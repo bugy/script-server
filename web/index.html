@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Script server</title>
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.js"></script>
+
+    <script src="js/index.js"></script>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body onload="onLoad()">
+<div class="container-fluid" id="mainPanel">
+    <h1 class="header">Script server</h1>
+    <div id="scriptsPanel">
+        <div id="scriptsList" class="">
+            <h2 class="header">Available scripts</h2>
+            <div id="scripts" class="collection"></div>
+        </div>
+        <div id="contentPanel">
+            <h2 id="scriptHeader" class="header"></h2>
+            <p id="scriptDescription"></p>
+            <div id="parametersPanel"></div>
+            <button id="executeButton" class="btn">Execute</button>
+            <code id="logPanel"></code>
+            <div id="inputPanel" class="input-field">
+                <label id="inputLabel" for="inputField"></label>
+                <input id="inputField" type="text">
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "Write to file",
+  "script_path": "./testing/scripts/my_script.sh",
+  "description": "This script does very simple change, putting \"I'm called\" into user home simple.txt file",
+  "parameters": [
+    {
+      "name": "text",
+      "param": "-t",
+      "description": "Custom text to write to file"
+    },
+    {
+      "name": "repeats",
+      "param": "-r",
+      "description": "How many times the text should be written to the file"
+    },
+    {
+      "name": "clear file",
+      "param": "--clear",
+      "no_value": true,
+      "description": "Clear file before writing"
+    }
+  ]
+}

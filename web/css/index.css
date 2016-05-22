@@ -1,0 +1,193 @@
+html {
+    box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+    box-sizing: inherit;
+}
+
+#scriptsPanel {
+    height: calc(100vh - 72px /* h1 height + margins */);
+    display: flex;
+    flex-direction: row;
+}
+
+#scripts {
+    width: 300px;
+}
+
+#contentPanel {
+    flex: 1;
+    height: 100%;
+
+    border-left: 1px solid #C8C8C8;
+
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 992px) {
+    #scriptsPanel {
+        display: flex;
+        flex-flow: column;
+    }
+
+    #contentPanel {
+        margin-top: 17px;
+        border-top: 1px solid #C8C8C8;
+        border-left: none;
+    }
+}
+
+#scriptDescription {
+    margin-left: 17px;
+    margin-bottom: 0;
+}
+
+#parametersPanel {
+    margin-top: 12px;
+}
+
+#parametersPanel .parameter {
+    margin-left: 24px;
+    margin-top: 7px;
+    margin-right: 0;
+    margin-bottom: 5px;
+
+    display: inline-block;
+}
+
+#parametersPanel .parameter input {
+    margin: 0;
+}
+
+#logPanel {
+    overflow-y: auto;
+    flex: 1;
+
+    background: #f4f2f0;
+    padding: 1.5em;
+    font-size: .875em;
+    width: calc(100% - 24px);
+    margin-right: 12px;
+    margin-left: 12px;
+    margin-top: 12px;
+    margin-bottom: 7px;
+    border: solid 1px rgba(51, 51, 51, 0.12);
+    border-radius: 2px;
+
+    white-space: pre-wrap; /* CSS 3 */
+    white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+    white-space: -o-pre-wrap; /* Opera 7 */
+    overflow-wrap: break-word;
+
+    -ms-word-break: break-all;
+    /* This is the dangerous one in WebKit, as it breaks things wherever */
+    word-break: break-all;
+    /* Instead use this non-standard one: */
+    word-break: break-word;
+
+    /* Adds a hyphen where the word breaks, if supported (No Blink) */
+    -ms-hyphens: auto;
+    -moz-hyphens: auto;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+}
+
+#logPanel.shadow-top-bottom {
+    box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
+    -webkit-box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
+    -moz-box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
+}
+
+#logPanel.shadow-top {
+    box-shadow: 0 7px 8px -4px #888888 inset;
+    -webkit-box-shadow: 0 7px 8px -4px #888888 inset;
+    -moz-box-shadow: 0 7px 8px -4px #888888 inset;
+}
+
+#logPanel.shadow-bottom {
+    box-shadow: 0 -7px 8px -4px #888888 inset;
+    -webkit-box-shadow: 0 -7px 8px -4px #888888 inset;
+    -moz-box-shadow: 0 -7px 8px -4px #888888 inset;
+}
+
+#scriptsList > .collection {
+    border: none;
+}
+
+#contentPanel input {
+    height: 1.5em;
+    width: auto;
+}
+
+#contentPanel .input-field label {
+    top: 0;
+}
+
+#contentPanel .input-field [type="checkbox"] + label {
+    left: 0;
+    padding-left: 28px;
+}
+
+#contentPanel .input-field label.active {
+    transform: translateY(-90%);
+}
+
+#executeButton {
+    width: 92%;
+    margin-left: 4%;
+    margin-right: 4%;
+    margin-top: 17px;
+}
+
+#contentPanel #inputPanel {
+    width: calc(100% - 24px);
+    margin: 5px 12px;
+}
+
+#contentPanel #inputPanel input {
+    margin: 0;
+    width: 100%;
+}
+
+#contentPanel #inputPanel label.active {
+    transform: translateY(-60%);
+}
+
+/* materialized styles */
+.header {
+    font-weight: 300;
+}
+
+h1.header {
+    font-size: 2.5rem;
+    margin: 1rem;
+}
+
+h2.header {
+    font-size: 2.25rem;
+    margin: 0.9rem;
+}
+
+h3.header {
+    font-size: 2.0rem;
+    margin: 0.8rem;
+}
+
+h4.header {
+    font-size: 1.75rem;
+    margin: 0.7rem;
+}
+
+h5.header {
+    font-size: 1.5rem;
+    margin: 0.6rem;
+}
+
+h6.header {
+    font-size: 1.25rem;
+    margin: 0.5rem;
+}

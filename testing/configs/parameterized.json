@@ -1,0 +1,83 @@
+{
+  "name": "Very parameterized",
+  "script_path": "~/temp/parameterized.sh",
+  "description": "This script does nothing except accepting a lot of parameters and printing them",
+  "parameters": [
+    {
+      "name": "TextParam1",
+      "param": "-p1",
+      "description": "Parameter One"
+    },
+    {
+      "name": "TextParam2",
+      "param": "-p2",
+      "description": "Parameter Two"
+    },
+    {
+      "name": "TextParam3",
+      "param": "-p3",
+      "description": "Parameter Three"
+    },
+    {
+      "name": "BoolParam1",
+      "param": "--b1",
+      "no_value": true,
+      "description": "Boolean One"
+    },
+    {
+      "name": "TextParam4",
+      "param": "-p4",
+      "description": "Parameter Four"
+    },
+    {
+      "name": "BoolParam2",
+      "param": "--b2",
+      "no_value": true,
+      "description": "Boolean Two"
+    },
+    {
+      "name": "BoolParam3",
+      "param": "--b3",
+      "no_value": true,
+      "description": "Boolean Three"
+    },
+    {
+      "name": "BoolParam4",
+      "param": "--b4",
+      "no_value": true,
+      "description": "Boolean Four"
+    },
+    {
+      "name": "TextParam5",
+      "param": "-p5",
+      "description": "Parameter Five"
+    },
+    {
+      "name": "TextParam6",
+      "param": "-p6",
+      "description": "Parameter Six"
+    },
+    {
+      "name": "BoolParam5",
+      "param": "--b5",
+      "no_value": true,
+      "description": "Boolean Five"
+    },
+    {
+      "name": "TextParam7",
+      "param": "-p7",
+      "description": "Parameter Seven"
+    },
+    {
+      "name": "BoolParam6",
+      "param": "--b6",
+      "no_value": true,
+      "description": "Boolean Six"
+    },
+    {
+      "name": "TextParam8",
+      "param": "-p8",
+      "description": "Parameter Eight"
+    }
+  ]
+}
