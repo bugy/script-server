@@ -137,10 +137,19 @@ html {
 }
 
 #executeButton {
-    width: 92%;
-    margin-left: 4%;
-    margin-right: 4%;
+    width: 80%;
+    margin-left: 2%;
+    margin-right: 0;
     margin-top: 17px;
+    display: inline;
+}
+
+#stopButton {
+    width: calc(96% - 80% - 12px - 5px); /* width without margins - executeButton - margin between button - rounding error */
+    margin-left: 12px;
+    margin-right: 2%;
+    margin-top: 17px;
+    display: inline;
 }
 
 #contentPanel #inputPanel {

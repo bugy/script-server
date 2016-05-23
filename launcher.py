@@ -3,18 +3,18 @@ import os
 import queue
 import subprocess
 import threading
-import time
 import traceback
 
 import six
 from flask import Flask, request, send_from_directory, abort, Response
 
 import configs_model
+import execution
 import external_model
 import utils.file_utils as file_utils
 
 app = Flask(__name__)
-script_inputs = {}
+running_scripts = {}
 
 
 def read_configs():
@@ -102,10 +102,19 @@ def build_parameter_string(param_values, config):
 @app.route("/scripts/execute/input", methods=["POST"])
 def post_user_input():
     request_data = request.data.decode("UTF-8")
-    id = json.loads(request_data).get("id")
+    process_id = json.loads(request_data).get("processId")
     value = json.loads(request_data).get("value")
 
-    script_inputs[id].put(value)
+    running_scripts[process_id].write_to_input(value)
+
+    return ""
+
+
+@app.route("/scripts/execute/stop", methods=["POST"])
+def stop_script():
+    process_id = int(request.data.decode("UTF-8"))
+
+    running_scripts[process_id].stop()
 
     return ""
 
@@ -138,19 +147,25 @@ def execute_script():
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
 
-        input_id = int(round(time.time() * 1000))
-        input_queue = queue.Queue()
-        script_inputs[input_id] = input_queue
+        process_wrapper = execution.ProcessWrapper(process)
+        process_id = process_wrapper.get_process_id()
+
+        running_scripts[process_id] = process_wrapper
 
         output = queue.Queue()
 
-        to_process = threading.Thread(target=pipe_http_to_process, args=(input_id, process, output))
-        to_process.start()
+        output.put(json.dumps({
+            "processId": process_id
+        }))
 
-        from_process = threading.Thread(target=pipe_process_to_http, args=(process, output))
+        output.put(json.dumps({
+            "input": "your input >>",
+        }))
+
+        output.put(wrap_script_output(" ---  OUTPUT  --- \n"))
+
+        from_process = threading.Thread(target=pipe_process_to_http, args=(process_wrapper, output))
         from_process.start()
-
-        output.put(to_script_output(" ---  OUTPUT  --- \n"))
 
         def response_stream():
             while True:
@@ -158,7 +173,7 @@ def execute_script():
                     output_object = output.get(timeout=1)
                     yield output_object
                 except queue.Empty:
-                    if not (process.poll() is None):
+                    if process_wrapper.is_finished():
                         break
 
         return Response(response_stream(), mimetype='text/html')
@@ -172,51 +187,19 @@ def execute_script():
 
         result = " ---  ERRORS  --- \n"
         result += error_output
-        return to_script_output(result)
+
+        return wrap_script_output(result)
 
 
-def pipe_http_to_process(input_id, process, output):
-    output.put(json.dumps({
-        "input": "your input >>",
-        "id": input_id
-    }))
+def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, output):
+    while not process_wrapper.is_finished():
+        process_output = process_wrapper.read()
 
-    input_queue = script_inputs.get(input_id)
-
-    while True:
-        try:
-            value = input_queue.get(timeout=1)
-            input_value = value + "\n"
-
-            output.put(to_script_output(input_value))
-
-            process.stdin.write(input_value.encode())
-            process.stdin.flush()
-        except queue.Empty:
-            if process.poll() is not None:
-                break
+        if not (process_output is None):
+            output.put(wrap_script_output(process_output))
 
 
-def pipe_process_to_http(process, output):
-    empty_count = 0
-
-    while True:
-        line_bytes = process.stdout.readline()
-
-        if not line_bytes:
-            empty_count += 1
-
-            if process.poll() is None:
-                break
-
-            time.sleep(min(1, 0.1 * empty_count))
-
-        else:
-            line = line_bytes.decode("UTF-8")
-            output.put(to_script_output(line))
-
-
-def to_script_output(text):
+def wrap_script_output(text):
     return json.dumps({
         "output": text
     })

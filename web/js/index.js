@@ -22,20 +22,20 @@ function onLoad() {
 
         scriptElement.innerText = script;
 
-        scriptListeners[scriptListeners.length] = function (activeScript) {
+        scriptListeners.push(function (activeScript) {
             if (activeScript == script) {
                 addClass(scriptElement, "active");
             } else {
                 removeClass(scriptElement, "active");
             }
-        };
+        });
 
         scriptsListElement.appendChild(scriptElement);
     });
 
-    scriptListeners[scriptListeners.length] = function (activeScript) {
+    scriptListeners.push(function (activeScript) {
         showScript(activeScript)
-    };
+    });
 
     var hash = getHash();
     if ((hash != null) && (scripts.indexOf(hash) != -1)) {
@@ -75,13 +75,10 @@ function initLogPanel() {
 }
 
 function initExecuteButton() {
-    var button = document.getElementById("executeButton");
-    button.onclick = function (e) {
+    var executeButton = document.getElementById("executeButton");
+    executeButton.onclick = function (e) {
         var logPanel = document.getElementById("logPanel");
         var inputPanel = document.getElementById("inputPanel");
-
-        button.disabled = true;
-        addClass(button, "disabled");
 
         logPanel.innerText = "Calling the script...";
         logPanel.style.display = "block";
@@ -100,20 +97,34 @@ function initExecuteButton() {
         };
 
         var lastText = null;
+        var processId = null;
 
+        var stopButton = document.getElementById("stopButton");
+
+        setButtonEnabled(stopButton, true);
+        setButtonEnabled(executeButton, false);
+
+        stopButton.onclick = function () {
+            if (isNull(processId)) {
+                throw "Cannot stop yet. Process id is not available";
+            }
+
+            callHttp("scripts/execute/stop", processId, "POST");
+        };
+        
         callHttp("scripts/execute", callBody, "POST", function (event) {
 
-            xhttp = event.currentTarget;
+            var xhttp = event.currentTarget;
             if ((xhttp.readyState == 4) || (xhttp.readyState == 3)) {
                 if (lastText == null) {
                     logPanel.innerText = "";
                     lastText = "";
                 }
 
-                newText = xhttp.responseText.substring(lastText.length);
+                var newText = xhttp.responseText.substring(lastText.length);
                 lastText = xhttp.responseText;
 
-                responses = newText.split(/(?={)/);
+                var responses = newText.split(/(?={)/);
                 responses.forEach(function (responseText) {
                     if (responseText.trim().length == 0) {
                         return
@@ -121,21 +132,28 @@ function initExecuteButton() {
 
                     var response = JSON.parse(responseText);
 
+                    if (response.hasOwnProperty("processId")) {
+                        processId = response.processId;
+                        return;
+                    }
+
                     if (response.hasOwnProperty("output")) {
                         logPanel.innerText += response.output;
                         logPanel.onscroll();
+                        return;
                     }
 
                     if (response.hasOwnProperty("input")) {
                         var inputLabel = document.getElementById("inputLabel");
                         inputLabel.innerText = response.input;
+
                         var inputField = document.getElementById("inputField");
                         inputField.value = "";
 
                         inputField.onkeyup = function (event) {
                             if (event.keyCode == 13) {
                                 callHttp("scripts/execute/input", {
-                                    id: response.id,
+                                    processId: processId,
                                     value: inputField.value
                                 }, "POST");
 
@@ -150,8 +168,9 @@ function initExecuteButton() {
             }
 
             if (xhttp.readyState == 4) {
-                button.disabled = false;
-                removeClass(button, "disabled");
+                setButtonEnabled(stopButton, false);
+                setButtonEnabled(executeButton, true);
+
                 hide(inputPanel);
             }
         });
@@ -204,6 +223,15 @@ function showScript(activeScript) {
 
     var inputPanel = document.getElementById("inputPanel");
     hide(inputPanel);
+
+
+    var stopButton = document.getElementById("stopButton");
+    var executeButton = document.getElementById("executeButton");
+
+    //TODO remove this code. It is temporal workaround to leave the possibility to stop the running script afterwards
+    if (!executeButton.disabled) {
+        setButtonEnabled(stopButton, false);
+    }
 }
 
 function createParameterControl(parameter) {
@@ -334,4 +362,13 @@ function wrapInDiv(element, divClasses) {
 
     logDiv.appendChild(element);
     return logDiv;
+}
+
+function setButtonEnabled(button, enabled) {
+    button.disabled = !enabled;
+    if (!enabled) {
+        addClass(button, "disabled");
+    } else {
+        removeClass(button, "disabled");
+    }
 }
