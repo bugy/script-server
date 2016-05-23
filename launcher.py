@@ -224,7 +224,7 @@ def to_script_output(text):
 
 def main():
     app.debug = True
-    app.run(threaded=True)
+    app.run(threaded=True, host="0.0.0.0")
 
 
 if __name__ == "__main__":

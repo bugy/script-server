@@ -103,7 +103,7 @@ function initExecuteButton() {
 
         callHttp("scripts/execute", callBody, "POST", function (event) {
 
-            xhttp = event.srcElement;
+            xhttp = event.currentTarget;
             if ((xhttp.readyState == 4) || (xhttp.readyState == 3)) {
                 if (lastText == null) {
                     logPanel.innerText = "";
