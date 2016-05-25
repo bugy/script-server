@@ -6,10 +6,11 @@ import time
 
 class ProcessWrapper(object):
     process = None
-    output = queue.Queue()
+    output = None
 
     def __init__(self, process):
         self.process = process
+        self.output = queue.Queue()
 
         read_output_thread = threading.Thread(target=self.pipe_process_output, args=())
         read_output_thread.start()
@@ -43,19 +44,40 @@ class ProcessWrapper(object):
                     break
 
     def pipe_process_output(self):
-        empty_count = 0
+        current_millis = lambda: int(round(time.time() * 1000))
 
+        last_send_time = current_millis()
+        buffer_flush_wait = 40
+
+        output_buffer = bytearray()
         while True:
-            line_bytes = self.process.stdout.readline()
+            wait_new_output = False
+            finished = False
 
-            if not line_bytes:
-                empty_count += 1
-
-                if self.is_finished():
-                    break
-
-                time.sleep(min(0.3, 0.03 * empty_count))
+            if self.is_finished():
+                read_data = self.process.stdout.read()
+                time_to_flush = True
+                finished = True
 
             else:
-                line = line_bytes.decode("UTF-8")
-                self.output.put(line)
+                read_data = self.process.stdout.readline()
+                time_to_flush = True  # temp fix for PROD (last_send_time + buffer_flush_wait) < current_millis()
+
+                if not read_data:
+                    wait_new_output = True
+
+            if read_data:
+                output_buffer += read_data
+
+            if output_buffer and time_to_flush:
+                output_text = output_buffer.decode("UTF-8")
+                self.output.put(output_text)
+
+                output_buffer = bytearray()
+                last_send_time = current_millis()
+
+            if finished:
+                break
+
+            if wait_new_output:
+                time.sleep(0.01)

@@ -192,11 +192,14 @@ def execute_script():
 
 
 def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, output):
-    while not process_wrapper.is_finished():
+    while True:
         process_output = process_wrapper.read()
 
         if not (process_output is None):
             output.put(wrap_script_output(process_output))
+        else:
+            if (process_wrapper.is_finished()):
+                break
 
 
 def wrap_script_output(text):
