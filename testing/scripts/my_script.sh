@@ -29,6 +29,8 @@ esac
 shift # past argument or value
 done
 
+read -p "Press enter to start writing to the file"
+
 for (( i=0; i<repeats ; i++ ))
 do
    echo "$text" >> ~/simple.txt

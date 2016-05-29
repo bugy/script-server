@@ -1,7 +1,6 @@
 import json
 import os
 import queue
-import subprocess
 import threading
 import traceback
 
@@ -121,18 +120,18 @@ def stop_script():
 
 @app.route("/scripts/execute", methods=["POST"])
 def execute_script():
-    request_data = request.data.decode("UTF-8")
-
-    execution_info = external_model.to_execution_info(request_data)
-
-    script_name = execution_info.get_script()
-
-    config = find_config_by_name(script_name)
-
-    if not config:
-        return abort("Script with name '" + str(script_name) + "' not found")
-
     try:
+        request_data = request.data.decode("UTF-8")
+
+        execution_info = external_model.to_execution_info(request_data)
+
+        script_name = execution_info.get_script()
+
+        config = find_config_by_name(script_name)
+
+        if not config:
+            return abort("Script with name '" + str(script_name) + "' not found")
+
         script_path = file_utils.normalize_path(config.get_script_path())
         script_args = build_parameter_string(execution_info.get_param_values(), config)
 
@@ -142,12 +141,11 @@ def execute_script():
 
         six.print_("Calling script: " + " ".join(command))
 
-        process = subprocess.Popen(command,
-                                   stdin=subprocess.PIPE,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
+        if config.is_requires_terminal():
+            process_wrapper = execution.PtyProcessWrapper(command, config.get_name())
+        else:
+            process_wrapper = execution.POpenProcessWrapper(command, config.get_name())
 
-        process_wrapper = execution.ProcessWrapper(process)
         process_id = process_wrapper.get_process_id()
 
         running_scripts[process_id] = process_wrapper
@@ -198,7 +196,7 @@ def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, output):
         if not (process_output is None):
             output.put(wrap_script_output(process_output))
         else:
-            if (process_wrapper.is_finished()):
+            if process_wrapper.is_finished():
                 break
 
 

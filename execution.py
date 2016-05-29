@@ -1,27 +1,39 @@
+import abc
+import os
+import pty
 import queue
+import subprocess
+import sys
 import threading
-
 import time
 
+script_encodings = {}
 
-class ProcessWrapper(object):
+
+class ProcessWrapper(metaclass=abc.ABCMeta):
     process = None
     output = None
+    command_identifier = None
 
-    def __init__(self, process):
-        self.process = process
+    def __init__(self, command, command_identifier):
+        self.init_process(command)
+
         self.output = queue.Queue()
 
         read_output_thread = threading.Thread(target=self.pipe_process_output, args=())
         read_output_thread.start()
 
+    @abc.abstractmethod
+    def pipe_process_output(self):
+        pass
+
+    @abc.abstractmethod
+    def init_process(self, command):
+        pass
+
+    @abc.abstractmethod
     def write_to_input(self, value):
-        input_value = value + "\n"
-
-        self.output.put(input_value)
-
-        self.process.stdin.write(input_value.encode())
-        self.process.stdin.flush()
+        pass
 
     def get_process_id(self):
         return self.process.pid
@@ -37,47 +49,146 @@ class ProcessWrapper(object):
     def read(self):
         while True:
             try:
-                result = self.output.get(0.1)
+                result = self.output.get(0.2)
+                try:
+                    while (True):
+                        result += self.output.get_nowait()
+                except queue.Empty:
+                    pass
+
                 return result
             except queue.Empty:
                 if self.is_finished():
                     break
 
+
+class PtyProcessWrapper(ProcessWrapper):
+    pty_master = None
+    encoding = None
+
+    def __init__(self, command, command_identifier):
+        ProcessWrapper.__init__(self, command, command_identifier)
+
+        if command_identifier in script_encodings:
+            self.encoding = script_encodings[command_identifier]
+        else:
+            self.encoding = sys.stdout.encoding
+
+    def init_process(self, command):
+        master, slave = pty.openpty()
+        self.process = subprocess.Popen(command,
+                                        stdin=slave,
+                                        stdout=slave,
+                                        stderr=slave,
+                                        close_fds=True,
+                                        universal_newlines=True)
+        os.close(slave)
+        self.pty_master = master
+
+    def write_to_input(self, value):
+        input_value = value
+        if not input_value.endswith("\n"):
+            input_value += "\n"
+
+        os.write(self.pty_master, input_value.encode())
+
     def pipe_process_output(self):
-        current_millis = lambda: int(round(time.time() * 1000))
+        try:
 
-        last_send_time = current_millis()
-        buffer_flush_wait = 40
+            while True:
+                finished = False
+                wait_new_output = False
 
-        output_buffer = bytearray()
+                max_read_bytes = 1024
+
+                if self.is_finished():
+                    data = b""
+                    while (True):
+                        chunk = os.read(self.pty_master, max_read_bytes)
+                        data += chunk
+
+                        if len(chunk) < max_read_bytes:
+                            break
+
+                    finished = True
+
+                else:
+                    data = os.read(self.pty_master, max_read_bytes)
+                    if data.endswith(b"\r"):
+                        data += os.read(self.pty_master, 1)
+
+                    if data and (self.encoding.lower() == "utf-8"):
+                        while data[len(data) - 1] >= 127:
+                            next_byte = os.read(self.pty_master, 1)
+                            if not next_byte:
+                                break
+
+                            data += next_byte
+
+                    if not data:
+                        wait_new_output = True
+
+                if data:
+                    output_text = data.decode(self.encoding)
+                    self.output.put(output_text)
+
+                if finished:
+                    break
+
+                if wait_new_output:
+                    time.sleep(0.01)
+        finally:
+            os.close(self.pty_master)
+
+
+class POpenProcessWrapper(ProcessWrapper):
+    def __init__(self, command, command_identifier):
+        ProcessWrapper.__init__(self, command, command_identifier)
+
+    def init_process(self, command):
+        self.process = subprocess.Popen(command,
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        close_fds=True,
+                                        universal_newlines=True)
+
+    def write_to_input(self, value):
+        input_value = value
+        if not value.endswith("\n"):
+            input_value += "\n"
+
+        self.output.put(input_value)
+
+        self.process.stdin.write(input_value)
+        self.process.stdin.flush()
+
+    def pipe_process_output(self):
         while True:
-            wait_new_output = False
             finished = False
+            wait_new_output = False
 
             if self.is_finished():
-                read_data = self.process.stdout.read()
-                time_to_flush = True
+                data = self.process.stdout.read()
+
                 finished = True
 
             else:
-                read_data = self.process.stdout.readline()
-                time_to_flush = True  # temp fix for PROD (last_send_time + buffer_flush_wait) < current_millis()
+                data = self.process.stdout.read(1)
 
-                if not read_data:
+                if not data:
                     wait_new_output = True
 
-            if read_data:
-                output_buffer += read_data
-
-            if output_buffer and time_to_flush:
-                output_text = output_buffer.decode("UTF-8")
+            if data:
+                output_text = data
                 self.output.put(output_text)
-
-                output_buffer = bytearray()
-                last_send_time = current_millis()
 
             if finished:
                 break
 
             if wait_new_output:
                 time.sleep(0.01)
+
+
+def set_script_encoding(command_identifier, encoding):
+    script_encodings[command_identifier] = encoding

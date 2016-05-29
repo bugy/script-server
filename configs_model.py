@@ -7,6 +7,7 @@ class Config(object):
     script_path = None
     name = None
     description = None
+    requires_terminal = None
     parameters = None
 
     def __init__(self):
@@ -23,6 +24,9 @@ class Config(object):
 
     def get_description(self):
         return self.description
+
+    def is_requires_terminal(self):
+        return self.requires_terminal
 
     def add_parameter(self, parameter):
         self.parameters.append(parameter)
@@ -68,12 +72,23 @@ def from_json(file_path, json_string):
 
     config.file_path = file_path
     config.name = json_object.get("name")
-    if not (config.name):
+    if not config.name:
         filename = os.path.basename(file_path)
         config.name = os.path.splitext(filename)[0]
 
     config.script_path = json_object.get("script_path")
     config.description = json_object.get("description")
+
+    requires_terminal = json_object.get("requires_terminal")
+    if requires_terminal is not None:
+        if requires_terminal.lower() == "true":
+            config.requires_terminal = True
+        elif requires_terminal.lower() == "false":
+            config.requires_terminal = False
+        else:
+            raise Exception("'requires_terminal' parameter should be True or False")
+    else:
+        config.requires_terminal = False
 
     parameters_json = json_object.get("parameters")
 
