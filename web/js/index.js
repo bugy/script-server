@@ -1,6 +1,7 @@
 var selectedScript = null;
 var scriptListeners = [];
 var parameterControls = [];
+var runningScriptExecutor = null;
 
 function onLoad() {
     var response = callHttp("scripts/list");
@@ -17,6 +18,19 @@ function onLoad() {
         addClass(scriptElement, "waves-teal");
         scriptElement.setAttribute("href", "#" + script);
         scriptElement.onclick = function (e) {
+            if (runningScriptExecutor != null) {
+                if (!runningScriptExecutor.isFinished()) {
+                    var abort = confirm("Another script is running. Do you want to abort?");
+                    if (abort == true) {
+                        runningScriptExecutor.abort();
+                    } else {
+                        return false;
+                    }
+                }
+
+                runningScriptExecutor = null;
+            }
+
             selectScript(script);
         };
 
@@ -44,6 +58,7 @@ function onLoad() {
 
     initLogPanel();
     initExecuteButton();
+    initStopButton();
 }
 
 function initLogPanel() {
@@ -74,6 +89,16 @@ function initLogPanel() {
     };
 }
 
+function initStopButton() {
+    var stopButton = document.getElementById("stopButton");
+
+    stopButton.onclick = function () {
+        if (runningScriptExecutor != null) {
+            runningScriptExecutor.stop();
+        }
+    };
+}
+
 function initExecuteButton() {
     var executeButton = document.getElementById("executeButton");
     executeButton.onclick = function (e) {
@@ -96,84 +121,15 @@ function initExecuteButton() {
             parameters: callParameters
         };
 
-        var lastText = null;
-        var processId = null;
-
         var stopButton = document.getElementById("stopButton");
 
         setButtonEnabled(stopButton, true);
         setButtonEnabled(executeButton, false);
 
-        stopButton.onclick = function () {
-            if (isNull(processId)) {
-                throw "Cannot stop yet. Process id is not available";
-            }
+        runningScriptExecutor = new ScriptExecutor();
 
-            callHttp("scripts/execute/stop", processId, "POST");
-        };
-        
-        callHttp("scripts/execute", callBody, "POST", function (event) {
-
-            var xhttp = event.currentTarget;
-            if ((xhttp.readyState == 4) || (xhttp.readyState == 3)) {
-                if (lastText == null) {
-                    logPanel.innerText = "";
-                    lastText = "";
-                }
-
-                var newText = xhttp.responseText.substring(lastText.length);
-                lastText = xhttp.responseText;
-
-                var responses = newText.split(/(?={)/);
-                responses.forEach(function (responseText) {
-                    if (responseText.trim().length == 0) {
-                        return
-                    }
-
-                    var response = JSON.parse(responseText);
-
-                    if (response.hasOwnProperty("processId")) {
-                        processId = response.processId;
-                        return;
-                    }
-
-                    if (response.hasOwnProperty("output")) {
-                        logPanel.innerText += response.output;
-                        logPanel.onscroll();
-                        return;
-                    }
-
-                    if (response.hasOwnProperty("input")) {
-                        var inputLabel = document.getElementById("inputLabel");
-                        inputLabel.innerText = response.input;
-
-                        var inputField = document.getElementById("inputField");
-                        inputField.value = "";
-
-                        inputField.onkeyup = function (event) {
-                            if (event.keyCode == 13) {
-                                callHttp("scripts/execute/input", {
-                                    processId: processId,
-                                    value: inputField.value
-                                }, "POST");
-
-                                inputField.value = "";
-                            }
-                        };
-
-                        inputPanel.style.display = "block";
-                        inputField.focus();
-                    }
-                });
-            }
-
-            if (xhttp.readyState == 4) {
-                setButtonEnabled(stopButton, false);
-                setButtonEnabled(executeButton, true);
-
-                hide(inputPanel);
-            }
-        });
+        var httpRequest = callHttp("scripts/execute", callBody, "POST", runningScriptExecutor.processScriptResponse);
+        runningScriptExecutor.setHttpRequest(httpRequest);
     };
 }
 
@@ -228,10 +184,8 @@ function showScript(activeScript) {
     var stopButton = document.getElementById("stopButton");
     var executeButton = document.getElementById("executeButton");
 
-    //TODO remove this code. It is temporal workaround to leave the possibility to stop the running script afterwards
-    if (!executeButton.disabled) {
-        setButtonEnabled(stopButton, false);
-    }
+    setButtonEnabled(executeButton, true);
+    setButtonEnabled(stopButton, false);
 }
 
 function createParameterControl(parameter) {
@@ -320,6 +274,8 @@ function callHttp(url, object, method, asyncHandler) {
 
     if (!async) {
         return xhttp.responseText;
+    } else {
+        return xhttp;
     }
 }
 
@@ -370,5 +326,109 @@ function setButtonEnabled(button, enabled) {
         addClass(button, "disabled");
     } else {
         removeClass(button, "disabled");
+    }
+}
+
+function ScriptExecutor() {
+    this.processId = null;
+    this.httpRequest = null;
+    this.availableResponseText = null;
+
+    this.setHttpRequest = function (httpRequest) {
+        this.httpRequest = httpRequest;
+    };
+
+    this.stop = function () {
+        if (isNull(this.processId)) {
+            throw "Cannot stop yet. Process id is not available";
+        }
+
+        callHttp("scripts/execute/stop", this.processId, "POST");
+    };
+
+    this.abort = function () {
+        if (!isNull(this.httpRequest)) {
+            this.httpRequest.abort()
+        }
+    };
+
+    this.isFinished = function () {
+        return !isNull(this.httpRequest) && (this.httpRequest.readyState == 4);
+    };
+
+    this.setProcessId = function (processId) {
+        this.processId = processId;
+    };
+
+    this.getProcessId = function () {
+        return this.processId;
+    };
+
+    var executor = this;
+
+    this.processScriptResponse = function (event) {
+        if (executor.httpRequest == null) {
+            executor.httpRequest = event.currentTarget;
+        }
+
+        if ((executor.httpRequest.readyState == 4) || (executor.httpRequest.readyState == 3)) {
+            if (executor.availableResponseText == null) {
+                logPanel.innerText = "";
+                executor.availableResponseText = "";
+            }
+
+            var newText = executor.httpRequest.responseText.substring(executor.availableResponseText.length);
+            executor.availableResponseText = executor.httpRequest.responseText;
+
+            var responses = newText.split(/(?={)/);
+            responses.forEach(function (responseText) {
+                if (responseText.trim().length == 0) {
+                    return
+                }
+
+                var response = JSON.parse(responseText);
+
+                if (response.hasOwnProperty("processId")) {
+                    executor.setProcessId(response.processId);
+                    return;
+                }
+
+                if (response.hasOwnProperty("output")) {
+                    logPanel.innerText += response.output;
+                    logPanel.onscroll();
+                    return;
+                }
+
+                if (response.hasOwnProperty("input")) {
+                    var inputLabel = document.getElementById("inputLabel");
+                    inputLabel.innerText = response.input;
+
+                    var inputField = document.getElementById("inputField");
+                    inputField.value = "";
+
+                    inputField.onkeyup = function (event) {
+                        if (event.keyCode == 13) {
+                            callHttp("scripts/execute/input", {
+                                processId: executor.getProcessId(),
+                                value: inputField.value
+                            }, "POST");
+
+                            inputField.value = "";
+                        }
+                    };
+
+                    inputPanel.style.display = "block";
+                    inputField.focus();
+                }
+            });
+        }
+
+        if (executor.httpRequest.readyState == 4) {
+            setButtonEnabled(stopButton, false);
+            setButtonEnabled(executeButton, true);
+            runningScriptExecutor = null;
+
+            hide(inputPanel);
+        }
     }
 }
