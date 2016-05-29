@@ -288,7 +288,7 @@ function getHash() {
         return null;
     }
 
-    return location.hash.substr(1);
+    return decodeURIComponent(location.hash.substr(1));
 }
 
 function removeClass(element, clazz) {
