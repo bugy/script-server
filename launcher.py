@@ -1,18 +1,20 @@
 import json
+import logging
+import logging.config
 import os
-import queue
 import threading
-import traceback
 
-import six
-from flask import Flask, request, send_from_directory, abort, Response
+import tornado.escape
+import tornado.httpserver as httpserver
+import tornado.ioloop
+import tornado.web
+import tornado.websocket
 
 import configs_model
 import execution
 import external_model
 import utils.file_utils as file_utils
 
-app = Flask(__name__)
 running_scripts = {}
 
 
@@ -32,28 +34,28 @@ def read_configs():
     return result
 
 
-@app.route("/scripts/list", methods=["GET"])
-def get_scripts():
-    configs = read_configs()
+class GetScripts(tornado.web.RequestHandler):
+    def get(self):
+        configs = read_configs()
 
-    return json.dumps([config.get_name() for config in configs])
+        self.write(json.dumps([config.get_name() for config in configs]))
 
 
-@app.route("/scripts/info", methods=["GET"])
-def get_script_info():
-    params = request.values
+class GetScriptInfo(tornado.web.RequestHandler):
+    def get(self):
+        try:
+            name = self.get_query_argument("name")
+        except tornado.web.MissingArgumentError:
+            respond_error(self, 400, "Script name is not specified")
+            return
 
-    if not ("name" in params):
-        return abort("Name is not specified")
+        config = find_config_by_name(name)
 
-    name = params["name"]
+        if not config:
+            respond_error(self, 400, "Couldn't find a script by name")
+            return
 
-    config = find_config_by_name(name)
-
-    if not config:
-        return "Couldn't find a script by name"
-
-    return external_model.config_to_json(config)
+        self.write(external_model.config_to_json(config))
 
 
 def find_config_by_name(name):
@@ -64,14 +66,6 @@ def find_config_by_name(name):
             config_by_name = config
             break
     return config_by_name
-
-
-@app.route("/<path:filename>")
-def web_resources(filename):
-    if not filename:
-        filename = "index.html"
-
-    return send_from_directory("web", filename)
 
 
 def build_parameter_string(param_values, config):
@@ -91,124 +85,165 @@ def build_parameter_string(param_values, config):
                 if value:
                     result.append(parameter.get_param())
 
-                    # value_string = '"' + value.replace("\"", "\\\"") + '"'
-                    # result.append(value_string)
                     result.append(value)
 
     return result
 
 
-@app.route("/scripts/execute/input", methods=["POST"])
-def post_user_input():
-    request_data = request.data.decode("UTF-8")
-    process_id = json.loads(request_data).get("processId")
-    value = json.loads(request_data).get("value")
-
-    running_scripts[process_id].write_to_input(value)
-
-    return ""
+def stop_script(process_id):
+    if process_id in running_scripts:
+        running_scripts[process_id].stop()
 
 
-@app.route("/scripts/execute/stop", methods=["POST"])
-def stop_script():
-    process_id = int(request.data.decode("UTF-8"))
+class ScriptStop(tornado.web.RequestHandler):
+    def post(self):
+        request_body = self.request.body.decode("UTF-8")
+        process_id = json.loads(request_body).get("processId")
 
-    running_scripts[process_id].stop()
-
-    return ""
-
-
-@app.route("/scripts/execute", methods=["POST"])
-def execute_script():
-    try:
-        request_data = request.data.decode("UTF-8")
-
-        execution_info = external_model.to_execution_info(request_data)
-
-        script_name = execution_info.get_script()
-
-        config = find_config_by_name(script_name)
-
-        if not config:
-            return abort("Script with name '" + str(script_name) + "' not found")
-
-        script_path = file_utils.normalize_path(config.get_script_path())
-        script_args = build_parameter_string(execution_info.get_param_values(), config)
-
-        command = []
-        command.append(script_path)
-        command.extend(script_args)
-
-        six.print_("Calling script: " + " ".join(command))
-
-        if config.is_requires_terminal():
-            process_wrapper = execution.PtyProcessWrapper(command, config.get_name())
+        if (process_id):
+            stop_script(int(process_id))
         else:
-            process_wrapper = execution.POpenProcessWrapper(command, config.get_name())
-
-        process_id = process_wrapper.get_process_id()
-
-        running_scripts[process_id] = process_wrapper
-
-        output = queue.Queue()
-
-        output.put(json.dumps({
-            "processId": process_id
-        }))
-
-        output.put(json.dumps({
-            "input": "your input >>",
-        }))
-
-        output.put(wrap_script_output(" ---  OUTPUT  --- \n"))
-
-        from_process = threading.Thread(target=pipe_process_to_http, args=(process_wrapper, output))
-        from_process.start()
-
-        def response_stream():
-            while True:
-                try:
-                    output_object = output.get(timeout=1)
-                    yield output_object
-                except queue.Empty:
-                    if process_wrapper.is_finished():
-                        break
-
-        return Response(response_stream(), mimetype='text/html')
-
-    except Exception as e:
-        traceback.print_exc()
-        if (hasattr(e, "strerror") and e.strerror):
-            error_output = e.strerror
-        else:
-            error_output = "Unknown error occurred, contact the administrator"
-
-        result = " ---  ERRORS  --- \n"
-        result += error_output
-
-        return wrap_script_output(result)
+            respond_error(self, 400, "Invalid stop request")
+            return
 
 
-def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, output):
+class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
+    process_wrapper = None
+    reading_thread = None
+
+    def open(self, process_id):
+        self.process_wrapper = running_scripts.get(int(process_id))
+
+        if not self.process_wrapper:
+            raise Exception("Couldn't find corresponding process")
+
+        self.write_message(wrap_to_server_event("input", "your input >>"))
+
+        self.write_message(wrap_script_output(" ---  OUTPUT  --- \n"))
+
+        reading_thread = threading.Thread(target=pipe_process_to_http, args=(
+            self.process_wrapper,
+            self.safe_write
+        ))
+        reading_thread.start()
+
+        web_socket = self
+
+        class FinishListener(object):
+            def finished(self):
+                web_socket.close()
+
+        self.process_wrapper.add_finish_listener(FinishListener())
+
+    def on_message(self, text):
+        self.process_wrapper.write_to_input(text)
+
+    def on_close(self):
+        if not self.process_wrapper.is_finished():
+            self.process_wrapper.kill()
+
+    def safe_write(self, message):
+        if self.ws_connection is not None:
+            self.write_message(message)
+
+
+class ScriptExecute(tornado.web.RequestHandler):
+    process_wrapper = None
+
+    def post(self):
+        try:
+            request_data = self.request.body
+
+            execution_info = external_model.to_execution_info(request_data.decode("UTF-8"))
+
+            script_name = execution_info.get_script()
+
+            config = find_config_by_name(script_name)
+
+            if not config:
+                respond_error(self, 400, "Script with name '" + str(script_name) + "' not found")
+
+            script_path = file_utils.normalize_path(config.get_script_path())
+            script_args = build_parameter_string(execution_info.get_param_values(), config)
+
+            command = []
+            command.append(script_path)
+            command.extend(script_args)
+
+            script_logger = logging.getLogger("scriptServer")
+            script_logger.info("Calling script: " + " ".join(command))
+
+            if config.is_requires_terminal():
+                self.process_wrapper = execution.PtyProcessWrapper(command, config.get_name())
+            else:
+                self.process_wrapper = execution.POpenProcessWrapper(command, config.get_name())
+
+            process_id = self.process_wrapper.get_process_id()
+
+            running_scripts[process_id] = self.process_wrapper
+
+            self.write(str(process_id))
+
+        except Exception as e:
+            script_logger = logging.getLogger("scriptServer")
+            script_logger.exception("Error while calling the script")
+
+            if hasattr(e, "strerror") and e.strerror:
+                error_output = e.strerror
+            else:
+                error_output = "Unknown error occurred, contact the administrator"
+
+            result = " ---  ERRORS  --- \n"
+            result += error_output
+
+            respond_error(self, 500, result)
+
+
+def respond_error(request_handler, status_code, message):
+    request_handler.set_status(status_code)
+    request_handler.write(message)
+
+
+def wrap_script_output(text):
+    return wrap_to_server_event("output", text)
+
+
+def wrap_to_server_event(event_type, data):
+    return json.dumps({
+        "event": event_type,
+        "data": str(data)
+    })
+
+
+def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, write_callback):
     while True:
         process_output = process_wrapper.read()
 
-        if not (process_output is None):
-            output.put(wrap_script_output(process_output))
+        if process_output is not None:
+            write_callback(wrap_script_output(process_output))
         else:
             if process_wrapper.is_finished():
                 break
 
 
-def wrap_script_output(text):
-    return json.dumps({
-        "output": text
-    })
+application = tornado.web.Application([
+    (r"/scripts/list", GetScripts),
+    (r"/scripts/info", GetScriptInfo),
+    (r"/scripts/execute", ScriptExecute),
+    (r"/scripts/execute/stop", ScriptStop),
+    (r"/scripts/execute/io/(.*)", ScriptStreamsSocket),
+    (r"/(.*)", tornado.web.StaticFileHandler, {"path": "web", "default_filename": "index.html"})
+])
 
 
 def main():
-    app.debug = True
-    app.run(threaded=True, host="0.0.0.0")
+    with open("logging.json", "rt") as f:
+        config = json.load(f)
+        logging.config.dictConfig(config)
+
+    http_server = httpserver.HTTPServer(application)
+    http_server.listen(5000)
+    tornado.ioloop.IOLoop.current().start()
 
 
 if __name__ == "__main__":

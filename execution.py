@@ -14,6 +14,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     process = None
     output = None
     command_identifier = None
+    finish_listeners = []
 
     def __init__(self, command, command_identifier):
         self.init_process(command)
@@ -44,22 +45,35 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     def stop(self):
         if not self.is_finished():
             self.output.put(">> STOPPED BY USER")
+            self.process.terminate()
+
+    def kill(self):
+        if not self.is_finished():
+            self.output.put(">> KILLED")
             self.process.kill()
 
     def read(self):
         while True:
             try:
-                result = self.output.get(0.2)
+                result = self.output.get(True, 0.2)
                 try:
-                    while (True):
-                        result += self.output.get_nowait()
+                    added_text = result
+                    while added_text:
+                        added_text = self.output.get_nowait()
+                        result += added_text
                 except queue.Empty:
                     pass
 
                 return result
             except queue.Empty:
                 if self.is_finished():
+                    for listener in self.finish_listeners:
+                        listener.finished()
+
                     break
+
+    def add_finish_listener(self, listener):
+        self.finish_listeners.append(listener)
 
 
 class PtyProcessWrapper(ProcessWrapper):
@@ -80,9 +94,8 @@ class PtyProcessWrapper(ProcessWrapper):
                                         stdin=slave,
                                         stdout=slave,
                                         stderr=slave,
-                                        close_fds=True,
-                                        universal_newlines=True)
-        os.close(slave)
+                                        close_fds=True)
+        self.pty_slave = slave
         self.pty_master = master
 
     def write_to_input(self, value):
@@ -139,6 +152,7 @@ class PtyProcessWrapper(ProcessWrapper):
                     time.sleep(0.01)
         finally:
             os.close(self.pty_master)
+            os.close(self.pty_slave)
 
 
 class POpenProcessWrapper(ProcessWrapper):

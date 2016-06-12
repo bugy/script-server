@@ -121,15 +121,18 @@ function initExecuteButton() {
             parameters: callParameters
         };
 
-        var stopButton = document.getElementById("stopButton");
+        try {
+            var process_id = callHttp("scripts/execute", callBody, "POST");
 
-        setButtonEnabled(stopButton, true);
-        setButtonEnabled(executeButton, false);
+            runningScriptExecutor = new ScriptController(process_id);
 
-        runningScriptExecutor = new ScriptExecutor();
+            var stopButton = document.getElementById("stopButton");
+            setButtonEnabled(stopButton, true);
+            setButtonEnabled(executeButton, false);
 
-        var httpRequest = callHttp("scripts/execute", callBody, "POST", runningScriptExecutor.processScriptResponse);
-        runningScriptExecutor.setHttpRequest(httpRequest);
+        } catch (error) {
+            logPanel.innerText = error.message;
+        }
     };
 }
 
@@ -179,7 +182,6 @@ function showScript(activeScript) {
 
     var inputPanel = document.getElementById("inputPanel");
     hide(inputPanel);
-
 
     var stopButton = document.getElementById("stopButton");
     var executeButton = document.getElementById("executeButton");
@@ -273,7 +275,16 @@ function callHttp(url, object, method, asyncHandler) {
     }
 
     if (!async) {
-        return xhttp.responseText;
+        if (xhttp.status == 200) {
+            return xhttp.responseText;
+
+        } else {
+            var message = "Couldn't execute request.";
+            if (!isNull(xhttp.responseText) && (xhttp.responseText.length > 0)) {
+                message = xhttp.responseText;
+            }
+            throw new Error(message);
+        }
     } else {
         return xhttp;
     }
@@ -311,15 +322,6 @@ function addClass(element, clazz) {
     element.className = className;
 }
 
-function wrapInDiv(element, divClasses) {
-    var logDiv = document.createElement("div");
-
-    addClass(logDiv, divClasses);
-
-    logDiv.appendChild(element);
-    return logDiv;
-}
-
 function setButtonEnabled(button, enabled) {
     button.disabled = !enabled;
     if (!enabled) {
@@ -329,106 +331,84 @@ function setButtonEnabled(button, enabled) {
     }
 }
 
-function ScriptExecutor() {
-    this.processId = null;
-    this.httpRequest = null;
-    this.availableResponseText = null;
+function ScriptController(processId) {
+    this.processId = processId;
 
-    this.setHttpRequest = function (httpRequest) {
-        this.httpRequest = httpRequest;
+    var inputPanel = document.getElementById("inputPanel");
+    var executeButton = document.getElementById("executeButton");
+    var stopButton = document.getElementById("stopButton");
+
+    var ws = new WebSocket("ws://" + window.location.host + "/scripts/execute/io/" + processId);
+
+    var receivedData = false;
+    var logPanel = document.getElementById("logPanel");
+
+    ws.onmessage = function (message) {
+        if (!receivedData) {
+            logPanel.innerText = "";
+            receivedData = true;
+        }
+
+        var events = message.data.split(/(?={)/);
+
+        events.forEach(function (event) {
+            if (event.trim().length == 0) {
+                return
+            }
+
+            var response = JSON.parse(event);
+
+            var eventType = response.event;
+            var data = response.data;
+
+            if (eventType == "output") {
+                logPanel.innerText += data;
+                logPanel.onscroll();
+                return;
+            }
+
+            if (eventType == "input") {
+                var inputLabel = document.getElementById("inputLabel");
+                inputLabel.innerText = data;
+
+                var inputField = document.getElementById("inputField");
+                inputField.value = "";
+
+                inputField.onkeyup = function (event) {
+                    if (event.keyCode == 13) {
+                        ws.send(inputField.value);
+
+                        inputField.value = "";
+                    }
+                };
+
+                inputPanel.style.display = "block";
+                inputField.focus();
+            }
+        });
+    };
+
+    ws.onclose = function (event) {
+        setButtonEnabled(stopButton, false);
+        setButtonEnabled(executeButton, true);
+        runningScriptExecutor = null;
+
+        hide(inputPanel);
     };
 
     this.stop = function () {
-        if (isNull(this.processId)) {
-            throw "Cannot stop yet. Process id is not available";
-        }
-
-        callHttp("scripts/execute/stop", this.processId, "POST");
+        callHttp("scripts/execute/stop", {"processId": this.processId}, "POST");
     };
 
     this.abort = function () {
-        if (!isNull(this.httpRequest)) {
-            this.httpRequest.abort()
+        this.stop();
+
+        if (!this.isFinished()) {
+            ws.close();
         }
     };
 
     this.isFinished = function () {
-        return !isNull(this.httpRequest) && (this.httpRequest.readyState == 4);
+        return ((ws.readyState == 2) && (ws.readyState == 3));
     };
-
-    this.setProcessId = function (processId) {
-        this.processId = processId;
-    };
-
-    this.getProcessId = function () {
-        return this.processId;
-    };
-
-    var executor = this;
-
-    this.processScriptResponse = function (event) {
-        if (executor.httpRequest == null) {
-            executor.httpRequest = event.currentTarget;
-        }
-
-        if ((executor.httpRequest.readyState == 4) || (executor.httpRequest.readyState == 3)) {
-            if (executor.availableResponseText == null) {
-                logPanel.innerText = "";
-                executor.availableResponseText = "";
-            }
-
-            var newText = executor.httpRequest.responseText.substring(executor.availableResponseText.length);
-            executor.availableResponseText = executor.httpRequest.responseText;
-
-            var responses = newText.split(/(?={)/);
-            responses.forEach(function (responseText) {
-                if (responseText.trim().length == 0) {
-                    return
-                }
-
-                var response = JSON.parse(responseText);
-
-                if (response.hasOwnProperty("processId")) {
-                    executor.setProcessId(response.processId);
-                    return;
-                }
-
-                if (response.hasOwnProperty("output")) {
-                    logPanel.innerText += response.output;
-                    logPanel.onscroll();
-                    return;
-                }
-
-                if (response.hasOwnProperty("input")) {
-                    var inputLabel = document.getElementById("inputLabel");
-                    inputLabel.innerText = response.input;
-
-                    var inputField = document.getElementById("inputField");
-                    inputField.value = "";
-
-                    inputField.onkeyup = function (event) {
-                        if (event.keyCode == 13) {
-                            callHttp("scripts/execute/input", {
-                                processId: executor.getProcessId(),
-                                value: inputField.value
-                            }, "POST");
-
-                            inputField.value = "";
-                        }
-                    };
-
-                    inputPanel.style.display = "block";
-                    inputField.focus();
-                }
-            });
-        }
-
-        if (executor.httpRequest.readyState == 4) {
-            setButtonEnabled(stopButton, false);
-            setButtonEnabled(executeButton, true);
-            runningScriptExecutor = null;
-
-            hide(inputPanel);
-        }
-    }
 }
