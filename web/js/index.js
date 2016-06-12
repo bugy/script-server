@@ -47,6 +47,9 @@ function onLoad() {
         scriptsListElement.appendChild(scriptElement);
     });
 
+    var contentPanel = document.getElementById("contentPanel");
+    hide(contentPanel);
+
     scriptListeners.push(function (activeScript) {
         showScript(activeScript)
     });
@@ -106,7 +109,7 @@ function initExecuteButton() {
         var inputPanel = document.getElementById("inputPanel");
 
         logPanel.innerText = "Calling the script...";
-        logPanel.style.display = "block";
+        show(logPanel, "block");
 
         var callParameters = [];
         parameterControls.forEach(function (control) {
@@ -140,7 +143,15 @@ function hide(element) {
     element.style.display = "none";
 }
 
+function show(element, displayStyle) {
+    displayStyle = displayStyle || "block";
+    element.style.display = displayStyle;
+}
+
 function showScript(activeScript) {
+    var contentPanel = document.getElementById("contentPanel");
+    show(contentPanel, "flex");
+
     var info = callHttp("scripts/info?name=" + activeScript);
 
     var parsedInfo = JSON.parse(info);
@@ -163,7 +174,7 @@ function showScript(activeScript) {
     }
 
     if (parameterControls.length > 0) {
-        paramsPanel.style.display = "block";
+        show(paramsPanel, "block");
 
         parameterControls.forEach(function (control) {
             var element = control.getElement();
@@ -382,7 +393,7 @@ function ScriptController(processId) {
                     }
                 };
 
-                inputPanel.style.display = "block";
+                show(inputPanel, "block");
                 inputField.focus();
             }
         });

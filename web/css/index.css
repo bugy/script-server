@@ -14,6 +14,10 @@ html {
     flex-direction: row;
 }
 
+#scriptsList {
+    border-right: 1px solid #C8C8C8;
+}
+
 #scripts {
     width: 300px;
 }
@@ -21,8 +25,6 @@ html {
 #contentPanel {
     flex: 1;
     height: 100%;
-
-    border-left: 1px solid #C8C8C8;
 
     display: flex;
     flex-direction: column;
