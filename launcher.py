@@ -232,7 +232,8 @@ application = tornado.web.Application([
     (r"/scripts/execute", ScriptExecute),
     (r"/scripts/execute/stop", ScriptStop),
     (r"/scripts/execute/io/(.*)", ScriptStreamsSocket),
-    (r"/(.*)", tornado.web.StaticFileHandler, {"path": "web", "default_filename": "index.html"})
+    (r"/", tornado.web.RedirectHandler, {"url": "/index.html"}),
+    (r"/(.*)", tornado.web.StaticFileHandler, {"path": "web"})
 ])
 
 
