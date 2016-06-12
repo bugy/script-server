@@ -68,9 +68,14 @@ function initLogPanel() {
     var logPanel = document.getElementById("logPanel");
 
     hide(logPanel);
+
+    var wasBottom = true;
     logPanel.onscroll = function () {
-        var shadowTop = (logPanel.scrollTop > 0);
-        var shadowBottom = (logPanel.scrollTop + logPanel.clientHeight) < (logPanel.scrollHeight - 1);
+        var isTop = logPanel.scrollTop == 0;
+        var isBottom = (logPanel.scrollTop + logPanel.clientHeight + 1) > (logPanel.scrollHeight);
+
+        var shadowTop = !isTop;
+        var shadowBottom = !isBottom;
 
         if (shadowTop && shadowBottom) {
             addClass(logPanel, "shadow-top-bottom");
@@ -89,7 +94,26 @@ function initLogPanel() {
             removeClass(logPanel, "shadow-top");
             removeClass(logPanel, "shadow-bottom");
         }
+
+        wasBottom = isBottom;
     };
+
+    var autoScroll = function (mutations) {
+        if (wasBottom) {
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+    };
+
+    var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+    var observer = new MutationObserver(autoScroll);
+
+    window.addEventListener('resize', function (event) {
+        autoScroll([]);
+        logPanel.onscroll();
+    });
+
+    var config = {attributes: false, subtree: true, childList: false, characterData: true};
+    observer.observe(logPanel, config);
 }
 
 function initStopButton() {
@@ -374,7 +398,6 @@ function ScriptController(processId) {
 
             if (eventType == "output") {
                 logPanel.innerText += data;
-                logPanel.onscroll();
                 return;
             }
 
