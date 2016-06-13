@@ -397,7 +397,8 @@ function ScriptController(processId) {
             var data = response.data;
 
             if (eventType == "output") {
-                logPanel.innerText += data;
+                var textNode = document.createTextNode(data);
+                logPanel.appendChild(textNode);
                 return;
             }
 
