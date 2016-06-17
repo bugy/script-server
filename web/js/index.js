@@ -72,7 +72,7 @@ function initLogPanel() {
     var wasBottom = true;
     logPanel.onscroll = function () {
         var isTop = logPanel.scrollTop == 0;
-        var isBottom = (logPanel.scrollTop + logPanel.clientHeight + 1) > (logPanel.scrollHeight);
+        var isBottom = (logPanel.scrollTop + logPanel.clientHeight + 5) > (logPanel.scrollHeight);
 
         var shadowTop = !isTop;
         var shadowBottom = !isBottom;
@@ -98,21 +98,31 @@ function initLogPanel() {
         wasBottom = isBottom;
     };
 
-    var autoScroll = function (mutations) {
-        if (wasBottom) {
+    var mouseDown = false;
+    logPanel.onmousedown = function () {
+        mouseDown = true;
+    };
+
+    logPanel.onmouseup = function () {
+        mouseDown = false;
+    };
+
+    var updateScroll = function (mutations) {
+        if ((wasBottom) && (!mouseDown)) {
             logPanel.scrollTop = logPanel.scrollHeight;
+        } else {
+            logPanel.onscroll();
         }
     };
 
     var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-    var observer = new MutationObserver(autoScroll);
+    var observer = new MutationObserver(updateScroll);
 
     window.addEventListener('resize', function (event) {
-        autoScroll([]);
-        logPanel.onscroll();
+        updateScroll([]);
     });
 
-    var config = {attributes: false, subtree: true, childList: false, characterData: true};
+    var config = {attributes: false, subtree: true, childList: true, characterData: true};
     observer.observe(logPanel, config);
 }
 
