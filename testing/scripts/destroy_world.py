@@ -54,18 +54,18 @@ for i, section in enumerate(sections):
     if i < (len(sections) - 1):
         print()
 
-        # correct_answer = None
-        # print("Want to continue? Y/N")
-        # while correct_answer is None:
-        #    answer = input()
-        #    if not (answer in ["Y", "N"]):
-        #        print("put correct answer")
-        #    else:
-        #       correct_answer = answer
+        correct_answer = None
+        print("Want to continue? Y/N")
+        while correct_answer is None:
+            answer = input()
+            if not (answer in ["Y", "N"]):
+                print("put correct answer")
+            else:
+                correct_answer = answer
 
-        # if correct_answer == "Y":
-        #    # just continuing
-        #    pass
-        # elif correct_answer == "N":
-        #    print("Bye bye!")
-        #    break
+        if correct_answer == "Y":
+            # just continuing
+            pass
+        elif correct_answer == "N":
+            print("Bye bye!")
+            break
