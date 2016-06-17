@@ -54,11 +54,17 @@ def read_file(filename):
 def write_file(filename, content):
     path = normalize_path(filename)
 
-    if not os.path.exists(os.path.dirname(path)):
-        os.makedirs(os.path.dirname(path))
+    prepare_folder(os.path.dirname(path))
 
     with open(path, "w") as file:
         file.write(content)
+
+
+def prepare_folder(folder_path):
+    path = normalize_path(folder_path)
+
+    if not os.path.exists(os.path.dirname(path)):
+        os.makedirs(path)
 
 
 def make_executable(filename):

@@ -3,6 +3,7 @@ import logging
 import logging.config
 import os
 import threading
+from datetime import date
 
 import tornado.escape
 import tornado.httpserver as httpserver
@@ -216,14 +217,24 @@ def wrap_to_server_event(event_type, data):
 
 
 def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, write_callback):
-    while True:
-        process_output = process_wrapper.read()
+    date_string = date.today().strftime("%y%m%d")
+    logger_name = 'process_' + str(process_wrapper.get_process_id()) + "_" + date_string
 
-        if process_output is not None:
-            write_callback(wrap_script_output(process_output))
-        else:
-            if process_wrapper.is_finished():
-                break
+    log_file = open("logs/processes/" + logger_name + '.log', "w")
+
+    try:
+        while True:
+            process_output = process_wrapper.read()
+
+            if process_output is not None:
+                write_callback(wrap_script_output(process_output))
+                log_file.write(process_output)
+                log_file.flush()
+            else:
+                if process_wrapper.is_finished():
+                    break
+    finally:
+        log_file.close()
 
 
 application = tornado.web.Application([
@@ -240,6 +251,8 @@ application = tornado.web.Application([
 def main():
     with open("logging.json", "rt") as f:
         config = json.load(f)
+        file_utils.prepare_folder("logs/processes")
+
         logging.config.dictConfig(config)
 
     http_server = httpserver.HTTPServer(application)
