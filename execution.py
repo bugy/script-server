@@ -24,6 +24,9 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
         read_output_thread = threading.Thread(target=self.pipe_process_output, args=())
         read_output_thread.start()
 
+        notify_finish_thread = threading.Thread(target=self.notify_finished)
+        notify_finish_thread.start()
+
     @abc.abstractmethod
     def pipe_process_output(self):
         pass
@@ -34,6 +37,10 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def write_to_input(self, value):
+        pass
+
+    @abc.abstractmethod
+    def wait_finish(self):
         pass
 
     def get_process_id(self):
@@ -67,17 +74,21 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
                 return result
             except queue.Empty:
                 if self.is_finished():
-                    for listener in self.finish_listeners:
-                        listener.finished()
-
                     break
 
     def add_finish_listener(self, listener):
         self.finish_listeners.append(listener)
 
+    def notify_finished(self):
+        self.wait_finish()
+
+        for listener in self.finish_listeners:
+            listener.finished()
+
 
 class PtyProcessWrapper(ProcessWrapper):
     pty_master = None
+    pty_slave = None
     encoding = None
 
     def __init__(self, command, command_identifier):
@@ -105,6 +116,9 @@ class PtyProcessWrapper(ProcessWrapper):
 
         os.write(self.pty_master, input_value.encode())
 
+    def wait_finish(self):
+        self.process.wait()
+
     def pipe_process_output(self):
         try:
 
@@ -116,7 +130,7 @@ class PtyProcessWrapper(ProcessWrapper):
 
                 if self.is_finished():
                     data = b""
-                    while (True):
+                    while True:
                         chunk = os.read(self.pty_master, max_read_bytes)
                         data += chunk
 
@@ -176,6 +190,9 @@ class POpenProcessWrapper(ProcessWrapper):
 
         self.process.stdin.write(input_value)
         self.process.stdin.flush()
+
+    def wait_finish(self):
+        self.process.wait()
 
     def pipe_process_output(self):
         while True:

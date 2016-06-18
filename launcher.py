@@ -132,6 +132,7 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 
         class FinishListener(object):
             def finished(self):
+                reading_thread.join()
                 web_socket.close()
 
         self.process_wrapper.add_finish_listener(FinishListener())
