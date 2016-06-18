@@ -2,6 +2,7 @@ import abc
 import os
 import pty
 import queue
+import signal
 import subprocess
 import sys
 import threading
@@ -51,13 +52,26 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
     def stop(self):
         if not self.is_finished():
-            self.output.put(">> STOPPED BY USER")
-            self.process.terminate()
+            group_id = os.getpgid(self.get_process_id())
+            os.killpg(group_id, signal.SIGTERM)
+
+            class KillChildren(object):
+                def finished(self):
+                    try:
+                        os.killpg(group_id, signal.SIGKILL)
+                    except ProcessLookupError:
+                        # probably there are no children left
+                        pass
+
+            self.add_finish_listener(KillChildren())
+
+            self.output.put("\n>> STOPPED BY USER\n")
 
     def kill(self):
         if not self.is_finished():
-            self.output.put(">> KILLED")
-            self.process.kill()
+            group_id = os.getpgid(self.get_process_id())
+            os.killpg(group_id, signal.SIGKILL)
+            self.output.put("\n>> KILLED\n")
 
     def read(self):
         while True:
@@ -105,6 +119,7 @@ class PtyProcessWrapper(ProcessWrapper):
                                         stdin=slave,
                                         stdout=slave,
                                         stderr=slave,
+                                        start_new_session=True,
                                         close_fds=True)
         self.pty_slave = slave
         self.pty_master = master
@@ -179,6 +194,7 @@ class POpenProcessWrapper(ProcessWrapper):
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
                                         close_fds=True,
+                                        start_new_session=True,
                                         universal_newlines=True)
 
     def write_to_input(self, value):
