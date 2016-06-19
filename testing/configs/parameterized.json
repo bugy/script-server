@@ -8,7 +8,8 @@
       "name": "TextParam1",
       "param": "-p1",
       "description": "Parameter One",
-      "required": true
+      "required": true,
+      "default": "Some default value"
     },
     {
       "name": "TextParam2",
@@ -35,7 +36,8 @@
       "name": "BoolParam2",
       "param": "--b2",
       "no_value": true,
-      "description": "Boolean Two"
+      "description": "Boolean Two",
+      "default": true
     },
     {
       "name": "BoolParam3",

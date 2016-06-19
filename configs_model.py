@@ -41,6 +41,7 @@ class Parameter(object):
     no_value = None
     description = None
     required = None
+    default = None
 
     def get_name(self):
         return self.name
@@ -71,6 +72,12 @@ class Parameter(object):
 
     def is_required(self):
         return self.required
+
+    def set_default(self, value):
+        self.default = value
+
+    def get_default(self):
+        return self.default
 
 
 def from_json(file_path, json_string):
@@ -107,6 +114,7 @@ def from_json(file_path, json_string):
             parameter.set_no_value(parameter_json.get("no_value"))
             parameter.set_description(parameter_json.get("description"))
             parameter.set_required(parameter_json.get("required"))
+            parameter.set_default(parameter_json.get("default"))
 
             config.add_parameter(parameter)
 

@@ -25,7 +25,8 @@ def config_to_json(config):
             "name": parameter.get_name(),
             "description": parameter.get_description(),
             "withoutValue": parameter.is_no_value(),
-            "required": parameter.is_required()
+            "required": parameter.is_required(),
+            "default": parameter.get_default()
         })
 
     return json.dumps({

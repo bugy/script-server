@@ -277,15 +277,20 @@ function createParameterControl(parameter) {
     addClass(panel, "input-field");
 
     var getValue = null;
+    var label = null;
 
     if (parameter.withoutValue) {
-        var label = document.createElement("label");
+        label = document.createElement("label");
         label.setAttribute("for", parameter.name);
         label.innerText = parameter.name;
 
         var checkBox = document.createElement("input");
         checkBox.id = parameter.name;
         checkBox.type = "checkbox";
+
+        if (!isNull(parameter.default)) {
+            checkBox.checked = parameter.default;
+        }
 
         getValue = function () {
             return checkBox.checked;
@@ -295,7 +300,7 @@ function createParameterControl(parameter) {
         panel.appendChild(label);
 
     } else {
-        var label = document.createElement("label");
+        label = document.createElement("label");
         label.setAttribute("for", parameter.name);
         label.innerText = parameter.name;
 
@@ -303,7 +308,12 @@ function createParameterControl(parameter) {
         field.id = parameter.name;
         field.type = "text";
 
-        var getValue = function () {
+        if (!isNull(parameter.default)) {
+            addClass(label, "active");
+            field.value = parameter.default;
+        }
+
+        getValue = function () {
             return field.value;
         };
 
