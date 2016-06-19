@@ -88,7 +88,7 @@ def from_json(file_path, json_string):
         else:
             raise Exception("'requires_terminal' parameter should be True or False")
     else:
-        config.requires_terminal = False
+        config.requires_terminal = True
 
     parameters_json = json_object.get("parameters")
 

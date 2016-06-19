@@ -2,7 +2,6 @@
   "name": "Write to file",
   "script_path": "./testing/scripts/my_script.sh",
   "description": "This script does very simple change, putting \"I'm called\" into user home simple.txt file",
-  "requires_terminal": "true",
   "parameters": [
     {
       "name": "text",
