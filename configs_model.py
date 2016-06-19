@@ -40,6 +40,7 @@ class Parameter(object):
     param = None
     no_value = None
     description = None
+    required = None
 
     def get_name(self):
         return self.name
@@ -64,6 +65,12 @@ class Parameter(object):
 
     def set_description(self, value):
         self.description = value
+
+    def set_required(self, value):
+        self.required = value
+
+    def is_required(self):
+        return self.required
 
 
 def from_json(file_path, json_string):
@@ -99,6 +106,7 @@ def from_json(file_path, json_string):
             parameter.set_param(parameter_json.get("param"))
             parameter.set_no_value(parameter_json.get("no_value"))
             parameter.set_description(parameter_json.get("description"))
+            parameter.set_required(parameter_json.get("required"))
 
             config.add_parameter(parameter)
 

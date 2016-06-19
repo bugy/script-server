@@ -141,6 +141,32 @@ function initExecuteButton() {
     executeButton.onclick = function (e) {
         var logPanel = document.getElementById("logPanel");
         var inputPanel = document.getElementById("inputPanel");
+        var errorsPanel = document.getElementById("errorsPanel");
+        var errorsList = document.getElementById("errorsList");
+
+        destroyChildren(errorsList);
+
+        var errors = {};
+        parameterControls.forEach(function (control) {
+            if (!control.isValid()) {
+                errors[control.getParameterName()] = control.getValidationError();
+            }
+        });
+
+        if (!isEmpty(errors)) {
+            show(errorsPanel, "block");
+
+            for (parameter in errors) {
+                var errorLabel = document.createElement("li");
+                errorLabel.innerText = parameter + ": " + errors[parameter];
+                errorsList.appendChild(errorLabel);
+            }
+
+            hide(logPanel);
+            return;
+        }
+
+        hide(errorsPanel);
 
         logPanel.innerText = "Calling the script...";
         show(logPanel, "block");
@@ -197,7 +223,7 @@ function showScript(activeScript) {
     scriptDescription.innerText = parsedInfo.description;
 
     var paramsPanel = document.getElementById("parametersPanel");
-    paramsPanel.innerHTML = "";
+    destroyChildren(paramsPanel);
 
     parameterControls = [];
     if (!isNull(parsedInfo.parameters)) {
@@ -220,6 +246,10 @@ function showScript(activeScript) {
         hide(paramsPanel);
     }
 
+    var errorsPanel = document.getElementById("errorsPanel");
+    hide(errorsPanel);
+    var errorsList = document.getElementById("errorsList");
+    destroyChildren(errorsList);
 
     var logPanel = document.getElementById("logPanel");
     hide(logPanel);
@@ -236,6 +266,13 @@ function showScript(activeScript) {
 }
 
 function createParameterControl(parameter) {
+    var getValidationError = function () {
+        return "";
+    };
+    var isValid = function () {
+        return true;
+    };
+
     var panel = document.createElement("div");
     addClass(panel, "input-field");
 
@@ -266,9 +303,53 @@ function createParameterControl(parameter) {
         field.id = parameter.name;
         field.type = "text";
 
-        getValue = function () {
+        var getValue = function () {
             return field.value;
         };
+
+        isValid = function () {
+            if (!parameter.required) {
+                return true;
+            }
+
+            var value = getValue();
+            if (isNull(value) || value.trim().length == 0) {
+                return false;
+            }
+
+            return true;
+        };
+
+        getValidationError = function () {
+            if (!parameter.required) {
+                return "";
+            }
+
+            var value = getValue();
+            if (isNull(value) || value.trim().length == 0) {
+                return "required";
+            }
+
+            return "";
+        };
+
+        if (parameter.required) {
+            field.setAttribute("required", "");
+            addClass(field, "validate");
+
+            var validate = function () {
+                if (isValid()) {
+                    field.setCustomValidity("");
+                    panel.removeAttribute("data-error");
+                } else {
+                    var error = getValidationError();
+                    field.setCustomValidity(error);
+                    panel.setAttribute("data-error", error);
+                }
+            };
+            addInputListener(field, validate);
+            validate();
+        }
 
         panel.appendChild(field);
         panel.appendChild(label);
@@ -283,7 +364,10 @@ function createParameterControl(parameter) {
 
         this.getParameterName = function () {
             return parameter.name;
-        }
+        };
+
+        this.isValid = isValid;
+        this.getValidationError = getValidationError;
     };
 }
 
@@ -298,6 +382,12 @@ function selectScript(scriptName) {
 
 function isNull(object) {
     return ((typeof object) == 'undefined' || (object == null));
+}
+
+function destroyChildren(element) {
+    while (element.firstChild) {
+        element.removeChild(element.firstChild);
+    }
 }
 
 function callHttp(url, object, method, asyncHandler) {
@@ -374,6 +464,20 @@ function setButtonEnabled(button, enabled) {
     } else {
         removeClass(button, "disabled");
     }
+}
+
+function addInputListener(element, callback) {
+    element.oninput = callback;
+}
+
+function isEmpty(obj) {
+    for (var prop in obj) {
+        if (obj.hasOwnProperty(prop)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 function ScriptController(processId) {
