@@ -9,7 +9,7 @@ class Config(object):
     description = None
     requires_terminal = None
     parameters = None
-    type = None
+    working_directory = None
 
     def __init__(self):
         self.parameters = []
@@ -34,6 +34,9 @@ class Config(object):
 
     def get_parameters(self):
         return self.parameters
+
+    def get_working_directory(self):
+        return self.working_directory
 
 
 class Parameter(object):
@@ -114,6 +117,7 @@ def from_json(file_path, json_string):
 
     config.script_path = json_object.get("script_path")
     config.description = json_object.get("description")
+    config.working_directory = json_object.get("working_directory")
 
     requires_terminal = json_object.get("requires_terminal")
     if requires_terminal is not None:

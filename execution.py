@@ -17,8 +17,8 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     command_identifier = None
     finish_listeners = []
 
-    def __init__(self, command, command_identifier):
-        self.init_process(command)
+    def __init__(self, command, command_identifier, working_directory):
+        self.init_process(command, working_directory)
 
         self.output = queue.Queue()
 
@@ -33,7 +33,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def init_process(self, command):
+    def init_process(self, command, working_directory):
         pass
 
     @abc.abstractmethod
@@ -105,17 +105,18 @@ class PtyProcessWrapper(ProcessWrapper):
     pty_slave = None
     encoding = None
 
-    def __init__(self, command, command_identifier):
-        ProcessWrapper.__init__(self, command, command_identifier)
+    def __init__(self, command, command_identifier, working_directory):
+        ProcessWrapper.__init__(self, command, command_identifier, working_directory)
 
         if command_identifier in script_encodings:
             self.encoding = script_encodings[command_identifier]
         else:
             self.encoding = sys.stdout.encoding
 
-    def init_process(self, command):
+    def init_process(self, command, working_directory):
         master, slave = pty.openpty()
         self.process = subprocess.Popen(command,
+                                        cwd=working_directory,
                                         stdin=slave,
                                         stdout=slave,
                                         stderr=slave,
@@ -185,11 +186,12 @@ class PtyProcessWrapper(ProcessWrapper):
 
 
 class POpenProcessWrapper(ProcessWrapper):
-    def __init__(self, command, command_identifier):
-        ProcessWrapper.__init__(self, command, command_identifier)
+    def __init__(self, command, command_identifier, working_directory):
+        ProcessWrapper.__init__(self, command, command_identifier, working_directory)
 
-    def init_process(self, command):
+    def init_process(self, command, working_directory):
         self.process = subprocess.Popen(command,
+                                        cwd=working_directory,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,

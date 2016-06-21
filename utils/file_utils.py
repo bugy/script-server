@@ -27,13 +27,17 @@ def is_root(path):
     return os.path.dirname(path) == path
 
 
-def normalize_path(path_string):
+def normalize_path(path_string, current_folder=None):
     path_string = os.path.expanduser(path_string)
 
     if os.path.isabs(path_string):
         return path_string
 
-    path = pathlib.Path(path_string)
+    if current_folder:
+        path = pathlib.Path(normalize_path(current_folder))
+        path = path.joinpath(path_string)
+    else:
+        path = pathlib.Path(path_string)
 
     if path.exists():
         path = path.resolve()

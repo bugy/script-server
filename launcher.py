@@ -165,7 +165,12 @@ class ScriptExecute(tornado.web.RequestHandler):
             if not config:
                 respond_error(self, 400, "Script with name '" + str(script_name) + "' not found")
 
-            script_path = file_utils.normalize_path(config.get_script_path())
+            working_directory = config.get_working_directory()
+            if working_directory is not None:
+                working_directory = file_utils.normalize_path(working_directory)
+
+            script_path = file_utils.normalize_path(config.get_script_path(), working_directory)
+
             script_args = build_parameter_string(execution_info.get_param_values(), config)
 
             command = []
@@ -176,9 +181,11 @@ class ScriptExecute(tornado.web.RequestHandler):
             script_logger.info("Calling script: " + " ".join(command))
 
             if config.is_requires_terminal():
-                self.process_wrapper = execution.PtyProcessWrapper(command, config.get_name())
+                self.process_wrapper = execution.PtyProcessWrapper(command, config.get_name(),
+                                                                   working_directory)
             else:
-                self.process_wrapper = execution.POpenProcessWrapper(command, config.get_name())
+                self.process_wrapper = execution.POpenProcessWrapper(command, config.get_name(),
+                                                                     working_directory)
 
             process_id = self.process_wrapper.get_process_id()
 
