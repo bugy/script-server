@@ -26,7 +26,10 @@ def config_to_json(config):
             "description": parameter.get_description(),
             "withoutValue": parameter.is_no_value(),
             "required": parameter.is_required(),
-            "default": parameter.get_default()
+            "default": parameter.get_default(),
+            "type": parameter.get_type(),
+            "min": parameter.get_min(),
+            "max": parameter.get_max()
         })
 
     return json.dumps({

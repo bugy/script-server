@@ -9,6 +9,7 @@ class Config(object):
     description = None
     requires_terminal = None
     parameters = None
+    type = None
 
     def __init__(self):
         self.parameters = []
@@ -42,6 +43,9 @@ class Parameter(object):
     description = None
     required = None
     default = None
+    type = "text"
+    min = None
+    max = None
 
     def get_name(self):
         return self.name
@@ -79,6 +83,24 @@ class Parameter(object):
     def get_default(self):
         return self.default
 
+    def set_type(self, value):
+        self.type = value
+
+    def get_type(self):
+        return self.type
+
+    def set_min(self, value):
+        self.min = value
+
+    def get_min(self):
+        return self.min
+
+    def set_max(self, value):
+        self.max = value
+
+    def get_max(self):
+        return self.max
+
 
 def from_json(file_path, json_string):
     json_object = json.loads(json_string)
@@ -115,6 +137,12 @@ def from_json(file_path, json_string):
             parameter.set_description(parameter_json.get("description"))
             parameter.set_required(parameter_json.get("required"))
             parameter.set_default(parameter_json.get("default"))
+            parameter.set_min(parameter_json.get("min"))
+            parameter.set_max(parameter_json.get("max"))
+
+            type = parameter_json.get("type")
+            if type:
+                parameter.set_type(type)
 
             config.add_parameter(parameter)
 

@@ -12,14 +12,20 @@
       "default": "Some default value"
     },
     {
-      "name": "TextParam2",
+      "name": "IntParam2",
       "param": "-p2",
-      "description": "Parameter Two"
+      "description": "Parameter Two",
+      "type": "int"
     },
     {
-      "name": "TextParam3",
+      "name": "IntParam3",
       "param": "-p3",
-      "description": "Parameter Three"
+      "description": "Parameter Three",
+      "type": "int",
+      "required": "true",
+      "default": "5",
+      "min": "-1",
+      "max": "123"
     },
     {
       "name": "BoolParam1",

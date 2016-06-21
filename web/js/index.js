@@ -153,7 +153,7 @@ function initExecuteButton() {
             }
         });
 
-        if (!isEmpty(errors)) {
+        if (!isEmptyObject(errors)) {
             show(errorsPanel, "block");
 
             for (parameter in errors) {
@@ -270,7 +270,8 @@ function createParameterControl(parameter) {
         return "";
     };
     var isValid = function () {
-        return true;
+        var error = getValidationError();
+        return isEmptyString(error);
     };
 
     var panel = document.createElement("div");
@@ -308,6 +309,12 @@ function createParameterControl(parameter) {
         field.id = parameter.name;
         field.type = "text";
 
+        if (!isNull(parameter.type)) {
+            if (parameter.type == "int") {
+                field.type = "number";
+            }
+        }
+
         if (!isNull(parameter.default)) {
             addClass(label, "active");
             field.value = parameter.default;
@@ -317,27 +324,19 @@ function createParameterControl(parameter) {
             return field.value;
         };
 
-        isValid = function () {
-            if (!parameter.required) {
-                return true;
-            }
-
-            var value = getValue();
-            if (isNull(value) || value.trim().length == 0) {
-                return false;
-            }
-
-            return true;
-        };
-
         getValidationError = function () {
-            if (!parameter.required) {
-                return "";
+            var value = getValue();
+            var empty = isEmptyString(value) || isEmptyString(value.trim());
+
+            if (parameter.required && empty) {
+                return "required";
             }
 
-            var value = getValue();
-            if (isNull(value) || value.trim().length == 0) {
-                return "required";
+            if ((!empty) || (field.validity.badInput)) {
+                var typeError = getValidByTypeError(value, field.validity, parameter.type, parameter);
+                if (!isEmptyString(typeError)) {
+                    return typeError;
+                }
             }
 
             return "";
@@ -345,21 +344,22 @@ function createParameterControl(parameter) {
 
         if (parameter.required) {
             field.setAttribute("required", "");
-            addClass(field, "validate");
-
-            var validate = function () {
-                if (isValid()) {
-                    field.setCustomValidity("");
-                    panel.removeAttribute("data-error");
-                } else {
-                    var error = getValidationError();
-                    field.setCustomValidity(error);
-                    panel.setAttribute("data-error", error);
-                }
-            };
-            addInputListener(field, validate);
-            validate();
         }
+
+        addClass(field, "validate");
+
+        var validate = function () {
+            if (isValid()) {
+                field.setCustomValidity("");
+                panel.removeAttribute("data-error");
+            } else {
+                var error = getValidationError();
+                field.setCustomValidity(error);
+                panel.setAttribute("data-error", error);
+            }
+        };
+        addInputListener(field, validate);
+        validate();
 
         panel.appendChild(field);
         panel.appendChild(label);
@@ -480,7 +480,7 @@ function addInputListener(element, callback) {
     element.oninput = callback;
 }
 
-function isEmpty(obj) {
+function isEmptyObject(obj) {
     for (var prop in obj) {
         if (obj.hasOwnProperty(prop)) {
             return false;
@@ -488,6 +488,51 @@ function isEmpty(obj) {
     }
 
     return true;
+}
+
+function isEmptyString(value) {
+    return isNull(value) || value.length == 0;
+}
+
+function getValidByTypeError(value, validity, type, parameter) {
+    if (type == "int") {
+        var isInteger = /^(((\-?[1-9])(\d*))|0)$/.test(value);
+        if (!isInteger || validity.badInput) {
+            return "integer expected";
+        }
+
+        var intValue = parseInt(value);
+
+        var minMaxValid = true;
+        var minMaxError = "";
+        if (!isNull(parameter.min)) {
+            minMaxError += "min: " + parameter.min;
+
+            if (intValue < parseInt(parameter.min)) {
+                minMaxValid = false;
+            }
+        }
+
+        if (!isNull(parameter.max)) {
+            if (intValue > parseInt(parameter.max)) {
+                minMaxValid = false;
+            }
+
+            if (!isEmptyString(minMaxError)) {
+                minMaxError += ", ";
+            }
+
+            minMaxError += "max: " + parameter.max;
+        }
+
+        if (!minMaxValid) {
+            return minMaxError;
+        }
+
+        return "";
+    }
+
+    return "";
 }
 
 function ScriptController(processId) {

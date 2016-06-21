@@ -217,7 +217,8 @@ h6.header {
     margin: 0.5rem;
 }
 
-#parametersPanel input[type="text"]:invalid {
+#parametersPanel input[type="text"]:invalid,
+#parametersPanel input[type="number"]:invalid {
     border-bottom: 1px solid #e51c23;
     box-shadow: 0 1px 0 0 #e51c23;
 }
