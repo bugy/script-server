@@ -328,12 +328,16 @@ function createParameterControl(parameter) {
             var value = getValue();
             var empty = isEmptyString(value) || isEmptyString(value.trim());
 
+            if ((field.validity.badInput)) {
+                return getInvalidTypeError(parameter.type);
+            }
+
             if (parameter.required && empty) {
                 return "required";
             }
 
-            if ((!empty) || (field.validity.badInput)) {
-                var typeError = getValidByTypeError(value, field.validity, parameter.type, parameter);
+            if (!empty) {
+                var typeError = getValidByTypeError(value, parameter.type, parameter);
                 if (!isEmptyString(typeError)) {
                     return typeError;
                 }
@@ -494,11 +498,11 @@ function isEmptyString(value) {
     return isNull(value) || value.length == 0;
 }
 
-function getValidByTypeError(value, validity, type, parameter) {
+function getValidByTypeError(value, type, parameter) {
     if (type == "int") {
         var isInteger = /^(((\-?[1-9])(\d*))|0)$/.test(value);
-        if (!isInteger || validity.badInput) {
-            return "integer expected";
+        if (!isInteger) {
+            return getInvalidTypeError(type);
         }
 
         var intValue = parseInt(value);
@@ -533,6 +537,14 @@ function getValidByTypeError(value, validity, type, parameter) {
     }
 
     return "";
+}
+
+function getInvalidTypeError(type) {
+    if (type == "int") {
+        return "integer expected";
+    }
+
+    return type + " expected";
 }
 
 function ScriptController(processId) {
