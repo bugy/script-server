@@ -49,6 +49,7 @@ class Parameter(object):
     type = "text"
     min = None
     max = None
+    constant = False
 
     def get_name(self):
         return self.name
@@ -104,6 +105,12 @@ class Parameter(object):
     def get_max(self):
         return self.max
 
+    def set_constant(self, value):
+        self.constant = value
+
+    def is_constant(self):
+        return self.constant
+
 
 def from_json(file_path, json_string):
     json_object = json.loads(json_string)
@@ -147,6 +154,12 @@ def from_json(file_path, json_string):
             type = parameter_json.get("type")
             if type:
                 parameter.set_type(type)
+
+            constant = parameter_json.get("constant")
+            if constant == True:
+                if not parameter.get_default():
+                    raise Exception("Constant should have default value specified")
+                parameter.set_constant(constant)
 
             config.add_parameter(parameter)
 

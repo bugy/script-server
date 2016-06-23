@@ -21,6 +21,9 @@ class ExecutionInfo(object):
 def config_to_json(config):
     parameters = []
     for parameter in config.get_parameters():
+        if parameter.is_constant():
+            continue
+
         parameters.append({
             "name": parameter.get_name(),
             "description": parameter.get_description(),

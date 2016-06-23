@@ -75,6 +75,9 @@ def build_parameter_string(param_values, config):
     for parameter in config.get_parameters():
         name = parameter.get_name()
 
+        if parameter.is_constant():
+            param_values[parameter.name] = parameter.get_default()
+
         if name in param_values:
             value = param_values[name]
 

@@ -69,6 +69,13 @@
       "required": true
     },
     {
+      "name": "Constant1",
+      "description": "Constant value",
+      "param": "-c1",
+      "constant": true,
+      "default": "constOne"
+    },
+    {
       "name": "BoolParam5",
       "param": "--b5",
       "no_value": true,
