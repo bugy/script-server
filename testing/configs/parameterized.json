@@ -87,7 +87,6 @@
     },
     {
       "name": "TextParam8",
-      "param": "-p8",
       "description": "Parameter Eight"
     }
   ]

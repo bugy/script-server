@@ -84,7 +84,8 @@ def build_parameter_string(param_values, config):
                     result.append(parameter.get_param())
             else:
                 if value:
-                    result.append(parameter.get_param())
+                    if parameter.get_param():
+                        result.append(parameter.get_param())
 
                     result.append(value)
 
