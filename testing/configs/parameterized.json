@@ -58,9 +58,16 @@
       "description": "Boolean Four"
     },
     {
-      "name": "TextParam5",
+      "name": "ListParam1",
       "param": "-p5",
-      "description": "Parameter Five"
+      "description": "Parameter Five",
+      "type": "list",
+      "default": "val3",
+      "values": [
+        "val1",
+        "val3",
+        "some long value"
+      ]
     },
     {
       "name": "TextParam6",

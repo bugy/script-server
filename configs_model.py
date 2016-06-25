@@ -50,6 +50,7 @@ class Parameter(object):
     min = None
     max = None
     constant = False
+    values = None
 
     def get_name(self):
         return self.name
@@ -111,6 +112,12 @@ class Parameter(object):
     def is_constant(self):
         return self.constant
 
+    def set_values(self, value):
+        self.values = value
+
+    def get_values(self):
+        return self.values
+
 
 def from_json(file_path, json_string):
     json_object = json.loads(json_string)
@@ -150,6 +157,7 @@ def from_json(file_path, json_string):
             parameter.set_default(parameter_json.get("default"))
             parameter.set_min(parameter_json.get("min"))
             parameter.set_max(parameter_json.get("max"))
+            parameter.set_values(parameter_json.get("values"))
 
             type = parameter_json.get("type")
             if type:

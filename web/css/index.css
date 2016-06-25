@@ -232,3 +232,11 @@ h6.header {
     top: 23px;
     left: 0.75rem;
 }
+
+#parametersPanel .select-wrapper span.caret {
+    top: 2px;
+}
+
+#parametersPanel .select-wrapper + label {
+    top: -14px;
+}

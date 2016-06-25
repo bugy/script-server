@@ -1,9 +1,18 @@
+$.getScript("js/components/component.js");
+$.getScript("js/components/abstract_input.js");
+$.getScript("js/components/checkbox.js");
+$.getScript("js/components/textfield.js");
+$.getScript("js/components/combobox.js");
+
+
 var selectedScript = null;
 var scriptListeners = [];
-var parameterControls = [];
+var parameterControls;
 var runningScriptExecutor = null;
 
 function onLoad() {
+    parameterControls = new Hashtable();
+
     var response = callHttp("scripts/list");
 
     var scripts = JSON.parse(response);
@@ -147,9 +156,9 @@ function initExecuteButton() {
         destroyChildren(errorsList);
 
         var errors = {};
-        parameterControls.forEach(function (control) {
+        parameterControls.each(function (parameter, control) {
             if (!control.isValid()) {
-                errors[control.getParameterName()] = control.getValidationError();
+                errors[parameter.name] = control.getValidationError();
             }
         });
 
@@ -172,9 +181,9 @@ function initExecuteButton() {
         show(logPanel, "block");
 
         var callParameters = [];
-        parameterControls.forEach(function (control) {
+        parameterControls.each(function (parameter, control) {
             callParameters.push({
-                name: control.getParameterName(),
+                name: parameter.name,
                 value: control.getValue()
             })
         });
@@ -209,6 +218,10 @@ function show(element, displayStyle) {
 }
 
 function showScript(activeScript) {
+    parameterControls.each(function (parameter, control) {
+        control.onDestroy();
+    });
+
     var contentPanel = document.getElementById("contentPanel");
     show(contentPanel, "flex");
 
@@ -225,23 +238,25 @@ function showScript(activeScript) {
     var paramsPanel = document.getElementById("parametersPanel");
     destroyChildren(paramsPanel);
 
-    parameterControls = [];
+    parameterControls.clear();
     if (!isNull(parsedInfo.parameters)) {
         parsedInfo.parameters.forEach(function (parameter) {
             var control = createParameterControl(parameter);
-            parameterControls.push(control);
+            parameterControls.put(parameter, control);
         });
     }
 
-    if (parameterControls.length > 0) {
+    if (!parameterControls.isEmpty()) {
         show(paramsPanel, "block");
 
-        parameterControls.forEach(function (control) {
+        parsedInfo.parameters.forEach(function (parameter) {
+            var control = parameterControls.get(parameter);
             var element = control.getElement();
             addClass(element, "parameter");
 
             paramsPanel.appendChild(element);
-        })
+            control.onAdd();
+        });
     } else {
         hide(paramsPanel);
     }
@@ -266,123 +281,26 @@ function showScript(activeScript) {
 }
 
 function createParameterControl(parameter) {
-    var getValidationError = function () {
-        return "";
-    };
-    var isValid = function () {
-        var error = getValidationError();
-        return isEmptyString(error);
-    };
-
-    var panel = document.createElement("div");
-    addClass(panel, "input-field");
-
-    var getValue = null;
-    var label = null;
 
     if (parameter.withoutValue) {
-        label = document.createElement("label");
-        label.setAttribute("for", parameter.name);
-        label.innerText = parameter.name;
+        return new Checkbox(parameter.name, parameter.default);
 
-        var checkBox = document.createElement("input");
-        checkBox.id = parameter.name;
-        checkBox.type = "checkbox";
-
-        if (!isNull(parameter.default)) {
-            checkBox.checked = parameter.default;
-        }
-
-        getValue = function () {
-            return checkBox.checked;
-        };
-
-        panel.appendChild(checkBox);
-        panel.appendChild(label);
+    } else if (parameter.type == "list") {
+        return new Combobox(
+            parameter.name,
+            parameter.default,
+            parameter.required,
+            parameter.values);
 
     } else {
-        label = document.createElement("label");
-        label.setAttribute("for", parameter.name);
-        label.innerText = parameter.name;
-
-        var field = document.createElement("input");
-        field.id = parameter.name;
-        field.type = "text";
-
-        if (!isNull(parameter.type)) {
-            if (parameter.type == "int") {
-                field.type = "number";
-            }
-        }
-
-        if (!isNull(parameter.default)) {
-            addClass(label, "active");
-            field.value = parameter.default;
-        }
-
-        getValue = function () {
-            return field.value;
-        };
-
-        getValidationError = function () {
-            var value = getValue();
-            var empty = isEmptyString(value) || isEmptyString(value.trim());
-
-            if ((field.validity.badInput)) {
-                return getInvalidTypeError(parameter.type);
-            }
-
-            if (parameter.required && empty) {
-                return "required";
-            }
-
-            if (!empty) {
-                var typeError = getValidByTypeError(value, parameter.type, parameter);
-                if (!isEmptyString(typeError)) {
-                    return typeError;
-                }
-            }
-
-            return "";
-        };
-
-        if (parameter.required) {
-            field.setAttribute("required", "");
-        }
-
-        addClass(field, "validate");
-
-        var validate = function () {
-            if (isValid()) {
-                field.setCustomValidity("");
-                panel.removeAttribute("data-error");
-            } else {
-                var error = getValidationError();
-                field.setCustomValidity(error);
-                panel.setAttribute("data-error", error);
-            }
-        };
-        addInputListener(field, validate);
-        validate();
-
-        panel.appendChild(field);
-        panel.appendChild(label);
+        return new TextField(
+            parameter.name,
+            parameter.default,
+            parameter.required,
+            parameter.type,
+            parameter.min,
+            parameter.max);
     }
-
-    return new function () {
-        this.getElement = function () {
-            return panel;
-        };
-
-        this.getValue = getValue;
-
-        this.getParameterName = function () {
-            return parameter.name;
-        };
-
-        this.isValid = isValid;
-        this.getValidationError = getValidationError;
-    };
 }
 
 
@@ -458,10 +376,11 @@ function removeClass(element, clazz) {
 }
 
 function addClass(element, clazz) {
-    var className = element.className;
-    if (className.search("(\\s|^)" + clazz + "(\\s|$)") >= 0) {
+    if (hasClass(element, clazz)) {
         return;
     }
+
+    var className = element.className;
 
     if (!className.endsWith(" ")) {
         className += " ";
@@ -469,6 +388,10 @@ function addClass(element, clazz) {
     className += clazz;
 
     element.className = className;
+}
+
+function hasClass(element, clazz) {
+    return element.className.search("(\\s|^)" + clazz + "(\\s|$)") >= 0;
 }
 
 function setButtonEnabled(button, enabled) {
@@ -498,7 +421,7 @@ function isEmptyString(value) {
     return isNull(value) || value.length == 0;
 }
 
-function getValidByTypeError(value, type, parameter) {
+function getValidByTypeError(value, type, min, max) {
     if (type == "int") {
         var isInteger = /^(((\-?[1-9])(\d*))|0)$/.test(value);
         if (!isInteger) {
@@ -509,16 +432,16 @@ function getValidByTypeError(value, type, parameter) {
 
         var minMaxValid = true;
         var minMaxError = "";
-        if (!isNull(parameter.min)) {
-            minMaxError += "min: " + parameter.min;
+        if (!isNull(min)) {
+            minMaxError += "min: " + min;
 
-            if (intValue < parseInt(parameter.min)) {
+            if (intValue < parseInt(min)) {
                 minMaxValid = false;
             }
         }
 
-        if (!isNull(parameter.max)) {
-            if (intValue > parseInt(parameter.max)) {
+        if (!isNull(max)) {
+            if (intValue > parseInt(max)) {
                 minMaxValid = false;
             }
 
@@ -526,7 +449,7 @@ function getValidByTypeError(value, type, parameter) {
                 minMaxError += ", ";
             }
 
-            minMaxError += "max: " + parameter.max;
+            minMaxError += "max: " + max;
         }
 
         if (!minMaxValid) {
@@ -545,6 +468,30 @@ function getInvalidTypeError(type) {
     }
 
     return type + " expected";
+}
+
+function findNeighbour(element, tag) {
+    var tagLower = tag.toLowerCase();
+
+    var previous = element.previousSibling;
+    while (!isNull(previous)) {
+        if (previous.tagName.toLowerCase() == tagLower) {
+            return previous;
+        }
+
+        previous = previous.previousSibling;
+    }
+
+    var next = element.nextSibling;
+    while (!isNull(next)) {
+        if (next.tagName.toLowerCase() == tagLower) {
+            return next;
+        }
+
+        next = next.nextSibling;
+    }
+
+    return null;
 }
 
 function ScriptController(processId) {
