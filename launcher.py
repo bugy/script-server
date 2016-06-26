@@ -32,7 +32,12 @@ def read_configs():
     for config_path in configs:
         path = os.path.join(configs_dir, config_path)
         content = file_utils.read_file(path)
-        result.append(configs_model.from_json(path, content))
+        try:
+            script_config = configs_model.from_json(path, content)
+            result.append(script_config)
+        except:
+            logger = logging.getLogger("scriptServer")
+            logger.exception("Could not load script config: " + config_path)
 
     return result
 
