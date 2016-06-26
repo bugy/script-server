@@ -18,6 +18,8 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     finish_listeners = []
 
     def __init__(self, command, command_identifier, working_directory):
+        self.command_identifier = command_identifier
+
         self.init_process(command, working_directory)
 
         self.output = queue.Queue()
@@ -98,6 +100,9 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
         for listener in self.finish_listeners:
             listener.finished()
+
+    def get_command_identifier(self):
+        return self.command_identifier
 
 
 class PtyProcessWrapper(ProcessWrapper):

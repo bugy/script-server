@@ -3,7 +3,7 @@ import logging
 import logging.config
 import os
 import threading
-from datetime import date
+from datetime import datetime
 
 import tornado.escape
 import tornado.httpserver as httpserver
@@ -126,8 +126,13 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 
         self.write_message(wrap_script_output(" ---  OUTPUT  --- \n"))
 
+        remote_ip = self.request.remote_ip
+        command_identifier = self.process_wrapper.get_command_identifier()
+        log_identifier = self.create_log_identifier(remote_ip, command_identifier)
+
         reading_thread = threading.Thread(target=pipe_process_to_http, args=(
             self.process_wrapper,
+            log_identifier,
             self.safe_write
         ))
         reading_thread.start()
@@ -140,6 +145,12 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
                 web_socket.close()
 
         self.process_wrapper.add_finish_listener(FinishListener())
+
+    def create_log_identifier(self, remote_ip, command_identifier):
+        date_string = datetime.today().strftime("%y%m%d_%H%M%S")
+        command_identifier = command_identifier.replace(" ", "_")
+        log_identifier = command_identifier + "_" + remote_ip + "_" + date_string
+        return log_identifier
 
     def on_message(self, text):
         self.process_wrapper.write_to_input(text)
@@ -228,11 +239,13 @@ def wrap_to_server_event(event_type, data):
     })
 
 
-def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, write_callback):
-    date_string = date.today().strftime("%y%m%d")
-    logger_name = 'process_' + str(process_wrapper.get_process_id()) + "_" + date_string
+def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, log_identifier, write_callback):
+    script_logger = logging.getLogger("scriptServer")
 
-    log_file = open("logs/processes/" + logger_name + '.log', "w")
+    try:
+        log_file = open("logs/processes/" + log_identifier + '.log', "w")
+    except:
+        script_logger.exception("Couldn't create a log file")
 
     try:
         while True:
@@ -240,13 +253,23 @@ def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, write_callba
 
             if process_output is not None:
                 write_callback(wrap_script_output(process_output))
-                log_file.write(process_output)
-                log_file.flush()
+
+                try:
+                    if log_file:
+                        log_file.write(process_output)
+                        log_file.flush()
+                except:
+                    script_logger.exception("Couldn't write to the log file")
+
             else:
                 if process_wrapper.is_finished():
                     break
     finally:
-        log_file.close()
+        try:
+            if log_file:
+                log_file.close()
+        except:
+            script_logger.exception("Couldn't close the log file")
 
 
 application = tornado.web.Application([
