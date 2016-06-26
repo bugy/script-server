@@ -1,4 +1,5 @@
 import abc
+import fcntl
 import os
 import pty
 import queue
@@ -130,6 +131,8 @@ class PtyProcessWrapper(ProcessWrapper):
         self.pty_slave = slave
         self.pty_master = master
 
+        fcntl.fcntl(self.pty_master, fcntl.F_SETFL, os.O_NONBLOCK)
+
     def write_to_input(self, value):
         input_value = value
         if not input_value.endswith("\n"):
@@ -152,26 +155,35 @@ class PtyProcessWrapper(ProcessWrapper):
                 if self.is_finished():
                     data = b""
                     while True:
-                        chunk = os.read(self.pty_master, max_read_bytes)
-                        data += chunk
+                        try:
+                            chunk = os.read(self.pty_master, max_read_bytes)
+                            data += chunk
 
-                        if len(chunk) < max_read_bytes:
+                            if len(chunk) < max_read_bytes:
+                                break
+                        except BlockingIOError:
                             break
 
                     finished = True
 
                 else:
-                    data = os.read(self.pty_master, max_read_bytes)
-                    if data.endswith(b"\r"):
-                        data += os.read(self.pty_master, 1)
+                    data = ""
+                    try:
+                        data = os.read(self.pty_master, max_read_bytes)
+                        if data.endswith(b"\r"):
+                            data += os.read(self.pty_master, 1)
 
-                    if data and (self.encoding.lower() == "utf-8"):
-                        while data[len(data) - 1] >= 127:
-                            next_byte = os.read(self.pty_master, 1)
-                            if not next_byte:
-                                break
+                        if data and (self.encoding.lower() == "utf-8"):
 
-                            data += next_byte
+                            while data[len(data) - 1] >= 127:
+                                next_byte = os.read(self.pty_master, 1)
+                                if not next_byte:
+                                    break
+
+                                data += next_byte
+                    except BlockingIOError:
+                        if self.is_finished():
+                            finished = True
 
                     if not data:
                         wait_new_output = True
