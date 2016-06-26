@@ -16,11 +16,13 @@ import execution
 import external_model
 import utils.file_utils as file_utils
 
+CONFIGS_FOLDER = "configs"
+
 running_scripts = {}
 
 
 def read_configs():
-    configs_dir = "configs"
+    configs_dir = CONFIGS_FOLDER
     files = os.listdir(configs_dir)
 
     configs = [file for file in files if file.lower().endswith(".json")]
@@ -289,6 +291,8 @@ def main():
         file_utils.prepare_folder("logs/processes")
 
         logging.config.dictConfig(config)
+
+    file_utils.prepare_folder(CONFIGS_FOLDER)
 
     http_server = httpserver.HTTPServer(application)
     http_server.listen(5000)
