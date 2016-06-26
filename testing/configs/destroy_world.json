@@ -1,5 +1,5 @@
 {
   "script_path": "./testing/scripts/destroy_world.py",
   "description": "This is a very dangerous script, please be careful when running. Don't forget your protective helmet.",
-  "requires_terminal": "false"
+  "requires_terminal": false
 }

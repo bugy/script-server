@@ -135,9 +135,9 @@ def from_json(file_path, json_string):
 
     requires_terminal = json_object.get("requires_terminal")
     if requires_terminal is not None:
-        if requires_terminal.lower() == "true":
+        if requires_terminal == True:
             config.requires_terminal = True
-        elif requires_terminal.lower() == "false":
+        elif requires_terminal == False:
             config.requires_terminal = False
         else:
             raise Exception("'requires_terminal' parameter should be True or False")
