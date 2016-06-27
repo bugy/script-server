@@ -94,6 +94,15 @@
       "description": "Parameter Seven"
     },
     {
+      "name": "ListParam2",
+      "param": "-lp2",
+      "description": "List parameter 2",
+      "type": "list",
+      "values": {
+        "script": "ls /var"
+      }
+    },
+    {
       "name": "BoolParam6",
       "param": "--b6",
       "no_value": true,

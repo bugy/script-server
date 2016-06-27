@@ -1,6 +1,8 @@
 import json
 import os
 
+import utils.process_utils as process_utils
+
 
 class Config(object):
     config_path = None
@@ -119,15 +121,22 @@ class Parameter(object):
         return self.values
 
 
+def read_name(file_path, json_string):
+    json_object = json.loads(json_string)
+
+    name = json_object.get("name")
+    if not name:
+        filename = os.path.basename(file_path)
+        name = os.path.splitext(filename)[0]
+
+    return name
+
+
 def from_json(file_path, json_string):
     json_object = json.loads(json_string)
     config = Config()
 
-    config.file_path = file_path
-    config.name = json_object.get("name")
-    if not config.name:
-        filename = os.path.basename(file_path)
-        config.name = os.path.splitext(filename)[0]
+    config.name = read_name(file_path, json_string)
 
     config.script_path = json_object.get("script_path")
     config.description = json_object.get("description")
@@ -157,7 +166,20 @@ def from_json(file_path, json_string):
             parameter.set_default(parameter_json.get("default"))
             parameter.set_min(parameter_json.get("min"))
             parameter.set_max(parameter_json.get("max"))
-            parameter.set_values(parameter_json.get("values"))
+
+            values = parameter_json.get("values")
+            if values:
+                if isinstance(values, list):
+                    parameter.set_values(values)
+
+                elif "script" in values:
+                    script_output = process_utils.invoke(values["script"])
+                    script_output = script_output.rstrip("\n")
+                    derived_values = script_output.split("\n")
+                    parameter.set_values(derived_values)
+
+                else:
+                    raise Exception("Unsupported values")
 
             type = parameter_json.get("type")
             if type:

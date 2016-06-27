@@ -21,7 +21,38 @@ CONFIGS_FOLDER = "configs"
 running_scripts = {}
 
 
-def read_configs():
+def list_config_names():
+    def add_name(path, content):
+        try:
+            return configs_model.read_name(path, content)
+
+        except:
+            logger = logging.getLogger("scriptServer")
+            logger.exception("Could not load script name: " + path)
+
+    result = visit_configs(add_name)
+
+    return result
+
+
+def load_config(name):
+    def find_and_load(path, content):
+        try:
+            config_name = configs_model.read_name(path, content)
+            if config_name == name:
+                return configs_model.from_json(path, content)
+        except:
+            logger = logging.getLogger("scriptServer")
+            logger.exception("Could not load script config: " + path)
+
+    configs = visit_configs(find_and_load)
+    if configs:
+        return configs[0]
+
+    return None
+
+
+def visit_configs(visitor):
     configs_dir = CONFIGS_FOLDER
     files = os.listdir(configs_dir)
 
@@ -32,21 +63,19 @@ def read_configs():
     for config_path in configs:
         path = os.path.join(configs_dir, config_path)
         content = file_utils.read_file(path)
-        try:
-            script_config = configs_model.from_json(path, content)
-            result.append(script_config)
-        except:
-            logger = logging.getLogger("scriptServer")
-            logger.exception("Could not load script config: " + config_path)
+
+        visit_result = visitor(path, content)
+        if visit_result is not None:
+            result.append(visit_result)
 
     return result
 
 
 class GetScripts(tornado.web.RequestHandler):
     def get(self):
-        configs = read_configs()
+        config_names = list_config_names()
 
-        self.write(json.dumps([config.get_name() for config in configs]))
+        self.write(json.dumps(config_names))
 
 
 class GetScriptInfo(tornado.web.RequestHandler):
@@ -57,23 +86,13 @@ class GetScriptInfo(tornado.web.RequestHandler):
             respond_error(self, 400, "Script name is not specified")
             return
 
-        config = find_config_by_name(name)
+        config = load_config(name)
 
         if not config:
             respond_error(self, 400, "Couldn't find a script by name")
             return
 
         self.write(external_model.config_to_json(config))
-
-
-def find_config_by_name(name):
-    configs = read_configs()
-    config_by_name = None
-    for config in configs:
-        if config.get_name() == name:
-            config_by_name = config
-            break
-    return config_by_name
 
 
 def build_parameter_string(param_values, config):
@@ -182,7 +201,7 @@ class ScriptExecute(tornado.web.RequestHandler):
 
             script_name = execution_info.get_script()
 
-            config = find_config_by_name(script_name)
+            config = load_config(script_name)
 
             if not config:
                 respond_error(self, 400, "Script with name '" + str(script_name) + "' not found")
