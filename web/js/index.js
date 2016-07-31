@@ -1,8 +1,14 @@
-$.getScript("js/components/component.js");
-$.getScript("js/components/abstract_input.js");
-$.getScript("js/components/checkbox.js");
-$.getScript("js/components/textfield.js");
-$.getScript("js/components/combobox.js");
+function loadScript(scriptPath) {
+    var code = callHttp(scriptPath);
+
+    window.eval(code);
+}
+
+loadScript("js/components/component.js");
+loadScript("js/components/abstract_input.js");
+loadScript("js/components/checkbox.js");
+loadScript("js/components/textfield.js");
+loadScript("js/components/combobox.js");
 
 
 var selectedScript = null;
