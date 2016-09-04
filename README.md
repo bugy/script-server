@@ -122,12 +122,6 @@ Server will be running on 5000 port.
       * Description: int type only, lower value bound 
       * Type: string
       */
-      "max": "-1",
-      /**
-      * Required: no
-      * Description: int type only, lower value bound 
-      * Type: string
-      */
       "min": "-1",
       /**
       * Required: no
