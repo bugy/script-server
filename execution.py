@@ -96,6 +96,9 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     def add_finish_listener(self, listener):
         self.finish_listeners.append(listener)
 
+        if self.is_finished():
+            self.notify_finished()
+
     def notify_finished(self):
         self.wait_finish()
 
