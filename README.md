@@ -18,7 +18,7 @@ Completely no security! Use it only in local network for fully trusted users.
 Server will be running on 5000 port.
 
 ## Config structure
-```json
+```javascript
 {
   /**
     * Required: no
@@ -84,7 +84,7 @@ Server will be running on 5000 port.
       * Description: user-friendly description of the parameter, shown to the user (not yet implemented in GUI)
       * Type: string
       */
-      "description": "This parameter is used for filename,
+      "description": "This parameter is used for filename",
       /**
       * Required: no
       * Description: if the value of the parameter is required 
