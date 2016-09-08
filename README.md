@@ -8,7 +8,7 @@ Python 3. Modules:
 
 Potentially should work on any OS, but was tested on Debian 8 only. 
 
-## Secutiry
+## Security
 Completely no security! Use it only in local network for fully trusted users. 
 
 ## Setup and run
