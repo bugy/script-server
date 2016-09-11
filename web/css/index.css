@@ -164,7 +164,7 @@ html {
     width: 100%;
 }
 
-#errorsPanel {
+#validationPanel {
     overflow-y: auto;
     flex: 1;
 
@@ -174,11 +174,16 @@ html {
     margin-bottom: 7px;
 }
 
-#errorsList {
+#validationErrorsList {
     margin-left: 17px;
 }
 
-#errorsList li {
+#validationErrorsList li {
+    color: #F44336;
+}
+
+#errorPanel {
+    margin-left: 17px;
     color: #F44336;
 }
 

@@ -156,8 +156,8 @@ function initExecuteButton() {
     executeButton.onclick = function (e) {
         var logPanel = document.getElementById("logPanel");
         var inputPanel = document.getElementById("inputPanel");
-        var errorsPanel = document.getElementById("errorsPanel");
-        var errorsList = document.getElementById("errorsList");
+        var errorsPanel = document.getElementById("validationPanel");
+        var errorsList = document.getElementById("validationErrorsList");
 
         destroyChildren(errorsList);
 
@@ -231,46 +231,72 @@ function showScript(activeScript) {
     var contentPanel = document.getElementById("contentPanel");
     show(contentPanel, "flex");
 
-    var info = callHttp("scripts/info?name=" + activeScript);
-
-    var parsedInfo = JSON.parse(info);
-
+    var validationPanel = document.getElementById("validationPanel");
+    var validationErrorsList = document.getElementById("validationErrorsList");
+    var errorPanel = document.getElementById("errorPanel");
     var scriptHeader = document.getElementById("scriptHeader");
-    scriptHeader.innerText = parsedInfo.name;
-
     var scriptDescription = document.getElementById("scriptDescription");
-    scriptDescription.innerText = parsedInfo.description;
+    var stopButton = document.getElementById("stopButton");
+    var executeButton = document.getElementById("executeButton");
 
     var paramsPanel = document.getElementById("parametersPanel");
     destroyChildren(paramsPanel);
 
-    parameterControls.clear();
-    if (!isNull(parsedInfo.parameters)) {
-        parsedInfo.parameters.forEach(function (parameter) {
-            var control = createParameterControl(parameter);
-            parameterControls.put(parameter, control);
-        });
-    }
+    try {
+        var info = callHttp("scripts/info?name=" + activeScript);
 
-    if (!parameterControls.isEmpty()) {
-        show(paramsPanel, "block");
+        var parsedInfo = JSON.parse(info);
 
-        parsedInfo.parameters.forEach(function (parameter) {
-            var control = parameterControls.get(parameter);
-            var element = control.getElement();
-            addClass(element, "parameter");
+        scriptHeader.innerText = parsedInfo.name;
 
-            paramsPanel.appendChild(element);
-            control.onAdd();
-        });
-    } else {
+        scriptDescription.innerText = parsedInfo.description;
+        show(scriptDescription, "block");
+
+        parameterControls.clear();
+        if (!isNull(parsedInfo.parameters)) {
+            parsedInfo.parameters.forEach(function (parameter) {
+                var control = createParameterControl(parameter);
+                parameterControls.put(parameter, control);
+            });
+        }
+
+        if (!parameterControls.isEmpty()) {
+            show(paramsPanel, "block");
+
+            parsedInfo.parameters.forEach(function (parameter) {
+                var control = parameterControls.get(parameter);
+                var element = control.getElement();
+                addClass(element, "parameter");
+
+                paramsPanel.appendChild(element);
+                control.onAdd();
+            });
+        } else {
+            hide(paramsPanel);
+        }
+
+        hide(validationPanel);
+        destroyChildren(validationErrorsList);
+
+        show(stopButton, "inline");
+        show(executeButton, "inline");
+        setButtonEnabled(executeButton, true);
+        setButtonEnabled(stopButton, false);
+
+        hide(errorPanel);
+
+    } catch (error) {
+        scriptHeader.innerText = activeScript;
+
+        errorPanel.innerHTML = "Failed to load script info. Try to reload the page. Error message: <br> " + error.message;
+        show(errorPanel, "block");
+
         hide(paramsPanel);
+        hide(scriptDescription);
+        hide(validationPanel);
+        hide(stopButton);
+        hide(executeButton);
     }
-
-    var errorsPanel = document.getElementById("errorsPanel");
-    hide(errorsPanel);
-    var errorsList = document.getElementById("errorsList");
-    destroyChildren(errorsList);
 
     var logPanel = document.getElementById("logPanel");
     hide(logPanel);
@@ -278,12 +304,6 @@ function showScript(activeScript) {
 
     var inputPanel = document.getElementById("inputPanel");
     hide(inputPanel);
-
-    var stopButton = document.getElementById("stopButton");
-    var executeButton = document.getElementById("executeButton");
-
-    setButtonEnabled(executeButton, true);
-    setButtonEnabled(stopButton, false);
 }
 
 function createParameterControl(parameter) {
