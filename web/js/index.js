@@ -25,6 +25,10 @@ function onLoad() {
 
     var scriptsListElement = document.getElementById("scripts");
 
+    scripts.sort(function (name1, name2) {
+        return name1.toLowerCase().localeCompare(name2.toLowerCase());
+    });
+
     scripts.forEach(function (script) {
         var scriptElement = document.createElement("a");
 
