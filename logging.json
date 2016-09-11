@@ -28,6 +28,14 @@
         "file"
       ],
       "propagate": false
+    },
+    "execution": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file"
+      ],
+      "propagate": false
     }
   },
   "root": {

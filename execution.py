@@ -1,5 +1,6 @@
 import abc
 import fcntl
+import logging
 import os
 import pty
 import queue
@@ -200,6 +201,18 @@ class PtyProcessWrapper(ProcessWrapper):
 
                 if wait_new_output:
                     time.sleep(0.01)
+
+        except:
+            self.output.put("Unexpected error occurred. Contact the administrator.")
+
+            logger = logging.getLogger("execution")
+            try:
+                self.kill()
+            except:
+                logger.exception("PtyProcessWrapper. Failed to kill a process")
+
+            logger.exception("PtyProcessWrapper. Failed to read script output")
+
         finally:
             os.close(self.pty_master)
             os.close(self.pty_slave)
@@ -233,30 +246,42 @@ class POpenProcessWrapper(ProcessWrapper):
         self.process.wait()
 
     def pipe_process_output(self):
-        while True:
-            finished = False
-            wait_new_output = False
+        try:
+            while True:
+                finished = False
+                wait_new_output = False
 
-            if self.is_finished():
-                data = self.process.stdout.read()
+                if self.is_finished():
+                    data = self.process.stdout.read()
 
-                finished = True
+                    finished = True
 
-            else:
-                data = self.process.stdout.read(1)
+                else:
+                    data = self.process.stdout.read(1)
 
-                if not data:
-                    wait_new_output = True
+                    if not data:
+                        wait_new_output = True
 
-            if data:
-                output_text = data
-                self.output.put(output_text)
+                if data:
+                    output_text = data
+                    self.output.put(output_text)
 
-            if finished:
-                break
+                if finished:
+                    break
 
-            if wait_new_output:
-                time.sleep(0.01)
+                if wait_new_output:
+                    time.sleep(0.01)
+
+        except:
+            self.output.put("Unexpected error occurred. Contact the administrator.")
+
+            logger = logging.getLogger("execution")
+            try:
+                self.kill()
+            except:
+                logger.exception("POpenProcessWrapper. Failed to kill a process")
+
+            logger.exception("POpenProcessWrapper. Failed to read script output")
 
 
 def set_script_encoding(command_identifier, encoding):
