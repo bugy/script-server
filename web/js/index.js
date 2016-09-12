@@ -29,13 +29,18 @@ function onLoad() {
         return name1.toLowerCase().localeCompare(name2.toLowerCase());
     });
 
+    var scriptHashes = new Hashtable();
+
     scripts.forEach(function (script) {
         var scriptElement = document.createElement("a");
+
+        var scriptHash = script.replace(/\s/g, "_");
+        scriptHashes.put(scriptHash, script);
 
         addClass(scriptElement, "collection-item");
         addClass(scriptElement, "waves-effect");
         addClass(scriptElement, "waves-teal");
-        scriptElement.setAttribute("href", "#" + script);
+        scriptElement.setAttribute("href", "#" + scriptHash);
         scriptElement.onclick = function (e) {
             if (runningScriptExecutor != null) {
                 if (!runningScriptExecutor.isFinished()) {
@@ -74,8 +79,15 @@ function onLoad() {
     });
 
     var hash = getHash();
-    if ((hash != null) && (scripts.indexOf(hash) != -1)) {
-        selectScript(hash);
+    if (!isNull(hash)) {
+        var scriptName = scriptHashes.get(hash);
+        if (isNull(scriptName)) {
+            scriptName = hash;
+        }
+
+        if (scripts.indexOf(scriptName) != -1) {
+            selectScript(scriptName);
+        }
     }
 
     initLogPanel();
