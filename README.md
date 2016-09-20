@@ -3,8 +3,10 @@ This is a simple web-server for hosting and executing scripts on a machine, prov
 Using the script server you can create scripts on a machine with all the needed packages, configs, etc. All users will be able to execute the scripts without any system requirements (except browser) and in user-friendly interface.
 
 ## Requirements
-Python 3. Modules:
+Python 3.5+ with following modules:
 * Tornado
+* six
+* 
 
 Potentially should work on any OS, but was tested on Debian 8 only. 
 
@@ -41,7 +43,7 @@ Server will be running on 5000 port.
   "description": "Some useful description on what the script does",
   /**
     * Required: no
-    * Description: if the script should be run in emulated terminal (if it has special behaviour in terminal).
+    * Description: specifies, if the script should be run in pseudo terminal (if it has special behaviour in terminal). This works only for Linux, on other operating systems this flag will be ignored.
     * Type: boolean
     * Default: true
     */
