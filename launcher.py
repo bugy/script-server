@@ -47,7 +47,7 @@ def load_config(name):
         try:
             config_name = configs_model.read_name(path, content)
             if config_name == name:
-                return configs_model.from_json(path, content)
+                return configs_model.from_json(path, content, pty_supported)
         except:
             logger = logging.getLogger("scriptServer")
             logger.exception("Could not load script config: " + path)

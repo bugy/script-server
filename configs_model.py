@@ -132,7 +132,7 @@ def read_name(file_path, json_string):
     return name
 
 
-def from_json(file_path, json_string):
+def from_json(file_path, json_string, pty_enabled_default=False):
     json_object = json.loads(json_string)
     config = Config()
 
@@ -151,7 +151,7 @@ def from_json(file_path, json_string):
         else:
             raise Exception("'requires_terminal' parameter should be True or False")
     else:
-        config.requires_terminal = True
+        config.requires_terminal = pty_enabled_default
 
     parameters_json = json_object.get("parameters")
 
