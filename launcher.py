@@ -2,6 +2,7 @@ import json
 import logging
 import logging.config
 import os
+import sys
 import threading
 from datetime import datetime
 
@@ -13,6 +14,12 @@ import tornado.websocket
 
 import configs_model
 import execution
+import execution_popen
+
+pty_supported = (sys.platform == "linux" or sys.platform == "linux2")
+if pty_supported:
+    import execution_pty
+
 import external_model
 import utils.file_utils as file_utils
 
@@ -221,12 +228,20 @@ class ScriptExecute(tornado.web.RequestHandler):
             script_logger = logging.getLogger("scriptServer")
             script_logger.info("Calling script: " + " ".join(command))
 
-            if config.is_requires_terminal():
-                self.process_wrapper = execution.PtyProcessWrapper(command, config.get_name(),
-                                                                   working_directory)
+            run_pty = config.is_requires_terminal()
+            if run_pty and not pty_supported:
+                script_logger.warn(
+                    "Requested PTY mode, but it's not supported for this OS (" + sys.platform + "). Falling back to POpen")
+                run_pty = False
+
+            if run_pty:
+                self.process_wrapper = execution_pty.PtyProcessWrapper(command,
+                                                                       config.get_name(),
+                                                                       working_directory)
             else:
-                self.process_wrapper = execution.POpenProcessWrapper(command, config.get_name(),
-                                                                     working_directory)
+                self.process_wrapper = execution_popen.POpenProcessWrapper(command,
+                                                                           config.get_name(),
+                                                                           working_directory)
 
             process_id = self.process_wrapper.get_process_id()
 
