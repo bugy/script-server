@@ -3,12 +3,20 @@ This is a simple web-server for hosting and executing scripts on a machine, prov
 Using the script server you can create scripts on a machine with all the needed packages, configs, etc. All users will be able to execute the scripts without any system requirements (except browser) and in user-friendly interface.
 
 ## Requirements
+### Server-side
 Python 3.5+ with following modules:
 * Tornado
 * six
-* 
 
-Potentially should work on any OS, but was tested on Debian 8 only. 
+OS support:
+- Linux (main). Tested and working on Debian 8
+- Windows (additional). Light testing on Windows 7
+- MacOS (additional). Not tested. Most probably some fixes are needed
+
+### Client-side
+Any more or less up to date browser with enabled JS
+
+Internet connection is not needed. All the files are loaded from the server.
 
 ## Security
 Completely no security! Use it only in local network for fully trusted users. 
