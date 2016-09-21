@@ -3,6 +3,7 @@ import os
 import queue
 import signal
 import threading
+import sys
 
 
 class ProcessWrapper(metaclass=abc.ABCMeta):
@@ -48,26 +49,33 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
     def stop(self):
         if not self.is_finished():
-            group_id = os.getpgid(self.get_process_id())
-            os.killpg(group_id, signal.SIGTERM)
+            if not sys.platform.startswith('win'):
+                group_id = os.getpgid(self.get_process_id())
+                os.killpg(group_id, signal.SIGTERM)
 
-            class KillChildren(object):
-                def finished(self):
-                    try:
-                        os.killpg(group_id, signal.SIGKILL)
-                    except ProcessLookupError:
-                        # probably there are no children left
-                        pass
+                class KillChildren(object):
+                    def finished(self):
+                        try:
+                            os.killpg(group_id, signal.SIGKILL)
+                        except ProcessLookupError:
+                            # probably there are no children left
+                            pass
 
-            self.add_finish_listener(KillChildren())
+                self.add_finish_listener(KillChildren())
+
+            else:
+                self.process.terminate()
 
             self.output.put("\n>> STOPPED BY USER\n")
 
     def kill(self):
         if not self.is_finished():
-            group_id = os.getpgid(self.get_process_id())
-            os.killpg(group_id, signal.SIGKILL)
-            self.output.put("\n>> KILLED\n")
+            if not sys.platform.startswith('win'):
+                group_id = os.getpgid(self.get_process_id())
+                os.killpg(group_id, signal.SIGKILL)
+                self.output.put("\n>> KILLED\n")
+            else:
+                subprocess.Popen("taskkill /F /T /PID " + self.get_process_id())
 
     def read(self):
         while True:

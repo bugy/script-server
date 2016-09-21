@@ -15,7 +15,6 @@ class POpenProcessWrapper(execution.ProcessWrapper):
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
-                                        close_fds=True,
                                         start_new_session=True,
                                         universal_newlines=True)
 

@@ -184,6 +184,9 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
         self.process_wrapper.add_finish_listener(FinishListener())
 
     def create_log_identifier(self, remote_ip, command_identifier):
+        if sys.platform.startswith('win'):
+            remote_ip= remote_ip.replace(":", "-")
+
         date_string = datetime.today().strftime("%y%m%d_%H%M%S")
         command_identifier = command_identifier.replace(" ", "_")
         log_identifier = command_identifier + "_" + remote_ip + "_" + date_string
@@ -288,7 +291,7 @@ def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, log_identifi
     script_logger = logging.getLogger("scriptServer")
 
     try:
-        log_file = open("logs/processes/" + log_identifier + '.log', "w")
+        log_file = open(os.path.join("logs", "processes", log_identifier + ".log"), "w")
     except:
         script_logger.exception("Couldn't create a log file")
 
@@ -331,7 +334,7 @@ application = tornado.web.Application([
 def main():
     with open("logging.json", "rt") as f:
         config = json.load(f)
-        file_utils.prepare_folder("logs/processes")
+        file_utils.prepare_folder(os.path.join("logs", "processes"))
 
         logging.config.dictConfig(config)
 

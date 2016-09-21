@@ -35,8 +35,7 @@ class PtyProcessWrapper(execution.ProcessWrapper):
                                         stdin=slave,
                                         stdout=slave,
                                         stderr=slave,
-                                        start_new_session=True,
-                                        close_fds=True)
+                                        start_new_session=True)
         self.pty_slave = slave
         self.pty_master = master
 
