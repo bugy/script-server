@@ -543,7 +543,9 @@ function ScriptController(processId) {
     var executeButton = document.getElementById("executeButton");
     var stopButton = document.getElementById("stopButton");
 
-    var ws = new WebSocket("ws://" + window.location.host + "/scripts/execute/io/" + processId);
+    var https = location.protocol.toLowerCase() == "https:";
+    var wsProtocol = https ? "wss" : "ws";
+    var ws = new WebSocket(wsProtocol + "://" + window.location.host + "/scripts/execute/io/" + processId);
 
     var receivedData = false;
     var logPanel = document.getElementById("logPanel");

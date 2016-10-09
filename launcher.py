@@ -2,6 +2,7 @@ import json
 import logging
 import logging.config
 import os
+import ssl
 import sys
 import threading
 from datetime import datetime
@@ -12,9 +13,10 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
-import configs_model
 import execution
 import execution_popen
+import script_configs
+import web_conf
 
 pty_supported = (sys.platform == "linux" or sys.platform == "linux2")
 if pty_supported:
@@ -23,7 +25,9 @@ if pty_supported:
 import external_model
 import utils.file_utils as file_utils
 
-CONFIGS_FOLDER = "configs"
+CONFIG_FOLDER = "conf"
+WEB_CONF_PATH = os.path.join(CONFIG_FOLDER, "web.json")
+SCRIPT_CONFIGS_FOLDER = os.path.join(CONFIG_FOLDER, "runners")
 
 running_scripts = {}
 
@@ -31,13 +35,13 @@ running_scripts = {}
 def list_config_names():
     def add_name(path, content):
         try:
-            return configs_model.read_name(path, content)
+            return script_configs.read_name(path, content)
 
         except:
             logger = logging.getLogger("scriptServer")
             logger.exception("Could not load script name: " + path)
 
-    result = visit_configs(add_name)
+    result = visit_script_configs(add_name)
 
     return result
 
@@ -45,22 +49,22 @@ def list_config_names():
 def load_config(name):
     def find_and_load(path, content):
         try:
-            config_name = configs_model.read_name(path, content)
+            config_name = script_configs.read_name(path, content)
             if config_name == name:
-                return configs_model.from_json(path, content, pty_supported)
+                return script_configs.from_json(path, content, pty_supported)
         except:
             logger = logging.getLogger("scriptServer")
             logger.exception("Could not load script config: " + path)
 
-    configs = visit_configs(find_and_load)
+    configs = visit_script_configs(find_and_load)
     if configs:
         return configs[0]
 
     return None
 
 
-def visit_configs(visitor):
-    configs_dir = CONFIGS_FOLDER
+def visit_script_configs(visitor):
+    configs_dir = SCRIPT_CONFIGS_FOLDER
     files = os.listdir(configs_dir)
 
     configs = [file for file in files if file.lower().endswith(".json")]
@@ -331,10 +335,18 @@ def main():
 
         logging.config.dictConfig(config)
 
-    file_utils.prepare_folder(CONFIGS_FOLDER)
+    file_utils.prepare_folder(CONFIG_FOLDER)
+    file_utils.prepare_folder(SCRIPT_CONFIGS_FOLDER)
 
-    http_server = httpserver.HTTPServer(application)
-    http_server.listen(5000)
+    web_config = web_conf.from_json(WEB_CONF_PATH)
+    ssl_context = None
+    if web_config.is_ssl():
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(web_config.get_ssl_cert_path(),
+                                    web_config.get_ssl_key_path())
+
+    http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
+    http_server.listen(web_config.port)
     tornado.ioloop.IOLoop.current().start()
 
 

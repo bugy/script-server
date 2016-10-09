@@ -67,7 +67,7 @@ def write_file(filename, content):
 def prepare_folder(folder_path):
     path = normalize_path(folder_path)
 
-    if not os.path.exists(os.path.dirname(path)):
+    if not os.path.exists(path):
         os.makedirs(path)
 
 
