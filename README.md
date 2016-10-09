@@ -20,14 +20,20 @@ Internet connection is not needed. All the files are loaded from the server.
 
 ## Security
 Completely no security! Use it only in local network for fully trusted users. 
+### SSL
+Server can work over SSL, for this server key and certificate should be provided.
 
 ## Setup and run
 1. Clone/download the repository
-2. Create GUI configs for your scripts in _server-path_/configs folder (see config structure)
+2. Create GUI configs for your scripts in _server-path_/conf/runners/ folder (see script config structure)
 3. Launch server using python3: python launcher.py
-Server will be running on 5000 port.
+Server will be running on 5000 port, over HTTP protocol
+### Web config
+You can configure ssl and port, using conf/web.json file. This file should have correct json structure. All missing parameters will be replaced with defaults.
+It is allowed not to create this file. In this case default values will be used.
+See web config structure for details
 
-## Config structure
+## Script config structure
 ```javascript
 {
   /**
@@ -144,6 +150,36 @@ Server will be running on 5000 port.
   ]
 }
 ```
+## Web config structure
+```javascript
+{
+  /**
+    * Required: no
+    * Description: custom port for running the web server
+    * Type: number
+    * Default: 5000 (5443 for ssl)
+    */
+  "port": 8080,
+  /**
+    * Required: no
+    * Description: add ssl element to configure ssl, if needed
+    * Type: object
+    */
+  "ssl": {
+    /**
+      * Required: yes
+      * Description: the path to key file. Can be relative to script-server location
+      * Type: string
+      */
+      "key_path": "testing/ssl/script-server.key",
+    /**
+      * Required: yes
+      * Description: the path to cert file. Can be relative to script-server location
+      * Type: string
+      */
+      "cert_path": "testing/ssl/script-server.crt"
+  }
+}
 
 ## Logging
 All web/operating logs are written to the _server-path_/logs/server.log
