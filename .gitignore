@@ -61,5 +61,6 @@ target/
 #Ipython Notebook
 .ipynb_checkpoints
 
-./conf
-./logs
+conf
+logs
+.idea
