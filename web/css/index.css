@@ -9,17 +9,37 @@ html {
 }
 
 #scriptsPanel {
-    height: calc(100vh - 72px /* h1 height + margins */);
+    height: 100vh;
     display: flex;
     flex-direction: row;
 }
 
 #scriptsList {
     border-right: 1px solid #C8C8C8;
+    width: 300px;
 }
 
-#scripts {
-    width: 300px;
+#scriptsList > .collection {
+    overflow: auto;
+    overflow-wrap: normal;
+    border: none;
+    margin: 0;
+}
+
+#scriptsList > .collection .collection-item {
+    border: none;
+}
+
+#listHeader {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#githubLink {
+    margin-right: 15px;
+    display: block;
 }
 
 #contentPanel {
@@ -43,13 +63,22 @@ html {
     }
 }
 
+#scriptHeader {
+    border-bottom: 1px solid #C8C8C8;
+
+    background: url("../images/titleBackground.jpg") no-repeat center;
+    background-size: cover;
+}
+
 #scriptDescription {
     margin-left: 17px;
+    margin-right: 17px;
+    margin-top: 15px;
     margin-bottom: 0;
 }
 
 #parametersPanel {
-    margin-top: 12px;
+    margin-top: 15px;
 }
 
 #parametersPanel .parameter {
@@ -114,10 +143,6 @@ html {
     box-shadow: 0 -7px 8px -4px #888888 inset;
     -webkit-box-shadow: 0 -7px 8px -4px #888888 inset;
     -moz-box-shadow: 0 -7px 8px -4px #888888 inset;
-}
-
-#scriptsList > .collection {
-    border: none;
 }
 
 #contentPanel input {
@@ -192,34 +217,38 @@ html {
     font-weight: 300;
 }
 
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+}
+
 h1.header {
-    font-size: 2.5rem;
-    margin: 1rem;
+    font-size: 2rem;
+    padding: 1rem;
 }
 
 h2.header {
-    font-size: 2.25rem;
-    margin: 0.9rem;
+    font-size: 1.82rem;
+    padding: 0.9rem;
 }
 
 h3.header {
-    font-size: 2.0rem;
-    margin: 0.8rem;
+    font-size: 1.64rem;
+    padding: 0.8rem;
 }
 
 h4.header {
-    font-size: 1.75rem;
-    margin: 0.7rem;
+    font-size: 1.46rem;
+    padding: 0.7rem;
 }
 
 h5.header {
-    font-size: 1.5rem;
-    margin: 0.6rem;
+    font-size: 1.28rem;
+    padding: 0.6rem;
 }
 
 h6.header {
-    font-size: 1.25rem;
-    margin: 0.5rem;
+    font-size: 1.1rem;
+    padding: 0.5rem;
 }
 
 #parametersPanel input[type="text"]:invalid,

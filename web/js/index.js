@@ -266,7 +266,11 @@ function showScript(activeScript) {
         scriptHeader.innerText = parsedInfo.name;
 
         scriptDescription.innerText = parsedInfo.description;
-        show(scriptDescription, "block");
+        if (!isNull(parsedInfo.description)) {
+            show(scriptDescription, "block");
+        } else {
+            hide(scriptDescription);
+        }
 
         parameterControls.clear();
         if (!isNull(parsedInfo.parameters)) {

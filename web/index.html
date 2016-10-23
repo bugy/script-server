@@ -8,18 +8,25 @@
     <script src="js/libs/jquery.min.js"></script>
     <script src="js/libs/materialize.js"></script>
     <script src="js/libs/hashtable.js"></script>
-
     <script src="js/index.js"></script>
+
     <link rel="stylesheet" href="css/index.css">
 </head>
 <body onload="onLoad()">
 <div class="container-fluid" id="mainPanel">
-    <h1 class="header">Script server</h1>
     <div id="scriptsPanel">
-        <div id="scriptsList" class="">
-            <h2 class="header">Available scripts</h2>
+        <div id="scriptsList">
+            <div id="listHeader">
+                <h2 class="header">Script server</h2>
+
+                <a href="https://github.com/bugy/script-server" target="_blank">
+                    <img src="images/github.png" id="githubLink">
+                </a>
+            </div>
+
             <div id="scripts" class="collection"></div>
         </div>
+
         <div id="contentPanel">
             <h2 id="scriptHeader" class="header"></h2>
             <p id="scriptDescription"></p>
