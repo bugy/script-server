@@ -478,6 +478,17 @@ def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, log_identifi
             script_logger.exception("Couldn't close the log file")
 
 
+def get_tornado_secret():
+    secret_file = os.path.join("temp", "secret.dat")
+    if os.path.exists(secret_file):
+        secret = file_utils.read_file(secret_file, byte_content=True)
+        if secret:
+            return secret
+
+    secret = os.urandom(256)
+    file_utils.write_file(secret_file, secret, byte_content=True)
+    return secret
+
 def main():
     with open("logging.json", "rt") as f:
         log_config = json.load(f)
@@ -495,8 +506,10 @@ def main():
         ssl_context.load_cert_chain(web_config.get_ssl_cert_path(),
                                     web_config.get_ssl_key_path())
 
+    file_utils.prepare_folder("temp")
+
     settings = {
-        "cookie_secret": os.urandom(20),
+        "cookie_secret": get_tornado_secret(),
         "login_url": "/login.html"
     }
 

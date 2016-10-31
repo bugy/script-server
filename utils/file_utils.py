@@ -45,22 +45,27 @@ def normalize_path(path_string, current_folder=None):
     return str(path)
 
 
-def read_file(filename):
+def read_file(filename, byte_content=False):
     path = normalize_path(filename)
 
-    file_content = ""
-    with open(path, "r") as f:
-        file_content += f.read()
+    mode = "r"
+    if byte_content:
+        mode += "b"
 
-    return file_content
+    with open(path, mode) as f:
+        return f.read()
 
 
-def write_file(filename, content):
+def write_file(filename, content, byte_content=False):
     path = normalize_path(filename)
 
     prepare_folder(os.path.dirname(path))
 
-    with open(path, "w") as file:
+    mode = "w"
+    if byte_content:
+        mode += "b"
+
+    with open(path, mode) as file:
         file.write(content)
 
 
