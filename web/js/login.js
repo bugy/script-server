@@ -10,7 +10,11 @@ function onLoad() {
     });
 
     var labels = document.getElementsByTagName("label");
+    for (var i = 0; i < labels.length; i++) {
+        var label = labels[i];
 
+        addClass(label, "active"); //workaround for browser autofill - it's not updating label position and label overlap with value
+    }
 }
 
 function sendData() {
@@ -18,18 +22,18 @@ function sendData() {
 
     var request = new XMLHttpRequest();
 
-    var formData  = new FormData(form);
+    var formData = new FormData(form);
 
-    request.addEventListener("load", function(event) {
+    request.addEventListener("load", function (event) {
         var status = request.status;
         var response = request.responseText;
 
         if (status == 200) {
             hideError();
 
-            window.location = request.responseURL;
+            window.location = request.responseURL + window.location.hash;
 
-        } else if ((status == 401) || (status == 500)){
+        } else if ((status == 401) || (status == 500)) {
             showError(response);
 
         } else {
@@ -37,7 +41,7 @@ function sendData() {
         }
     });
 
-    request.addEventListener("error", function(event) {
+    request.addEventListener("error", function (event) {
         showError("Unknown error occurred. Please contact the administrator")
     });
 

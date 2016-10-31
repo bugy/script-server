@@ -79,11 +79,15 @@ function callHttp(url, object, method, asyncHandler) {
 
     xhttp.open(method, url, async);
 
-    if (!isNull(object)) {
-        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify(object));
-    } else {
-        xhttp.send();
+    try {
+        if (!isNull(object)) {
+            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhttp.send(JSON.stringify(object));
+        } else {
+            xhttp.send();
+        }
+    } catch (error) {
+        throw new HttpRequestError(xhttp.status, error.message);
     }
 
     if (!async) {
@@ -95,12 +99,24 @@ function callHttp(url, object, method, asyncHandler) {
             if (!isNull(xhttp.responseText) && (xhttp.responseText.length > 0)) {
                 message = xhttp.responseText;
             }
-            throw new Error(message);
+            throw new HttpRequestError(xhttp.status, message);
         }
     } else {
         return xhttp;
     }
 }
+
+function HttpRequestError(code, message) {
+    this.code = code;
+    this.message = message;
+    var lastPart = new Error().stack.match(/[^\s]+$/);
+    this.stack = `${this.name} at ${lastPart}`;
+}
+HttpRequestError.prototype = Object.create(Error.prototype);
+HttpRequestError.prototype.name = "HttpRequestError";
+HttpRequestError.prototype.message = "";
+HttpRequestError.prototype.code = -1;
+HttpRequestError.prototype.constructor = HttpRequestError;
 
 function isNull(object) {
     return ((typeof object) == 'undefined' || (object == null));

@@ -40,7 +40,8 @@ class LdapAuthorizer(auth_base.Authorizer):
                 user=user,
                 password=password,
                 authentication=SIMPLE,
-                read_only=True
+                read_only=True,
+                version=self.version
             )
 
             connection.bind()

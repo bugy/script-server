@@ -13,7 +13,7 @@ var runningScriptExecutor = null;
 function onLoad() {
     parameterControls = new Hashtable();
 
-    var response = callHttp("scripts/list");
+    var response = authorizedCallHttp("scripts/list");
 
     var scripts = JSON.parse(response);
 
@@ -147,7 +147,7 @@ function initLogPanel() {
         updateScroll([]);
     });
 
-    var config = {attributes: false, subtree: true, childList: true, characterData: true};
+    var config = { attributes: false, subtree: true, childList: true, characterData: true };
     observer.observe(logPanel, config);
 }
 
@@ -210,7 +210,7 @@ function initExecuteButton() {
         };
 
         try {
-            var process_id = callHttp("scripts/execute", callBody, "POST");
+            var process_id = authorizedCallHttp("scripts/execute", callBody, "POST");
 
             runningScriptExecutor = new ScriptController(process_id);
 
@@ -219,7 +219,9 @@ function initExecuteButton() {
             setButtonEnabled(executeButton, false);
 
         } catch (error) {
-            logPanel.innerText = error.message;
+            if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
+                logPanel.innerText = error.message;
+            }
         }
     };
 }
@@ -244,7 +246,7 @@ function showScript(activeScript) {
     destroyChildren(paramsPanel);
 
     try {
-        var info = callHttp("scripts/info?name=" + activeScript);
+        var info = authorizedCallHttp("scripts/info?name=" + activeScript);
 
         var parsedInfo = JSON.parse(info);
 
@@ -292,15 +294,16 @@ function showScript(activeScript) {
 
     } catch (error) {
         scriptHeader.innerText = activeScript;
-
-        errorPanel.innerHTML = "Failed to load script info. Try to reload the page. Error message: <br> " + error.message;
-        show(errorPanel, "block");
-
         hide(paramsPanel);
         hide(scriptDescription);
         hide(validationPanel);
         hide(stopButton);
         hide(executeButton);
+
+        if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
+            errorPanel.innerHTML = "Failed to load script info. Try to reload the page. Error message: <br> " + error.message;
+            show(errorPanel, "block");
+        }
     }
 
     var logPanel = document.getElementById("logPanel");
@@ -481,7 +484,7 @@ function ScriptController(processId) {
     };
 
     this.stop = function () {
-        callHttp("scripts/execute/stop", {"processId": this.processId}, "POST");
+        authorizedCallHttp("scripts/execute/stop", { "processId": this.processId }, "POST");
     };
 
     this.abort = function () {
@@ -495,4 +498,32 @@ function ScriptController(processId) {
     this.isFinished = function () {
         return ((ws.readyState == 2) && (ws.readyState == 3));
     };
+}
+
+function authorizedCallHttp(url, object, method, asyncHandler) {
+    try {
+        return callHttp(url, object, method, asyncHandler);
+    } catch (error) {
+        if ((error instanceof HttpRequestError) && (error.code == 401)) {
+            var errorPanel = document.getElementById("errorPanel");
+            var logPanel = document.getElementById("logPanel");
+            var inputPanel = document.getElementById("inputPanel");
+
+            hide(logPanel);
+            hide(inputPanel);
+
+            var link = document.createElement("a");
+            link.innerHTML = "relogin";
+            link.onclick = function () {
+                location.reload();
+            }
+            link.href = "javascript:void(0)";
+
+            errorPanel.innerHTML = "Credentials expired, please ";
+            errorPanel.appendChild(link);
+            show(errorPanel, "block");
+        }
+
+        throw error;
+    }
 }

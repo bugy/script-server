@@ -106,7 +106,11 @@ class TornadoAuth():
         if not self.is_enabled():
             return None
 
-        return request_handler.get_secure_cookie("username")
+        username = request_handler.get_secure_cookie("username")
+        if not username:
+            return None
+
+        return username.decode("utf-8")
 
     def authenticate(self, username, password, request_handler):
         logger = logging.getLogger("scriptServer")
@@ -128,7 +132,9 @@ class TornadoAuth():
             return
 
         request_handler.set_secure_cookie("username", username)
-        request_handler.redirect(request_handler.get_argument("next", "/"))
+
+        path = tornado.escape.url_unescape(request_handler.get_argument("next", "/"))
+        request_handler.redirect(path)
 
 
 def is_allowed_during_login(request_path, login_url, request_handler):
@@ -176,7 +182,7 @@ def check_authorization(func):
             return func(self, *args, **kwargs)
 
         if not isinstance(self, tornado.web.StaticFileHandler):
-            raise tornado.web.HTTPError(403, "Unauthorized")
+            raise tornado.web.HTTPError(401, "Unauthorized")
 
         login_url += "?" + urlencode(dict(next=request_path))
 
@@ -265,6 +271,8 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
         if not auth.is_authenticated(self):
             return None
 
+        logger = logging.getLogger("scriptServer")
+
         self.process_wrapper = running_scripts.get(int(process_id))
 
         if not self.process_wrapper:
@@ -279,11 +287,16 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
             audit_name = username
         else:
             remote_ip = self.request.remote_ip
-            (hostname, aliases, ip_addresses) = socket.gethostbyaddr(remote_ip)
-            if hostname:
+            try:
+                (hostname, aliases, ip_addresses) = socket.gethostbyaddr(remote_ip)
                 audit_name = hostname
-            else:
+            except:
+                audit_name = None
+                logger.exception("Couldn't get hostname for " + remote_ip)
+
+            if not audit_name:
                 audit_name = remote_ip
+
 
         command_identifier = self.process_wrapper.get_command_identifier()
         log_identifier = self.create_log_identifier(audit_name, command_identifier)
@@ -497,9 +510,8 @@ def main():
                 (r"/", tornado.web.RedirectHandler, {"url": "/index.html"})]
     if auth.is_enabled():
         handlers.append((r"/login", LoginHandler))
-        handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
-    else:
-        handlers.append((r"/(.*)", tornado.web.StaticFileHandler, {"path": "web"}))
+
+    handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 
     application = tornado.web.Application(handlers, **settings)
 
