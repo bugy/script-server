@@ -31,7 +31,7 @@ function TextField(name, defaultValue, required, type, min, max) {
 
     addClass(this.field, "validate");
 
-    addInputListener(this.field, $.proxy(this.validate, this));
+    this.field.oninput = $.proxy(this.validate, this);
     this.validate();
 
     this.panel.appendChild(this.field);

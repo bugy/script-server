@@ -2,10 +2,13 @@ import json
 import logging
 import logging.config
 import os
+import socket
 import ssl
 import sys
 import threading
 from datetime import datetime
+from urllib.parse import urlencode
+from urllib.parse import urlparse
 
 import tornado.escape
 import tornado.httpserver as httpserver
@@ -13,17 +16,17 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
+import auth.auth_base as auth_base
 import execution
 import execution_popen
+import external_model
 import script_configs
+import utils.file_utils as file_utils
 import web_conf
 
 pty_supported = (sys.platform == "linux" or sys.platform == "linux2")
 if pty_supported:
     import execution_pty
-
-import external_model
-import utils.file_utils as file_utils
 
 CONFIG_FOLDER = "conf"
 WEB_CONF_PATH = os.path.join(CONFIG_FOLDER, "web.json")
@@ -82,7 +85,109 @@ def visit_script_configs(visitor):
     return result
 
 
+class TornadoAuth():
+    authorizer = None
+
+    def __init__(self, authorizer):
+        self.authorizer = authorizer
+
+    def is_enabled(self):
+        return bool(self.authorizer)
+
+    def is_authenticated(self, request_handler):
+        if not self.is_enabled():
+            return True
+
+        username = request_handler.get_secure_cookie("username")
+
+        return bool(username)
+
+    def get_username(self, request_handler):
+        if not self.is_enabled():
+            return None
+
+        return request_handler.get_secure_cookie("username")
+
+    def authenticate(self, username, password, request_handler):
+        logger = logging.getLogger("scriptServer")
+
+        logger.info("Trying to authenticate user " + username)
+
+        try:
+            self.authorizer.authenticate(username, password)
+            logger.info("Authenticated user " + username)
+
+        except auth_base.AuthRejectedError as e:
+            logger.info("Authentication rejected for user " + username + ": " + e.get_message())
+            respond_error(request_handler, 401, e.get_message())
+            return
+
+        except auth_base.AuthFailureError:
+            logger.exception("Authentication failed for user " + username)
+            respond_error(request_handler, 500, "Something went wrong. Please contact the administrator or try later")
+            return
+
+        request_handler.set_secure_cookie("username", username)
+        request_handler.redirect(request_handler.get_argument("next", "/"))
+
+
+def is_allowed_during_login(request_path, login_url, request_handler):
+    if request_handler.request.method == "POST":
+        if request_path == "/login":
+            return True
+
+    elif request_handler.request.method == "GET":
+        if request_path == "/favicon.ico":
+            return True
+
+        if request_path == login_url:
+            return True
+
+        referer = request_handler.request.headers.get("Referer")
+        if referer:
+            referer = urlparse(referer).path
+
+        login_resources = ["/js/login.js",
+                           "/js/common.js",
+                           "/js/libs/jquery.min.js",
+                           "/js/libs/materialize.js",
+                           "/css/libs/materialize.min.css",
+                           "/css/index.css",
+                           "/css/fonts/roboto/Roboto-Regular.woff2",
+                           "/css/fonts/roboto/Roboto-Regular.woff",
+                           "/css/fonts/roboto/Roboto-Regular.ttf"]
+
+        if ((referer == login_url) or (referer == "/css/libs/materialize.min.css")) \
+                and (request_path in login_resources):
+            return True
+
+    return False
+
+
+# This decorator is used for REST requests, in which we don't redirect explicitly, but reply with Unauthorized code.
+# Client application should provide redirection in the way it likes
+def check_authorization(func):
+    def wrapper(self, *args, **kwargs):
+        auth = self.application.auth
+        request_path = self.request.path
+        login_url = self.get_login_url()
+
+        if auth.is_authenticated(self) or is_allowed_during_login(request_path, login_url, self):
+            return func(self, *args, **kwargs)
+
+        if not isinstance(self, tornado.web.StaticFileHandler):
+            raise tornado.web.HTTPError(403, "Unauthorized")
+
+        login_url += "?" + urlencode(dict(next=request_path))
+
+        self.redirect(login_url)
+        return
+
+    return wrapper
+
+
 class GetScripts(tornado.web.RequestHandler):
+    @check_authorization
     def get(self):
         config_names = list_config_names()
 
@@ -90,6 +195,7 @@ class GetScripts(tornado.web.RequestHandler):
 
 
 class GetScriptInfo(tornado.web.RequestHandler):
+    @check_authorization
     def get(self):
         try:
             name = self.get_query_argument("name")
@@ -138,6 +244,7 @@ def stop_script(process_id):
 
 
 class ScriptStop(tornado.web.RequestHandler):
+    @check_authorization
     def post(self):
         request_body = self.request.body.decode("UTF-8")
         process_id = json.loads(request_body).get("processId")
@@ -154,6 +261,10 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
     reading_thread = None
 
     def open(self, process_id):
+        auth = self.application.auth
+        if not auth.is_authenticated(self):
+            return None
+
         self.process_wrapper = running_scripts.get(int(process_id))
 
         if not self.process_wrapper:
@@ -163,9 +274,19 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 
         self.write_message(wrap_script_output(" ---  OUTPUT  --- \n"))
 
-        remote_ip = self.request.remote_ip
+        username = auth.get_username(self)
+        if username:
+            audit_name = username
+        else:
+            remote_ip = self.request.remote_ip
+            (hostname, aliases, ip_addresses) = socket.gethostbyaddr(remote_ip)
+            if hostname:
+                audit_name = hostname
+            else:
+                audit_name = remote_ip
+
         command_identifier = self.process_wrapper.get_command_identifier()
-        log_identifier = self.create_log_identifier(remote_ip, command_identifier)
+        log_identifier = self.create_log_identifier(audit_name, command_identifier)
 
         reading_thread = threading.Thread(target=pipe_process_to_http, args=(
             self.process_wrapper,
@@ -183,13 +304,14 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 
         self.process_wrapper.add_finish_listener(FinishListener())
 
-    def create_log_identifier(self, remote_ip, command_identifier):
+    @staticmethod
+    def create_log_identifier(audit_name, command_identifier):
         if sys.platform.startswith('win'):
-            remote_ip= remote_ip.replace(":", "-")
+            audit_name = audit_name.replace(":", "-")
 
         date_string = datetime.today().strftime("%y%m%d_%H%M%S")
         command_identifier = command_identifier.replace(" ", "_")
-        log_identifier = command_identifier + "_" + remote_ip + "_" + date_string
+        log_identifier = command_identifier + "_" + audit_name + "_" + date_string
         return log_identifier
 
     def on_message(self, text):
@@ -207,6 +329,7 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 class ScriptExecute(tornado.web.RequestHandler):
     process_wrapper = None
 
+    @check_authorization
     def post(self):
         try:
             request_data = self.request.body
@@ -271,6 +394,27 @@ class ScriptExecute(tornado.web.RequestHandler):
             respond_error(self, 500, result)
 
 
+class AuthorizedStaticFileHandler(tornado.web.StaticFileHandler):
+    @check_authorization
+    def validate_absolute_path(self, root, absolute_path):
+        if not self.application.auth.is_enabled() and (absolute_path.endswith("/login.html")):
+            raise tornado.web.HTTPError(404)
+
+        return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
+
+
+class LoginHandler(tornado.web.RequestHandler):
+    def post(self):
+        auth = self.application.auth
+        if not auth.is_enabled():
+            return
+
+        username = self.get_argument("username")
+        password = self.get_argument("password")
+
+        auth.authenticate(username, password, self)
+
+
 def respond_error(request_handler, status_code, message):
     request_handler.set_status(status_code)
     request_handler.write(message)
@@ -293,6 +437,7 @@ def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, log_identifi
     try:
         log_file = open(os.path.join("logs", "processes", log_identifier + ".log"), "w")
     except:
+        log_file = None
         script_logger.exception("Couldn't create a log file")
 
     try:
@@ -320,23 +465,12 @@ def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, log_identifi
             script_logger.exception("Couldn't close the log file")
 
 
-application = tornado.web.Application([
-    (r"/scripts/list", GetScripts),
-    (r"/scripts/info", GetScriptInfo),
-    (r"/scripts/execute", ScriptExecute),
-    (r"/scripts/execute/stop", ScriptStop),
-    (r"/scripts/execute/io/(.*)", ScriptStreamsSocket),
-    (r"/", tornado.web.RedirectHandler, {"url": "/index.html"}),
-    (r"/(.*)", tornado.web.StaticFileHandler, {"path": "web"})
-])
-
-
 def main():
     with open("logging.json", "rt") as f:
-        config = json.load(f)
+        log_config = json.load(f)
         file_utils.prepare_folder(os.path.join("logs", "processes"))
 
-        logging.config.dictConfig(config)
+        logging.config.dictConfig(log_config)
 
     file_utils.prepare_folder(CONFIG_FOLDER)
     file_utils.prepare_folder(SCRIPT_CONFIGS_FOLDER)
@@ -347,6 +481,29 @@ def main():
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(web_config.get_ssl_cert_path(),
                                     web_config.get_ssl_key_path())
+
+    settings = {
+        "cookie_secret": os.urandom(20),
+        "login_url": "/login.html"
+    }
+
+    auth = TornadoAuth(web_config.authorizer)
+
+    handlers = [(r"/scripts/list", GetScripts),
+                (r"/scripts/info", GetScriptInfo),
+                (r"/scripts/execute", ScriptExecute),
+                (r"/scripts/execute/stop", ScriptStop),
+                (r"/scripts/execute/io/(.*)", ScriptStreamsSocket),
+                (r"/", tornado.web.RedirectHandler, {"url": "/index.html"})]
+    if auth.is_enabled():
+        handlers.append((r"/login", LoginHandler))
+        handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
+    else:
+        handlers.append((r"/(.*)", tornado.web.StaticFileHandler, {"path": "web"}))
+
+    application = tornado.web.Application(handlers, **settings)
+
+    application.auth = auth
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
     http_server.listen(web_config.port)

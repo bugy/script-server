@@ -9,6 +9,7 @@ class WebConfig(object):
     ssl = False
     ssl_key_path = None
     ssl_cert_path = None
+    authorizer = None
 
     def get_port(self):
         return self.port
@@ -21,6 +22,9 @@ class WebConfig(object):
 
     def get_ssl_cert_path(self):
         return self.ssl_cert_path
+
+    def get_authorizer(self):
+        return self.authorizer
 
 
 def from_json(conf_path):
@@ -54,5 +58,20 @@ def from_json(conf_path):
     if json_object.get("port"):
         port = json_object.get("port")
     config.port = port
+
+    if json_object.get("auth"):
+        auth_object = json_object.get("auth")
+        auth_type = auth_object.get("type")
+
+        if not auth_type:
+            raise Exception("Auth type should be specified")
+
+        auth_type = auth_type.strip().lower()
+        if auth_type == "ldap":
+            from auth.auth_ldap import LdapAuthorizer
+            config.authorizer = LdapAuthorizer(auth_object)
+
+        else:
+            raise Exception(auth_type + " auth is not supported")
 
     return config

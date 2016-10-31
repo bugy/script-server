@@ -274,3 +274,38 @@ h6.header {
 #parametersPanel .select-wrapper + label {
     top: -14px;
 }
+
+#login-body {
+    background: #eee;
+    height: 100vh;
+}
+
+#login-form {
+    width: 300px;
+    margin: auto;
+}
+
+#login-form input[type="text"],
+#login-form input[type="password"] {
+    height: 2em;
+}
+
+#login-form .input-field label {
+    top: 0;
+}
+
+#login-form .input-field label.active {
+    transform: translateY(-90%);
+}
+
+#login-button {
+    width: 100%;
+    margin-top: 7px;
+}
+
+#login-error-label {
+    color: #F44336;
+    line-height: 1em;
+    font-size: 0.9em;
+    height: 2em;
+}

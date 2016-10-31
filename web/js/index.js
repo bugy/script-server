@@ -1,9 +1,3 @@
-function loadScript(scriptPath) {
-    var code = callHttp(scriptPath);
-
-    window.eval(code);
-}
-
 loadScript("js/components/component.js");
 loadScript("js/components/abstract_input.js");
 loadScript("js/components/checkbox.js");
@@ -230,15 +224,6 @@ function initExecuteButton() {
     };
 }
 
-function hide(element) {
-    element.style.display = "none";
-}
-
-function show(element, displayStyle) {
-    displayStyle = displayStyle || "block";
-    element.style.display = displayStyle;
-}
-
 function showScript(activeScript) {
     parameterControls.each(function (parameter, control) {
         control.onDestroy();
@@ -358,51 +343,6 @@ function selectScript(scriptName) {
     })
 }
 
-function isNull(object) {
-    return ((typeof object) == 'undefined' || (object == null));
-}
-
-function destroyChildren(element) {
-    while (element.firstChild) {
-        element.removeChild(element.firstChild);
-    }
-}
-
-function callHttp(url, object, method, asyncHandler) {
-    method = method || "GET";
-
-    var xhttp = new XMLHttpRequest();
-
-    var async = !isNull(asyncHandler);
-    if (async) {
-        xhttp.onreadystatechange = asyncHandler;
-    }
-
-    xhttp.open(method, url, async);
-
-    if (!isNull(object)) {
-        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify(object));
-    } else {
-        xhttp.send();
-    }
-
-    if (!async) {
-        if (xhttp.status == 200) {
-            return xhttp.responseText;
-
-        } else {
-            var message = "Couldn't execute request.";
-            if (!isNull(xhttp.responseText) && (xhttp.responseText.length > 0)) {
-                message = xhttp.responseText;
-            }
-            throw new Error(message);
-        }
-    } else {
-        return xhttp;
-    }
-}
-
 function getHash() {
     if (location.hash == 'undefined') {
         return null;
@@ -415,31 +355,6 @@ function getHash() {
     return decodeURIComponent(location.hash.substr(1));
 }
 
-function removeClass(element, clazz) {
-    var className = element.className;
-    className = className.replace(new RegExp("(\\s+|^)" + clazz + "(\\s+|$)"), " ");
-    element.className = className;
-}
-
-function addClass(element, clazz) {
-    if (hasClass(element, clazz)) {
-        return;
-    }
-
-    var className = element.className;
-
-    if (!className.endsWith(" ")) {
-        className += " ";
-    }
-    className += clazz;
-
-    element.className = className;
-}
-
-function hasClass(element, clazz) {
-    return element.className.search("(\\s|^)" + clazz + "(\\s|$)") >= 0;
-}
-
 function setButtonEnabled(button, enabled) {
     button.disabled = !enabled;
     if (!enabled) {
@@ -447,24 +362,6 @@ function setButtonEnabled(button, enabled) {
     } else {
         removeClass(button, "disabled");
     }
-}
-
-function addInputListener(element, callback) {
-    element.oninput = callback;
-}
-
-function isEmptyObject(obj) {
-    for (var prop in obj) {
-        if (obj.hasOwnProperty(prop)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function isEmptyString(value) {
-    return isNull(value) || value.length == 0;
 }
 
 function getValidByTypeError(value, type, min, max) {
@@ -514,30 +411,6 @@ function getInvalidTypeError(type) {
     }
 
     return type + " expected";
-}
-
-function findNeighbour(element, tag) {
-    var tagLower = tag.toLowerCase();
-
-    var previous = element.previousSibling;
-    while (!isNull(previous)) {
-        if (previous.tagName.toLowerCase() == tagLower) {
-            return previous;
-        }
-
-        previous = previous.previousSibling;
-    }
-
-    var next = element.nextSibling;
-    while (!isNull(next)) {
-        if (next.tagName.toLowerCase() == tagLower) {
-            return next;
-        }
-
-        next = next.nextSibling;
-    }
-
-    return null;
 }
 
 function ScriptController(processId) {

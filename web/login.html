@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Script server</title>
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" href="css/libs/materialize.min.css">
+    <script src="js/libs/jquery.min.js"></script>
+    <script src="js/libs/materialize.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/login.js"></script>
+
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body id="login-body" onload="onLoad()" class="valign-wrapper">
+<form id="login-form" action="login" class="card">
+    <div class="card-content">
+        <div class="input-field">
+            <input id="username" name="username" type="text" class="validate">
+            <label for="username">Username</label>
+        </div>
+
+        <div class="input-field">
+            <input id="password" name="password" type="password" class="validate">
+            <label for="password">Password</label>
+        </div>
+
+        <div id="login-error-label"></div>
+
+        <input type="submit" id="login-button" class="btn" value="Log in">
+    </div>
+</form>
+</body>
+</html>
