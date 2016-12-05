@@ -25,6 +25,8 @@ class LdapAuthorizer(auth_base.Authorizer):
             self.username_template = Template(params_dict.get("username_pattern"))
 
         self.version = params_dict.get("version")
+        if not self.version:
+            self.version = 3
 
     def authenticate(self, username, password):
         logger = logging.getLogger("authorization")

@@ -136,6 +136,19 @@ class TornadoAuth():
         path = tornado.escape.url_unescape(request_handler.get_argument("next", "/"))
         request_handler.redirect(path)
 
+    def logout(self, request_handler):
+        if not self.is_enabled():
+            return
+
+        username = self.get_username(request_handler)
+        if not username:
+            return
+
+        logger = logging.getLogger("scriptServer")
+        logger.info("Logging out " + username)
+
+        request_handler.clear_cookie("username")
+
 
 def is_allowed_during_login(request_path, login_url, request_handler):
     if request_handler.request.method == "POST":
@@ -161,9 +174,10 @@ def is_allowed_during_login(request_path, login_url, request_handler):
                            "/css/index.css",
                            "/css/fonts/roboto/Roboto-Regular.woff2",
                            "/css/fonts/roboto/Roboto-Regular.woff",
-                           "/css/fonts/roboto/Roboto-Regular.ttf"]
+                           "/css/fonts/roboto/Roboto-Regular.ttf",
+                           "/images/titleBackground.jpg"]
 
-        if ((referer == login_url) or (referer == "/css/libs/materialize.min.css")) \
+        if ((referer == login_url) or (referer == "/css/libs/materialize.min.css") or (referer == "/css/index.css")) \
                 and (request_path in login_resources):
             return True
 
@@ -428,6 +442,25 @@ class LoginHandler(tornado.web.RequestHandler):
         auth.authenticate(username, password, self)
 
 
+class LogoutHandler(tornado.web.RequestHandler):
+    @check_authorization
+    def post(self):
+        auth = self.application.auth
+
+        auth.logout(self)
+
+
+class GetUsernameHandler(tornado.web.RequestHandler):
+    @check_authorization
+    def get(self):
+        auth = self.application.auth
+        if not auth.is_enabled():
+            raise tornado.web.HTTPError(404)
+
+        username = auth.get_username(self)
+        self.write(username)
+
+
 def respond_error(request_handler, status_code, message):
     request_handler.set_status(status_code)
     request_handler.write(message)
@@ -523,6 +556,8 @@ def main():
                 (r"/", tornado.web.RedirectHandler, {"url": "/index.html"})]
     if auth.is_enabled():
         handlers.append((r"/login", LoginHandler))
+        handlers.append((r"/logout", LogoutHandler))
+        handlers.append((r"/username", GetUsernameHandler))
 
     handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 

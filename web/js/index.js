@@ -36,17 +36,8 @@ function onLoad() {
         addClass(scriptElement, "waves-teal");
         scriptElement.setAttribute("href", "#" + scriptHash);
         scriptElement.onclick = function (e) {
-            if (runningScriptExecutor != null) {
-                if (!runningScriptExecutor.isFinished()) {
-                    var abort = confirm("Another script is running. Do you want to abort?");
-                    if (abort == true) {
-                        runningScriptExecutor.abort();
-                    } else {
-                        return false;
-                    }
-                }
-
-                runningScriptExecutor = null;
+            if (!stopRunningScript()) {
+                return;
             }
 
             selectScript(script);
@@ -87,6 +78,26 @@ function onLoad() {
     initLogPanel();
     initExecuteButton();
     initStopButton();
+
+    initLogoutPanel();
+    initWelcomeIcon();
+}
+
+function stopRunningScript() {
+    if (runningScriptExecutor != null) {
+        if (!runningScriptExecutor.isFinished()) {
+            var abort = confirm("Some script is running. Do you want to abort it?");
+            if (abort == true) {
+                runningScriptExecutor.abort();
+            } else {
+                return false;
+            }
+        }
+
+        runningScriptExecutor = null;
+    }
+
+    return true;
 }
 
 function initLogPanel() {
@@ -147,7 +158,7 @@ function initLogPanel() {
         updateScroll([]);
     });
 
-    var config = { attributes: false, subtree: true, childList: true, characterData: true };
+    var config = {attributes: false, subtree: true, childList: true, characterData: true};
     observer.observe(logPanel, config);
 }
 
@@ -226,10 +237,60 @@ function initExecuteButton() {
     };
 }
 
+function initLogoutPanel() {
+    var usernameField = document.getElementById("usernameField");
+    var logoutPanel = document.getElementById("logoutPanel");
+
+    try {
+        usernameField.innerHTML = authorizedCallHttp("username");
+    } catch (error) {
+        if (error.code == 404) {
+            hide(logoutPanel);
+            return;
+        } else {
+            throw error;
+        }
+    }
+
+    var logoutButton = document.getElementById("logoutButton");
+    logoutButton.onclick = function (e) {
+        if (!stopRunningScript()) {
+            return;
+        }
+
+        try {
+            authorizedCallHttp("logout", null, "POST");
+        } catch (error) {
+            if (error.code !== 405) {
+                throw error;
+            }
+        }
+
+        location.reload();
+    };
+}
+
+
+function initWelcomeIcon() {
+    var welcomeIcon = document.getElementById("welcomeIcon");
+
+    var originalSrc = welcomeIcon.src;
+    var welcomeCookiePanel = document.getElementById("welcomeCookieText");
+    welcomeCookiePanel.onmouseover = function (e) {
+        welcomeIcon.src = "../images/cookie.png";
+    };
+    welcomeCookiePanel.onmouseout = function (e) {
+        welcomeIcon.src = originalSrc;
+    };
+}
+
 function showScript(activeScript) {
     parameterControls.each(function (parameter, control) {
         control.onDestroy();
     });
+
+    var welcomePanel = document.getElementById("welcomePanel");
+    hide(welcomePanel);
 
     var contentPanel = document.getElementById("contentPanel");
     show(contentPanel, "flex");
