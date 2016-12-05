@@ -179,7 +179,7 @@ See web config structure for details
       */
       "cert_path": "testing/ssl/script-server.crt"
   }
-}
+}```
 
 ## Logging
 All web/operating logs are written to the _server-path_/logs/server.log
