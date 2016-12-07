@@ -311,8 +311,7 @@ h6.header {
 }
 
 #welcomePanel {
-    width: 100%;
-    height: 100%;
+    flex: 1;
     color: #9e9e9e;
     display: flex;
     text-align: center;
