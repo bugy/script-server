@@ -48,12 +48,34 @@ def normalize_path(path_string, current_folder=None):
 def read_file(filename, byte_content=False):
     path = normalize_path(filename)
 
-    mode = "r"
+    mode = 'r'
     if byte_content:
-        mode += "b"
+        with open(path, mode + 'b') as f:
+            return f.read()
 
-    with open(path, mode) as f:
-        return f.read()
+    try:
+        with open(path, mode) as f:
+            return f.read()
+
+    except UnicodeDecodeError as e:
+        encoded_result = try_encoded_read(path)
+        if encoded_result is not None:
+            return encoded_result
+        else:
+            raise e
+
+
+def try_encoded_read(path):
+    encodings = ['utf_8', 'cp1251', 'iso-8859-1', 'koi8_r', 'cp1252', 'cp1250', 'latin1', 'utf_32']
+
+    for encoding in encodings:
+        try:
+            with open(path, 'r', encoding=encoding) as f:
+                return f.read()
+        except UnicodeDecodeError:
+            pass
+
+    return None
 
 
 def write_file(filename, content, byte_content=False):

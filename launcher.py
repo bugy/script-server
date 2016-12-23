@@ -76,11 +76,17 @@ def visit_script_configs(visitor):
 
     for config_path in configs:
         path = os.path.join(configs_dir, config_path)
-        content = file_utils.read_file(path)
 
-        visit_result = visitor(path, content)
-        if visit_result is not None:
-            result.append(visit_result)
+        try:
+            content = file_utils.read_file(path)
+
+            visit_result = visitor(path, content)
+            if visit_result is not None:
+                result.append(visit_result)
+
+        except:
+            logger = logging.getLogger('scriptServer')
+            logger.exception("Couldn't read the file: " + config_path)
 
     return result
 
@@ -311,7 +317,6 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
             if not audit_name:
                 audit_name = remote_ip
 
-
         command_identifier = self.process_wrapper.get_command_identifier()
         log_identifier = self.create_log_identifier(audit_name, command_identifier)
 
@@ -521,6 +526,7 @@ def get_tornado_secret():
     secret = os.urandom(256)
     file_utils.write_file(secret_file, secret, byte_content=True)
     return secret
+
 
 def main():
     with open("logging.json", "rt") as f:
