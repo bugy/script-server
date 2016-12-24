@@ -312,7 +312,7 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
                 audit_name = hostname
             except:
                 audit_name = None
-                logger.exception("Couldn't get hostname for " + remote_ip)
+                logger.warn("Couldn't get hostname for " + remote_ip)
 
             if not audit_name:
                 audit_name = remote_ip
