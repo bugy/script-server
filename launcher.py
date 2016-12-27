@@ -380,7 +380,7 @@ class ScriptExecute(tornado.web.RequestHandler):
             if working_directory is not None:
                 working_directory = file_utils.normalize_path(working_directory)
 
-            (body_args, script_path) = self.parse_script_body(config)
+            (script_path, body_args) = self.parse_script_body(config, working_directory)
 
             script_args = build_parameter_string(execution_info.get_param_values(), config)
 
@@ -427,21 +427,21 @@ class ScriptExecute(tornado.web.RequestHandler):
 
             respond_error(self, 500, result)
 
-    def parse_script_body(self, config):
+    def parse_script_body(self, config, working_directory):
         script_body = config.get_script_body()
         if (' ' in script_body) and (not sys.platform.startswith('win')):
             args = shlex.split(script_body)
-            script_path = file_utils.normalize_path(args[0])
+            script_path = file_utils.normalize_path(args[0], working_directory)
             body_args = args[1:]
             for i, body_arg in enumerate(body_args):
                 expanded = os.path.expanduser(body_arg)
                 if expanded != body_arg:
                     body_args[i] = expanded
         else:
-            script_path = file_utils.normalize_path(script_body)
+            script_path = file_utils.normalize_path(script_body, working_directory)
             body_args = []
 
-        return body_args, script_path
+        return script_path, body_args
 
 
 class AuthorizedStaticFileHandler(tornado.web.StaticFileHandler):

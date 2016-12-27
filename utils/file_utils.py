@@ -40,9 +40,9 @@ def normalize_path(path_string, current_folder=None):
         path = pathlib.Path(path_string)
 
     if path.exists():
-        path = path.resolve()
+        return str(path.resolve())
 
-    return str(path)
+    return path_string
 
 
 def read_file(filename, byte_content=False):
