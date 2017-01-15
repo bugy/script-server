@@ -75,12 +75,76 @@ function onLoad() {
         }
     }
 
+
+    initSearchPanel();
+
     initLogPanel();
     initExecuteButton();
     initStopButton();
 
     initLogoutPanel();
     initWelcomeIcon();
+}
+
+function initSearchPanel() {
+    var scriptsListElement = document.getElementById("scripts");
+    var searchPanel = document.getElementById("searchPanel");
+    var searchField = document.getElementById("searchField");
+    var searchButton = document.getElementById("searchButton");
+
+    var originalSrc = searchButton.src;
+
+    var openSearchOnTheNextClick = true;
+
+    searchField.disabled = true;
+
+    searchField.addEventListener('transitionend', function (e) {
+        if ((e.propertyName === "width") && hasClass(searchField, "collapsed")) {
+            searchField.disabled = true;
+        }
+    });
+
+    searchField.oninput = function (e) {
+        var searchValue = searchField.value;
+        for (var i = 0; i < scriptsListElement.childElementCount; ++i) {
+            var scriptElement = scriptsListElement.children[i];
+            if (scriptElement.innerHTML.toLowerCase().search(searchValue.toLowerCase()) !== -1) {
+                show(scriptElement, "block");
+            } else {
+                hide(scriptElement);
+            }
+        }
+    };
+
+    searchButton.onclick = function () {
+        if (openSearchOnTheNextClick) {
+            removeClass(searchField, "collapsed");
+            searchField.disabled = false;
+            searchField.focus();
+            searchButton.src = "../images/clear.png";
+
+        } else {
+            addClass(searchField, "collapsed");
+            searchButton.src = originalSrc;
+            searchField.value = "";
+            for (var i = 0; i < scriptsListElement.childElementCount; ++i) {
+                show(scriptsListElement.children[i], "block");
+            }
+        }
+        openSearchOnTheNextClick = true;
+    };
+
+    searchButton.onmousedown = function () {
+        openSearchOnTheNextClick = hasClass(searchField, "collapsed");
+    };
+
+    searchField.onblur = function () {
+        var searchValue = searchField.value;
+        if (searchValue === "") {
+            addClass(searchField, "collapsed");
+            searchButton.src = originalSrc;
+        }
+    };
 }
 
 function stopRunningScript() {
@@ -545,7 +609,7 @@ function ScriptController(processId) {
     };
 
     this.stop = function () {
-        authorizedCallHttp("scripts/execute/stop", { "processId": this.processId }, "POST");
+        authorizedCallHttp("scripts/execute/stop", {"processId": this.processId}, "POST");
     };
 
     this.abort = function () {

@@ -26,17 +26,55 @@ body {
 
     display: flex;
     flex-direction: column;
+
+    box-shadow: 7px 0 8px -4px #888888;
+    -webkit-box-shadow: 7px 0 8px -4px #888888;
+    -moz-box-shadow: 7px 0 8px -4px #888888;
 }
 
 #listHeader {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
     align-items: center;
+    justify-content: flex-end;
 
     border-bottom: 1px solid transparent; /* This is to make the header on the same level as the script header */
 
     flex-shrink: 0;
+
+    position: relative;
+}
+
+#serverHeader {
+    flex-grow: 1;
+}
+
+#searchField {
+    width: calc(100% - 8px);
+    height: 1.5rem;
+    float: right;
+    padding: 0;
+    margin: 0;
+}
+
+#searchPanel {
+    padding: 16px 10px;
+    width: auto;
+    display: flex;
+    flex-direction: row;
+    vertical-align: middle;
+    position: absolute;
+    top: 0;
+    right: 54px;
+    background: white;
+}
+
+#searchField.collapsed {
+    width: 0;
+}
+
+#searchButton {
+    margin-top: 1px;
 }
 
 #githubLink {
@@ -67,7 +105,6 @@ body {
     justify-content: center;
     align-items: center;
 
-    align-self: flex-end;
     flex-shrink: 0;
 }
 
