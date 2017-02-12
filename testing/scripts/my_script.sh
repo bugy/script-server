@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 repeats=1
 text="I'm called"
 

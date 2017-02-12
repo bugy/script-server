@@ -27,11 +27,11 @@ Server can work over SSL, for this server key and certificate should be provided
 1. Clone/download the repository
 2. Create GUI configs for your scripts in _server-path_/conf/runners/ folder (see script config structure)
 3. Launch server using python3: python launcher.py
-Server will be running on 5000 port, over HTTP protocol
-### Web config
-You can configure ssl and port, using conf/web.json file. This file should have correct json structure. All missing parameters will be replaced with defaults.
+By default, server will be running on 5000 port, over HTTP protocol
+### Server config
+You can configure ssl and port, using conf/conf.json file. This file should have correct json structure. All missing parameters will be replaced with defaults.
 It is allowed not to create this file. In this case default values will be used.
-See web config structure for details
+See server config structure for details
 
 ## Script config structure
 ```javascript
@@ -150,7 +150,7 @@ See web config structure for details
   ]
 }
 ```
-## Web config structure
+## Server config structure
 ```javascript
 {
   /**

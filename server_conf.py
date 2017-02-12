@@ -4,12 +4,13 @@ import os
 import utils.file_utils as file_utils
 
 
-class WebConfig(object):
+class ServerConfig(object):
     port = None
     ssl = False
     ssl_key_path = None
     ssl_cert_path = None
     authorizer = None
+    alerts_config = None
 
     def get_port(self):
         return self.port
@@ -26,6 +27,19 @@ class WebConfig(object):
     def get_authorizer(self):
         return self.authorizer
 
+    def get_alerts_config(self):
+        return self.alerts_config
+
+
+class AlertsConfig:
+    destinations = []
+
+    def add_destination(self, destination):
+        self.destinations.append(destination)
+
+    def get_destinations(self):
+        return self.destinations
+
 
 def from_json(conf_path):
     if os.path.exists(conf_path):
@@ -33,7 +47,7 @@ def from_json(conf_path):
     else:
         file_content = "{}"
 
-    config = WebConfig()
+    config = ServerConfig()
 
     json_object = json.loads(file_content)
 
@@ -74,4 +88,33 @@ def from_json(conf_path):
         else:
             raise Exception(auth_type + " auth is not supported")
 
+    config.alerts_config = parse_alerts_config(json_object)
+
     return config
+
+
+def parse_alerts_config(json_object):
+    if json_object.get('alerts'):
+        alerts_object = json_object.get('alerts')
+        destination_objects = alerts_object.get('destinations')
+
+        if destination_objects:
+            alerts_config = AlertsConfig()
+
+            for destination_object in destination_objects:
+                destination_type = destination_object.get('type')
+
+                if destination_type == 'email':
+                    import alerts.destination_email as email
+                    destination = email.EmailDestination(destination_object)
+                elif destination_type == 'http':
+                    import alerts.destination_http as http
+                    destination = http.HttpDestination(destination_object)
+                else:
+                    raise Exception('Unknown alert destination type: ' + destination_type)
+
+                alerts_config.add_destination(destination)
+
+            return alerts_config
+
+    return None

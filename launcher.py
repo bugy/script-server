@@ -22,15 +22,15 @@ import execution
 import execution_popen
 import external_model
 import script_configs
+import server_conf
 import utils.file_utils as file_utils
-import web_conf
 
 pty_supported = (sys.platform == "linux" or sys.platform == "linux2")
 if pty_supported:
     import execution_pty
 
 CONFIG_FOLDER = "conf"
-WEB_CONF_PATH = os.path.join(CONFIG_FOLDER, "web.json")
+SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, "conf.json")
 SCRIPT_CONFIGS_FOLDER = os.path.join(CONFIG_FOLDER, "runners")
 
 running_scripts = {}
@@ -303,20 +303,7 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 
         self.write_message(wrap_script_output(" ---  OUTPUT  --- \n"))
 
-        username = auth.get_username(self)
-        if username:
-            audit_name = username
-        else:
-            remote_ip = self.request.remote_ip
-            try:
-                (hostname, aliases, ip_addresses) = socket.gethostbyaddr(remote_ip)
-                audit_name = hostname
-            except:
-                audit_name = None
-                logger.warn("Couldn't get hostname for " + remote_ip)
-
-            if not audit_name:
-                audit_name = remote_ip
+        audit_name = get_audit_name(self, auth, logger)
 
         command_identifier = self.process_wrapper.get_command_identifier()
         log_identifier = self.create_log_identifier(audit_name, command_identifier)
@@ -359,11 +346,32 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
             self.write_message(message)
 
 
+def get_audit_name(request_handler, auth, logger):
+    username = auth.get_username(request_handler)
+    if username:
+        audit_name = username
+    else:
+        remote_ip = request_handler.request.remote_ip
+        try:
+            (hostname, aliases, ip_addresses) = socket.gethostbyaddr(remote_ip)
+            audit_name = hostname
+        except:
+            audit_name = None
+            logger.warn("Couldn't get hostname for " + remote_ip)
+
+        if not audit_name:
+            audit_name = remote_ip
+
+    return audit_name
+
+
 class ScriptExecute(tornado.web.RequestHandler):
     process_wrapper = None
 
     @check_authorization
     def post(self):
+        script_name = None
+
         try:
             request_data = self.request.body
 
@@ -413,6 +421,11 @@ class ScriptExecute(tornado.web.RequestHandler):
 
             self.write(str(process_id))
 
+            alerts_config = self.application.alerts_config
+            if alerts_config:
+                self.subscribe_fail_alerter(script_name, script_logger, alerts_config)
+
+
         except Exception as e:
             script_logger = logging.getLogger("scriptServer")
             script_logger.exception("Error while calling the script")
@@ -425,7 +438,40 @@ class ScriptExecute(tornado.web.RequestHandler):
             result = " ---  ERRORS  --- \n"
             result += error_output
 
+            if script_name:
+                script = str(script_name)
+            else:
+                script = "Some script"
+
+            audit_name = get_audit_name(self, self.application.auth, script_logger)
+            send_alerts(self.application.alerts_config, script + ' NOT STARTED',
+                        "Couldn't start the script " + script + ' by ' + audit_name + '.\n\n' +
+                        result)
+
             respond_error(self, 500, result)
+
+    def subscribe_fail_alerter(self, script_name, script_logger, alerts_config):
+        request_handler_self = self
+
+        class Alerter(object):
+            def finished(self):
+                return_code = request_handler_self.process_wrapper.get_return_code()
+
+                if return_code != 0:
+                    script = str(script_name)
+                    auth = request_handler_self.application.auth
+
+                    audit_name = get_audit_name(request_handler_self, auth, script_logger)
+
+                    title = script + ' FAILED'
+                    body = 'The script "' + script + '", started by ' + audit_name + \
+                           ' exited with return code ' + str(return_code) + '.' + \
+                           ' Usually this means an error, occurred during the execution.' + \
+                           ' Please check the corresponding logs'
+
+                    send_alerts(alerts_config, title, body)
+
+        self.process_wrapper.add_finish_listener(Alerter())
 
     def parse_script_body(self, config, working_directory):
         script_body = config.get_script_body()
@@ -442,6 +488,22 @@ class ScriptExecute(tornado.web.RequestHandler):
             body_args = []
 
         return script_path, body_args
+
+
+def send_alerts(alerts_config, title, body):
+    if (not alerts_config) or (not alerts_config.get_destinations()):
+        return
+
+    def _send():
+        for destination in alerts_config.get_destinations():
+            try:
+                destination.send(title, body)
+            except:
+                script_logger = logging.getLogger("scriptServer")
+                script_logger.exception("Couldn't send alert to " + str(destination))
+
+    thread = threading.Thread(target=_send)
+    thread.start()
 
 
 class AuthorizedStaticFileHandler(tornado.web.StaticFileHandler):
@@ -556,12 +618,12 @@ def main():
     file_utils.prepare_folder(CONFIG_FOLDER)
     file_utils.prepare_folder(SCRIPT_CONFIGS_FOLDER)
 
-    web_config = web_conf.from_json(WEB_CONF_PATH)
+    server_config = server_conf.from_json(SERVER_CONF_PATH)
     ssl_context = None
-    if web_config.is_ssl():
+    if server_config.is_ssl():
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(web_config.get_ssl_cert_path(),
-                                    web_config.get_ssl_key_path())
+        ssl_context.load_cert_chain(server_config.get_ssl_cert_path(),
+                                    server_config.get_ssl_key_path())
 
     file_utils.prepare_folder("temp")
 
@@ -570,7 +632,7 @@ def main():
         "login_url": "/login.html"
     }
 
-    auth = TornadoAuth(web_config.authorizer)
+    auth = TornadoAuth(server_config.authorizer)
 
     handlers = [(r"/scripts/list", GetScripts),
                 (r"/scripts/info", GetScriptInfo),
@@ -589,8 +651,10 @@ def main():
 
     application.auth = auth
 
+    application.alerts_config = server_config.get_alerts_config()
+
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
-    http_server.listen(web_config.port)
+    http_server.listen(server_config.port)
     tornado.ioloop.IOLoop.current().start()
 
 

@@ -2,18 +2,19 @@ import abc
 import os
 import queue
 import signal
-import threading
 import sys
+import threading
 
 
 class ProcessWrapper(metaclass=abc.ABCMeta):
     process = None
     output = None
     command_identifier = None
-    finish_listeners = []
+    finish_listeners = None
 
     def __init__(self, command, command_identifier, working_directory):
         self.command_identifier = command_identifier
+        self.finish_listeners = []
 
         self.init_process(command, working_directory)
 
@@ -46,6 +47,9 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
     def is_finished(self):
         return self.process.poll() is not None
+
+    def get_return_code(self):
+        return self.process.returncode
 
     def stop(self):
         if not self.is_finished():
