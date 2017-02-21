@@ -1,7 +1,4 @@
 function onLoad() {
-    var usernameField = document.getElementById("username");
-    usernameField.focus();
-
     var form = document.getElementById("login-form");
     form.addEventListener("submit", function (event) {
         event.preventDefault();
