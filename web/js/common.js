@@ -43,30 +43,20 @@ function isEmptyObject(obj) {
 }
 
 function addClass(element, clazz) {
-    if (hasClass(element, clazz)) {
-        return;
+    if (!hasClass(element, clazz)) {
+        element.classList.add(clazz);
     }
-
-    var className = element.className;
-
-    if (!className.endsWith(" ")) {
-        className += " ";
-    }
-    className += clazz;
-
-    element.className = className;
 }
 
 function hasClass(element, clazz) {
-    return element.className.search("(\\s|^)" + clazz + "(\\s|$)") >= 0;
+    return element.classList.contains(clazz);
 }
 
 function removeClass(element, clazz) {
-    var className = element.className;
-    className = className.replace(new RegExp("(\\s+|^)" + clazz + "(\\s+|$)"), " ");
-    element.className = className;
+    element.classList.remove(clazz);
 }
 
+// TODO: replace this with new fetch api
 function callHttp(url, object, method, asyncHandler) {
     method = method || "GET";
 
@@ -128,7 +118,6 @@ function destroyChildren(element) {
     }
 }
 
-
 function hide(element) {
     element.style.display = "none";
 }
@@ -137,3 +126,4 @@ function show(element, displayStyle) {
     displayStyle = displayStyle || "block";
     element.style.display = displayStyle;
 }
+
