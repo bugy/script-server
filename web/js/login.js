@@ -7,7 +7,9 @@ function onLoad() {
     });
 
     var labels = document.getElementsByTagName("label");
-    for (label of labels) {
+    for (var i = 0; i < labels.length; i++) {
+        var label = labels[i];
+
         addClass(label, "active"); //workaround for browser autofill - it's not updating label position and label overlap with value
     }
 }
@@ -52,4 +54,3 @@ function showError(text) {
 function hideError(text) {
     showError("");
 }
-
