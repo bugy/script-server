@@ -56,7 +56,6 @@ function removeClass(element, clazz) {
     element.classList.remove(clazz);
 }
 
-// TODO: replace this with new fetch api
 function callHttp(url, object, method, asyncHandler) {
     method = method || "GET";
 
