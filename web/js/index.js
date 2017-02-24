@@ -11,7 +11,6 @@ var parameterControls;
 var runningScriptExecutor = null;
 
 function onLoad() {
-    // TODO: replace this with Map 
     parameterControls = new Hashtable();
 
     var response = authorizedCallHttp("scripts/list");
@@ -107,7 +106,8 @@ function initSearchPanel() {
 
     searchField.addEventListener("input", function (e) {
         var searchValue = searchField.value;
-        for (scriptElement of scriptsListElement) {
+        for (var i = 0; i < scriptsListElement.childElementCount; ++i) {
+            var scriptElement = scriptsListElement.children[i];
             if (scriptElement.innerHTML.toLowerCase().search(searchValue.toLowerCase()) !== -1) {
                 show(scriptElement, "block");
             } else {
@@ -127,8 +127,8 @@ function initSearchPanel() {
             addClass(searchField, "collapsed");
             searchButton.src = originalSrc;
             searchField.value = "";
-            for (scriptElementChild of scriptsListElement) {
-                show(scriptElementChild, "block");
+            for (var i = 0; i < scriptsListElement.childElementCount; ++i) {
+                show(scriptsListElement.children[i], "block");
             }
         }
         openSearchOnTheNextClick = true;
