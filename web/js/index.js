@@ -35,13 +35,13 @@ function onLoad() {
         addClass(scriptElement, "waves-effect");
         addClass(scriptElement, "waves-teal");
         scriptElement.setAttribute("href", "#" + scriptHash);
-        scriptElement.onclick = function (e) {
+        scriptElement.addEventListener("click", function (e) {
             if (!stopRunningScript()) {
                 return;
             }
 
             selectScript(script);
-        };
+        });
 
         scriptElement.innerText = script;
 
@@ -98,13 +98,13 @@ function initSearchPanel() {
 
     searchField.disabled = true;
 
-    searchField.addEventListener('transitionend', function (e) {
+    searchField.addEventListener("transitionend", function (e) {
         if ((e.propertyName === "width") && hasClass(searchField, "collapsed")) {
             searchField.disabled = true;
         }
     });
 
-    searchField.oninput = function (e) {
+    searchField.addEventListener("input", function (e) {
         var searchValue = searchField.value;
         for (var i = 0; i < scriptsListElement.childElementCount; ++i) {
             var scriptElement = scriptsListElement.children[i];
@@ -114,9 +114,9 @@ function initSearchPanel() {
                 hide(scriptElement);
             }
         }
-    };
+    });
 
-    searchButton.onclick = function () {
+    searchButton.addEventListener("click", function () {
         if (openSearchOnTheNextClick) {
             removeClass(searchField, "collapsed");
             searchField.disabled = false;
@@ -132,19 +132,19 @@ function initSearchPanel() {
             }
         }
         openSearchOnTheNextClick = true;
-    };
+    });
 
-    searchButton.onmousedown = function () {
+    searchButton.addEventListener("mousedown", function () {
         openSearchOnTheNextClick = hasClass(searchField, "collapsed");
-    };
+    });
 
-    searchField.onblur = function () {
+    searchField.addEventListener("blur", function () {
         var searchValue = searchField.value;
         if (searchValue === "") {
             addClass(searchField, "collapsed");
             searchButton.src = originalSrc;
         }
-    };
+    });
 }
 
 function stopRunningScript() {
@@ -170,7 +170,7 @@ function initLogPanel() {
     hide(logPanel);
 
     var wasBottom = true;
-    logPanel.onscroll = function () {
+    logPanel.addEventListener("scroll", function () {
         var isTop = logPanel.scrollTop == 0;
         var isBottom = (logPanel.scrollTop + logPanel.clientHeight + 5) > (logPanel.scrollHeight);
 
@@ -196,16 +196,16 @@ function initLogPanel() {
         }
 
         wasBottom = isBottom;
-    };
+    });
 
     var mouseDown = false;
-    logPanel.onmousedown = function () {
+    logPanel.addEventListener("mousedown", function () {
         mouseDown = true;
-    };
+    });
 
-    logPanel.onmouseup = function () {
+    logPanel.addEventListener("mouseup", function () {
         mouseDown = false;
-    };
+    });
 
     var updateScroll = function (mutations) {
         if ((wasBottom) && (!mouseDown)) {
@@ -218,7 +218,7 @@ function initLogPanel() {
     var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
     var observer = new MutationObserver(updateScroll);
 
-    window.addEventListener('resize', function (event) {
+    window.addEventListener("resize", function (event) {
         updateScroll([]);
     });
 
@@ -229,16 +229,16 @@ function initLogPanel() {
 function initStopButton() {
     var stopButton = document.getElementById("stopButton");
 
-    stopButton.onclick = function () {
+    stopButton.addEventListener("click", function () {
         if (runningScriptExecutor != null) {
             runningScriptExecutor.stop();
         }
-    };
+    });
 }
 
 function initExecuteButton() {
     var executeButton = document.getElementById("executeButton");
-    executeButton.onclick = function (e) {
+    executeButton.addEventListener("click", function (e) {
         var logPanel = document.getElementById("logPanel");
         var inputPanel = document.getElementById("inputPanel");
         var errorsPanel = document.getElementById("validationPanel");
@@ -298,7 +298,7 @@ function initExecuteButton() {
                 logPanel.innerText = error.message;
             }
         }
-    };
+    });
 }
 
 function initLogoutPanel() {
@@ -317,7 +317,7 @@ function initLogoutPanel() {
     }
 
     var logoutButton = document.getElementById("logoutButton");
-    logoutButton.onclick = function (e) {
+    logoutButton.addEventListener("click", function (e) {
         if (!stopRunningScript()) {
             return;
         }
@@ -331,7 +331,7 @@ function initLogoutPanel() {
         }
 
         location.reload();
-    };
+    });
 }
 
 
@@ -340,12 +340,12 @@ function initWelcomeIcon() {
 
     var originalSrc = welcomeIcon.src;
     var welcomeCookiePanel = document.getElementById("welcomeCookieText");
-    welcomeCookiePanel.onmouseover = function (e) {
+    welcomeCookiePanel.addEventListener("mouseover", function (e) {
         welcomeIcon.src = "../images/cookie.png";
-    };
-    welcomeCookiePanel.onmouseout = function (e) {
+    });
+    welcomeCookiePanel.addEventListener("mouseout", function (e) {
         welcomeIcon.src = originalSrc;
-    };
+    });
 }
 
 function showScript(activeScript) {
@@ -472,7 +472,7 @@ function selectScript(scriptName) {
 }
 
 function getHash() {
-    if (location.hash == 'undefined') {
+    if (location.hash == "undefined") {
         return null;
     }
 
@@ -555,7 +555,7 @@ function ScriptController(processId) {
     var receivedData = false;
     var logPanel = document.getElementById("logPanel");
 
-    ws.onmessage = function (message) {
+    ws.addEventListener("message", function (message) {
         if (!receivedData) {
             logPanel.innerText = "";
             receivedData = true;
@@ -586,27 +586,27 @@ function ScriptController(processId) {
                 var inputField = document.getElementById("inputField");
                 inputField.value = "";
 
-                inputField.onkeyup = function (event) {
+                inputField.addEventListener("keyup", function (event) {
                     if (event.keyCode == 13) {
                         ws.send(inputField.value);
 
                         inputField.value = "";
                     }
-                };
+                });
 
                 show(inputPanel, "block");
                 inputField.focus();
             }
         });
-    };
+    });
 
-    ws.onclose = function (event) {
+    ws.addEventListener("close", function (event) {
         setButtonEnabled(stopButton, false);
         setButtonEnabled(executeButton, true);
         runningScriptExecutor = null;
 
         hide(inputPanel);
-    };
+    });
 
     this.stop = function () {
         authorizedCallHttp("scripts/execute/stop", {"processId": this.processId}, "POST");
@@ -639,9 +639,9 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
 
             var link = document.createElement("a");
             link.innerHTML = "relogin";
-            link.onclick = function () {
+            link.addEventListener("click", function () {
                 location.reload();
-            }
+            });
             link.href = "javascript:void(0)";
 
             errorPanel.innerHTML = "Credentials expired, please ";
@@ -652,3 +652,4 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
         throw error;
     }
 }
+
