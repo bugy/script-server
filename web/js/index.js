@@ -440,16 +440,16 @@ function showScript(activeScript) {
 }
 
 function createParameterControl(parameter) {
-
     if (parameter.withoutValue) {
-        return new Checkbox(parameter.name, parameter.default);
+        return new Checkbox(parameter.name, parameter.default, parameter.description);
 
     } else if (parameter.type == "list") {
         return new Combobox(
             parameter.name,
             parameter.default,
             parameter.required,
-            parameter.values);
+            parameter.values,
+            parameter.description);
 
     } else {
         return new TextField(
@@ -458,7 +458,8 @@ function createParameterControl(parameter) {
             parameter.required,
             parameter.type,
             parameter.min,
-            parameter.max);
+            parameter.max,
+            parameter.description);
     }
 }
 

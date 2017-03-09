@@ -1,4 +1,4 @@
-function Combobox(name, defaultValue, required, values) {
+function Combobox(name, defaultValue, required, values, description) {
     AbstractInput.call(this);
 
     this.required = required;
@@ -40,6 +40,7 @@ function Combobox(name, defaultValue, required, values) {
 
     this.panel.appendChild(this.selectField);
     this.panel.appendChild(label);
+    this.panel.title = description;
 }
 
 Combobox.prototype = new AbstractInput();

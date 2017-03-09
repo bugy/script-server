@@ -1,4 +1,4 @@
-function Checkbox(name, defaultValue) {
+function Checkbox(name, defaultValue, description) {
     AbstractInput.call(this);
 
     var label = document.createElement("label");
@@ -15,6 +15,7 @@ function Checkbox(name, defaultValue) {
 
     this.panel.appendChild(this.checkBox);
     this.panel.appendChild(label);
+    this.panel.title = description;
 }
 
 Checkbox.prototype = new AbstractInput();
