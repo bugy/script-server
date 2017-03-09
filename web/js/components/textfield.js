@@ -13,7 +13,6 @@ function TextField(name, defaultValue, required, type, min, max, description) {
     this.field = document.createElement("input");
     this.field.id = name;
     this.field.type = "text";
-    this.field.title = description;
 
     if (!isNull(this.type)) {
         if (this.type == "int") {
