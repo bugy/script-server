@@ -1,6 +1,7 @@
 function AbstractInput() {
     this.panel = document.createElement("div");
     addClass(this.panel, "input-field");
+    addClass(this.panel, "inline");
 }
 
 AbstractInput.prototype = new Component();

@@ -176,7 +176,7 @@ def is_allowed_during_login(request_path, login_url, request_handler):
         login_resources = ["/js/login.js",
                            "/js/common.js",
                            "/js/libs/jquery.min.js",
-                           "/js/libs/materialize.js",
+                           "/js/libs/materialize.min.js",
                            "/css/libs/materialize.min.css",
                            "/css/index.css",
                            "/css/fonts/roboto/Roboto-Regular.woff2",
