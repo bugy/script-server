@@ -1,4 +1,4 @@
-function TextField(name, defaultValue, required, type, min, max) {
+function TextField(name, defaultValue, required, type, min, max, description) {
     AbstractInput.call(this);
 
     this.required = required;
@@ -36,6 +36,9 @@ function TextField(name, defaultValue, required, type, min, max) {
 
     this.panel.appendChild(this.field);
     this.panel.appendChild(label);
+    if (!isEmptyString(description)) {
+        this.panel.title = description;
+    }
 }
 
 TextField.prototype = new AbstractInput();
