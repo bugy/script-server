@@ -40,7 +40,9 @@ function Combobox(name, defaultValue, required, values, description) {
 
     this.panel.appendChild(this.selectField);
     this.panel.appendChild(label);
-    this.panel.title = description;
+    if (!isEmptyString(description)) {
+        this.panel.title = description;
+    }
 }
 
 Combobox.prototype = new AbstractInput();

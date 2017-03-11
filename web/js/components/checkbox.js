@@ -15,7 +15,9 @@ function Checkbox(name, defaultValue, description) {
 
     this.panel.appendChild(this.checkBox);
     this.panel.appendChild(label);
-    this.panel.title = description;
+    if (!isEmptyString(description)) {
+        this.panel.title = description;
+    }
 }
 
 Checkbox.prototype = new AbstractInput();
