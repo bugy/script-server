@@ -587,13 +587,13 @@ function ScriptController(processId) {
                 var inputField = document.getElementById("inputField");
                 inputField.value = "";
 
-                inputField.addEventListener("keyup", function (event) {
+                inputField.onkeyup = function (event) {
                     if (event.keyCode == 13) {
                         ws.send(inputField.value);
 
                         inputField.value = "";
                     }
-                });
+                };
 
                 show(inputPanel, "block");
                 inputField.focus();
