@@ -67,8 +67,6 @@ class PtyProcessWrapper(execution.ProcessWrapper):
                             chunk = os.read(self.pty_master, max_read_bytes)
                             data += chunk
 
-                            if len(chunk) < max_read_bytes:
-                                break
                         except BlockingIOError:
                             break
 
