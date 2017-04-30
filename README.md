@@ -9,12 +9,15 @@ GUI is very straightforward and easy-to-use for anyone. Example of the user inte
 ![Example of user interface](screenshot.png?raw=true)
 
 ## Features
-1. Users can specify script parameters. Different parameter types are supported
+1. Users can specify script parameters. Different parameter types are supported [c]
 2. Providing immediate output to the user and reading his input (if script is interactive)
-3. LDAP authentication support
-4. Alerting in case of script execution failures (email or web hook)
-5. HTTPS support
+3. LDAP authentication support [c]
+4. Alerting in case of script execution failures (email or web hook) [c]
+5. HTTPS support [c]
 6. Transparent logging and auditing
+7. Bash colors/styles support [c]
+
+[c] These features are configurable, see [server config page](https://github.com/bugy/script-server/wiki/Server-config) for details
 
 ## Setup and run
 1. Clone/download the repository
@@ -24,7 +27,7 @@ GUI is very straightforward and easy-to-use for anyone. Example of the user inte
 By default, server will run on 5000 port, over HTTP protocol
 
 ### Server config
-You can configure ssl and port, using *conf/conf.json* file. This file should have correct json structure. All missing parameters will be replaced with defaults.
+All the features listed above and some other minor features can be configured in *conf/conf.json* file. 
 It is allowed not to create this file. In this case default values will be used.
 See [server config page](https://github.com/bugy/script-server/wiki/Server-config) for details
 
