@@ -9,15 +9,17 @@ GUI is very straightforward and easy-to-use for anyone. Example of the user inte
 ![Example of user interface](screenshot.png?raw=true)
 
 ## Features
-1. Users can specify script parameters. Different parameter types are supported [c]
+1. Users can specify script parameters. Different parameter types are supported [conf-script]
 2. Providing immediate output to the user and reading his input (if script is interactive)
-3. LDAP authentication support [c]
-4. Alerting in case of script execution failures (email or web hook) [c]
-5. HTTPS support [c]
+3. LDAP authentication support [conf-server]
+4. Alerting in case of script execution failures (email or web hook) [conf-server]
+5. HTTPS support [conf-server]
 6. Transparent logging and auditing
-7. Bash colors/styles support [c]
+7. Bash colors/styles support [conf-script]
 
-[c] These features are configurable, see [server config page](https://github.com/bugy/script-server/wiki/Server-config) for details
+[conf-script] These features are configurable per script, see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details
+
+[conf-server] These features are configurable for the whole server, see [server config page](https://github.com/bugy/script-server/wiki/Server-config) for details
 
 ## Setup and run
 1. Clone/download the repository
