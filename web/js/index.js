@@ -170,7 +170,7 @@ function initLogPanel() {
     hide(logPanel);
 
     var wasBottom = true;
-    logPanel.addEventListener("scroll", function () {
+    var scrollStyleUpdate = function () {
         var isTop = logPanel.scrollTop == 0;
         var isBottom = (logPanel.scrollTop + logPanel.clientHeight + 5) > (logPanel.scrollHeight);
 
@@ -196,7 +196,8 @@ function initLogPanel() {
         }
 
         wasBottom = isBottom;
-    });
+    };
+    logPanel.addEventListener("scroll", scrollStyleUpdate);
 
     var mouseDown = false;
     logPanel.addEventListener("mousedown", function () {
@@ -211,7 +212,7 @@ function initLogPanel() {
         if ((wasBottom) && (!mouseDown)) {
             logPanel.scrollTop = logPanel.scrollHeight;
         } else {
-            logPanel.onscroll();
+            scrollStyleUpdate();
         }
     };
 
@@ -556,52 +557,78 @@ function ScriptController(processId) {
     var receivedData = false;
     var logPanel = document.getElementById("logPanel");
 
+    var logElements = [];
+    var publishLogs = function () {
+        for (i = 0; i < logElements.length; i++) {
+            logPanel.appendChild(logElements[i]);
+        }
+        logElements = [];
+    };
+    var logPublisher = window.setInterval(publishLogs, 30);
+
     ws.addEventListener("message", function (message) {
         if (!receivedData) {
             logPanel.innerText = "";
             receivedData = true;
         }
 
-        var events = message.data.split(/(?={)/);
+        var event = JSON.parse(message.data);
 
-        events.forEach(function (event) {
-            if (event.trim().length == 0) {
-                return
-            }
+        var eventType = event.event;
+        var data = event.data;
 
-            var response = JSON.parse(event);
+        if (eventType == "output") {
+            var outputElement = null;
 
-            var eventType = response.event;
-            var data = response.data;
+            if (!isNull(data.text_color) || !isNull(data.background_color) || !isNull(data.text_styles)) {
+                outputElement = document.createElement('span');
+                if (!isNull(data.text_color)) {
+                    addClass(outputElement, 'text_color_' + data.text_color);
+                }
+                if (!isNull(data.background_color)) {
+                    addClass(outputElement, 'background_' + data.background_color);
+                }
 
-            if (eventType == "output") {
-                var textNode = document.createTextNode(data);
-                logPanel.appendChild(textNode);
-                return;
-            }
-
-            if (eventType == "input") {
-                var inputLabel = document.getElementById("inputLabel");
-                inputLabel.innerText = data;
-
-                var inputField = document.getElementById("inputField");
-                inputField.value = "";
-
-                inputField.onkeyup = function (event) {
-                    if (event.keyCode == 13) {
-                        ws.send(inputField.value);
-
-                        inputField.value = "";
+                if (!isNull(data.text_styles)) {
+                    for (styleIndex = 0; styleIndex < data.text_styles.length; styleIndex++) {
+                        addClass(outputElement, 'text_style_' + data.text_styles[styleIndex]);
                     }
-                };
+                }
 
-                show(inputPanel, "block");
-                inputField.focus();
+                outputElement.appendChild(document.createTextNode(data.text));
+            } else {
+                outputElement = document.createTextNode(data.text);
             }
-        });
+
+            logElements.push(outputElement);
+
+            return;
+        }
+
+        if (eventType == "input") {
+            var inputLabel = document.getElementById("inputLabel");
+            inputLabel.innerText = data;
+
+            var inputField = document.getElementById("inputField");
+            inputField.value = "";
+
+            inputField.onkeyup = function (event) {
+                if (event.keyCode == 13) {
+                    ws.send(inputField.value);
+
+                    inputField.value = "";
+                }
+            };
+
+            show(inputPanel, "block");
+            inputField.focus();
+        }
     });
 
     ws.addEventListener("close", function (event) {
+        window.clearInterval(logPublisher);
+        publishLogs();
+
         setButtonEnabled(stopButton, false);
         setButtonEnabled(executeButton, true);
         runningScriptExecutor = null;

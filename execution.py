@@ -11,9 +11,11 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     output = None
     command_identifier = None
     finish_listeners = None
+    config = None
 
-    def __init__(self, command, command_identifier, working_directory):
+    def __init__(self, command, command_identifier, working_directory, config):
         self.command_identifier = command_identifier
+        self.config = config
         self.finish_listeners = []
 
         self.init_process(command, working_directory)
@@ -50,6 +52,9 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
     def get_return_code(self):
         return self.process.returncode
+
+    def get_config(self):
+        return self.config
 
     def stop(self):
         if not self.is_finished():

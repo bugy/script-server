@@ -1,0 +1,143 @@
+#logPanel > span.text_color_red {
+    color: #f44336;
+}
+
+#logPanel > span.text_color_black {
+    color: #000;
+}
+
+#logPanel > span.text_color_green {
+    color: #689f38;
+}
+
+#logPanel > span.text_color_yellow {
+    color: #fdd835;
+}
+
+#logPanel > span.text_color_blue {
+    color: #1976D2;
+}
+
+#logPanel > span.text_color_magenta {
+    color: #d81b60;
+}
+
+#logPanel > span.text_color_cyan {
+    color: #0097A7;
+}
+
+#logPanel > span.text_color_lightgray {
+    color: #BDBDBD;
+}
+
+#logPanel > span.text_color_darkgray {
+    color: #616161;
+}
+
+#logPanel > span.text_color_lightred {
+    color: #EF9A9A;
+}
+
+#logPanel > span.text_color_lightgreen {
+    color: #9ccc65;
+}
+
+#logPanel > span.text_color_lightyellow {
+    color: #fff59d;
+}
+
+#logPanel > span.text_color_lightblue {
+    color: #90CAF9;
+}
+
+#logPanel > span.text_color_lightmagenta {
+    color: #f06292;
+}
+
+#logPanel > span.text_color_lightcyan {
+    color: #26C6DA;
+}
+
+#logPanel > span.text_color_white {
+    color: #fff;
+}
+
+#logPanel > span.background_red {
+    background-color: #f44336;
+}
+
+#logPanel > span.background_black {
+    background-color: #000;
+}
+
+#logPanel > span.background_green {
+    background-color: #689f38;
+}
+
+#logPanel > span.background_yellow {
+    background-color: #fdd835;
+}
+
+#logPanel > span.background_blue {
+    background-color: #1976D2;
+}
+
+#logPanel > span.background_magenta {
+    background-color: #d81b60;
+}
+
+#logPanel > span.background_cyan {
+    background-color: #0097A7;
+}
+
+#logPanel > span.background_lightgray {
+    background-color: #BDBDBD;
+}
+
+#logPanel > span.background_darkgray {
+    background-color: #616161;
+}
+
+#logPanel > span.background_lightred {
+    background-color: #EF9A9A;
+}
+
+#logPanel > span.background_lightgreen {
+    background-color: #9ccc65;
+}
+
+#logPanel > span.background_lightyellow {
+    background-color: #fff59d;
+}
+
+#logPanel > span.background_lightblue {
+    background-color: #90CAF9;
+}
+
+#logPanel > span.background_lightmagenta {
+    background-color: #f06292;
+}
+
+#logPanel > span.background_lightcyan {
+    background-color: #26C6DA;
+}
+
+#logPanel > span.background_white {
+    background-color: #fff;
+}
+
+#logPanel > span.text_style_bold {
+    font-weight: bold;
+}
+
+#logPanel > span.text_style_underlined {
+    text-decoration: underline;
+}
+
+#logPanel > span.text_style_dim {
+    opacity: 0.5;
+}
+
+#logPanel > span.text_style_hidden {
+    opacity: 0;
+}

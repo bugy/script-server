@@ -23,6 +23,7 @@ import execution_popen
 import external_model
 import script_configs
 import server_conf
+import utils.bash_utils as bash_utils
 import utils.file_utils as file_utils
 
 pty_supported = (sys.platform == "linux" or sys.platform == "linux2")
@@ -409,11 +410,13 @@ class ScriptExecute(tornado.web.RequestHandler):
             if run_pty:
                 self.process_wrapper = execution_pty.PtyProcessWrapper(command,
                                                                        config.get_name(),
-                                                                       working_directory)
+                                                                       working_directory,
+                                                                       config)
             else:
                 self.process_wrapper = execution_popen.POpenProcessWrapper(command,
                                                                            config.get_name(),
-                                                                           working_directory)
+                                                                           working_directory,
+                                                                           config)
 
             process_id = self.process_wrapper.get_process_id()
 
@@ -551,14 +554,25 @@ def respond_error(request_handler, status_code, message):
     request_handler.write(message)
 
 
-def wrap_script_output(text):
-    return wrap_to_server_event("output", text)
+def wrap_script_output(text, text_color=None, background_color=None, text_styles=None):
+    output_object = {'text': text}
+
+    if text_color:
+        output_object['text_color'] = text_color
+
+    if background_color:
+        output_object['background_color'] = background_color
+
+    if text_styles:
+        output_object['text_styles'] = text_styles
+
+    return wrap_to_server_event("output", output_object)
 
 
 def wrap_to_server_event(event_type, data):
     return json.dumps({
         "event": event_type,
-        "data": str(data)
+        "data": data
     })
 
 
@@ -572,22 +586,48 @@ def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, log_identifi
         script_logger.exception("Couldn't create a log file")
 
     try:
+        bash_formatting = process_wrapper.get_config().is_bash_formatting()
+
+        reader = None
+        if bash_formatting:
+            reader = bash_utils.BashReader()
+
         while True:
             process_output = process_wrapper.read()
 
+            try:
+                if log_file and (process_output is not None):
+                    log_file.write(process_output)
+                    log_file.flush()
+            except:
+                script_logger.exception("Couldn't write to the log file")
+
             if process_output is not None:
-                write_callback(wrap_script_output(process_output))
+                if reader:
+                    formatted_texts = reader.read(process_output)
+                    for text in formatted_texts:
+                        write_callback(wrap_script_output(
+                            text.text,
+                            text.text_color,
+                            text.background_color,
+                            text.styles
+                        ))
 
-                try:
-                    if log_file:
-                        log_file.write(process_output)
-                        log_file.flush()
-                except:
-                    script_logger.exception("Couldn't write to the log file")
+                else:
+                    write_callback(wrap_script_output(process_output))
 
-            else:
-                if process_wrapper.is_finished():
-                    break
+            elif process_wrapper.is_finished():
+                if reader:
+                    remaining_text = reader.get_current_text()
+                    if remaining_text:
+                        write_callback(wrap_script_output(
+                            remaining_text.text,
+                            remaining_text.text_color,
+                            remaining_text.background_color,
+                            remaining_text.styles
+                        ))
+
+                break
     finally:
         try:
             if log_file:

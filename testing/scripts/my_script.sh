@@ -39,4 +39,4 @@ do
 done
 
 echo "File content >> \n"
-cat ~/simple.txt
+cat ~/simple.txt | grep --color=always -E "$text|$"

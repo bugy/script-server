@@ -20,13 +20,13 @@ class PtyProcessWrapper(execution.ProcessWrapper):
     pty_slave = None
     encoding = None
 
-    def __init__(self, command, command_identifier, working_directory):
+    def __init__(self, command, command_identifier, working_directory, config):
         if command_identifier in script_encodings:
             self.encoding = script_encodings[command_identifier]
         else:
             self.encoding = sys.stdout.encoding
 
-        execution.ProcessWrapper.__init__(self, command, command_identifier, working_directory)
+        execution.ProcessWrapper.__init__(self, command, command_identifier, working_directory, config)
 
     def init_process(self, command, working_directory):
         master, slave = pty.openpty()

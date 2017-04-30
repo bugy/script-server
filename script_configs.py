@@ -12,6 +12,7 @@ class Config(object):
     requires_terminal = None
     parameters = None
     working_directory = None
+    bash_formatting = None
 
     def __init__(self):
         self.parameters = []
@@ -39,6 +40,9 @@ class Config(object):
 
     def get_working_directory(self):
         return self.working_directory
+
+    def is_bash_formatting(self):
+        return self.bash_formatting
 
 
 class Parameter(object):
@@ -142,16 +146,8 @@ def from_json(file_path, json_string, pty_enabled_default=False):
     config.description = json_object.get("description")
     config.working_directory = json_object.get("working_directory")
 
-    requires_terminal = json_object.get("requires_terminal")
-    if requires_terminal is not None:
-        if requires_terminal == True:
-            config.requires_terminal = True
-        elif requires_terminal == False:
-            config.requires_terminal = False
-        else:
-            raise Exception("'requires_terminal' parameter should be True or False")
-    else:
-        config.requires_terminal = pty_enabled_default
+    config.requires_terminal = read_boolean("requires_terminal", json_object, pty_enabled_default)
+    config.bash_formatting = read_boolean("bash_formatting", json_object, (os.name == 'posix') or (os.name == 'mac'))
 
     parameters_json = json_object.get("parameters")
 
@@ -194,3 +190,16 @@ def from_json(file_path, json_string, pty_enabled_default=False):
             config.add_parameter(parameter)
 
     return config
+
+
+def read_boolean(name, json_object, default=None):
+    value = json_object.get(name)
+    if value is not None:
+        if value == True:
+            return True
+        elif value == False:
+            return False
+        else:
+            raise Exception('"' + name + '" parameter should be True or False')
+    else:
+        return default
