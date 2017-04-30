@@ -35,13 +35,13 @@ function onLoad() {
         addClass(scriptElement, "waves-effect");
         addClass(scriptElement, "waves-teal");
         scriptElement.setAttribute("href", "#" + scriptHash);
-        scriptElement.addEventListener("click", function (e) {
+        scriptElement.onclick = function (e) {
             if (!stopRunningScript()) {
-                return;
+                return false;
             }
 
-            selectScript(script);
-        });
+            return true;
+        };
 
         scriptElement.innerText = script;
 
@@ -63,8 +63,19 @@ function onLoad() {
         showScript(activeScript)
     });
 
-    var hash = getHash();
-    if (!isNull(hash)) {
+    var activateScriptFromHash = function () {
+        if (!isNull(runningScriptExecutor) && !runningScriptExecutor.isFinished()) {
+            runningScriptExecutor.abort();
+            runningScriptExecutor = null;
+        }
+
+        var hash = getHash();
+
+        if (isNull(hash)) {
+            selectScript(null);
+            return;
+        }
+
         var scriptName = scriptHashes.get(hash);
         if (isNull(scriptName)) {
             scriptName = hash;
@@ -73,7 +84,9 @@ function onLoad() {
         if (scripts.indexOf(scriptName) != -1) {
             selectScript(scriptName);
         }
-    }
+    };
+    window.addEventListener('hashchange', activateScriptFromHash);
+    activateScriptFromHash();
 
 
     initSearchPanel();
@@ -355,10 +368,8 @@ function showScript(activeScript) {
     });
 
     var welcomePanel = document.getElementById("welcomePanel");
-    hide(welcomePanel);
 
     var contentPanel = document.getElementById("contentPanel");
-    show(contentPanel, "flex");
 
     var validationPanel = document.getElementById("validationPanel");
     var validationErrorsList = document.getElementById("validationErrorsList");
@@ -371,9 +382,17 @@ function showScript(activeScript) {
     var paramsPanel = document.getElementById("parametersPanel");
     destroyChildren(paramsPanel);
 
+    if (isNull(activeScript)) {
+        show(welcomePanel, 'flex');
+        hide(contentPanel);
+        return;
+    }
+
+    hide(welcomePanel);
+    show(contentPanel, "flex");
+
     try {
         var info = authorizedCallHttp("scripts/info?name=" + activeScript);
-
         var parsedInfo = JSON.parse(info);
 
         scriptHeader.innerText = parsedInfo.name;
