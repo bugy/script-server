@@ -21,10 +21,13 @@ import auth.auth_base as auth_base
 import execution
 import execution_popen
 import external_model
+import file_download_feature
 import script_configs
 import server_conf
 import utils.bash_utils as bash_utils
 import utils.file_utils as file_utils
+
+TEMP_FOLDER = "temp"
 
 pty_supported = (sys.platform == "linux" or sys.platform == "linux2")
 if pty_supported:
@@ -307,20 +310,40 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
         audit_name = get_audit_name(self, auth, logger)
 
         command_identifier = self.process_wrapper.get_command_identifier()
-        log_identifier = self.create_log_identifier(audit_name, command_identifier)
+        launch_identifier = self.create_log_identifier(audit_name, command_identifier)
 
         reading_thread = threading.Thread(target=pipe_process_to_http, args=(
             self.process_wrapper,
-            log_identifier,
+            launch_identifier,
             self.safe_write
         ))
         reading_thread.start()
 
         web_socket = self
+        process_wrapper = self.process_wrapper
 
         class FinishListener(object):
             def finished(self):
                 reading_thread.join()
+
+                try:
+                    downloadable_files = file_download_feature.prepare_downloadable_files(
+                        process_wrapper.get_config(),
+                        process_wrapper.get_full_output(),
+                        audit_name,
+                        get_tornado_secret(),
+                        TEMP_FOLDER)
+
+                    for file in downloadable_files:
+                        filename = os.path.basename(file)
+                        relative_path = file_utils.relative_path(file, TEMP_FOLDER)
+
+                        web_socket.safe_write(wrap_to_server_event(
+                            'file',
+                            {'url': relative_path.replace(os.path.sep, '/'), 'filename': filename}))
+                except:
+                    logger.exception("Couldn't prepare downloadable files")
+
                 web_socket.close()
 
         self.process_wrapper.add_finish_listener(FinishListener())
@@ -549,6 +572,28 @@ class GetUsernameHandler(tornado.web.RequestHandler):
         self.write(username)
 
 
+class DownloadResultFile(AuthorizedStaticFileHandler):
+    def set_extra_headers(self, path):
+        super().set_extra_headers(path)
+
+        filename = os.path.basename(path)
+        self.set_header('Content-Disposition', 'attachment; filename=' + filename + '')
+
+    @check_authorization
+    def validate_absolute_path(self, root, absolute_path):
+        auth = self.application.auth
+        logger = logging.getLogger('scriptServer')
+
+        audit_name = get_audit_name(self, auth, logger)
+
+        file_path = file_utils.relative_path(absolute_path, os.path.abspath(root))
+        if not file_download_feature.allowed_to_download(file_path, audit_name, get_tornado_secret()):
+            logger.warn('Access attempt from ' + audit_name + ' to ' + absolute_path)
+            raise tornado.web.HTTPError(404)
+
+        return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
+
+
 def respond_error(request_handler, status_code, message):
     request_handler.set_status(status_code)
     request_handler.write(message)
@@ -665,7 +710,7 @@ def main():
         ssl_context.load_cert_chain(server_config.get_ssl_cert_path(),
                                     server_config.get_ssl_key_path())
 
-    file_utils.prepare_folder("temp")
+    file_utils.prepare_folder(TEMP_FOLDER)
 
     settings = {
         "cookie_secret": get_tornado_secret(),
@@ -674,16 +719,24 @@ def main():
 
     auth = TornadoAuth(server_config.authorizer)
 
+    result_files_folder = file_download_feature.get_result_files_folder(TEMP_FOLDER)
+    file_download_feature.autoclean_downloads(TEMP_FOLDER)
+
     handlers = [(r"/scripts/list", GetScripts),
                 (r"/scripts/info", GetScriptInfo),
                 (r"/scripts/execute", ScriptExecute),
                 (r"/scripts/execute/stop", ScriptStop),
                 (r"/scripts/execute/io/(.*)", ScriptStreamsSocket),
+                (r'/' + file_download_feature.RESULT_FILES_FOLDER + '/(.*)',
+                 DownloadResultFile,
+                 {'path': result_files_folder}),
                 (r"/", tornado.web.RedirectHandler, {"url": "/index.html"})]
+
     if auth.is_enabled():
         handlers.append((r"/login", LoginHandler))
         handlers.append((r"/logout", LogoutHandler))
-        handlers.append((r"/username", GetUsernameHandler))
+
+    handlers.append((r"/username", GetUsernameHandler))
 
     handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 

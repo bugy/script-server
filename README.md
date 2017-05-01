@@ -16,6 +16,7 @@ GUI is very straightforward and easy-to-use for anyone. Example of the user inte
 5. HTTPS support [conf-server]
 6. Transparent logging and auditing
 7. Bash colors/styles support [conf-script]
+8. Download script execution results [conf-script]
 
 [conf-script] These features are configurable per script, see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details
 

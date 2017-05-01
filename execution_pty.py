@@ -96,7 +96,7 @@ class PtyProcessWrapper(execution.ProcessWrapper):
 
                 if data:
                     output_text = data.decode(self.encoding)
-                    self.output.put(output_text)
+                    self.write_script_output(output_text)
 
                 if finished:
                     break
@@ -105,7 +105,7 @@ class PtyProcessWrapper(execution.ProcessWrapper):
                     time.sleep(0.01)
 
         except:
-            self.output.put("Unexpected error occurred. Contact the administrator.")
+            self.output_queue.put("Unexpected error occurred. Contact the administrator.")
 
             logger = logging.getLogger("execution")
             try:

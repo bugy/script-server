@@ -257,8 +257,11 @@ function initExecuteButton() {
         var inputPanel = document.getElementById("inputPanel");
         var errorsPanel = document.getElementById("validationPanel");
         var errorsList = document.getElementById("validationErrorsList");
+        var filesDownloadPanel = document.getElementById("filesDownloadPanel");
 
         destroyChildren(errorsList);
+        destroyChildren(filesDownloadPanel);
+        hide(filesDownloadPanel);
 
         var errors = {};
         parameterControls.each(function (parameter, control) {
@@ -457,6 +460,10 @@ function showScript(activeScript) {
 
     var inputPanel = document.getElementById("inputPanel");
     hide(inputPanel);
+
+    var filesDownloadPanel = document.getElementById("filesDownloadPanel");
+    destroyChildren(filesDownloadPanel);
+    hide(filesDownloadPanel);
 }
 
 function createParameterControl(parameter) {
@@ -622,9 +629,8 @@ function ScriptController(processId) {
             logElements.push(outputElement);
 
             return;
-        }
 
-        if (eventType == "input") {
+        } else if (eventType == "input") {
             var inputLabel = document.getElementById("inputLabel");
             inputLabel.innerText = data;
 
@@ -641,6 +647,30 @@ function ScriptController(processId) {
 
             show(inputPanel, "block");
             inputField.focus();
+
+        } else if (eventType == "file") {
+            var filesDownloadPanel = document.getElementById('filesDownloadPanel');
+            show(filesDownloadPanel, 'block');
+
+            var url = data.url;
+            var filename = data.filename;
+
+            var downloadLink = document.createElement('a');
+            addClass(downloadLink, 'waves-effect');
+            addClass(downloadLink, 'waves-teal');
+            addClass(downloadLink, 'btn-flat');
+            downloadLink.setAttribute("download", filename);
+            downloadLink.href = url;
+            downloadLink.target = '_blank';
+            downloadLink.appendChild(document.createTextNode(filename));
+
+            var downloadImage = document.createElement('img');
+            downloadImage.src = 'images/file_download.png';
+            downloadLink.appendChild(downloadImage);
+
+            filesDownloadPanel.appendChild(downloadLink);
+
+            return;
         }
     });
 

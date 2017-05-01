@@ -13,9 +13,11 @@ class Config(object):
     parameters = None
     working_directory = None
     bash_formatting = None
+    output_files = None
 
     def __init__(self):
         self.parameters = []
+        self.output_files = []
 
     def get_config_path(self):
         return self.config_path
@@ -148,6 +150,10 @@ def from_json(file_path, json_string, pty_enabled_default=False):
 
     config.requires_terminal = read_boolean("requires_terminal", json_object, pty_enabled_default)
     config.bash_formatting = read_boolean("bash_formatting", json_object, (os.name == 'posix') or (os.name == 'mac'))
+
+    output_files = json_object.get("output_files")
+    if output_files:
+        config.output_files = output_files
 
     parameters_json = json_object.get("parameters")
 

@@ -131,3 +131,31 @@ def last_modification(folder_paths):
                     result = folder_date
 
     return result
+
+
+def relative_path(path, parent_path):
+    path = normalize_path(path)
+    parent_path = normalize_path(parent_path)
+
+    if not path.startswith(parent_path):
+        raise ValueError(path + ' is not subpath of ' + parent_path)
+
+    relative_path = path[len(parent_path):]
+
+    if relative_path.startswith(os.path.sep):
+        return relative_path[1:]
+
+    return relative_path
+
+
+def split_all(path):
+    result = []
+
+    head = path
+    while head and (not is_root(head)):
+        (head, tail) = os.path.split(head)
+        if tail:
+            result.append(tail)
+
+    result.reverse()
+    return result

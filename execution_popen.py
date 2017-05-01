@@ -23,7 +23,7 @@ class POpenProcessWrapper(execution.ProcessWrapper):
         if not value.endswith("\n"):
             input_value += "\n"
 
-        self.output.put(input_value)
+        self.output_queue.put(input_value)
 
         self.process.stdin.write(input_value)
         self.process.stdin.flush()
@@ -50,7 +50,7 @@ class POpenProcessWrapper(execution.ProcessWrapper):
 
                 if data:
                     output_text = data
-                    self.output.put(output_text)
+                    self.write_script_output(output_text)
 
                 if finished:
                     break
@@ -59,7 +59,7 @@ class POpenProcessWrapper(execution.ProcessWrapper):
                     time.sleep(0.01)
 
         except:
-            self.output.put("Unexpected error occurred. Contact the administrator.")
+            self.output_queue.put("Unexpected error occurred. Contact the administrator.")
 
             logger = logging.getLogger("execution")
             try:

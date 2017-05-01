@@ -2,16 +2,18 @@ import abc
 import os
 import queue
 import signal
+import subprocess
 import sys
 import threading
 
 
 class ProcessWrapper(metaclass=abc.ABCMeta):
     process = None
-    output = None
+    output_queue = None
     command_identifier = None
     finish_listeners = None
     config = None
+    full_output = ''
 
     def __init__(self, command, command_identifier, working_directory, config):
         self.command_identifier = command_identifier
@@ -20,7 +22,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
         self.init_process(command, working_directory)
 
-        self.output = queue.Queue()
+        self.output_queue = queue.Queue()
 
         read_output_thread = threading.Thread(target=self.pipe_process_output, args=())
         read_output_thread.start()
@@ -56,6 +58,13 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     def get_config(self):
         return self.config
 
+    def write_script_output(self, text):
+        self.output_queue.put(text)
+        self.full_output += text
+
+    def get_full_output(self):
+        return self.full_output
+
     def stop(self):
         if not self.is_finished():
             if not sys.platform.startswith('win'):
@@ -75,25 +84,25 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
             else:
                 self.process.terminate()
 
-            self.output.put("\n>> STOPPED BY USER\n")
+            self.output_queue.put("\n>> STOPPED BY USER\n")
 
     def kill(self):
         if not self.is_finished():
             if not sys.platform.startswith('win'):
                 group_id = os.getpgid(self.get_process_id())
                 os.killpg(group_id, signal.SIGKILL)
-                self.output.put("\n>> KILLED\n")
+                self.output_queue.put("\n>> KILLED\n")
             else:
                 subprocess.Popen("taskkill /F /T /PID " + self.get_process_id())
 
     def read(self):
         while True:
             try:
-                result = self.output.get(True, 0.2)
+                result = self.output_queue.get(True, 0.2)
                 try:
                     added_text = result
                     while added_text:
-                        added_text = self.output.get_nowait()
+                        added_text = self.output_queue.get_nowait()
                         result += added_text
                 except queue.Empty:
                     pass

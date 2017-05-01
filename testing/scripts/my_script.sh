@@ -31,7 +31,7 @@ esac
 shift # past argument or value
 done
 
-read -p "Press enter to start writing to the file"
+read -p "Press enter to start writing to the file (~/simple.txt)"
 
 for (( i=0; i<repeats ; i++ ))
 do
