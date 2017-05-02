@@ -77,11 +77,12 @@ class BashReader(object):
                     self.command_buffer = ''
 
             elif character == FORMAT_ESCAPE_CHARACTER:
-                self.command_buffer += character
-
                 if self.buffer:
                     result.append(self.get_current_text())
                     self.buffer = ''
+
+                self.command_buffer += character
+
             else:
                 self.buffer += character
 
