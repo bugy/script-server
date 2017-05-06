@@ -1,5 +1,9 @@
 import copy
-import re
+
+FORMAT_ESCAPE_CHARACTER = ''
+COMMAND_AFTER_SEMICOLON_CHARS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+COMMAND_AFTER_DIGIT_CHARS = [';', 'm', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+COMMAND_OPENING_CHARS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'K', 'm']
 
 
 class FormattedText(object):
@@ -18,6 +22,7 @@ class FormattedText(object):
 class BashReader(object):
     buffer = ''
     command_buffer = ''
+    command_next_expected = None
 
     current_text_color = None
     current_background_color = None
@@ -27,13 +32,13 @@ class BashReader(object):
         self.current_styles = []
 
     def read(self, process_output_chunk):
-        result = []
-
         for character in process_output_chunk:
             if self.command_buffer:
                 self.command_buffer += character
 
-                bash_format = is_bash_format_start(self.command_buffer)
+                bash_format, self.command_next_expected = check_bash_command(
+                    character, self.command_next_expected)
+
                 if not bash_format:
                     self.buffer += self.command_buffer
                     self.command_buffer = ''
@@ -57,14 +62,13 @@ class BashReader(object):
                             zero_padded_key = '0' + key
                             if (key in subcommands) or (zero_padded_key in subcommands):
                                 style = TEXT_STYLES_DICT[key]
-                                if not style in self.current_styles:
+                                if style not in self.current_styles:
                                     self.current_styles.append(style)
 
                         for key in RESET_STYLES_DICT:
                             if key in subcommands:
                                 style = RESET_STYLES_DICT[key]
                                 self.current_styles.remove(style)
-
 
                     else:
                         self.current_text_color = None
@@ -78,32 +82,32 @@ class BashReader(object):
 
             elif character == FORMAT_ESCAPE_CHARACTER:
                 if self.buffer:
-                    result.append(self.get_current_text())
+                    yield self.to_formatted_text(self.buffer)
                     self.buffer = ''
 
+                _, self.command_next_expected = check_bash_command(character, None)
                 self.command_buffer += character
 
             else:
                 self.buffer += character
 
         if self.buffer and not self.command_buffer:
-            result.append(self.get_current_text())
+            yield self.to_formatted_text(self.buffer)
             self.buffer = ''
-
-        return result
 
     def get_current_text(self):
         if self.buffer or self.command_buffer:
-            return FormattedText(
-                self.buffer + self.command_buffer,
-                self.current_text_color,
-                self.current_background_color,
-                self.current_styles)
+            return self.to_formatted_text(self.buffer + self.command_buffer)
 
         return None
 
+    def to_formatted_text(self, text):
+        return FormattedText(
+            text,
+            self.current_text_color,
+            self.current_background_color,
+            self.current_styles)
 
-FORMAT_ESCAPE_CHARACTER = ''
 TEXT_COLOR_DICT = {
     '39': None,
     '31': 'red',
@@ -159,23 +163,22 @@ RESET_STYLES_DICT = {
 }
 
 
-def is_bash_format_start(text):
-    next_expected = FORMAT_ESCAPE_CHARACTER
+def check_bash_command(character, next_expected=None):
+    if next_expected is None:
+        next_expected = [FORMAT_ESCAPE_CHARACTER]
 
-    for c in text:
-        if not re.match(next_expected, c):
-            return False
+    if character not in next_expected:
+        return False, None
 
-        if c == FORMAT_ESCAPE_CHARACTER:
-            next_expected = '\['
-        elif c == '[':
-            next_expected = '\d|K|m'
-        elif c.isdigit():
-            next_expected = '\d|;|m'
-        elif c == ';':
-            next_expected = '\d'
-        elif (c == 'm') or (c == 'K'):
-            # it should be the last symbol, so nothing is expected
-            next_expected = ''
+    if character == FORMAT_ESCAPE_CHARACTER:
+        next_expected = ['[']
+    elif character == '[':
+        next_expected = COMMAND_OPENING_CHARS
+    elif character == ';':
+        next_expected = COMMAND_AFTER_SEMICOLON_CHARS
+    elif (character == 'm') or (character == 'K'):
+        next_expected = []
+    elif character.isdigit():
+        next_expected = COMMAND_AFTER_DIGIT_CHARS
 
-    return True
+    return True, next_expected

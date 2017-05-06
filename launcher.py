@@ -649,8 +649,8 @@ def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, log_identifi
 
             if process_output is not None:
                 if reader:
-                    formatted_texts = reader.read(process_output)
-                    for text in formatted_texts:
+                    read_iterator = reader.read(process_output)
+                    for text in read_iterator:
                         write_callback(wrap_script_output(
                             text.text,
                             text.text_color,
