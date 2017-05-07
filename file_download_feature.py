@@ -18,7 +18,7 @@ def hash_user(name, secret_bytes):
     return hashlib.sha256(name.encode() + secret_bytes).hexdigest()
 
 
-def create_download_path(user_hash, temp_folder):
+def build_download_path(user_hash, temp_folder):
     millis = int(round(time.time() * 1000))
 
     return os.path.join(temp_folder, RESULT_FILES_FOLDER, user_hash, str(millis))
@@ -88,7 +88,7 @@ def prepare_downloadable_files(config, script_output, audit_name, secret, temp_f
 
     user_hashed = get_user_download_folder(audit_name, secret)
 
-    download_folder = create_download_path(user_hashed, temp_folder)
+    download_folder = build_download_path(user_hashed, temp_folder)
     logger.info('Created download folder for ' + audit_name + ': ' + download_folder)
 
     if not os.path.exists(download_folder):
@@ -151,20 +151,21 @@ def autoclean_downloads(temp_folder):
     delay_secs = 60.0 * 60
 
     def clean_results():
-        for user_folder in os.listdir(results_folder):
-            for timed_folder in os.listdir(os.path.join(results_folder, user_folder)):
-                if not re.match('\d+', timed_folder):
-                    continue
+        if os.path.exists(results_folder):
+            for user_folder in os.listdir(results_folder):
+                for timed_folder in os.listdir(os.path.join(results_folder, user_folder)):
+                    if not re.match('\d+', timed_folder):
+                        continue
 
-                millis = int(timed_folder)
-                folder_date = datetime.datetime.fromtimestamp(millis / 1000.0)
-                now = datetime.datetime.now()
+                    millis = int(timed_folder)
+                    folder_date = datetime.datetime.fromtimestamp(millis / 1000.0)
+                    now = datetime.datetime.now()
 
-                if (now - folder_date) > datetime.timedelta(hours=24):
-                    folder_path = os.path.join(results_folder, user_folder, timed_folder)
+                    if (now - folder_date) > datetime.timedelta(hours=24):
+                        folder_path = os.path.join(results_folder, user_folder, timed_folder)
 
-                    logger.info('Cleaning old download folder: ' + folder_path)
-                    shutil.rmtree(folder_path)
+                        logger.info('Cleaning old download folder: ' + folder_path)
+                        shutil.rmtree(folder_path)
 
         timer = threading.Timer(delay_secs, clean_results)
         timer.setDaemon(True)
