@@ -307,7 +307,7 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 
         self.write_message(wrap_script_output(" ---  OUTPUT  --- \n"))
 
-        audit_name = get_audit_name(self, auth, logger)
+        audit_name = get_audit_name(self, logger)
 
         command_identifier = self.process_wrapper.get_command_identifier()
         launch_identifier = self.create_log_identifier(audit_name, command_identifier)
@@ -370,7 +370,9 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
             self.write_message(message)
 
 
-def get_audit_name(request_handler, auth, logger):
+def get_audit_name(request_handler, logger):
+    auth = request_handler.application.auth
+
     username = auth.get_username(request_handler)
     if username:
         audit_name = username
@@ -422,7 +424,9 @@ class ScriptExecute(tornado.web.RequestHandler):
             command.extend(script_args)
 
             script_logger = logging.getLogger("scriptServer")
-            script_logger.info("Calling script: " + " ".join(command))
+            audit_name = get_audit_name(self, script_logger)
+
+            script_logger.info("Calling script (by " + audit_name + "): " + " ".join(command))
 
             run_pty = config.is_requires_terminal()
             if run_pty and not pty_supported:
@@ -469,7 +473,7 @@ class ScriptExecute(tornado.web.RequestHandler):
             else:
                 script = "Some script"
 
-            audit_name = get_audit_name(self, self.application.auth, script_logger)
+            audit_name = get_audit_name(self, script_logger)
             send_alerts(self.application.alerts_config, script + ' NOT STARTED',
                         "Couldn't start the script " + script + ' by ' + audit_name + '.\n\n' +
                         result)
@@ -485,9 +489,8 @@ class ScriptExecute(tornado.web.RequestHandler):
 
                 if return_code != 0:
                     script = str(script_name)
-                    auth = request_handler_self.application.auth
 
-                    audit_name = get_audit_name(request_handler_self, auth, script_logger)
+                    audit_name = get_audit_name(request_handler_self, script_logger)
 
                     title = script + ' FAILED'
                     body = 'The script "' + script + '", started by ' + audit_name + \
@@ -581,10 +584,9 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
 
     @check_authorization
     def validate_absolute_path(self, root, absolute_path):
-        auth = self.application.auth
         logger = logging.getLogger('scriptServer')
 
-        audit_name = get_audit_name(self, auth, logger)
+        audit_name = get_audit_name(self, logger)
 
         file_path = file_utils.relative_path(absolute_path, os.path.abspath(root))
         if not file_download_feature.allowed_to_download(file_path, audit_name, get_tornado_secret()):
