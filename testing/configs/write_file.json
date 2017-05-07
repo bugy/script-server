@@ -22,6 +22,6 @@
     }
   ],
   "output_files": [
-    "##any_path/simple.txt"
+    "##any_path#"
   ]
 }
