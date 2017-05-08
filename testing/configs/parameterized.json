@@ -110,7 +110,8 @@
     },
     {
       "name": "TextParam8",
-      "description": "Parameter Eight"
+      "description": "Parameter Eight",
+      "default": "$$USER"
     }
   ]
 }

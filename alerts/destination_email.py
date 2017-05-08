@@ -1,7 +1,7 @@
-import os
 import smtplib
 
 import alerts.destination_base as destination_base
+import model_helper
 
 
 def split_addresses(addresses_string):
@@ -58,13 +58,7 @@ class EmailDestination(destination_base.Destination):
     @staticmethod
     def read_password(params_dict):
         password = params_dict.get('password')
-        if password and password.startswith('$$'):
-            variable_name = password[2:]
-            env_password = os.environ[variable_name]
-            if env_password:
-                password = env_password
-            elif env_password is None:
-                raise Exception('Password environment variable ' + variable_name + ' is not set')
+        password = model_helper.unwrap_conf_value(password)
 
         return password
 

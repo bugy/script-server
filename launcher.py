@@ -22,6 +22,7 @@ import execution
 import execution_popen
 import external_model
 import file_download_feature
+import model_helper
 import script_configs
 import server_conf
 import utils.bash_utils as bash_utils
@@ -250,7 +251,7 @@ def build_parameter_string(param_values, config):
         name = parameter.get_name()
 
         if parameter.is_constant():
-            param_values[parameter.name] = parameter.get_default()
+            param_values[parameter.name] = model_helper.get_default(parameter)
 
         if name in param_values:
             value = param_values[name]
