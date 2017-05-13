@@ -22,12 +22,34 @@ GUI is very straightforward and easy-to-use for anyone. Example of the user inte
 
 [conf-server] These features are configurable for the whole server, see [server config page](https://github.com/bugy/script-server/wiki/Server-config) for details
 
-## Setup and run
-1. Clone/download the repository
-2. Create configurations for your scripts in *conf/runners/* folder (see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details)
-3. Launch server using python3: python launcher.py
+## Requirements
+### Server-side
+Python 3.4+ with following modules:
+* Tornado
+* six
 
-By default, server will run on 5000 port, over HTTP protocol
+OS support:
+- Linux (main). Tested and working on Debian 8,9
+- Windows (additional). Light testing on Windows 7
+- MacOS (additional). Not tested. Most probably some fixes are needed
+
+### Client-side
+Any more or less up to date browser with enabled JS
+
+Internet connection is not needed. All the files are loaded from the server.
+
+## Installation
+### Developer mode
+1. Clone/download the repository
+2. Run tools/init.py script (this will download javascript libraries)
+
+## Setup and run
+1. Create configurations for your scripts in *conf/runners/* folder (see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details)
+2. Launch launcher.py from script-server folder
+2.1 Windows command: launcher.py
+2.2 Linux command: ./launcher.py
+
+By default, server will run on 5000 port, over HTTP protocol.
 
 ### Server config
 All the features listed above and some other minor features can be configured in *conf/conf.json* file. 
@@ -36,22 +58,6 @@ See [server config page](https://github.com/bugy/script-server/wiki/Server-confi
 
 #### SSL 
 If you want server to work over HTTPS, you should specify server key and certificate in server configuration.
-
-## Requirements
-### Server-side
-Python 3.5+ with following modules:
-* Tornado
-* six
-
-OS support:
-- Linux (main). Tested and working on Debian 8
-- Windows (additional). Light testing on Windows 7
-- MacOS (additional). Not tested. Most probably some fixes are needed
-
-### Client-side
-Any more or less up to date browser with enabled JS
-
-Internet connection is not needed. All the files are loaded from the server.
 
 ## Security
 Completely no security! Use it only in local network for trusted users. 

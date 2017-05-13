@@ -44,6 +44,7 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
+tests/tests_temp
 
 # Translations
 *.mo
@@ -65,3 +66,5 @@ conf
 logs
 .idea
 temp
+web/css/libs
+web/js/libs
