@@ -48,6 +48,7 @@ build_info.include(os.path.join('web', '**'))
 build_info.include(os.path.join('conf', 'runners'))
 build_info.exclude('tests')
 build_info.exclude('tools')
+build_info.exclude('testing')
 build_info.exclude(BUILD_FOLDER)
 
 if os.path.exists(BUILD_FOLDER):
