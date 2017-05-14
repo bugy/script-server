@@ -23,7 +23,7 @@ IF NOT "%1"=="" (
     GOTO :loop
 )
 
-SET /p DUMMY=Press enter to start writing to the file
+SET /p DUMMY=Press enter to start writing to the file (~\simple.txt)
 
 for /l %%X in (1,1,%repeats%) do (
   ECHO %text% >> %HOMEPATH%\simple.txt

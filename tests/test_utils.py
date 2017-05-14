@@ -1,6 +1,5 @@
 import os
 import shutil
-import sys
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
@@ -29,12 +28,12 @@ def cleanup():
     if os.path.exists(temp_folder):
         shutil.rmtree(temp_folder)
 
-    os_utils.sys_platform = sys.platform
+    os_utils.reset_os()
 
 
 def set_linux():
-    os_utils.sys_platform = 'linux'
+    os_utils.set_linux()
 
 
 def set_win():
-    os_utils.sys_platform = 'win'
+    os_utils.set_win()

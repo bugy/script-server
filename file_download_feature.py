@@ -10,6 +10,7 @@ import time
 from shutil import copyfile
 
 import utils.file_utils as file_utils
+import utils.os_utils as os_utils
 import utils.string_utils as string_utils
 
 RESULT_FILES_FOLDER = 'resultFiles'
@@ -93,7 +94,7 @@ def prepare_downloadable_files(config, script_output, audit_name, secret, temp_f
 
 def find_matching_files(file_pattern, script_output):
     files = []
-    separator = re.escape(os.path.sep)
+    separator = re.escape(os_utils.path_sep())
     output_patterns = [file_pattern]
     while len(output_patterns) > 0:
         output_pattern = output_patterns.pop(0)
@@ -118,10 +119,10 @@ def find_matching_files(file_pattern, script_output):
                 regex_pattern = output_pattern[pattern_start + 1:regex_end]
 
                 if regex_pattern.startswith('#any_path') and (regex_start == 0):
-                    if (os.name == 'posix') or (os.name == 'mac'):
+                    if os_utils.is_linux() or os_utils.is_mac():
                         regex_pattern = '~?' + regex_pattern
-                    elif os.name == 'nt':
-                        regex_pattern = '[^\W\d_]:\\' + regex_pattern
+                    elif os_utils.is_win():
+                        regex_pattern = '(([^\W\d_]:)|~)' + regex_pattern
 
                 regex_pattern = regex_pattern.replace('#any_path', '(' + separator + '([\w.\-]|(\\\ ))+)+')
                 found_matches = re.finditer(regex_pattern, script_output)

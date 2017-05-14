@@ -1,6 +1,7 @@
 import json
 import os
 
+import utils.os_utils as os_utils
 import utils.process_utils as process_utils
 
 
@@ -149,7 +150,7 @@ def from_json(file_path, json_string, pty_enabled_default=False):
     config.working_directory = json_object.get("working_directory")
 
     config.requires_terminal = read_boolean("requires_terminal", json_object, pty_enabled_default)
-    config.bash_formatting = read_boolean("bash_formatting", json_object, (os.name == 'posix') or (os.name == 'mac'))
+    config.bash_formatting = read_boolean("bash_formatting", json_object, os_utils.is_linux() or os_utils.is_mac())
 
     output_files = json_object.get("output_files")
     if output_files:

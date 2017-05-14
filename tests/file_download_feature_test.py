@@ -75,13 +75,35 @@ class TestFileMatching(unittest.TestCase):
 
         self.assertEqual(files, ['/home/username/text.txt', '/tmp/data.dat', '/opt/software/script\ server/read_me.md'])
 
-    def test_regex_only_any_path_3_matches(self):
+    def test_regex_only_any_path_linux_3_matches(self):
+        test_utils.set_linux()
+
         files = file_download_feature.find_matching_files('##any_path#', 'found files: '
                                                                          '/home/username/text.txt, '
                                                                          '/tmp/data.dat, '
                                                                          '/opt/software/script\ server/read_me.md')
 
         self.assertEqual(files, ['/home/username/text.txt', '/tmp/data.dat', '/opt/software/script\ server/read_me.md'])
+
+    def test_regex_only_any_path_win_3_matches(self):
+        test_utils.set_win()
+
+        files = file_download_feature.find_matching_files('##any_path#', 'found files: '
+                                                                         'C:\\Users\\username\\text.txt, '
+                                                                         'D:\\windows\\System32, '
+                                                                         'C:\\Program\ Files\\script\ server\\read_me.md')
+
+        self.assertEqual(files, ['C:\\Users\\username\\text.txt',
+                                 'D:\\windows\\System32',
+                                 'C:\\Program\ Files\\script\ server\\read_me.md'])
+
+    def test_regex_only_search_user_home_win(self):
+        test_utils.set_win()
+
+        files = file_download_feature.find_matching_files('##any_path#', 'found files: '
+                                                                         '~\\text.txt')
+
+        self.assertEqual(files, ['~\\text.txt'])
 
     def test_1_regex_and_text_no_matches(self):
         files = file_download_feature.find_matching_files('/home/username/#\d+#', 'username=some_name\n '
