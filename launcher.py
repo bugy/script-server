@@ -4,7 +4,6 @@ import json
 import logging
 import logging.config
 import os
-import shlex
 import socket
 import ssl
 import sys
@@ -29,10 +28,12 @@ import script_configs
 import server_conf
 import utils.bash_utils as bash_utils
 import utils.file_utils as file_utils
+import utils.os_utils as os_utils
+import utils.process_utils as process_utils
 
 TEMP_FOLDER = "temp"
 
-pty_supported = (sys.platform == "linux" or sys.platform == "linux2")
+pty_supported = os_utils.is_linux()
 if pty_supported:
     import execution_pty
 
@@ -353,7 +354,7 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 
     @staticmethod
     def create_log_identifier(audit_name, command_identifier):
-        if sys.platform.startswith('win'):
+        if os_utils.is_win():
             audit_name = audit_name.replace(":", "-")
 
         date_string = datetime.today().strftime("%y%m%d_%H%M%S")
@@ -417,13 +418,12 @@ class ScriptExecute(tornado.web.RequestHandler):
             if working_directory is not None:
                 working_directory = file_utils.normalize_path(working_directory)
 
-            (script_path, body_args) = self.parse_script_body(config, working_directory)
+            script_base_command = process_utils.split_command(config.get_script_command(), working_directory)
 
             script_args = build_parameter_string(execution_info.get_param_values(), config)
 
             command = []
-            command.append(script_path)
-            command.extend(body_args)
+            command.extend(script_base_command)
             command.extend(script_args)
 
             script_logger = logging.getLogger("scriptServer")
@@ -504,22 +504,6 @@ class ScriptExecute(tornado.web.RequestHandler):
                     send_alerts(alerts_config, title, body)
 
         self.process_wrapper.add_finish_listener(Alerter())
-
-    def parse_script_body(self, config, working_directory):
-        script_body = config.get_script_body()
-        if (' ' in script_body) and (not sys.platform.startswith('win')):
-            args = shlex.split(script_body)
-            script_path = file_utils.normalize_path(args[0], working_directory)
-            body_args = args[1:]
-            for i, body_arg in enumerate(body_args):
-                expanded = os.path.expanduser(body_arg)
-                if expanded != body_arg:
-                    body_args[i] = expanded
-        else:
-            script_path = file_utils.normalize_path(script_body, working_directory)
-            body_args = []
-
-        return script_path, body_args
 
 
 def send_alerts(alerts_config, title, body):

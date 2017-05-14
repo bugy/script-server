@@ -3,8 +3,9 @@ import os
 import queue
 import signal
 import subprocess
-import sys
 import threading
+
+from utils import os_utils
 
 
 class ProcessWrapper(metaclass=abc.ABCMeta):
@@ -67,7 +68,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
     def stop(self):
         if not self.is_finished():
-            if not sys.platform.startswith('win'):
+            if not os_utils.is_win():
                 group_id = os.getpgid(self.get_process_id())
                 os.killpg(group_id, signal.SIGTERM)
 
@@ -88,7 +89,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
     def kill(self):
         if not self.is_finished():
-            if not sys.platform.startswith('win'):
+            if not os_utils.is_win():
                 group_id = os.getpgid(self.get_process_id())
                 os.killpg(group_id, signal.SIGKILL)
                 self.output_queue.put("\n>> KILLED\n")

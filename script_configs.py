@@ -6,7 +6,7 @@ import utils.process_utils as process_utils
 
 class Config(object):
     config_path = None
-    script_body = None
+    script_command = None
     name = None
     description = None
     requires_terminal = None
@@ -22,8 +22,8 @@ class Config(object):
     def get_config_path(self):
         return self.config_path
 
-    def get_script_body(self):
-        return self.script_body
+    def get_script_command(self):
+        return self.script_command
 
     def get_name(self):
         return self.name
@@ -144,7 +144,7 @@ def from_json(file_path, json_string, pty_enabled_default=False):
 
     config.name = read_name(file_path, json_string)
 
-    config.script_body = json_object.get("script_path")
+    config.script_command = json_object.get("script_path")
     config.description = json_object.get("description")
     config.working_directory = json_object.get("working_directory")
 

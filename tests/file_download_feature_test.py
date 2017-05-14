@@ -1,62 +1,60 @@
 import os
-import shutil
 import unittest
 
 import file_download_feature
+import tests.test_utils as test_utils
 import utils.file_utils as file_utils
 
 
 class TestFileMatching(unittest.TestCase):
-    temp_folder = 'tests_temp'
-
     def test_simple_match(self):
         files = file_download_feature.find_matching_files('/home/user/test.txt', None)
 
         self.assertEqual(files, ['/home/user/test.txt'])
 
     def test_single_asterisk_1_match(self):
-        self.create_file('test.txt')
+        test_utils.create_file('test.txt')
 
         files = file_download_feature.find_matching_files('*/test.txt', None)
 
-        self.assertEqual(files, [os.path.join(self.temp_folder, 'test.txt')])
+        self.assertEqual(files, [os.path.join(test_utils.temp_folder, 'test.txt')])
 
     def test_single_asterisk_2_matches(self):
-        self.create_file('test1.txt')
-        self.create_file('test2.txt')
+        test_utils.create_file('test1.txt')
+        test_utils.create_file('test2.txt')
 
         files = file_download_feature.find_matching_files('*/test*.txt', None)
 
         self.assertEqual(files, [
-            os.path.join(self.temp_folder, 'test1.txt'),
-            os.path.join(self.temp_folder, 'test2.txt')
+            os.path.join(test_utils.temp_folder, 'test1.txt'),
+            os.path.join(test_utils.temp_folder, 'test2.txt')
         ])
 
     def test_double_asterisk_match(self):
-        self.create_file(os.path.join('test', 'test.txt'))
+        test_utils.create_file(os.path.join('test', 'test.txt'))
 
-        files = set(file_download_feature.find_matching_files(self.temp_folder + '/**', None))
+        files = set(file_download_feature.find_matching_files(test_utils.temp_folder + '/**', None))
 
         self.assertEqual(files, {
-            os.path.join(self.temp_folder, ''),
-            os.path.join(self.temp_folder, 'test'),
-            os.path.join(self.temp_folder, 'test', 'test.txt')
+            os.path.join(test_utils.temp_folder, ''),
+            os.path.join(test_utils.temp_folder, 'test'),
+            os.path.join(test_utils.temp_folder, 'test', 'test.txt')
         })
 
     def test_double_asterisk_match_multiple_files(self):
-        self.create_file(os.path.join('f1', 'test1.txt'))
-        self.create_file(os.path.join('f1', 'test2.txt'))
-        self.create_file(os.path.join('f2', 'test3.txt'))
+        test_utils.create_file(os.path.join('f1', 'test1.txt'))
+        test_utils.create_file(os.path.join('f1', 'test2.txt'))
+        test_utils.create_file(os.path.join('f2', 'test3.txt'))
 
-        files = set(file_download_feature.find_matching_files(self.temp_folder + '/**', None))
+        files = set(file_download_feature.find_matching_files(test_utils.temp_folder + '/**', None))
 
         self.assertEqual(files, {
-            os.path.join(self.temp_folder, ''),
-            os.path.join(self.temp_folder, 'f1'),
-            os.path.join(self.temp_folder, 'f1', 'test1.txt'),
-            os.path.join(self.temp_folder, 'f1', 'test2.txt'),
-            os.path.join(self.temp_folder, 'f2'),
-            os.path.join(self.temp_folder, 'f2', 'test3.txt')
+            os.path.join(test_utils.temp_folder, ''),
+            os.path.join(test_utils.temp_folder, 'f1'),
+            os.path.join(test_utils.temp_folder, 'f1', 'test1.txt'),
+            os.path.join(test_utils.temp_folder, 'f1', 'test2.txt'),
+            os.path.join(test_utils.temp_folder, 'f2'),
+            os.path.join(test_utils.temp_folder, 'f2', 'test3.txt')
         })
 
     def test_regex_only_0_matches(self):
@@ -134,29 +132,31 @@ class TestFileMatching(unittest.TestCase):
         self.assertEqual(files, ['/home/some_name/153514.txt'])
 
     def test_1_regex_and_asterisk(self):
-        self.create_file(os.path.join('some_folder', 'file.txt'))
+        test_utils.create_file(os.path.join('some_folder', 'file.txt'))
 
         files = file_download_feature.find_matching_files('*/#1#folder=(\w+)#/*.txt', 'username=some_name\n '
                                                                                       'folder=some_folder\n '
                                                                                       'time=153514\n '
                                                                                       'age=18, size=256Mb')
 
-        self.assertEqual(files, [os.path.join(self.temp_folder, 'some_folder', 'file.txt')])
+        self.assertEqual(files, [os.path.join(test_utils.temp_folder, 'some_folder', 'file.txt')])
 
     def create_file(self, filepath):
-        if not os.path.exists(self.temp_folder):
-            os.makedirs(self.temp_folder)
+        if not os.path.exists(test_utils.temp_folder):
+            os.makedirs(test_utils.temp_folder)
 
         filename = os.path.basename(filepath)
-        folder = os.path.join(self.temp_folder, os.path.dirname(filepath))
+        folder = os.path.join(test_utils.temp_folder, os.path.dirname(filepath))
         if not os.path.exists(folder):
             os.makedirs(folder)
 
         file_utils.write_file(os.path.join(folder, filename), 'test text')
 
     def setUp(self):
-        if os.path.exists(self.temp_folder):
-            shutil.rmtree(self.temp_folder)
+        test_utils.setup()
+
+    def tearDown(self):
+        test_utils.cleanup()
 
 
 if __name__ == '__main__':
