@@ -348,7 +348,7 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
                 except:
                     logger.exception("Couldn't prepare downloadable files")
 
-                web_socket.close()
+                tornado.ioloop.IOLoop.current().add_callback(web_socket.close)
 
         self.process_wrapper.add_finish_listener(FinishListener())
 
