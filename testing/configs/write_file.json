@@ -12,6 +12,8 @@
     {
       "name": "repeats",
       "param": "-r",
+      "type": "int",
+      "min": 1,
       "description": "How many times the text should be written to the file"
     },
     {

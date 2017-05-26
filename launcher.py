@@ -413,10 +413,18 @@ class ScriptExecute(tornado.web.RequestHandler):
 
             if not config:
                 respond_error(self, 400, "Script with name '" + str(script_name) + "' not found")
+                return
 
             working_directory = config.get_working_directory()
             if working_directory is not None:
                 working_directory = file_utils.normalize_path(working_directory)
+
+            script_logger = logging.getLogger("scriptServer")
+
+            valid_parameters = model_helper.validate_parameters(execution_info.get_param_values(), config)
+            if not valid_parameters:
+                respond_error(self, 400, 'Received invalid parameters')
+                return
 
             script_base_command = process_utils.split_command(config.get_script_command(), working_directory)
 
@@ -426,7 +434,6 @@ class ScriptExecute(tornado.web.RequestHandler):
             command.extend(script_base_command)
             command.extend(script_args)
 
-            script_logger = logging.getLogger("scriptServer")
             audit_name = get_audit_name(self, script_logger)
 
             script_logger.info("Calling script (by " + audit_name + "): " + " ".join(command))

@@ -7,3 +7,11 @@ def replace(old_text, new_text, start, end):
         end_text = ''
 
     return start_text + new_text + end_text
+
+
+def is_integer(text):
+    try:
+        int(text)
+        return True
+    except ValueError:
+        return False
