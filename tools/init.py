@@ -5,6 +5,8 @@ import sys
 import urllib.request
 from html.parser import HTMLParser
 
+sys.path.append(os.getcwd())
+
 import utils.file_utils as file_utils
 
 
