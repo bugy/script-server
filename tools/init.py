@@ -5,9 +5,9 @@ import sys
 import urllib.request
 from html.parser import HTMLParser
 
-sys.path.append(os.getcwd())
+sys.path.insert(1, os.getcwd())
 
-import utils.file_utils as file_utils
+from utils import file_utils
 
 
 def prepare_project(project_path):
