@@ -2,15 +2,13 @@ import os
 import shlex
 import subprocess
 
-import six
-
 from utils import file_utils
 from utils import os_utils
 
 
-def invoke(command, work_dir="."):
-    if isinstance(command, six.string_types):
-        command = command.split()
+def invoke(command, work_dir='.'):
+    if isinstance(command, str):
+        command = split_command(command, working_directory=work_dir)
 
     p = subprocess.Popen(command,
                          stdout=subprocess.PIPE,
@@ -25,16 +23,16 @@ def invoke(command, work_dir="."):
     result_code = p.returncode
     if result_code != 0:
         message = "Execution failed with exit code " + str(result_code)
-        six.print_(message)
-        six.print_(output)
+        print(message)
+        print(output)
 
         if error:
-            six.print_(" --- ERRORS ---:")
-            six.print_(error)
+            print(" --- ERRORS ---:")
+            print(error)
         raise Exception(message)
 
     if error:
-        six.print_("WARN! Error output wasn't empty, although the command finished with code 0!")
+        print("WARN! Error output wasn't empty, although the command finished with code 0!")
 
     return output
 
