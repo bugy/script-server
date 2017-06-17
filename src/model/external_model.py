@@ -1,6 +1,6 @@
 import json
 
-import model_helper
+from model import model_helper
 
 
 class ExecutionInfo(object):

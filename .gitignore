@@ -44,7 +44,7 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
-tests/tests_temp
+src/tests/tests_temp
 
 # Translations
 *.mo
@@ -62,7 +62,8 @@ target/
 #Ipython Notebook
 .ipynb_checkpoints
 
-conf
+conf/runners
+conf/conf.json
 logs
 .idea
 temp

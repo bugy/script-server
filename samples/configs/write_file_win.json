@@ -2,7 +2,7 @@
   "name": "Write to file (WIN)",
   "script_path": "scripts\\write_to_file.bat",
   "description": "This script does very simple change, putting \"I'm called\" into user home simple.txt file",
-  "working_directory": "testing",
+  "working_directory": "samples",
   "parameters": [
     {
       "name": "text",

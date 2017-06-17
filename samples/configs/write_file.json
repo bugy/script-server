@@ -2,7 +2,7 @@
   "name": "Write to file",
   "script_path": "scripts/my_script.sh",
   "description": "This script does very simple change, putting \"I'm called\" into user home simple.txt file",
-  "working_directory": "./testing",
+  "working_directory": "./samples",
   "parameters": [
     {
       "name": "text",

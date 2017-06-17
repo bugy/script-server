@@ -2,7 +2,7 @@ import logging
 
 import utils.env_utils as env_utils
 import utils.string_utils as string_utils
-from script_configs import Parameter
+from model.script_configs import Parameter
 
 ENV_VAR_PREFIX = '$$'
 

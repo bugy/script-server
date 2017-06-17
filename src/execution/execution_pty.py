@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 
-import execution
+from execution import execution_base
 
 script_encodings = {}
 
@@ -15,7 +15,7 @@ def set_script_encoding(command_identifier, encoding):
     script_encodings[command_identifier] = encoding
 
 
-class PtyProcessWrapper(execution.ProcessWrapper):
+class PtyProcessWrapper(execution_base.ProcessWrapper):
     pty_master = None
     pty_slave = None
     encoding = None
@@ -26,7 +26,7 @@ class PtyProcessWrapper(execution.ProcessWrapper):
         else:
             self.encoding = sys.stdout.encoding
 
-        execution.ProcessWrapper.__init__(self, command, command_identifier, working_directory, config)
+        execution_base.ProcessWrapper.__init__(self, command, command_identifier, working_directory, config)
 
     def init_process(self, command, working_directory):
         master, slave = pty.openpty()

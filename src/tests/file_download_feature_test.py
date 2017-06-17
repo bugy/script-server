@@ -1,9 +1,9 @@
 import os
 import unittest
 
-import file_download_feature
-import tests.test_utils as test_utils
-import utils.file_utils as file_utils
+from features import file_download_feature
+from tests import test_utils
+from utils import file_utils
 
 
 class TestFileMatching(unittest.TestCase):

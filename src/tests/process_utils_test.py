@@ -1,8 +1,8 @@
 import os
 import unittest
 
-import tests.test_utils as test_utils
-import utils.process_utils as process_utils
+from tests import test_utils
+from utils import process_utils
 
 
 class TestSplitCommand(unittest.TestCase):

@@ -18,24 +18,24 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
-import auth.auth_base as auth_base
-import execution
-import execution_popen
-import external_model
-import file_download_feature
-import model_helper
-import script_configs
-import server_conf
-import utils.bash_utils as bash_utils
-import utils.file_utils as file_utils
-import utils.os_utils as os_utils
-import utils.process_utils as process_utils
+from auth import auth_base
+from execution import execution_base
+from execution import execution_popen
+from features import file_download_feature
+from model import external_model
+from model import model_helper
+from model import script_configs
+from model import server_conf
+from utils import bash_utils as bash_utils
+from utils import file_utils as file_utils
+from utils import os_utils as os_utils
+from utils import process_utils as process_utils
 
 TEMP_FOLDER = "temp"
 
 pty_supported = os_utils.is_linux()
 if pty_supported:
-    import execution_pty
+    from execution import execution_pty
 
 CONFIG_FOLDER = "conf"
 SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, "conf.json")
@@ -617,7 +617,7 @@ def wrap_to_server_event(event_type, data):
     })
 
 
-def pipe_process_to_http(process_wrapper: execution.ProcessWrapper, log_identifier, write_callback):
+def pipe_process_to_http(process_wrapper: execution_base.ProcessWrapper, log_identifier, write_callback):
     script_logger = logging.getLogger("scriptServer")
 
     try:
@@ -690,7 +690,8 @@ def get_tornado_secret():
 
 
 def main():
-    with open("logging.json", "rt") as f:
+    logging_conf_file = os.path.join(CONFIG_FOLDER, 'logging.json')
+    with open(logging_conf_file, "rt") as f:
         log_config = json.load(f)
         file_utils.prepare_folder(os.path.join("logs", "processes"))
 

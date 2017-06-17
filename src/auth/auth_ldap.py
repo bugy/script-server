@@ -3,7 +3,7 @@ from string import Template
 
 from ldap3 import Connection, SIMPLE
 
-import auth.auth_base as auth_base
+from auth import auth_base
 
 KNOWN_REJECTIONS = [
     "invalidCredentials",

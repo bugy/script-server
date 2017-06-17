@@ -6,7 +6,7 @@ Everything will run on your machine, so users shouldn't care about setting up an
 
 
 GUI is very straightforward and easy-to-use for anyone. Example of the user interface:
-![Example of user interface](screenshot.png?raw=true)
+![Example of user interface](https://cloud.githubusercontent.com/assets/1275813/26519407/f0318706-42c0-11e7-8328-34ded505839c.png)
 
 ## Features
 1. Users can specify script parameters. Different parameter types are supported [conf-script]

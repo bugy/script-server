@@ -1,7 +1,7 @@
 import smtplib
 
-import alerts.destination_base as destination_base
-import model_helper
+from alerts import destination_base
+from model import model_helper
 
 
 def split_addresses(addresses_string):
@@ -44,13 +44,14 @@ class EmailDestination(destination_base.Destination):
             raise Exception('"server" is compulsory parameter for email destination')
 
         if self.auth_enabled is None:
-            auth_enabled = self.password or self.login
+            self.auth_enabled = self.password or self.login
         elif (self.auth_enabled == True) or (self.auth_enabled.lower() == 'true'):
             self.auth_enabled = True
-            if not self.login:
-                self.login = self.from_address
         else:
             self.auth_enabled = False
+
+        if self.auth_enabled and (not self.login):
+            self.login = self.from_address
 
         if (self.tls is None) and ('gmail' in self.server):
             self.tls = True

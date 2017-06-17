@@ -1,8 +1,8 @@
 import os
 import unittest
 
-import model_helper
-import script_configs
+from model import model_helper
+from model import script_configs
 
 
 class TestDefaultValue(unittest.TestCase):
