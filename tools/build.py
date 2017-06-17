@@ -5,7 +5,7 @@ import os
 import shutil
 import zipfile
 
-import tools.init
+import init
 
 BUILD_FOLDER = 'build'
 
@@ -44,11 +44,12 @@ class BuildInfo():
 
 
 build_info = BuildInfo()
-build_info.include(os.path.join('**', '*.py'))
-build_info.include('logging.json')
+build_info.include('launcher.py')
+build_info.include(os.path.join('src', '**', '*.py'))
+build_info.include(os.path.join('conf', 'logging.json'))
 build_info.include(os.path.join('web', '**'))
 build_info.include(os.path.join('conf', 'runners'))
-build_info.exclude('tests')
+build_info.exclude(os.path.join('src', 'tests'))
 build_info.exclude('tools')
 build_info.exclude('samples')
 build_info.exclude(BUILD_FOLDER)
@@ -61,4 +62,4 @@ zip = zipfile.ZipFile(os.path.join(BUILD_FOLDER, 'script-server.zip'), 'w', zipf
 for file in build_info.get_files():
     zip.write(file)
 
-tools.init.prepare_project('')
+init.prepare_project('')

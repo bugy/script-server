@@ -5,7 +5,7 @@ import sys
 import urllib.request
 from html.parser import HTMLParser
 
-sys.path.insert(1, os.getcwd())
+sys.path.insert(1, os.path.join(sys.path[0], '..', 'src'))
 
 from utils import file_utils
 
