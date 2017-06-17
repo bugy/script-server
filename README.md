@@ -26,7 +26,8 @@ GUI is very straightforward and easy-to-use for anyone. Example of the user inte
 ### Server-side
 Python 3.4+ with following modules:
 * Tornado
-* six
+
+Some features can require additional modules. Such requirements are specified in a corresponding feature description.
 
 OS support:
 - Linux (main). Tested and working on Debian 8,9
@@ -46,8 +47,8 @@ Internet connection is not needed. All the files are loaded from the server.
 ## Setup and run
 1. Create configurations for your scripts in *conf/runners/* folder (see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details)
 2. Launch launcher.py from script-server folder
-2.1 Windows command: launcher.py
-2.2 Linux command: ./launcher.py
+  * Windows command: launcher.py
+  * Linux command: ./launcher.py
 
 By default, server will run on 5000 port, over HTTP protocol.
 
@@ -67,4 +68,4 @@ All web/operating logs are written to the *logs/server.log*
 Additionally each script logs are written to separate file in *logs/processes*. File name format is {script\_name}\_{client\_address}\_{date}\_{time}.log. 
 
 ## Testing/demo
-Script-server has bundled configs/scripts for testing/demo purposes, which are located in testing folder. You can link/copy testing config files to server config files.
+Script-server has bundled configs/scripts for testing/demo purposes, which are located in samples folder. You can link/copy these config files (samples/configs/\*.json) to server config folder (conf/runners).
