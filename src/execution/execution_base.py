@@ -9,21 +9,22 @@ from utils import os_utils
 
 
 class ProcessWrapper(metaclass=abc.ABCMeta):
-    process = None
-    output_queue = None
-    command_identifier = None
-    finish_listeners = None
-    config = None
-    full_output = ''
+    def __init__(self, command, command_identifier, working_directory, config, execution_info):
+        self.process = None
 
-    def __init__(self, command, command_identifier, working_directory, config):
+        self.working_directory = working_directory
+        self.command = command
+        self.execution_info = execution_info
+
         self.command_identifier = command_identifier
         self.config = config
         self.finish_listeners = []
 
-        self.init_process(command, working_directory)
-
         self.output_queue = queue.Queue()
+        self.full_output = ''
+
+    def start(self):
+        self.init_process(self.command, self.working_directory)
 
         read_output_thread = threading.Thread(target=self.pipe_process_output, args=())
         read_output_thread.start()

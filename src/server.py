@@ -21,6 +21,7 @@ import tornado.websocket
 from auth import auth_base
 from execution import execution_base
 from execution import execution_popen
+from execution.logging import ScriptOutputLogger
 from features import file_download_feature
 from model import external_model
 from model import model_helper
@@ -247,7 +248,7 @@ class GetScriptInfo(tornado.web.RequestHandler):
         self.write(external_model.config_to_json(config))
 
 
-def build_parameter_string(param_values, config):
+def build_command_args(param_values, config, stringify=lambda value, param: value):
     result = []
 
     for parameter in config.get_parameters():
@@ -268,7 +269,8 @@ def build_parameter_string(param_values, config):
                     if parameter.get_param():
                         result.append(parameter.get_param())
 
-                    result.append(value)
+                    value_string = stringify(value, parameter)
+                    result.append(value_string)
 
     return result
 
@@ -291,9 +293,12 @@ class ScriptStop(tornado.web.RequestHandler):
             return
 
 
-class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
-    process_wrapper = None
-    reading_thread = None
+class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
+    def __init__(self, application, request, **kwargs):
+        super().__init__(application, request, **kwargs)
+
+        self.process_wrapper = None
+        self.reading_thread = None
 
     def open(self, process_id):
         auth = self.application.auth
@@ -313,12 +318,12 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
 
         audit_name = get_audit_name(self, logger)
 
-        command_identifier = self.process_wrapper.get_command_identifier()
-        launch_identifier = self.create_log_identifier(audit_name, command_identifier)
+        output_logger = self.create_script_output_logger(audit_name, logger)
+        output_logger.open()
 
         reading_thread = threading.Thread(target=pipe_process_to_http, args=(
             self.process_wrapper,
-            launch_identifier,
+            output_logger,
             self.safe_write
         ))
         reading_thread.start()
@@ -329,6 +334,8 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
         class FinishListener(object):
             def finished(self):
                 reading_thread.join()
+
+                output_logger.close()
 
                 try:
                     downloadable_files = file_download_feature.prepare_downloadable_files(
@@ -351,6 +358,19 @@ class ScriptStreamsSocket(tornado.websocket.WebSocketHandler):
                 tornado.ioloop.IOLoop.current().add_callback(web_socket.close)
 
         self.process_wrapper.add_finish_listener(FinishListener())
+
+    def create_script_output_logger(self, audit_name, logger):
+        command_identifier = self.process_wrapper.get_command_identifier()
+        log_identifier = self.create_log_identifier(audit_name, command_identifier)
+        log_file_path = os.path.join('logs', 'processes', log_identifier + '.log')
+
+        output_logger = ScriptOutputLogger(
+            log_file_path,
+            logger,
+            self.process_wrapper.config,
+            self.process_wrapper.execution_info)
+
+        return output_logger
 
     @staticmethod
     def create_log_identifier(audit_name, command_identifier):
@@ -407,7 +427,7 @@ class ScriptExecute(tornado.web.RequestHandler):
 
             execution_info = external_model.to_execution_info(request_data.decode("UTF-8"))
 
-            script_name = execution_info.get_script()
+            script_name = execution_info.script
 
             config = load_config(script_name)
 
@@ -421,26 +441,29 @@ class ScriptExecute(tornado.web.RequestHandler):
 
             script_logger = logging.getLogger("scriptServer")
 
-            valid_parameters = model_helper.validate_parameters(execution_info.get_param_values(), config)
+            valid_parameters = model_helper.validate_parameters(execution_info.param_values, config)
             if not valid_parameters:
                 respond_error(self, 400, 'Received invalid parameters')
                 return
 
             script_base_command = process_utils.split_command(config.get_script_command(), working_directory)
 
-            script_args = build_parameter_string(execution_info.get_param_values(), config)
-
-            command = []
-            command.extend(script_base_command)
-            command.extend(script_args)
+            script_args = build_command_args(execution_info.param_values, config)
+            command = script_base_command + script_args
 
             audit_name = get_audit_name(self, script_logger)
 
-            script_logger.info("Calling script (by " + audit_name + "): " + " ".join(command))
+            audit_script_args = build_command_args(
+                execution_info.param_values,
+                config,
+                model_helper.value_to_str)
+            audit_command = script_base_command + audit_script_args
+
+            script_logger.info("Calling script (by " + audit_name + "): " + " ".join(audit_command))
 
             run_pty = config.is_requires_terminal()
             if run_pty and not pty_supported:
-                script_logger.warn(
+                script_logger.warning(
                     "Requested PTY mode, but it's not supported for this OS (" + sys.platform + "). Falling back to POpen")
                 run_pty = False
 
@@ -448,12 +471,15 @@ class ScriptExecute(tornado.web.RequestHandler):
                 self.process_wrapper = execution_pty.PtyProcessWrapper(command,
                                                                        config.get_name(),
                                                                        working_directory,
-                                                                       config)
+                                                                       config,
+                                                                       execution_info)
             else:
                 self.process_wrapper = execution_popen.POpenProcessWrapper(command,
                                                                            config.get_name(),
                                                                            working_directory,
-                                                                           config)
+                                                                           config,
+                                                                           execution_info)
+            self.process_wrapper.start()
 
             process_id = self.process_wrapper.get_process_id()
 
@@ -584,7 +610,7 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
 
         file_path = file_utils.relative_path(absolute_path, os.path.abspath(root))
         if not file_download_feature.allowed_to_download(file_path, audit_name, get_tornado_secret()):
-            logger.warn('Access attempt from ' + audit_name + ' to ' + absolute_path)
+            logger.warning('Access attempt from ' + audit_name + ' to ' + absolute_path)
             raise tornado.web.HTTPError(404)
 
         return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
@@ -617,64 +643,44 @@ def wrap_to_server_event(event_type, data):
     })
 
 
-def pipe_process_to_http(process_wrapper: execution_base.ProcessWrapper, log_identifier, write_callback):
-    script_logger = logging.getLogger("scriptServer")
+def pipe_process_to_http(process_wrapper: execution_base.ProcessWrapper, output_logger, write_callback):
+    bash_formatting = process_wrapper.get_config().is_bash_formatting()
 
-    try:
-        log_file = open(os.path.join("logs", "processes", log_identifier + ".log"), "w")
-    except:
-        log_file = None
-        script_logger.exception("Couldn't create a log file")
+    reader = None
+    if bash_formatting:
+        reader = bash_utils.BashReader()
 
-    try:
-        bash_formatting = process_wrapper.get_config().is_bash_formatting()
+    while True:
+        process_output = process_wrapper.read()
 
-        reader = None
-        if bash_formatting:
-            reader = bash_utils.BashReader()
+        output_logger.log(process_output)
 
-        while True:
-            process_output = process_wrapper.read()
+        if process_output is not None:
+            if reader:
+                read_iterator = reader.read(process_output)
+                for text in read_iterator:
+                    write_callback(wrap_script_output(
+                        text.text,
+                        text.text_color,
+                        text.background_color,
+                        text.styles
+                    ))
 
-            try:
-                if log_file and (process_output is not None):
-                    log_file.write(process_output)
-                    log_file.flush()
-            except:
-                script_logger.exception("Couldn't write to the log file")
+            else:
+                write_callback(wrap_script_output(process_output))
 
-            if process_output is not None:
-                if reader:
-                    read_iterator = reader.read(process_output)
-                    for text in read_iterator:
-                        write_callback(wrap_script_output(
-                            text.text,
-                            text.text_color,
-                            text.background_color,
-                            text.styles
-                        ))
+        elif process_wrapper.is_finished():
+            if reader:
+                remaining_text = reader.get_current_text()
+                if remaining_text:
+                    write_callback(wrap_script_output(
+                        remaining_text.text,
+                        remaining_text.text_color,
+                        remaining_text.background_color,
+                        remaining_text.styles
+                    ))
 
-                else:
-                    write_callback(wrap_script_output(process_output))
-
-            elif process_wrapper.is_finished():
-                if reader:
-                    remaining_text = reader.get_current_text()
-                    if remaining_text:
-                        write_callback(wrap_script_output(
-                            remaining_text.text,
-                            remaining_text.text_color,
-                            remaining_text.background_color,
-                            remaining_text.styles
-                        ))
-
-                break
-    finally:
-        try:
-            if log_file:
-                log_file.close()
-        except:
-            script_logger.exception("Couldn't close the log file")
+            break
 
 
 def get_tornado_secret():
@@ -723,7 +729,7 @@ def main():
                 (r"/scripts/info", GetScriptInfo),
                 (r"/scripts/execute", ScriptExecute),
                 (r"/scripts/execute/stop", ScriptStop),
-                (r"/scripts/execute/io/(.*)", ScriptStreamsSocket),
+                (r"/scripts/execute/io/(.*)", ScriptStreamSocket),
                 (r'/' + file_download_feature.RESULT_FILES_FOLDER + '/(.*)',
                  DownloadResultFile,
                  {'path': result_files_folder}),

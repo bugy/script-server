@@ -6,17 +6,18 @@ import utils.process_utils as process_utils
 
 
 class Config(object):
-    config_path = None
-    script_command = None
-    name = None
-    description = None
-    requires_terminal = None
-    parameters = None
-    working_directory = None
-    bash_formatting = None
-    output_files = None
 
     def __init__(self):
+        self.config_path = None
+        self.script_command = None
+        self.name = None
+        self.description = None
+        self.requires_terminal = None
+        self.parameters = None
+        self.working_directory = None
+        self.bash_formatting = None
+        self.output_files = None
+
         self.parameters = []
         self.output_files = []
 
@@ -49,17 +50,19 @@ class Config(object):
 
 
 class Parameter(object):
-    name = None
-    param = None
-    no_value = None
-    description = None
-    required = None
-    default = None
-    type = "text"
-    min = None
-    max = None
-    constant = False
-    values = None
+    def __init__(self):
+        self.name = None
+        self.param = None
+        self.no_value = None
+        self.description = None
+        self.required = None
+        self.default = None
+        self.type = "text"
+        self.min = None
+        self.max = None
+        self.constant = False
+        self.values = None
+        self.secure = False
 
     def get_name(self):
         return self.name
@@ -169,6 +172,7 @@ def from_json(file_path, json_string, pty_enabled_default=False):
             parameter.set_default(parameter_json.get("default"))
             parameter.set_min(parameter_json.get("min"))
             parameter.set_max(parameter_json.get("max"))
+            parameter.secure = read_boolean('secure', parameter_json)
 
             values = parameter_json.get("values")
             if values:

@@ -23,6 +23,8 @@ def setup():
     if os.path.exists(temp_folder):
         shutil.rmtree(temp_folder)
 
+    os.makedirs(temp_folder)
+
 
 def cleanup():
     if os.path.exists(temp_folder):

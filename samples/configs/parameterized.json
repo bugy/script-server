@@ -1,24 +1,24 @@
 {
   "name": "Very parameterized",
-  "script_path": "~/temp/parameterized.sh",
+  "script_path": "samples/scripts/parameterized.sh",
   "description": "This script does nothing except accepting a lot of parameters and printing them",
   "requires_terminal": false,
   "parameters": [
     {
-      "name": "TextParam1",
+      "name": "Required Text",
       "param": "-p1",
       "description": "Parameter One",
       "required": true,
       "default": "Some default value"
     },
     {
-      "name": "IntParam2",
+      "name": "Simple Int",
       "param": "-p2",
       "description": "Parameter Two",
       "type": "int"
     },
     {
-      "name": "IntParam3",
+      "name": "Constrained Int",
       "param": "-p3",
       "description": "Parameter Three",
       "type": "int",
@@ -28,37 +28,37 @@
       "max": "123"
     },
     {
-      "name": "BoolParam1",
+      "name": "Simple Boolean",
       "param": "--b1",
       "no_value": true,
       "description": "Boolean One"
     },
     {
-      "name": "TextParam4",
+      "name": "Simple Text",
       "param": "-p4",
       "description": "Parameter Four"
     },
     {
-      "name": "BoolParam2",
+      "name": "Default Boolean",
       "param": "--b2",
       "no_value": true,
       "description": "Boolean Two",
       "default": true
     },
     {
-      "name": "BoolParam3",
+      "name": "Simple Boolean 2",
       "param": "--b3",
       "no_value": true,
       "description": "Boolean Three"
     },
     {
-      "name": "BoolParam4",
+      "name": "Simple Boolean 3",
       "param": "--b4",
       "no_value": true,
       "description": "Boolean Four"
     },
     {
-      "name": "ListParam1",
+      "name": "Simple List",
       "param": "-p5",
       "description": "Parameter Five",
       "type": "list",
@@ -70,31 +70,31 @@
       ]
     },
     {
-      "name": "TextParam6",
+      "name": "Required Text 2",
       "param": "-p6",
       "description": "Parameter Six",
       "required": true
     },
     {
-      "name": "Constant1",
+      "name": "Constant Text",
       "description": "Constant value",
       "param": "-c1",
       "constant": true,
       "default": "constOne"
     },
     {
-      "name": "BoolParam5",
+      "name": "Simple Boolean 4",
       "param": "--b5",
       "no_value": true,
       "description": "Boolean Five"
     },
     {
-      "name": "TextParam7",
+      "name": "Simple Text 2",
       "param": "-p7",
       "description": "Parameter Seven"
     },
     {
-      "name": "ListParam2",
+      "name": "Command-based list",
       "param": "-lp2",
       "description": "List parameter 2",
       "type": "list",
@@ -103,15 +103,32 @@
       }
     },
     {
-      "name": "BoolParam6",
+      "name": "Simple Boolean 5",
       "param": "--b6",
       "no_value": true,
       "description": "Boolean Six"
     },
     {
-      "name": "TextParam8",
+      "name": "Default Text from variable",
       "description": "Parameter Eight",
       "default": "$$USER"
+    },
+    {
+      "name": "Secure Text",
+      "description": "Parameter Nine",
+      "secure": true
+    },
+    {
+      "name": "Secure List",
+      "description": "Parameter Ten",
+      "secure": true,
+      "type": "list",
+      "param": "-lp10",
+      "values": [
+        "one",
+        "two",
+        "three"
+      ]
     }
   ]
 }

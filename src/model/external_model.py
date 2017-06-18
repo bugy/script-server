@@ -4,20 +4,9 @@ from model import model_helper
 
 
 class ExecutionInfo(object):
-    script = None
-    param_values = {}
-
-    def set_script(self, value):
-        self.script = value
-
-    def get_script(self):
-        return self.script
-
-    def set_param_values(self, value):
-        self.param_values = value
-
-    def get_param_values(self):
-        return self.param_values
+    def __init__(self):
+        self.param_values = {}
+        self.script = None
 
 
 def config_to_json(config):
@@ -51,7 +40,7 @@ def to_execution_info(request_data):
     script = json_object.get("script")
 
     info = ExecutionInfo()
-    info.set_script(script)
+    info.script = script
 
     param_values = {}
     parameters = json_object.get("parameters")
@@ -62,6 +51,6 @@ def to_execution_info(request_data):
 
             param_values[name] = value
 
-    info.set_param_values(param_values)
+    info.param_values = param_values
 
     return info

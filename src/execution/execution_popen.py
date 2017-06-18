@@ -6,8 +6,8 @@ from execution import execution_base
 
 
 class POpenProcessWrapper(execution_base.ProcessWrapper):
-    def __init__(self, command, command_identifier, working_directory, config):
-        execution_base.ProcessWrapper.__init__(self, command, command_identifier, working_directory, config)
+    def __init__(self, command, command_identifier, working_directory, config, execution_info):
+        super().__init__(command, command_identifier, working_directory, config, execution_info)
 
     def init_process(self, command, working_directory):
         self.process = subprocess.Popen(command,
