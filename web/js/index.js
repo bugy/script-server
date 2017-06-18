@@ -486,7 +486,8 @@ function createParameterControl(parameter) {
             parameter.type,
             parameter.min,
             parameter.max,
-            parameter.description);
+            parameter.description,
+            parameter.secure);
     }
 }
 

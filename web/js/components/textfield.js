@@ -1,10 +1,11 @@
-function TextField(name, defaultValue, required, type, min, max, description) {
+function TextField(name, defaultValue, required, type, min, max, description, secure) {
     AbstractInput.call(this);
 
     this.required = required;
     this.type = type;
     this.min = min;
     this.max = max;
+    this.secure = secure;
 
     var label = document.createElement("label");
     label.innerText = name;
@@ -18,6 +19,10 @@ function TextField(name, defaultValue, required, type, min, max, description) {
         if (this.type == "int") {
             this.field.type = "number";
         }
+    }
+
+    if (this.secure) {
+        this.field.type = "password"
     }
 
     if (!isNull(defaultValue)) {

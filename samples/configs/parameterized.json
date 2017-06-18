@@ -114,9 +114,10 @@
       "default": "$$USER"
     },
     {
-      "name": "Secure Text",
+      "name": "Secure Int",
       "description": "Parameter Nine",
-      "secure": true
+      "secure": true,
+      "type": "int"
     },
     {
       "name": "Secure List",

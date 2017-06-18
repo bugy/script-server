@@ -24,7 +24,8 @@ def config_to_json(config):
             "type": parameter.get_type(),
             "min": parameter.get_min(),
             "max": parameter.get_max(),
-            "values": parameter.get_values()
+            "values": parameter.get_values(),
+            "secure": parameter.secure
         })
 
     return json.dumps({
