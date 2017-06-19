@@ -168,18 +168,31 @@ body {
 }
 
 #logPanel {
-    overflow-y: auto;
     flex: 1;
 
+    position: relative;
+    min-height: 0;
+
     background: #f4f2f0;
-    padding: 1.5em;
-    font-size: .875em;
+
     width: calc(100% - 24px);
+
     margin-right: 12px;
     margin-left: 12px;
     margin-top: 12px;
+
     border: solid 1px rgba(51, 51, 51, 0.12);
     border-radius: 2px;
+}
+
+#logContent {
+    display: block;
+    overflow-y: auto;
+    height: 100%;
+
+    font-size: .875em;
+
+    padding: 1.5em;
 
     white-space: pre-wrap; /* CSS 3 */
     white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
@@ -197,6 +210,17 @@ body {
     -moz-hyphens: auto;
     -webkit-hyphens: auto;
     hyphens: auto;
+}
+
+#logPanelShadow {
+    position: absolute;
+
+    width: 100%;
+    min-height: 100%;
+    top: 0;
+    z-index: 5;
+
+    pointer-events: none;
 }
 
 .shadow-top-bottom {

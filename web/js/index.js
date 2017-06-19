@@ -179,51 +179,53 @@ function stopRunningScript() {
 
 function initLogPanel() {
     var logPanel = document.getElementById("logPanel");
+    var logContent = document.getElementById("logContent");
+    var logPanelShadow = document.getElementById("logPanelShadow");
 
     hide(logPanel);
 
     var wasBottom = true;
     var scrollStyleUpdate = function () {
-        var isTop = logPanel.scrollTop == 0;
-        var isBottom = (logPanel.scrollTop + logPanel.clientHeight + 5) > (logPanel.scrollHeight);
+        var isTop = logContent.scrollTop == 0;
+        var isBottom = (logContent.scrollTop + logContent.clientHeight + 5) > (logContent.scrollHeight);
 
         var shadowTop = !isTop;
         var shadowBottom = !isBottom;
 
         if (shadowTop && shadowBottom) {
-            addClass(logPanel, "shadow-top-bottom");
-            removeClass(logPanel, "shadow-top");
-            removeClass(logPanel, "shadow-bottom");
+            addClass(logPanelShadow, "shadow-top-bottom");
+            removeClass(logPanelShadow, "shadow-top");
+            removeClass(logPanelShadow, "shadow-bottom");
         } else if (shadowTop) {
-            removeClass(logPanel, "shadow-top-bottom");
-            addClass(logPanel, "shadow-top");
-            removeClass(logPanel, "shadow-bottom");
+            removeClass(logPanelShadow, "shadow-top-bottom");
+            addClass(logPanelShadow, "shadow-top");
+            removeClass(logPanelShadow, "shadow-bottom");
         } else if (shadowBottom) {
-            removeClass(logPanel, "shadow-top-bottom");
-            removeClass(logPanel, "shadow-top");
-            addClass(logPanel, "shadow-bottom");
+            removeClass(logPanelShadow, "shadow-top-bottom");
+            removeClass(logPanelShadow, "shadow-top");
+            addClass(logPanelShadow, "shadow-bottom");
         } else {
-            removeClass(logPanel, "shadow-top-bottom");
-            removeClass(logPanel, "shadow-top");
-            removeClass(logPanel, "shadow-bottom");
+            removeClass(logPanelShadow, "shadow-top-bottom");
+            removeClass(logPanelShadow, "shadow-top");
+            removeClass(logPanelShadow, "shadow-bottom");
         }
 
         wasBottom = isBottom;
     };
-    logPanel.addEventListener("scroll", scrollStyleUpdate);
+    logContent.addEventListener("scroll", scrollStyleUpdate);
 
     var mouseDown = false;
-    logPanel.addEventListener("mousedown", function () {
+    logContent.addEventListener("mousedown", function () {
         mouseDown = true;
     });
 
-    logPanel.addEventListener("mouseup", function () {
+    logContent.addEventListener("mouseup", function () {
         mouseDown = false;
     });
 
     var updateScroll = function (mutations) {
         if ((wasBottom) && (!mouseDown)) {
-            logPanel.scrollTop = logPanel.scrollHeight;
+            logContent.scrollTop = logContent.scrollHeight;
         } else {
             scrollStyleUpdate();
         }
@@ -237,7 +239,7 @@ function initLogPanel() {
     });
 
     var config = {attributes: false, subtree: true, childList: true, characterData: true};
-    observer.observe(logPanel, config);
+    observer.observe(logContent, config);
 }
 
 function initStopButton() {
@@ -254,6 +256,7 @@ function initExecuteButton() {
     var executeButton = document.getElementById("executeButton");
     executeButton.addEventListener("click", function (e) {
         var logPanel = document.getElementById("logPanel");
+        var logContent = document.getElementById("logContent");
         var inputPanel = document.getElementById("inputPanel");
         var errorsPanel = document.getElementById("validationPanel");
         var errorsList = document.getElementById("validationErrorsList");
@@ -285,7 +288,7 @@ function initExecuteButton() {
 
         hide(errorsPanel);
 
-        logPanel.innerText = "Calling the script...";
+        logContent.innerText = "Calling the script...";
         show(logPanel, "block");
 
         var callParameters = [];
@@ -312,7 +315,7 @@ function initExecuteButton() {
 
         } catch (error) {
             if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
-                logPanel.innerText = error.message;
+                logContent.innerText = error.message;
             }
         }
     });
@@ -455,8 +458,9 @@ function showScript(activeScript) {
     }
 
     var logPanel = document.getElementById("logPanel");
+    var logContent = document.getElementById("logContent");
     hide(logPanel);
-    logPanel.innerText = "";
+    logContent.innerText = "";
 
     var inputPanel = document.getElementById("inputPanel");
     hide(inputPanel);
@@ -582,12 +586,12 @@ function ScriptController(processId) {
     var ws = new WebSocket(wsProtocol + "://" + window.location.host + "/scripts/execute/io/" + processId);
 
     var receivedData = false;
-    var logPanel = document.getElementById("logPanel");
+    var logContent = document.getElementById("logContent");
 
     var logElements = [];
     var publishLogs = function () {
         for (i = 0; i < logElements.length; i++) {
-            logPanel.appendChild(logElements[i]);
+            logContent.appendChild(logElements[i]);
         }
         logElements = [];
     };
@@ -595,7 +599,7 @@ function ScriptController(processId) {
 
     ws.addEventListener("message", function (message) {
         if (!receivedData) {
-            logPanel.innerText = "";
+            logContent.innerText = "";
             receivedData = true;
         }
 
