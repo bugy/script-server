@@ -16,7 +16,10 @@ def create_file(filepath):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    file_utils.write_file(os.path.join(folder, filename), 'test text')
+    file_path = os.path.join(folder, filename)
+    file_utils.write_file(file_path, 'test text')
+
+    return file_path
 
 
 def setup():

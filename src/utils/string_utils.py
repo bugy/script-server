@@ -15,3 +15,12 @@ def is_integer(text):
         return True
     except ValueError:
         return False
+
+
+def unwrap_quotes(string):
+    if string.startswith('"') and string.endswith('"'):
+        return string[1:-1]
+    elif string.startswith("'") and string.endswith("'"):
+        return string[1:-1]
+
+    return string

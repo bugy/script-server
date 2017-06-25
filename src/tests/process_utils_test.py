@@ -30,7 +30,35 @@ class TestSplitCommand(unittest.TestCase):
 
         command_split = process_utils.split_command('"c:\program files\python\python.exe" test.py')
 
-        self.assertEqual(command_split, ['"c:\program files\python\python.exe"', 'test.py'])
+        self.assertEqual(command_split, ['c:\program files\python\python.exe', 'test.py'])
+
+    def test_unwrap_double_quotes_win(self):
+        test_utils.set_win()
+
+        command_split = process_utils.split_command('"my script.py" "param 1"')
+
+        self.assertEqual(command_split, ['my script.py', 'param 1'])
+
+    def test_unwrap_single_quotes_win(self):
+        test_utils.set_win()
+
+        command_split = process_utils.split_command("'my script.py' 'param 1'")
+
+        self.assertEqual(command_split, ['my script.py', 'param 1'])
+
+    def test_unwrap_single_and_quotes_separate_args_win(self):
+        test_utils.set_win()
+
+        command_split = process_utils.split_command('"my script.py" \'param 1\'')
+
+        self.assertEqual(command_split, ['my script.py', 'param 1'])
+
+    def test_unwrap_single_and_quotes_same_arg_win(self):
+        test_utils.set_win()
+
+        command_split = process_utils.split_command('\'"my script.py"\' "\'param 1\'"')
+
+        self.assertEqual(command_split, ['"my script.py"', "'param 1'"])
 
     def setUp(self):
         test_utils.setup()

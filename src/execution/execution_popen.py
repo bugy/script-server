@@ -1,8 +1,23 @@
 import logging
+import os
 import subprocess
 import time
 
 from execution import execution_base
+from utils import os_utils
+
+
+def prepare_cmd_for_win(command):
+    shell = False
+
+    command_path = command[0]
+    if os.path.exists(command_path):
+        file_extension = os.path.splitext(command_path)[1]
+        if file_extension not in ['.bat', '.exe']:
+            command = [command[0]] + [arg.replace('&', '^&') for arg in command[1:]]
+            shell = True
+
+    return command, shell
 
 
 class POpenProcessWrapper(execution_base.ProcessWrapper):
@@ -10,13 +25,19 @@ class POpenProcessWrapper(execution_base.ProcessWrapper):
         super().__init__(command, command_identifier, working_directory, config, execution_info)
 
     def init_process(self, command, working_directory):
+        shell = False
+
+        if os_utils.is_win():
+            (command, shell) = prepare_cmd_for_win(command)
+
         self.process = subprocess.Popen(command,
                                         cwd=working_directory,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
                                         start_new_session=True,
-                                        universal_newlines=True)
+                                        universal_newlines=True,
+                                        shell=shell)
 
     def write_to_input(self, value):
         input_value = value

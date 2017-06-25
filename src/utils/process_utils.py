@@ -4,6 +4,7 @@ import subprocess
 
 from utils import file_utils
 from utils import os_utils
+from utils import string_utils
 
 
 def invoke(command, work_dir='.'):
@@ -41,6 +42,9 @@ def split_command(script_command, working_directory=None):
     if ' ' in script_command:
         posix = not os_utils.is_win()
         args = shlex.split(script_command, posix=posix)
+
+        if not posix:
+            args = [string_utils.unwrap_quotes(arg) for arg in args]
     else:
         args = [script_command]
 
@@ -51,7 +55,4 @@ def split_command(script_command, working_directory=None):
         if expanded != body_arg:
             script_args[i] = expanded
 
-    result = [script_path]
-    result.extend(script_args)
-
-    return result
+    return [script_path] + script_args
