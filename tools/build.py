@@ -42,6 +42,7 @@ class BuildInfo():
     def get_files(self):
         return self.files
 
+init.prepare_project('')
 
 build_info = BuildInfo()
 build_info.include('launcher.py')
@@ -61,5 +62,3 @@ os.mkdir(BUILD_FOLDER)
 zip = zipfile.ZipFile(os.path.join(BUILD_FOLDER, 'script-server.zip'), 'w', zipfile.ZIP_DEFLATED)
 for file in build_info.get_files():
     zip.write(file)
-
-init.prepare_project('')
