@@ -40,12 +40,17 @@ Any more or less up to date browser with enabled JS
 Internet connection is not needed. All the files are loaded from the server.
 
 ## Installation
+### Non-developer mode
+1. Download script-server.zip file from [Latest release](https://github.com/bugy/script-server/releases/latest)
+2. Create script-server folder anywhere on your PC and extract zip content to this folder
+
 ### Developer mode
 1. Clone/download the repository
 2. Run tools/init.py script (this will download javascript libraries)
 
+
 ## Setup and run
-1. Create configurations for your scripts in *conf/runners/* folder (see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details)
+1. Create json configurations for your scripts in *conf/runners/* folder (see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details)
 2. Launch launcher.py from script-server folder
   * Windows command: launcher.py
   * Linux command: ./launcher.py
