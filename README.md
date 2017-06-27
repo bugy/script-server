@@ -57,15 +57,21 @@ All the features listed above and some other minor features can be configured in
 It is allowed not to create this file. In this case default values will be used.
 See [server config page](https://github.com/bugy/script-server/wiki/Server-config) for details
 
-#### SSL 
-If you want server to work over HTTPS, you should specify server key and certificate in server configuration.
-
-## Security
-Completely no security! Use it only in local network for trusted users. 
-
 ## Logging
 All web/operating logs are written to the *logs/server.log*
 Additionally each script logs are written to separate file in *logs/processes*. File name format is {script\_name}\_{client\_address}\_{date}\_{time}.log. 
 
 ## Testing/demo
 Script-server has bundled configs/scripts for testing/demo purposes, which are located in samples folder. You can link/copy these config files (samples/configs/\*.json) to server config folder (conf/runners).
+
+## Security
+General note: for different security reasons it's recommended to run script server only on a trusted network.
+### Shell commands injection
+Script server guarantees that all user parameters are passed to an executable script as arguments and won't be executed under any conditions. There is no way to inject fraud command from a client side.
+However user parameters are not escaped, so scripts should take care of not executing them also (general recommendation for bash is at least to wrap all arguments in double quotes).
+It's recommended to use typed parameters when 	appropriate, because they are validated for proper values and so they are harder to be subject of commands injection. Such attempts would be easier to detect also.
+
+_Important!_ Command injection protection is fully supported for linux, but _only_ for .bat and .exe files on Windows
+
+### XSS and CSRF
+At the moment script server _is_ vulnerable to these attacks.
