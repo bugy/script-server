@@ -4,16 +4,19 @@
 <head>
     <title>Script server</title>
     <meta charset="utf-8">
-
     <link rel="stylesheet" href="css/libs/materialize.min.css">
-    <script src="js/libs/jquery.min.js"></script>
-    <script src="js/libs/materialize.min.js"></script>
-    <script src="js/libs/hashtable.js"></script>
+    <script src="{% if web_root %}{{ web_root }}{% end %}/scripts/js/libs/jquery.min.js"></script>
+    <script src="{% if web_root %}{{ web_root }}{% end %}/scripts/js/libs/materialize.min.js"></script>
+    <script src="{% if web_root %}{{ web_root }}{% end %}/scripts/js/libs/hashtable.js"></script>
     <script src="js/common.js"></script>
     <script src="js/index.js"></script>
 
     <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="css/bash_styles.css">
+    <script>
+        <!--declare global variable indicating web root status for further use in scripts (index.js)-->
+        var web_root = {% if web_root %} "{{ web_root }}" {% else %} false {% end %}
+    </script>
 </head>
 
 <body onload="onLoad()">

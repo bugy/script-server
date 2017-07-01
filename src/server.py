@@ -33,6 +33,7 @@ from utils import os_utils as os_utils
 from utils import process_utils as process_utils
 
 TEMP_FOLDER = "temp"
+SERVER_CONFIG = None
 
 pty_supported = os_utils.is_linux()
 if pty_supported:
@@ -576,6 +577,11 @@ class LoginHandler(tornado.web.RequestHandler):
         auth.authenticate(username, password, self)
 
 
+class IndexHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.render('index.html', web_root=SERVER_CONFIG.web_root)
+
+
 class LogoutHandler(tornado.web.RequestHandler):
     @check_authorization
     def post(self):
@@ -706,34 +712,37 @@ def main():
     file_utils.prepare_folder(CONFIG_FOLDER)
     file_utils.prepare_folder(SCRIPT_CONFIGS_FOLDER)
 
-    server_config = server_conf.from_json(SERVER_CONF_PATH)
+    global SERVER_CONFIG
+    SERVER_CONFIG = server_conf.from_json(SERVER_CONF_PATH)
     ssl_context = None
-    if server_config.is_ssl():
+    if SERVER_CONFIG.is_ssl():
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(server_config.get_ssl_cert_path(),
-                                    server_config.get_ssl_key_path())
+        ssl_context.load_cert_chain(SERVER_CONFIG.get_ssl_cert_path(),
+                                    SERVER_CONFIG.get_ssl_key_path())
 
     file_utils.prepare_folder(TEMP_FOLDER)
 
     settings = {
         "cookie_secret": get_tornado_secret(),
-        "login_url": "/login.html"
+        "login_url": "/login.html",
+        # "static_path": os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "scripts"),
+        "template_path": os.path.join(os.path.dirname(os.path.dirname(__file__)), "web"),
     }
 
-    auth = TornadoAuth(server_config.authorizer)
+    auth = TornadoAuth(SERVER_CONFIG.authorizer)
 
     result_files_folder = file_download_feature.get_result_files_folder(TEMP_FOLDER)
     file_download_feature.autoclean_downloads(TEMP_FOLDER)
 
-    handlers = [(r"/scripts/list", GetScripts),
-                (r"/scripts/info", GetScriptInfo),
-                (r"/scripts/execute", ScriptExecute),
-                (r"/scripts/execute/stop", ScriptStop),
-                (r"/scripts/execute/io/(.*)", ScriptStreamSocket),
-                (r'/' + file_download_feature.RESULT_FILES_FOLDER + '/(.*)',
+    handlers = [(r"{}/scripts/list".format(SERVER_CONFIG.web_root), GetScripts),
+                (r"{}/scripts/info".format(SERVER_CONFIG.web_root), GetScriptInfo),
+                (r"{}/scripts/execute".format(SERVER_CONFIG.web_root), ScriptExecute),
+                (r"{}/scripts/execute/stop".format(SERVER_CONFIG.web_root), ScriptStop),
+                (r"{}/scripts/execute/io/(.*)".format(SERVER_CONFIG.web_root), ScriptStreamSocket),
+                (r"{}/".format(SERVER_CONFIG.web_root) + file_download_feature.RESULT_FILES_FOLDER + "/(.*)",
                  DownloadResultFile,
-                 {'path': result_files_folder}),
-                (r"/", tornado.web.RedirectHandler, {"url": "/index.html"})]
+                 {"path": result_files_folder}),
+                (r"{}/".format(SERVER_CONFIG.web_root), IndexHandler), ]
 
     if auth.is_enabled():
         handlers.append((r"/login", LoginHandler))
@@ -741,16 +750,16 @@ def main():
 
     handlers.append((r"/username", GetUsernameHandler))
 
-    handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
+    handlers.append((r"{}/(.*)".format(SERVER_CONFIG.web_root), AuthorizedStaticFileHandler, {"path": "web"}))
 
     application = tornado.web.Application(handlers, **settings)
 
     application.auth = auth
 
-    application.alerts_config = server_config.get_alerts_config()
+    application.alerts_config = SERVER_CONFIG.get_alerts_config()
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
-    http_server.listen(server_config.port)
+    http_server.listen(SERVER_CONFIG.port)
     tornado.ioloop.IOLoop.current().start()
 
 

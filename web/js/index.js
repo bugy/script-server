@@ -134,7 +134,7 @@ function initSearchPanel() {
             removeClass(searchField, "collapsed");
             searchField.disabled = false;
             searchField.focus();
-            searchButton.src = "../images/clear.png";
+            searchButton.src = (web_root ? web_root : "") + "/images/clear.png";
 
         } else {
             addClass(searchField, "collapsed");
@@ -361,7 +361,7 @@ function initWelcomeIcon() {
     var originalSrc = welcomeIcon.src;
     var welcomeCookiePanel = document.getElementById("welcomeCookieText");
     welcomeCookiePanel.addEventListener("mouseover", function (e) {
-        welcomeIcon.src = "../images/cookie.png";
+        welcomeIcon.src = (web_root ? web_root : "") + "/images/cookie.png";
     });
     welcomeCookiePanel.addEventListener("mouseout", function (e) {
         welcomeIcon.src = originalSrc;
@@ -670,7 +670,7 @@ function ScriptController(processId) {
             downloadLink.appendChild(document.createTextNode(filename));
 
             var downloadImage = document.createElement('img');
-            downloadImage.src = 'images/file_download.png';
+            downloadImage.src = (web_root ? web_root : "") + 'images/file_download.png';
             downloadLink.appendChild(downloadImage);
 
             filesDownloadPanel.appendChild(downloadLink);
