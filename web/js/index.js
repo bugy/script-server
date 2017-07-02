@@ -134,7 +134,7 @@ function initSearchPanel() {
             removeClass(searchField, "collapsed");
             searchField.disabled = false;
             searchField.focus();
-            searchButton.src = "../images/clear.png";
+            searchButton.src = "images/clear.png";
 
         } else {
             addClass(searchField, "collapsed");
@@ -361,7 +361,7 @@ function initWelcomeIcon() {
     var originalSrc = welcomeIcon.src;
     var welcomeCookiePanel = document.getElementById("welcomeCookieText");
     welcomeCookiePanel.addEventListener("mouseover", function (e) {
-        welcomeIcon.src = "../images/cookie.png";
+        welcomeIcon.src = "images/cookie.png";
     });
     welcomeCookiePanel.addEventListener("mouseout", function (e) {
         welcomeIcon.src = originalSrc;
