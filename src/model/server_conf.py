@@ -7,7 +7,6 @@ import utils.file_utils as file_utils
 class ServerConfig(object):
     port = None
     ssl = False
-    web_root = ""
     ssl_key_path = None
     ssl_cert_path = None
     authorizer = None
@@ -88,10 +87,6 @@ def from_json(conf_path):
 
         else:
             raise Exception(auth_type + " auth is not supported")
-
-    if json_object.get("web_root"):
-        web_root = json_object.get("web_root")
-        config.web_root = web_root[:-1] if web_root.endswith("/") else web_root
 
     config.alerts_config = parse_alerts_config(json_object)
 
