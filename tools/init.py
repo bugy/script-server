@@ -26,7 +26,6 @@ def prepare_project(project_path):
                 for attr in attrs:
                     if attr[0] == 'src':
                         imports.add(attr[1])
-
             if tag == 'link':
                 for attr in attrs:
                     if attr[0] == 'href':
