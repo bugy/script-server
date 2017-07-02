@@ -25,8 +25,10 @@ def prepare_project(project_path):
             if tag == 'script':
                 for attr in attrs:
                     if attr[0] == 'src':
-                        imports.add(attr[1])
-
+                        if r'{% if web_root %}{{ web_root }}{% end %}' in attr[1]:
+                            imports.add(attr[1].replace(r"{% if web_root %}{{ web_root }}{% end %}/", ""))
+                        else:
+                            imports.add(attr[1])
             if tag == 'link':
                 for attr in attrs:
                     if attr[0] == 'href':
