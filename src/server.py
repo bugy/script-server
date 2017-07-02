@@ -10,6 +10,7 @@ import sys
 import threading
 from datetime import datetime
 from urllib.parse import urlencode
+from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import tornado.escape
@@ -33,7 +34,6 @@ from utils import os_utils as os_utils
 from utils import process_utils as process_utils
 
 TEMP_FOLDER = "temp"
-SERVER_CONFIG = None
 
 pty_supported = os_utils.is_linux()
 if pty_supported:
@@ -151,7 +151,7 @@ class TornadoAuth():
         request_handler.set_secure_cookie("username", username)
 
         path = tornado.escape.url_unescape(request_handler.get_argument("next", "/"))
-        request_handler.redirect(path)
+        redirect(path, request_handler)
 
     def logout(self, request_handler):
         if not self.is_enabled():
@@ -167,36 +167,53 @@ class TornadoAuth():
         request_handler.clear_cookie("username")
 
 
+def redirect(relative_url, request_handler, *args, **kwargs):
+    full_url = get_full_url(relative_url, request_handler)
+    request_handler.redirect(full_url, *args, **kwargs)
+
+
+def get_full_url(relative_url, request_handler):
+    request = request_handler.request
+    host_url = request.protocol + "://" + request.host
+    return urljoin(host_url, relative_url)
+
+
 def is_allowed_during_login(request_path, login_url, request_handler):
-    if request_handler.request.method == "POST":
-        if request_path == "/login":
+    if request_handler.request.method == 'POST':
+        if request_path == '/login':
             return True
 
-    elif request_handler.request.method == "GET":
-        if request_path == "/favicon.ico":
+    elif request_handler.request.method == 'GET':
+        if request_path == '/favicon.ico':
             return True
 
         if request_path == login_url:
             return True
 
-        referer = request_handler.request.headers.get("Referer")
+        login_resources = ['/js/login.js',
+                           '/js/common.js',
+                           '/js/libs/jquery.min.js',
+                           '/js/libs/materialize.min.js',
+                           '/css/libs/materialize.min.css',
+                           '/css/index.css',
+                           '/css/fonts/roboto/Roboto-Regular.woff2',
+                           '/css/fonts/roboto/Roboto-Regular.woff',
+                           '/css/fonts/roboto/Roboto-Regular.ttf',
+                           '/images/titleBackground.jpg']
+
+        if request_path not in login_resources:
+            return False
+
+        referer = request_handler.request.headers.get('Referer')
         if referer:
             referer = urlparse(referer).path
+        else:
+            return False
 
-        login_resources = ["/js/login.js",
-                           "/js/common.js",
-                           "/js/libs/jquery.min.js",
-                           "/js/libs/materialize.min.js",
-                           "/css/libs/materialize.min.css",
-                           "/css/index.css",
-                           "/css/fonts/roboto/Roboto-Regular.woff2",
-                           "/css/fonts/roboto/Roboto-Regular.woff",
-                           "/css/fonts/roboto/Roboto-Regular.ttf",
-                           "/images/titleBackground.jpg"]
-
-        if ((referer == login_url) or (referer == "/css/libs/materialize.min.css") or (referer == "/css/index.css")) \
-                and (request_path in login_resources):
-            return True
+        allowed_referrers = [login_url, '/css/libs/materialize.min.css', '/css/index.css']
+        for allowed_referrer in allowed_referrers:
+            if referer.endswith(allowed_referrer):
+                return True
 
     return False
 
@@ -217,10 +234,16 @@ def check_authorization(func):
 
         login_url += "?" + urlencode(dict(next=request_path))
 
-        self.redirect(login_url)
+        redirect(login_url, self)
+
         return
 
     return wrapper
+
+
+class ProxiedRedirectHandler(tornado.web.RedirectHandler):
+    def get(self, *args):
+        redirect(self._url.format(*args), self, *args)
 
 
 class GetScripts(tornado.web.RequestHandler):
@@ -577,11 +600,6 @@ class LoginHandler(tornado.web.RequestHandler):
         auth.authenticate(username, password, self)
 
 
-class IndexHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.render('index.html', web_root=SERVER_CONFIG.web_root)
-
-
 class LogoutHandler(tornado.web.RequestHandler):
     @check_authorization
     def post(self):
@@ -712,37 +730,34 @@ def main():
     file_utils.prepare_folder(CONFIG_FOLDER)
     file_utils.prepare_folder(SCRIPT_CONFIGS_FOLDER)
 
-    global SERVER_CONFIG
-    SERVER_CONFIG = server_conf.from_json(SERVER_CONF_PATH)
+    server_config = server_conf.from_json(SERVER_CONF_PATH)
     ssl_context = None
-    if SERVER_CONFIG.is_ssl():
+    if server_config.is_ssl():
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(SERVER_CONFIG.get_ssl_cert_path(),
-                                    SERVER_CONFIG.get_ssl_key_path())
+        ssl_context.load_cert_chain(server_config.get_ssl_cert_path(),
+                                    server_config.get_ssl_key_path())
 
     file_utils.prepare_folder(TEMP_FOLDER)
 
     settings = {
         "cookie_secret": get_tornado_secret(),
-        "login_url": "/login.html",
-        # "static_path": os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "scripts"),
-        "template_path": os.path.join(os.path.dirname(os.path.dirname(__file__)), "web"),
+        "login_url": "/login.html"
     }
 
-    auth = TornadoAuth(SERVER_CONFIG.authorizer)
+    auth = TornadoAuth(server_config.authorizer)
 
     result_files_folder = file_download_feature.get_result_files_folder(TEMP_FOLDER)
     file_download_feature.autoclean_downloads(TEMP_FOLDER)
 
-    handlers = [(r"{}/scripts/list".format(SERVER_CONFIG.web_root), GetScripts),
-                (r"{}/scripts/info".format(SERVER_CONFIG.web_root), GetScriptInfo),
-                (r"{}/scripts/execute".format(SERVER_CONFIG.web_root), ScriptExecute),
-                (r"{}/scripts/execute/stop".format(SERVER_CONFIG.web_root), ScriptStop),
-                (r"{}/scripts/execute/io/(.*)".format(SERVER_CONFIG.web_root), ScriptStreamSocket),
-                (r"{}/".format(SERVER_CONFIG.web_root) + file_download_feature.RESULT_FILES_FOLDER + "/(.*)",
+    handlers = [(r"/scripts/list", GetScripts),
+                (r"/scripts/info", GetScriptInfo),
+                (r"/scripts/execute", ScriptExecute),
+                (r"/scripts/execute/stop", ScriptStop),
+                (r"/scripts/execute/io/(.*)", ScriptStreamSocket),
+                (r'/' + file_download_feature.RESULT_FILES_FOLDER + '/(.*)',
                  DownloadResultFile,
-                 {"path": result_files_folder}),
-                (r"{}/".format(SERVER_CONFIG.web_root), IndexHandler), ]
+                 {'path': result_files_folder}),
+                (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
 
     if auth.is_enabled():
         handlers.append((r"/login", LoginHandler))
@@ -750,16 +765,16 @@ def main():
 
     handlers.append((r"/username", GetUsernameHandler))
 
-    handlers.append((r"{}/(.*)".format(SERVER_CONFIG.web_root), AuthorizedStaticFileHandler, {"path": "web"}))
+    handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 
     application = tornado.web.Application(handlers, **settings)
 
     application.auth = auth
 
-    application.alerts_config = SERVER_CONFIG.get_alerts_config()
+    application.alerts_config = server_config.get_alerts_config()
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
-    http_server.listen(SERVER_CONFIG.port)
+    http_server.listen(server_config.port)
     tornado.ioloop.IOLoop.current().start()
 
 

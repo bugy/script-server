@@ -13,7 +13,7 @@ var runningScriptExecutor = null;
 function onLoad() {
     parameterControls = new Hashtable();
 
-    var response = authorizedCallHttp((web_root ? web_root + "/" : "") + "scripts/list");
+    var response = authorizedCallHttp("scripts/list");
 
     var scripts = JSON.parse(response);
 
@@ -134,7 +134,7 @@ function initSearchPanel() {
             removeClass(searchField, "collapsed");
             searchField.disabled = false;
             searchField.focus();
-            searchButton.src = (web_root ? web_root : "") + "/images/clear.png";
+            searchButton.src = "../images/clear.png";
 
         } else {
             addClass(searchField, "collapsed");
@@ -305,7 +305,7 @@ function initExecuteButton() {
         };
 
         try {
-            var process_id = authorizedCallHttp((web_root ? web_root + "/" : "") + "scripts/execute", callBody, "POST");
+            var process_id = authorizedCallHttp("scripts/execute", callBody, "POST");
 
             runningScriptExecutor = new ScriptController(process_id);
 
@@ -361,7 +361,7 @@ function initWelcomeIcon() {
     var originalSrc = welcomeIcon.src;
     var welcomeCookiePanel = document.getElementById("welcomeCookieText");
     welcomeCookiePanel.addEventListener("mouseover", function (e) {
-        welcomeIcon.src = (web_root ? web_root : "") + "/images/cookie.png";
+        welcomeIcon.src = "../images/cookie.png";
     });
     welcomeCookiePanel.addEventListener("mouseout", function (e) {
         welcomeIcon.src = originalSrc;
@@ -398,7 +398,7 @@ function showScript(activeScript) {
     show(contentPanel, "flex");
 
     try {
-        var info = authorizedCallHttp((web_root ? web_root + "/" : "") + "scripts/info?name=" + activeScript);
+        var info = authorizedCallHttp("scripts/info?name=" + activeScript);
         var parsedInfo = JSON.parse(info);
 
         scriptHeader.innerText = parsedInfo.name;
@@ -581,9 +581,18 @@ function ScriptController(processId) {
     var executeButton = document.getElementById("executeButton");
     var stopButton = document.getElementById("stopButton");
 
-    var https = location.protocol.toLowerCase() == "https:";
+    var location = window.location;
+
+    var https = location.protocol.toLowerCase() === "https:";
     var wsProtocol = https ? "wss" : "ws";
-    var ws = new WebSocket(wsProtocol + "://" + window.location.host + (web_root ? web_root : "") + "/scripts/execute/io/" + processId);
+    var hostUrl = wsProtocol + "://" + location.host;
+
+    var dir = location.pathname.substring(0, location.pathname.lastIndexOf('/'));
+    if (dir) {
+        hostUrl += '/' + dir;
+    }
+
+    var ws = new WebSocket(hostUrl + "/scripts/execute/io/" + processId);
 
     var receivedData = false;
     var logContent = document.getElementById("logContent");
@@ -670,7 +679,7 @@ function ScriptController(processId) {
             downloadLink.appendChild(document.createTextNode(filename));
 
             var downloadImage = document.createElement('img');
-            downloadImage.src = (web_root ? web_root : "") + 'images/file_download.png';
+            downloadImage.src = 'images/file_download.png';
             downloadLink.appendChild(downloadImage);
 
             filesDownloadPanel.appendChild(downloadLink);
@@ -691,7 +700,7 @@ function ScriptController(processId) {
     });
 
     this.stop = function () {
-        authorizedCallHttp((web_root ? web_root + "/" : "") + "scripts/execute/stop", {"processId": this.processId}, "POST");
+        authorizedCallHttp("scripts/execute/stop", {"processId": this.processId}, "POST");
     };
 
     this.abort = function () {
