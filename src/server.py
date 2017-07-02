@@ -10,6 +10,7 @@ import sys
 import threading
 from datetime import datetime
 from urllib.parse import urlencode
+from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import tornado.escape
@@ -150,7 +151,7 @@ class TornadoAuth():
         request_handler.set_secure_cookie("username", username)
 
         path = tornado.escape.url_unescape(request_handler.get_argument("next", "/"))
-        request_handler.redirect(path)
+        redirect(path, request_handler)
 
     def logout(self, request_handler):
         if not self.is_enabled():
@@ -166,36 +167,53 @@ class TornadoAuth():
         request_handler.clear_cookie("username")
 
 
+def redirect(relative_url, request_handler, *args, **kwargs):
+    full_url = get_full_url(relative_url, request_handler)
+    request_handler.redirect(full_url, *args, **kwargs)
+
+
+def get_full_url(relative_url, request_handler):
+    request = request_handler.request
+    host_url = request.protocol + "://" + request.host
+    return urljoin(host_url, relative_url)
+
+
 def is_allowed_during_login(request_path, login_url, request_handler):
-    if request_handler.request.method == "POST":
-        if request_path == "/login":
+    if request_handler.request.method == 'POST':
+        if request_path == '/login':
             return True
 
-    elif request_handler.request.method == "GET":
-        if request_path == "/favicon.ico":
+    elif request_handler.request.method == 'GET':
+        if request_path == '/favicon.ico':
             return True
 
         if request_path == login_url:
             return True
 
-        referer = request_handler.request.headers.get("Referer")
+        login_resources = ['/js/login.js',
+                           '/js/common.js',
+                           '/js/libs/jquery.min.js',
+                           '/js/libs/materialize.min.js',
+                           '/css/libs/materialize.min.css',
+                           '/css/index.css',
+                           '/css/fonts/roboto/Roboto-Regular.woff2',
+                           '/css/fonts/roboto/Roboto-Regular.woff',
+                           '/css/fonts/roboto/Roboto-Regular.ttf',
+                           '/images/titleBackground.jpg']
+
+        if request_path not in login_resources:
+            return False
+
+        referer = request_handler.request.headers.get('Referer')
         if referer:
             referer = urlparse(referer).path
+        else:
+            return False
 
-        login_resources = ["/js/login.js",
-                           "/js/common.js",
-                           "/js/libs/jquery.min.js",
-                           "/js/libs/materialize.min.js",
-                           "/css/libs/materialize.min.css",
-                           "/css/index.css",
-                           "/css/fonts/roboto/Roboto-Regular.woff2",
-                           "/css/fonts/roboto/Roboto-Regular.woff",
-                           "/css/fonts/roboto/Roboto-Regular.ttf",
-                           "/images/titleBackground.jpg"]
-
-        if ((referer == login_url) or (referer == "/css/libs/materialize.min.css") or (referer == "/css/index.css")) \
-                and (request_path in login_resources):
-            return True
+        allowed_referrers = [login_url, '/css/libs/materialize.min.css', '/css/index.css']
+        for allowed_referrer in allowed_referrers:
+            if referer.endswith(allowed_referrer):
+                return True
 
     return False
 
@@ -216,10 +234,16 @@ def check_authorization(func):
 
         login_url += "?" + urlencode(dict(next=request_path))
 
-        self.redirect(login_url)
+        redirect(login_url, self)
+
         return
 
     return wrapper
+
+
+class ProxiedRedirectHandler(tornado.web.RedirectHandler):
+    def get(self, *args):
+        redirect(self._url.format(*args), self, *args)
 
 
 class GetScripts(tornado.web.RequestHandler):
@@ -733,7 +757,7 @@ def main():
                 (r'/' + file_download_feature.RESULT_FILES_FOLDER + '/(.*)',
                  DownloadResultFile,
                  {'path': result_files_folder}),
-                (r"/", tornado.web.RedirectHandler, {"url": "/index.html"})]
+                (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
 
     if auth.is_enabled():
         handlers.append((r"/login", LoginHandler))

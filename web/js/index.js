@@ -581,9 +581,18 @@ function ScriptController(processId) {
     var executeButton = document.getElementById("executeButton");
     var stopButton = document.getElementById("stopButton");
 
-    var https = location.protocol.toLowerCase() == "https:";
+    var location = window.location;
+
+    var https = location.protocol.toLowerCase() === "https:";
     var wsProtocol = https ? "wss" : "ws";
-    var ws = new WebSocket(wsProtocol + "://" + window.location.host + "/scripts/execute/io/" + processId);
+    var hostUrl = wsProtocol + "://" + location.host;
+
+    var dir = location.pathname.substring(0, location.pathname.lastIndexOf('/'));
+    if (dir) {
+        hostUrl += '/' + dir;
+    }
+
+    var ws = new WebSocket(hostUrl + "/scripts/execute/io/" + processId);
 
     var receivedData = false;
     var logContent = document.getElementById("logContent");
