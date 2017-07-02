@@ -13,7 +13,7 @@ var runningScriptExecutor = null;
 function onLoad() {
     parameterControls = new Hashtable();
 
-    var response = authorizedCallHttp("scripts/list");
+    var response = authorizedCallHttp((web_root ? web_root + "/" : "") + "scripts/list");
 
     var scripts = JSON.parse(response);
 
@@ -305,7 +305,7 @@ function initExecuteButton() {
         };
 
         try {
-            var process_id = authorizedCallHttp("scripts/execute", callBody, "POST");
+            var process_id = authorizedCallHttp((web_root ? web_root + "/" : "") + "scripts/execute", callBody, "POST");
 
             runningScriptExecutor = new ScriptController(process_id);
 
@@ -398,7 +398,7 @@ function showScript(activeScript) {
     show(contentPanel, "flex");
 
     try {
-        var info = authorizedCallHttp("scripts/info?name=" + activeScript);
+        var info = authorizedCallHttp((web_root ? web_root + "/" : "") + "scripts/info?name=" + activeScript);
         var parsedInfo = JSON.parse(info);
 
         scriptHeader.innerText = parsedInfo.name;
@@ -583,7 +583,7 @@ function ScriptController(processId) {
 
     var https = location.protocol.toLowerCase() == "https:";
     var wsProtocol = https ? "wss" : "ws";
-    var ws = new WebSocket(wsProtocol + "://" + window.location.host + "/scripts/execute/io/" + processId);
+    var ws = new WebSocket(wsProtocol + "://" + window.location.host + (web_root ? web_root : "") + "/scripts/execute/io/" + processId);
 
     var receivedData = false;
     var logContent = document.getElementById("logContent");
@@ -691,7 +691,7 @@ function ScriptController(processId) {
     });
 
     this.stop = function () {
-        authorizedCallHttp("scripts/execute/stop", {"processId": this.processId}, "POST");
+        authorizedCallHttp((web_root ? web_root + "/" : "") + "scripts/execute/stop", {"processId": this.processId}, "POST");
     };
 
     this.abort = function () {
