@@ -88,6 +88,18 @@ function onLoad() {
     window.addEventListener('hashchange', activateScriptFromHash);
     activateScriptFromHash();
 
+    window.addEventListener("beforeunload", function (e) {
+        if (!isNull(runningScriptExecutor)) {
+            e = e || window.event;
+
+            // in modern browsers the message will be replaced with default one (security reasons)
+            var message = "Closing the page will stop the running script. Are you sure?";
+            e.returnValue = message;
+
+            return message
+        }
+    });
+
 
     initSearchPanel();
 
