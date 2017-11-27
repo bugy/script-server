@@ -774,7 +774,7 @@ def main():
     application.alerts_config = server_config.get_alerts_config()
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
-    http_server.listen(server_config.port)
+    http_server.listen(server_config.port, address=server_config.address)
     tornado.ioloop.IOLoop.current().start()
 
 

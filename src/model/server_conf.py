@@ -12,6 +12,9 @@ class ServerConfig(object):
     authorizer = None
     alerts_config = None
 
+    def get_address(self):
+        return self.address
+
     def get_port(self):
         return self.port
 
@@ -51,6 +54,7 @@ def from_json(conf_path):
 
     json_object = json.loads(file_content)
 
+    address = "0.0.0.0"
     port = 5000
 
     ssl = json_object.get("ssl")
@@ -68,6 +72,10 @@ def from_json(conf_path):
         config.ssl_key_path = key_path
         config.ssl_cert_path = cert_path
         port = 5443
+
+    if json_object.get("address"):
+        address = json_object.get("address")
+    config.address = address
 
     if json_object.get("port"):
         port = json_object.get("port")
