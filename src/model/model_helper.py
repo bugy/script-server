@@ -1,4 +1,5 @@
 import logging
+import re
 
 import utils.env_utils as env_utils
 import utils.string_utils as string_utils
@@ -25,6 +26,18 @@ def unwrap_conf_value(value):
 
 def is_empty(value):
     return (not value) and (value != 0) and (value != False)
+
+
+def update_output_files_with_vars(output_files, arguments):
+    for i, output_file in enumerate(output_files):
+        regex = "\$\$([a-zA-Z0-9-_]+)"  # Syntaxe is : $$my_variable (with two '$')
+        matched_arguments = re.findall(regex, output_file)
+        for argument in matched_arguments:
+            if argument in arguments:
+                value = arguments[argument]
+                output_file = output_file.replace("$$" + argument, value)
+        output_files[i] = output_file
+    return output_files
 
 
 def validate_parameters(parameters, config):

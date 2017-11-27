@@ -470,6 +470,8 @@ class ScriptExecute(tornado.web.RequestHandler):
                 respond_error(self, 400, 'Received invalid parameters')
                 return
 
+            model_helper.update_output_files_with_vars(config.output_files, execution_info.param_values)
+
             script_base_command = process_utils.split_command(config.get_script_command(), working_directory)
 
             script_args = build_command_args(execution_info.param_values, config)
