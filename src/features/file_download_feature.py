@@ -26,6 +26,15 @@ def build_download_path(user_hash, temp_folder):
     return os.path.join(temp_folder, RESULT_FILES_FOLDER, user_hash, str(millis))
 
 
+def update_output_files_vars_with_args(output_files, arguments):
+    output_file_parsed = []
+    for i, output_file in enumerate(output_files):
+        for argument in arguments:
+            output_file = re.sub('\$\$\$' + argument, arguments[argument], output_file)
+        output_file_parsed.append(output_file)
+    return output_file_parsed
+
+
 def prepare_downloadable_files(config, script_output, audit_name, secret, temp_folder):
     output_files = config.output_files
 
