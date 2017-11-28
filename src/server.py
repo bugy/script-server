@@ -361,6 +361,14 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
                 output_logger.close()
 
+                # What's the diffrence between "get_config()" and "config" ?
+                # process_wrapper.get_config().output_files = file_download_feature.update_output_files_vars_with_args(
+                #    process_wrapper.get_config().output_files,
+                #    process_wrapper.execution_info.param_values)#
+                process_wrapper.config.output_files = file_download_feature.update_output_files_vars_with_args(
+                    process_wrapper.config.output_files,
+                    process_wrapper.execution_info.param_values)
+
                 try:
                     downloadable_files = file_download_feature.prepare_downloadable_files(
                         process_wrapper.get_config(),
@@ -774,7 +782,7 @@ def main():
     application.alerts_config = server_config.get_alerts_config()
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
-    http_server.listen(server_config.port)
+    http_server.listen(server_config.port, address=server_config.address)
     tornado.ioloop.IOLoop.current().start()
 
 
