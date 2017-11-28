@@ -361,6 +361,14 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
                 output_logger.close()
 
+                # What's the diffrence between "get_config()" and "config" ?
+                # process_wrapper.get_config().output_files = file_download_feature.update_output_files_vars_with_args(
+                #    process_wrapper.get_config().output_files,
+                #    process_wrapper.execution_info.param_values)#
+                process_wrapper.config.output_files = file_download_feature.update_output_files_vars_with_args(
+                    process_wrapper.config.output_files,
+                    process_wrapper.execution_info.param_values)
+
                 try:
                     downloadable_files = file_download_feature.prepare_downloadable_files(
                         process_wrapper.get_config(),
@@ -469,8 +477,6 @@ class ScriptExecute(tornado.web.RequestHandler):
             if not valid_parameters:
                 respond_error(self, 400, 'Received invalid parameters')
                 return
-
-            model_helper.update_output_files_with_vars(config.output_files, execution_info.param_values)
 
             script_base_command = process_utils.split_command(config.get_script_command(), working_directory)
 
