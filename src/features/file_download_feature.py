@@ -35,11 +35,15 @@ def update_output_files_vars_with_args(output_files, arguments):
     return output_file_parsed
 
 
-def prepare_downloadable_files(config, script_output, audit_name, secret, temp_folder):
+def prepare_downloadable_files(config, script_output, script_param_values, audit_name, secret, temp_folder):
     output_files = config.output_files
 
     if not output_files:
         return []
+
+    output_files = update_output_files_vars_with_args(
+        config.output_files,
+        script_param_values)
 
     logger = logging.getLogger("scriptServer")
 
