@@ -30,7 +30,16 @@ def update_output_files_vars_with_args(output_files, arguments):
     output_file_parsed = []
     for i, output_file in enumerate(output_files):
         for argument in arguments:
-            output_file = re.sub('\$\$\$' + argument, arguments[argument], output_file)
+            value = arguments[argument]
+
+            if value is None:
+                value = ''
+
+            if not isinstance(value, str):
+                value = str(value)
+
+            output_file = re.sub('\$\$\$' + argument, value, output_file)
+
         output_file_parsed.append(output_file)
     return output_file_parsed
 
