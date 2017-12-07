@@ -365,6 +365,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
                     downloadable_files = file_download_feature.prepare_downloadable_files(
                         process_wrapper.get_config(),
                         process_wrapper.get_full_output(),
+                        process_wrapper.execution_info.param_values,
                         audit_name,
                         get_tornado_secret(),
                         TEMP_FOLDER)
@@ -774,7 +775,7 @@ def main():
     application.alerts_config = server_config.get_alerts_config()
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
-    http_server.listen(server_config.port)
+    http_server.listen(server_config.port, address=server_config.address)
     tornado.ioloop.IOLoop.current().start()
 
 
