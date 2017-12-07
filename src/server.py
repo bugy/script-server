@@ -246,6 +246,12 @@ class ProxiedRedirectHandler(tornado.web.RedirectHandler):
         redirect(self._url.format(*args), self, *args)
 
 
+class GetServerTitle(tornado.web.RequestHandler):
+    def get(self):
+        if self.application.server_title:
+            self.write(self.application.server_title)
+
+
 class GetScripts(tornado.web.RequestHandler):
     @check_authorization
     def get(self):
@@ -750,7 +756,8 @@ def main():
     result_files_folder = file_download_feature.get_result_files_folder(TEMP_FOLDER)
     file_download_feature.autoclean_downloads(TEMP_FOLDER)
 
-    handlers = [(r"/scripts/list", GetScripts),
+    handlers = [(r"/conf/title", GetServerTitle),
+                (r"/scripts/list", GetScripts),
                 (r"/scripts/info", GetScriptInfo),
                 (r"/scripts/execute", ScriptExecute),
                 (r"/scripts/execute/stop", ScriptStop),
@@ -773,6 +780,7 @@ def main():
     application.auth = auth
 
     application.alerts_config = server_config.get_alerts_config()
+    application.server_title = server_config.title
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
     http_server.listen(server_config.port, address=server_config.address)

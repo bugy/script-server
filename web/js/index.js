@@ -13,6 +13,12 @@ var runningScriptExecutor = null;
 function onLoad() {
     parameterControls = new Hashtable();
 
+    authorizedCallHttp('conf/title', null, 'GET', function (result) {
+        if (result) {
+            document.title = result;
+        }
+    });
+
     var response = authorizedCallHttp("scripts/list");
 
     var scripts = JSON.parse(response);

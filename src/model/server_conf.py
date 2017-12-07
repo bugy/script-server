@@ -11,6 +11,7 @@ class ServerConfig(object):
     ssl_cert_path = None
     authorizer = None
     alerts_config = None
+    title = None
 
     def get_address(self):
         return self.address
@@ -80,6 +81,9 @@ def from_json(conf_path):
     if json_object.get("port"):
         port = json_object.get("port")
     config.port = port
+
+    if json_object.get('title'):
+        config.title = json_object.get('title')
 
     if json_object.get("auth"):
         auth_object = json_object.get("auth")

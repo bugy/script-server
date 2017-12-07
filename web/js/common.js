@@ -63,7 +63,11 @@ function callHttp(url, object, method, asyncHandler) {
 
     var async = !isNull(asyncHandler);
     if (async) {
-        xhttp.onreadystatechange = asyncHandler;
+        xhttp.onreadystatechange = function (event) {
+            if (xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200) {
+                asyncHandler(xhttp.responseText);
+            }
+        };
     }
 
     xhttp.open(method, url, async);
