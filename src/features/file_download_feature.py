@@ -26,11 +26,15 @@ def build_download_path(user_hash, temp_folder):
     return os.path.join(temp_folder, RESULT_FILES_FOLDER, user_hash, str(millis))
 
 
-def update_output_files_vars_with_args(output_files, arguments):
+def substitute_parameter_values(parameter_configs, output_files, values):
     output_file_parsed = []
     for i, output_file in enumerate(output_files):
-        for argument in arguments:
-            value = arguments[argument]
+        for parameter_config in parameter_configs:
+            if parameter_config.secure or parameter_config.no_value:
+                continue
+
+            parameter_name = parameter_config.name
+            value = values[parameter_name]
 
             if value is None:
                 value = ''
@@ -38,7 +42,7 @@ def update_output_files_vars_with_args(output_files, arguments):
             if not isinstance(value, str):
                 value = str(value)
 
-            output_file = re.sub('\$\$\$' + argument, value, output_file)
+            output_file = re.sub('\$\$\$' + parameter_name, value, output_file)
 
         output_file_parsed.append(output_file)
     return output_file_parsed
@@ -50,7 +54,8 @@ def prepare_downloadable_files(config, script_output, script_param_values, audit
     if not output_files:
         return []
 
-    output_files = update_output_files_vars_with_args(
+    output_files = substitute_parameter_values(
+        config.parameters,
         config.output_files,
         script_param_values)
 

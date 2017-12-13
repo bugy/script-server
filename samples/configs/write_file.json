@@ -21,9 +21,15 @@
       "param": "--clear",
       "no_value": true,
       "description": "Clear file before writing"
+    },
+    {
+      "name": "filename",
+      "param": "-f",
+      "description": "Custom filename"
     }
   ],
   "output_files": [
-    "##any_path#"
+    "##any_path#",
+    "~/$$$filename"
   ]
 }

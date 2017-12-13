@@ -4,6 +4,8 @@ set -e
 
 repeats=1
 text="I'm called"
+filename='simple.txt'
+clear=false
 
 while (( $# >= 1 ))
 do
@@ -20,9 +22,13 @@ case $key in
     echo "text = $text"
     shift # past argument
     ;;
+    -f)
+    filename="$2"
+    echo "filename = $filename"
+    shift # past argument
+    ;;
     --clear)
-    echo "Clearing the file..."
-    > ~/simple.txt
+    clear=true
     ;;
     *)
     # unknown option
@@ -31,12 +37,17 @@ esac
 shift # past argument or value
 done
 
-read -p "Press enter to start writing to the file (~/simple.txt)"
+if $clear; then
+    echo "Clearing the file..."
+     > ~/"$filename"
+fi
+
+read -p "Press enter to start writing to the file (~/$filename)"
 
 for (( i=0; i<repeats ; i++ ))
 do
-   echo "$text" >> ~/simple.txt
+   echo "$text" >> ~/"$filename"
 done
 
 echo "File content >> \n"
-cat ~/simple.txt | grep --color=always -E "$text|$"
+cat ~/"$filename" | grep --color=always -E "$text|$"

@@ -2,6 +2,7 @@ import os
 import unittest
 
 from features import file_download_feature
+from model.script_configs import Parameter
 from tests import test_utils
 from utils import file_utils
 
@@ -179,6 +180,87 @@ class TestFileMatching(unittest.TestCase):
 
     def tearDown(self):
         test_utils.cleanup()
+
+
+class TestParametersSubstitute(unittest.TestCase):
+    def test_no_parameters(self):
+        files = file_download_feature.substitute_parameter_values([], ['/home/user/test.txt'], [])
+
+        self.assertEqual(files, ['/home/user/test.txt'])
+
+    def test_single_replace(self):
+        parameter = Parameter()
+        parameter.name = 'param1'
+
+        files = file_download_feature.substitute_parameter_values(
+            [parameter],
+            ['/home/user/$$$param1.txt'],
+            {'param1': 'val1'})
+
+        self.assertEqual(files, ['/home/user/val1.txt'])
+
+    def test_two_replaces(self):
+        param1 = Parameter()
+        param1.name = 'param1'
+
+        param2 = Parameter()
+        param2.name = 'param2'
+
+        files = file_download_feature.substitute_parameter_values(
+            [param1, param2],
+            ['/home/$$$param2/$$$param1.txt'],
+            {'param1': 'val1', 'param2': 'val2'})
+
+        self.assertEqual(files, ['/home/val2/val1.txt'])
+
+    def test_two_replaces_in_two_files(self):
+        param1 = Parameter()
+        param1.name = 'param1'
+
+        param2 = Parameter()
+        param2.name = 'param2'
+
+        files = file_download_feature.substitute_parameter_values(
+            [param1, param2],
+            ['/home/$$$param2/$$$param1.txt', '/tmp/$$$param2.txt', '/$$$param1'],
+            {'param1': 'val1', 'param2': 'val2'})
+
+        self.assertEqual(files, ['/home/val2/val1.txt', '/tmp/val2.txt', '/val1'])
+
+    def test_no_pattern_match(self):
+        param1 = Parameter()
+        param1.name = 'param1'
+
+        files = file_download_feature.substitute_parameter_values(
+            [param1],
+            ['/home/user/$$$paramX.txt'],
+            {'param1': 'val1'})
+
+        self.assertEqual(files, ['/home/user/$$$paramX.txt'])
+
+    def test_skip_secure_replace(self):
+        param1 = Parameter()
+        param1.name = 'param1'
+        param1.secure = True
+
+        files = file_download_feature.substitute_parameter_values(
+            [param1],
+            ['/home/user/$$$param1.txt'],
+            {'param1': 'val1'})
+
+        self.assertEqual(files, ['/home/user/$$$param1.txt'])
+
+    def test_skip_flag_replace(self):
+        param1 = Parameter()
+        param1.name = 'param1'
+        param1.no_value = True
+
+        files = file_download_feature.substitute_parameter_values(
+            [param1],
+            ['/home/user/$$$param1.txt'],
+            {'param1': 'val1'})
+
+        self.assertEqual(files, ['/home/user/$$$param1.txt'])
 
 
 if __name__ == '__main__':
