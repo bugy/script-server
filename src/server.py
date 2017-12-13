@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-
 import json
 import logging
 import logging.config
 import os
-import socket
 import ssl
 import sys
 import threading
@@ -32,6 +30,8 @@ from utils import bash_utils as bash_utils
 from utils import file_utils as file_utils
 from utils import os_utils as os_utils
 from utils import process_utils as process_utils
+from utils.audit_utils import get_audit_name
+from utils.audit_utils import get_all_audit_names
 
 TEMP_FOLDER = "temp"
 
@@ -425,27 +425,6 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
             self.write_message(message)
 
 
-def get_audit_name(request_handler, logger):
-    auth = request_handler.application.auth
-
-    username = auth.get_username(request_handler)
-    if username:
-        audit_name = username
-    else:
-        remote_ip = request_handler.request.remote_ip
-        try:
-            (hostname, aliases, ip_addresses) = socket.gethostbyaddr(remote_ip)
-            audit_name = hostname
-        except:
-            audit_name = None
-            logger.warn("Couldn't get hostname for " + remote_ip)
-
-        if not audit_name:
-            audit_name = remote_ip
-
-    return audit_name
-
-
 class ScriptExecute(tornado.web.RequestHandler):
     process_wrapper = None
 
@@ -482,15 +461,14 @@ class ScriptExecute(tornado.web.RequestHandler):
             script_args = build_command_args(execution_info.param_values, config)
             command = script_base_command + script_args
 
-            audit_name = get_audit_name(self, script_logger)
-
             audit_script_args = build_command_args(
                 execution_info.param_values,
                 config,
                 model_helper.value_to_str)
             audit_command = script_base_command + audit_script_args
 
-            script_logger.info("Calling script (by " + audit_name + "): " + " ".join(audit_command))
+            script_logger.info('Calling script: ' + ' '.join(audit_command))
+            script_logger.info('User info: ' + str(get_all_audit_names(self, script_logger)))
 
             run_pty = config.is_requires_terminal()
             if run_pty and not pty_supported:
