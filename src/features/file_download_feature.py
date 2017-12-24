@@ -34,7 +34,7 @@ def substitute_parameter_values(parameter_configs, output_files, values):
                 continue
 
             parameter_name = parameter_config.name
-            value = values[parameter_name]
+            value = values.get(parameter_name)
 
             if value is None:
                 value = ''
