@@ -30,8 +30,9 @@ from utils import bash_utils as bash_utils
 from utils import file_utils as file_utils
 from utils import os_utils as os_utils
 from utils import process_utils as process_utils
-from utils.audit_utils import get_audit_name
+from utils import tool_utils
 from utils.audit_utils import get_all_audit_names
+from utils.audit_utils import get_audit_name
 
 TEMP_FOLDER = "temp"
 
@@ -705,6 +706,8 @@ def get_tornado_secret():
 
 
 def main():
+    tool_utils.validate_web_imports_exist(os.getcwd())
+
     logging_conf_file = os.path.join(CONFIG_FOLDER, 'logging.json')
     with open(logging_conf_file, "rt") as f:
         log_config = json.load(f)
@@ -766,4 +769,5 @@ def main():
 
 
 if __name__ == "__main__":
+    os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     main()
