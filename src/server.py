@@ -247,13 +247,23 @@ class ProxiedRedirectHandler(tornado.web.RedirectHandler):
         redirect(self._url.format(*args), self, *args)
 
 
-class GetServerTitle(tornado.web.RequestHandler):
+class BaseRequestHandler(tornado.web.RequestHandler):
+    def set_default_headers(self):
+        self.set_header('X-Frame-Options', 'DENY')
+
+
+class BaseStaticHandler(tornado.web.StaticFileHandler):
+    def set_default_headers(self):
+        self.set_header('X-Frame-Options', 'DENY')
+
+
+class GetServerTitle(BaseRequestHandler):
     def get(self):
         if self.application.server_title:
             self.write(self.application.server_title)
 
 
-class GetScripts(tornado.web.RequestHandler):
+class GetScripts(BaseRequestHandler):
     @check_authorization
     def get(self):
         config_names = list_config_names()
@@ -261,7 +271,7 @@ class GetScripts(tornado.web.RequestHandler):
         self.write(json.dumps(config_names))
 
 
-class GetScriptInfo(tornado.web.RequestHandler):
+class GetScriptInfo(BaseRequestHandler):
     @check_authorization
     def get(self):
         try:
@@ -311,7 +321,7 @@ def stop_script(process_id):
         running_scripts[process_id].stop()
 
 
-class ScriptStop(tornado.web.RequestHandler):
+class ScriptStop(BaseRequestHandler):
     @check_authorization
     def post(self):
         request_body = self.request.body.decode("UTF-8")
@@ -426,7 +436,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
             self.write_message(message)
 
 
-class ScriptExecute(tornado.web.RequestHandler):
+class ScriptExecute(BaseRequestHandler):
     process_wrapper = None
 
     @check_authorization
@@ -565,7 +575,7 @@ def send_alerts(alerts_config, title, body):
     thread.start()
 
 
-class AuthorizedStaticFileHandler(tornado.web.StaticFileHandler):
+class AuthorizedStaticFileHandler(BaseStaticHandler):
     @check_authorization
     def validate_absolute_path(self, root, absolute_path):
         if not self.application.auth.is_enabled() and (absolute_path.endswith("/login.html")):
@@ -574,7 +584,7 @@ class AuthorizedStaticFileHandler(tornado.web.StaticFileHandler):
         return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
 
 
-class LoginHandler(tornado.web.RequestHandler):
+class LoginHandler(BaseRequestHandler):
     def post(self):
         auth = self.application.auth
         if not auth.is_enabled():
@@ -586,7 +596,7 @@ class LoginHandler(tornado.web.RequestHandler):
         auth.authenticate(username, password, self)
 
 
-class LogoutHandler(tornado.web.RequestHandler):
+class LogoutHandler(BaseRequestHandler):
     @check_authorization
     def post(self):
         auth = self.application.auth
@@ -594,7 +604,7 @@ class LogoutHandler(tornado.web.RequestHandler):
         auth.logout(self)
 
 
-class GetUsernameHandler(tornado.web.RequestHandler):
+class GetUsernameHandler(BaseRequestHandler):
     @check_authorization
     def get(self):
         auth = self.application.auth
