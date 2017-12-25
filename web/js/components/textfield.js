@@ -16,7 +16,7 @@ function TextField(name, defaultValue, required, type, min, max, description, se
     this.field.type = "text";
 
     if (!isNull(this.type)) {
-        if (this.type == "int") {
+        if (this.type === 'int') {
             this.field.type = "number";
         }
     }
@@ -50,6 +50,20 @@ TextField.prototype = new AbstractInput();
 
 TextField.prototype.getValue = function () {
     return this.field.value;
+};
+
+TextField.prototype.setValue = function (value) {
+    var label = findNeighbour(this.field, 'label');
+
+    if (!isNull(value) && value !== '') {
+        addClass(label, 'active');
+        this.field.value = value;
+    } else {
+        removeClass(label, 'active');
+        this.field.value = '';
+    }
+
+    this.validate();
 };
 
 TextField.prototype.getValidationError = function () {

@@ -18,9 +18,6 @@ function Combobox(name, defaultValue, required, values, description) {
     var selectOption = document.createElement("option");
     selectOption.setAttribute("disabled", "");
     selectOption.setAttribute("value", "");
-    if (isNull(defaultValue)) {
-        selectOption.setAttribute("selected", "");
-    }
     selectOption.innerHTML = "Choose your option";
     this.selectField.appendChild(selectOption);
 
@@ -30,11 +27,10 @@ function Combobox(name, defaultValue, required, values, description) {
         var valueOption = document.createElement("option");
         valueOption.innerHTML = value;
         valueOption.setAttribute("value", value);
-        if (!isNull(defaultValue) && defaultValue == value) {
-            valueOption.setAttribute("selected", "");
-        }
         this.selectField.appendChild(valueOption);
     }
+
+    this._setValueInternal(defaultValue);
 
     this.selectField.onchange = $.proxy(this.validate, this);
 
@@ -49,6 +45,31 @@ Combobox.prototype = new AbstractInput();
 
 Combobox.prototype.getValue = function () {
     return this.selectField.value;
+};
+
+Combobox.prototype.setValue = function (value) {
+    $(this.selectField).children('option').removeAttr('selected');
+
+    this._setValueInternal(value);
+
+    $(this.selectField).material_select();
+};
+
+Combobox.prototype._setValueInternal = function (value) {
+    var foundMatching = false;
+    if (!isNull(value)) {
+        var matchingChildren = $(this.selectField).children('option[value="' + value + '"]');
+        if (matchingChildren.size() === 1) {
+            matchingChildren.attr('selected', '');
+            foundMatching = true;
+        }
+    }
+
+    if (!foundMatching) {
+        $(this.selectField).children('option[value=""][disabled]').attr('selected', '');
+    }
+
+    this.validate();
 };
 
 Combobox.prototype.getValidationError = function () {

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import sys
 import urllib.request
 from html.parser import HTMLParser
@@ -15,7 +16,9 @@ def prepare_project(project_path):
         'materialize.min.css': 'https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/css/materialize.min.css',
         'jquery.min.js': 'https://code.jquery.com/jquery-2.1.1.min.js',
         'materialize.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/js/materialize.min.js',
-        'hashtable.js': 'https://github.com/timdown/jshashtable/releases/download/v3.0/jshashtable-3.0.js'
+        'hashtable.js': 'https://github.com/timdown/jshashtable/releases/download/v3.0/jshashtable-3.0.js',
+        'MaterialIcons-Regular.woff2':
+            'https://github.com/google/material-design-icons/blob/master/iconfont/MaterialIcons-Regular.woff2?raw=true'
     }
 
     imports = set()
@@ -42,6 +45,17 @@ def prepare_project(project_path):
         parser = HtmlImportSearcher()
         parser.feed(file_utils.read_file(file_path))
 
+    css_folder = os.path.join(web_folder, 'css')
+    for file in os.listdir(css_folder):
+        if not file.endswith('.css'):
+            continue
+
+        file_path = os.path.join(css_folder, file)
+
+        fonts_paths = extract_font_urls_from_css(file_path)
+        for path in fonts_paths:
+            imports.add(os.path.join('css', path))
+
     lib_paths = []
     for import_path in imports:
         if '/libs/' in import_path:
@@ -67,6 +81,17 @@ def prepare_project(project_path):
     runners_conf = os.path.join(project_path, 'conf', 'runners')
     if not os.path.exists(runners_conf):
         os.makedirs(runners_conf)
+
+
+def extract_font_urls_from_css(css_file):
+    content = file_utils.read_file(css_file)
+    matches = re.findall('url\(/?((\w+/)*fonts/[^)]+)\)', content)
+    result = []
+    for match in matches:
+        url = match[0]
+        result.append(url)
+
+    return result
 
 
 if __name__ == "__main__":

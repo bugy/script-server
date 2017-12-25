@@ -6,6 +6,7 @@
     <meta charset="utf-8">
 
     <link rel="stylesheet" href="css/libs/materialize.min.css">
+    <link rel="stylesheet" href="css/font_styles.css">
     <script src="js/libs/jquery.min.js"></script>
     <script src="js/libs/materialize.min.js"></script>
     <script src="js/libs/hashtable.js"></script>
@@ -44,42 +45,67 @@
             </div>
         </div>
 
-        <div id="contentPanel">
-            <h2 id="scriptHeader" class="header"></h2>
-            <p id="scriptDescription"></p>
-            <div id="parametersPanel"></div>
-            <div>
-                <button id="executeButton" class="btn">Execute</button>
-                <button id="stopButton" class="btn red lighten-1">Stop</button>
-            </div>
-            <div id="logPanel">
-                <code id="logContent"></code>
-                <div id="logPanelShadow"></div>
-            </div>
-            <div id="validationPanel">
-                <h6 class="header">Validation failed. Errors list:</h6>
-                <ul id="validationErrorsList"></ul>
-            </div>
-            <div id="filesDownloadPanel"></div>
-            <div id="inputPanel" class="input-field">
-                <label id="inputLabel" for="inputField"></label>
-                <input id="inputField" type="text">
-            </div>
-
-            <div id="errorPanel"></div>
+        <div id="content-panel">
+            <h2 id="script-header" class="header"></h2>
+            <div id="script-panel-container"></div>
+            <div id="error-panel"></div>
         </div>
 
-        <div id="welcomePanel">
-            <img src="images/console.png" id="welcomeIcon">
-            <div id="welcomeText">
+        <div id="welcome-panel">
+            <img src="images/console.png" id="welcome-icon">
+            <div id="welcome-text">
                 Welcome to the Script Server. <br> To start, select one of the scripts
             </div>
-            <div id="welcomeCookieText">
+            <div id="welcome-cookie-text">
                 or just take a cookie and enjoy!
             </div>
         </div>
     </div>
 </div>
 </body>
+
+<script type="text/template" id="script-panel-template">
+    <div class="script-panel">
+        <p class="script-description"></p>
+        <div class="script-parameters-panel"></div>
+        <div>
+            <button class="button-execute btn">Execute</button>
+            <button class="button-stop btn red lighten-1">Stop</button>
+        </div>
+        <div class="log-panel">
+            <code class="log-content"></code>
+            <div class="log-panel-shadow"></div>
+        </div>
+        <div class="validation-panel">
+            <h6 class="header">Validation failed. Errors list:</h6>
+            <ul class="validation-errors-list"></ul>
+        </div>
+        <div class="files-download-panel"></div>
+        <div class="script-input-panel input-field">
+            <label class="script-input-label"></label>
+            <!--suppress HtmlFormInputWithoutLabel -->
+            <input class="script-input-field" type="text">
+        </div>
+    </div>
+</script>
+
+<script type="text/template" id="menu-item-state-template">
+    <div class="menu-item-state">
+        <i class="material-icons check-icon">check</i>
+        <div class="preloader-wrapper active">
+            <div class="spinner-layer">
+                <div class="circle-clipper left">
+                    <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                    <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                    <div class="circle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
 
 </html>

@@ -68,4 +68,5 @@ logs
 .idea
 temp
 web/css/libs
+web/css/fonts/libs
 web/js/libs

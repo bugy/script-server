@@ -93,6 +93,61 @@ body {
 
 #scripts .collection-item {
     border: none;
+    padding-right: 32px;
+}
+
+#scripts .collection-item .menu-item-state {
+    width: 24px;
+    height: 24px;
+    position: absolute;
+    right: 8px;
+    top: calc(50% - 12px);
+    display: none;
+}
+
+#scripts .collection-item .menu-item-state > .check-icon {
+    color: #26a69a;
+    display: none;
+    font-size: 24px;
+}
+
+#scripts .collection-item.active .menu-item-state > .check-icon {
+    color: white;
+}
+
+#scripts .collection-item .menu-item-state > .preloader-wrapper {
+    display: none;
+    width: 100%;
+    height: 100%;
+}
+
+#scripts .collection-item .menu-item-state.executing,
+#scripts .collection-item .menu-item-state.finished {
+    display: inline;
+}
+
+#scripts .collection-item .menu-item-state.executing > .check-icon {
+    display: none;
+}
+
+#scripts .collection-item .menu-item-state.executing > .preloader-wrapper {
+    display: block;
+}
+
+#scripts .collection-item .menu-item-state.finished > .check-icon {
+    display: block;
+}
+
+#scripts .collection-item .menu-item-state.finished > .preloader-wrapper {
+    display: none;
+}
+
+#scripts .collection-item.active .preloader-wrapper .spinner-layer {
+    border-color: white;
+}
+
+#scripts .collection-item .preloader-wrapper .spinner-layer {
+    border-color: #26a69a;
 }
 
 #logoutPanel {
@@ -112,15 +167,14 @@ body {
     margin: 0 10px;
 }
 
-#contentPanel {
+#content-panel {
     flex: 1;
-    height: 100%;
+
+    background: white;
+    padding-bottom: 12px;
 
     display: flex;
     flex-direction: column;
-    background: white;
-
-    padding-bottom: 12px;
 }
 
 @media (max-width: 992px) {
@@ -129,45 +183,48 @@ body {
         flex-flow: column;
     }
 
-    #contentPanel {
-        margin-top: 17px;
+    #content-panel {
         border-top: 1px solid #C8C8C8;
         border-left: none;
     }
 }
 
-#scriptHeader {
+#script-header {
     border-bottom: 1px solid #C8C8C8;
 
     background: url("../images/titleBackground.jpg") no-repeat center;
     background-size: cover;
 }
 
-#scriptDescription {
-    margin-left: 17px;
-    margin-right: 17px;
-    margin-top: 15px;
-    margin-bottom: 0;
+#script-panel-container {
+    height: 100%;
 }
 
-#parametersPanel {
+#content-panel .script-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#content-panel .script-description {
+    margin: 15px 17px 0;
+}
+
+#content-panel .script-parameters-panel {
     margin-top: 15px;
 }
 
-#parametersPanel .parameter {
-    margin-left: 24px;
-    margin-top: 7px;
-    margin-right: 0;
-    margin-bottom: 20px;
+#content-panel .script-parameters-panel .parameter {
+    margin: 7px 0 20px 24px;
 
     display: inline-block;
 }
 
-#parametersPanel .parameter input {
+#content-panel .script-parameters-panel .parameter input {
     margin: 0;
 }
 
-#logPanel {
+#content-panel .log-panel {
     flex: 1;
 
     position: relative;
@@ -185,7 +242,8 @@ body {
     border-radius: 2px;
 }
 
-#logContent {
+/*noinspection CssInvalidPropertyValue,CssOverwrittenProperties*/
+#content-panel .log-content {
     display: block;
     overflow-y: auto;
     height: 100%;
@@ -212,7 +270,7 @@ body {
     hyphens: auto;
 }
 
-#logPanelShadow {
+#content-panel .log-panel-shadow {
     position: absolute;
 
     width: 100%;
@@ -241,25 +299,25 @@ body {
     -moz-box-shadow: 0 -7px 8px -4px #888888 inset;
 }
 
-#contentPanel input {
+#content-panel input {
     height: 1.5em;
     width: auto;
 }
 
-#contentPanel .input-field label {
+#content-panel .input-field label {
     top: 0;
 }
 
-#contentPanel .input-field [type="checkbox"] + label {
+#content-panel .input-field [type="checkbox"] + label {
     left: 0;
     padding-left: 28px;
 }
 
-#contentPanel .input-field label.active {
+#content-panel .input-field label.active {
     transform: translateY(-90%);
 }
 
-#executeButton {
+#content-panel .button-execute {
     width: 80%;
     margin-left: 2%;
     margin-right: 0;
@@ -267,7 +325,7 @@ body {
     display: inline;
 }
 
-#stopButton {
+#content-panel .button-stop {
     width: calc(96% - 80% - 12px - 5px); /* width without margins - executeButton - margin between button - rounding error */
     margin-left: 12px;
     margin-right: 2%;
@@ -275,35 +333,32 @@ body {
     display: inline;
 }
 
-#contentPanel #inputPanel {
+#content-panel .script-input-panel {
     width: calc(100% - 24px);
     margin: 18px 12px 0;
 }
 
-#contentPanel #inputPanel input {
+#content-panel .script-input-panel input {
     margin: 0;
     width: 100%;
 }
 
-#validationPanel {
+#content-panel .validation-panel {
     overflow-y: auto;
     flex: 1;
 
-    margin-right: 12px;
-    margin-left: 12px;
-    margin-top: 17px;
-    margin-bottom: 7px;
+    margin: 17px 12px 7px;
 }
 
-#validationErrorsList {
+#content-panel .validation-errors-list {
     margin-left: 17px;
 }
 
-#validationErrorsList li {
+#content-panel .validation-errors-list li {
     color: #F44336;
 }
 
-#errorPanel {
+#error-panel {
     margin-left: 17px;
     color: #F44336;
     margin-top: 17px;
@@ -348,13 +403,13 @@ h6.header {
     padding: 0.5rem;
 }
 
-#parametersPanel input[type="text"]:invalid,
-#parametersPanel input[type="number"]:invalid {
+#content-panel .script-parameters-panel input[type="text"]:invalid,
+#content-panel .script-parameters-panel input[type="number"]:invalid {
     border-bottom: 1px solid #e51c23;
     box-shadow: 0 1px 0 0 #e51c23;
 }
 
-#parametersPanel .input-field:after {
+#content-panel .script-parameters-panel .input-field:after {
     content: attr(data-error);
     color: #F44336;
     font-size: 0.9rem;
@@ -364,15 +419,15 @@ h6.header {
     left: 0.75rem;
 }
 
-#parametersPanel .select-wrapper span.caret {
+#content-panel .script-parameters-panel .select-wrapper span.caret {
     top: 2px;
 }
 
-#parametersPanel .select-wrapper + label {
+#content-panel .script-parameters-panel .select-wrapper + label {
     top: -14px;
 }
 
-#welcomePanel {
+#welcome-panel {
     flex: 1;
     color: #9e9e9e;
     display: flex;
@@ -382,11 +437,11 @@ h6.header {
     align-items: center;
 }
 
-#welcomeText {
+#welcome-text {
     margin-top: 15px;
 }
 
-#welcomeCookieText {
+#welcome-cookie-text {
     margin-top: 8px;
 }
 
@@ -430,11 +485,11 @@ h6.header {
     height: 2em;
 }
 
-#filesDownloadPanel {
+#content-panel .files-download-panel {
     margin: 12px 12px 0;
 }
 
-#filesDownloadPanel a {
+#content-panel .files-download-panel a {
     color: #26a69a;
     padding-left: 16px;
     padding-right: 16px;
@@ -442,7 +497,7 @@ h6.header {
     text-transform: none;
 }
 
-#filesDownloadPanel a > img {
+#content-panel .files-download-panel a > img {
     width: 12px;
     margin-left: 10px;
     vertical-align: middle;

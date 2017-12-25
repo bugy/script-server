@@ -1,18 +1,20 @@
-loadScript("js/components/component.js");
-loadScript("js/components/abstract_input.js");
-loadScript("js/components/checkbox.js");
-loadScript("js/components/textfield.js");
-loadScript("js/components/combobox.js");
+loadScript('js/components/component.js');
+loadScript('js/components/abstract_input.js');
+loadScript('js/components/checkbox.js');
+loadScript('js/components/textfield.js');
+loadScript('js/components/combobox.js');
+loadScript('js/script/script-controller.js');
+loadScript('js/script/script-view.js');
+loadScript('js/script/script-executor.js');
 
 
 var selectedScript = null;
-var scriptListeners = [];
-var parameterControls;
-var runningScriptExecutor = null;
+var scriptSelectionListeners = [];
+var scriptMenuItems = new Hashtable();
+var runningScriptExecutors = [];
+var activeScriptController = null;
 
 function onLoad() {
-    parameterControls = new Hashtable();
-
     authorizedCallHttp('conf/title', null, 'GET', function (result) {
         if (result) {
             document.title = result;
@@ -41,40 +43,35 @@ function onLoad() {
         addClass(scriptElement, "waves-effect");
         addClass(scriptElement, "waves-teal");
         scriptElement.setAttribute("href", "#" + scriptHash);
-        scriptElement.onclick = function (e) {
-            if (!stopRunningScript()) {
-                return false;
-            }
-
-            return true;
-        };
-
         scriptElement.innerText = script;
 
-        scriptListeners.push(function (activeScript) {
-            if (activeScript == script) {
+        scriptSelectionListeners.push(function (activeScript) {
+            if (activeScript === script) {
                 addClass(scriptElement, "active");
             } else {
                 removeClass(scriptElement, "active");
             }
         });
 
+        var stateElement = createTemplateElement('menu-item-state-template');
+        scriptElement.appendChild(stateElement);
+
         scriptsListElement.appendChild(scriptElement);
+
+        scriptElement.stateElement = stateElement;
+        scriptMenuItems.put(script, scriptElement);
+
+        updateMenuItemState(script);
     });
 
-    var contentPanel = document.getElementById("contentPanel");
+    var contentPanel = document.getElementById('content-panel');
     hide(contentPanel);
 
-    scriptListeners.push(function (activeScript) {
+    scriptSelectionListeners.push(function (activeScript) {
         showScript(activeScript)
     });
 
     var activateScriptFromHash = function () {
-        if (!isNull(runningScriptExecutor) && !runningScriptExecutor.isFinished()) {
-            runningScriptExecutor.abort();
-            runningScriptExecutor = null;
-        }
-
         var hash = getHash();
 
         if (isNull(hash)) {
@@ -87,7 +84,7 @@ function onLoad() {
             scriptName = hash;
         }
 
-        if (scripts.indexOf(scriptName) != -1) {
+        if (scripts.indexOf(scriptName) !== -1) {
             selectScript(scriptName);
         }
     };
@@ -95,23 +92,19 @@ function onLoad() {
     activateScriptFromHash();
 
     window.addEventListener("beforeunload", function (e) {
-        if (!isNull(runningScriptExecutor)) {
+        if (getUnfinishedExecutors().length > 0) {
             e = e || window.event;
 
             // in modern browsers the message will be replaced with default one (security reasons)
-            var message = "Closing the page will stop the running script. Are you sure?";
+            var message = "Closing the page will stop all running scripts. Are you sure?";
             e.returnValue = message;
 
-            return message
+            return message;
         }
     });
 
 
     initSearchPanel();
-
-    initLogPanel();
-    initExecuteButton();
-    initStopButton();
 
     initLogoutPanel();
     initWelcomeIcon();
@@ -135,12 +128,12 @@ function initSearchPanel() {
         }
     });
 
-    searchField.addEventListener("input", function (e) {
+    searchField.addEventListener('input', function () {
         var searchValue = searchField.value;
         for (var i = 0; i < scriptsListElement.childElementCount; ++i) {
             var scriptElement = scriptsListElement.children[i];
             if (scriptElement.innerHTML.toLowerCase().search(searchValue.toLowerCase()) !== -1) {
-                show(scriptElement, "block");
+                show(scriptElement);
             } else {
                 hide(scriptElement);
             }
@@ -159,7 +152,7 @@ function initSearchPanel() {
             searchButton.src = originalSrc;
             searchField.value = "";
             for (var i = 0; i < scriptsListElement.childElementCount; ++i) {
-                show(scriptsListElement.children[i], "block");
+                show(scriptsListElement.children[i]);
             }
         }
         openSearchOnTheNextClick = true;
@@ -178,165 +171,42 @@ function initSearchPanel() {
     });
 }
 
-function stopRunningScript() {
-    if (runningScriptExecutor != null) {
-        if (!runningScriptExecutor.isFinished()) {
-            var abort = confirm("Some script is running. Do you want to abort it?");
-            if (abort == true) {
-                runningScriptExecutor.abort();
+function getUnfinishedExecutors() {
+    var unfinishedExecutors = [];
+    runningScriptExecutors.forEach(function (executor) {
+        if (!executor.isFinished()) {
+            unfinishedExecutors.push(executor);
+        }
+    });
+    return unfinishedExecutors;
+}
+
+function stopRunningScripts() {
+    if (runningScriptExecutors.length > 0) {
+        var unfinishedExecutors = getUnfinishedExecutors();
+
+        if (unfinishedExecutors.length > 0) {
+            var message;
+            if (unfinishedExecutors.length === 1) {
+                message = 'Some script is running. Do you want to abort it?'
+            } else {
+                message = unfinishedExecutors.length + ' scripts are running. Do you want to abort them?'
+            }
+
+            var abort = confirm(message);
+            if (abort === true) {
+                unfinishedExecutors.forEach(function (executor) {
+                    executor.abort();
+                });
             } else {
                 return false;
             }
         }
 
-        runningScriptExecutor = null;
+        clearArray(runningScriptExecutors);
     }
 
     return true;
-}
-
-function initLogPanel() {
-    var logPanel = document.getElementById("logPanel");
-    var logContent = document.getElementById("logContent");
-    var logPanelShadow = document.getElementById("logPanelShadow");
-
-    hide(logPanel);
-
-    var wasBottom = true;
-    var scrollStyleUpdate = function () {
-        var isTop = logContent.scrollTop == 0;
-        var isBottom = (logContent.scrollTop + logContent.clientHeight + 5) > (logContent.scrollHeight);
-
-        var shadowTop = !isTop;
-        var shadowBottom = !isBottom;
-
-        if (shadowTop && shadowBottom) {
-            addClass(logPanelShadow, "shadow-top-bottom");
-            removeClass(logPanelShadow, "shadow-top");
-            removeClass(logPanelShadow, "shadow-bottom");
-        } else if (shadowTop) {
-            removeClass(logPanelShadow, "shadow-top-bottom");
-            addClass(logPanelShadow, "shadow-top");
-            removeClass(logPanelShadow, "shadow-bottom");
-        } else if (shadowBottom) {
-            removeClass(logPanelShadow, "shadow-top-bottom");
-            removeClass(logPanelShadow, "shadow-top");
-            addClass(logPanelShadow, "shadow-bottom");
-        } else {
-            removeClass(logPanelShadow, "shadow-top-bottom");
-            removeClass(logPanelShadow, "shadow-top");
-            removeClass(logPanelShadow, "shadow-bottom");
-        }
-
-        wasBottom = isBottom;
-    };
-    logContent.addEventListener("scroll", scrollStyleUpdate);
-
-    var mouseDown = false;
-    logContent.addEventListener("mousedown", function () {
-        mouseDown = true;
-    });
-
-    logContent.addEventListener("mouseup", function () {
-        mouseDown = false;
-    });
-
-    var updateScroll = function (mutations) {
-        if ((wasBottom) && (!mouseDown)) {
-            logContent.scrollTop = logContent.scrollHeight;
-        } else {
-            scrollStyleUpdate();
-        }
-    };
-
-    var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-    var observer = new MutationObserver(updateScroll);
-
-    window.addEventListener("resize", function (event) {
-        updateScroll([]);
-    });
-
-    var config = {attributes: false, subtree: true, childList: true, characterData: true};
-    observer.observe(logContent, config);
-}
-
-function initStopButton() {
-    var stopButton = document.getElementById("stopButton");
-
-    stopButton.addEventListener("click", function () {
-        if (runningScriptExecutor != null) {
-            runningScriptExecutor.stop();
-        }
-    });
-}
-
-function initExecuteButton() {
-    var executeButton = document.getElementById("executeButton");
-    executeButton.addEventListener("click", function (e) {
-        var logPanel = document.getElementById("logPanel");
-        var logContent = document.getElementById("logContent");
-        var inputPanel = document.getElementById("inputPanel");
-        var errorsPanel = document.getElementById("validationPanel");
-        var errorsList = document.getElementById("validationErrorsList");
-        var filesDownloadPanel = document.getElementById("filesDownloadPanel");
-
-        destroyChildren(errorsList);
-        destroyChildren(filesDownloadPanel);
-        hide(filesDownloadPanel);
-
-        var errors = {};
-        parameterControls.each(function (parameter, control) {
-            if (!control.isValid()) {
-                errors[parameter.name] = control.getValidationError();
-            }
-        });
-
-        if (!isEmptyObject(errors)) {
-            show(errorsPanel, "block");
-
-            for (parameter in errors) {
-                var errorLabel = document.createElement("li");
-                errorLabel.innerText = parameter + ": " + errors[parameter];
-                errorsList.appendChild(errorLabel);
-            }
-
-            hide(logPanel);
-            return;
-        }
-
-        hide(errorsPanel);
-
-        logContent.innerText = "Calling the script...";
-        show(logPanel, "block");
-
-        var callParameters = [];
-        parameterControls.each(function (parameter, control) {
-            callParameters.push({
-                name: parameter.name,
-                value: control.getValue()
-            })
-        });
-
-        var callBody = {
-            script: selectedScript,
-            parameters: callParameters
-        };
-
-        try {
-            var process_id = authorizedCallHttp("scripts/execute", callBody, "POST");
-
-            runningScriptExecutor = new ScriptController(process_id);
-
-            var stopButton = document.getElementById("stopButton");
-            setButtonEnabled(stopButton, true);
-            setButtonEnabled(executeButton, false);
-
-        } catch (error) {
-            if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
-                logContent.innerText = error.message;
-            }
-        }
-    });
 }
 
 function initLogoutPanel() {
@@ -346,7 +216,7 @@ function initLogoutPanel() {
     try {
         usernameField.innerHTML = authorizedCallHttp("username");
     } catch (error) {
-        if (error.code == 404) {
+        if (error.code === 404) {
             hide(logoutPanel);
             return;
         } else {
@@ -355,8 +225,8 @@ function initLogoutPanel() {
     }
 
     var logoutButton = document.getElementById("logoutButton");
-    logoutButton.addEventListener("click", function (e) {
-        if (!stopRunningScript()) {
+    logoutButton.addEventListener("click", function () {
+        if (!stopRunningScripts()) {
             return;
         }
 
@@ -374,125 +244,116 @@ function initLogoutPanel() {
 
 
 function initWelcomeIcon() {
-    var welcomeIcon = document.getElementById("welcomeIcon");
+    var welcomeIcon = document.getElementById('welcome-icon');
 
     var originalSrc = welcomeIcon.src;
-    var welcomeCookiePanel = document.getElementById("welcomeCookieText");
-    welcomeCookiePanel.addEventListener("mouseover", function (e) {
-        welcomeIcon.src = "images/cookie.png";
+    var welcomeCookiePanel = document.getElementById('welcome-cookie-text');
+    welcomeCookiePanel.addEventListener('mouseover', function () {
+        welcomeIcon.src = 'images/cookie.png';
     });
-    welcomeCookiePanel.addEventListener("mouseout", function (e) {
+    welcomeCookiePanel.addEventListener('mouseout', function () {
         welcomeIcon.src = originalSrc;
     });
 }
 
-function showScript(activeScript) {
-    parameterControls.each(function (parameter, control) {
-        control.onDestroy();
-    });
+function showScript(selectedScript) {
+    if (!isNull(activeScriptController)) {
+        if (!isNull(activeScriptController.executor)) {
+            if (activeScriptController.executor.isFinished()) {
+                removeElement(runningScriptExecutors, activeScriptController.executor);
+            }
 
-    var welcomePanel = document.getElementById("welcomePanel");
+            updateMenuItemState(activeScriptController.scriptName);
+        }
 
-    var contentPanel = document.getElementById("contentPanel");
+        activeScriptController.destroy();
+        activeScriptController = null;
+    }
 
-    var validationPanel = document.getElementById("validationPanel");
-    var validationErrorsList = document.getElementById("validationErrorsList");
-    var errorPanel = document.getElementById("errorPanel");
-    var scriptHeader = document.getElementById("scriptHeader");
-    var scriptDescription = document.getElementById("scriptDescription");
-    var stopButton = document.getElementById("stopButton");
-    var executeButton = document.getElementById("executeButton");
+    var welcomePanel = document.getElementById('welcome-panel');
+    var contentPanel = document.getElementById('content-panel');
 
-    var paramsPanel = document.getElementById("parametersPanel");
-    destroyChildren(paramsPanel);
-
-    if (isNull(activeScript)) {
+    if (isNull(selectedScript)) {
         show(welcomePanel, 'flex');
         hide(contentPanel);
         return;
     }
 
     hide(welcomePanel);
-    show(contentPanel, "flex");
+    show(contentPanel);
 
-    try {
-        var info = authorizedCallHttp("scripts/info?name=" + activeScript);
-        var parsedInfo = JSON.parse(info);
+    var scriptPanelContainer = document.getElementById('script-panel-container');
+    destroyChildren(scriptPanelContainer);
 
-        scriptHeader.innerText = parsedInfo.name;
+    var errorPanel = document.getElementById('error-panel');
+    hide(errorPanel);
 
-        scriptDescription.innerText = parsedInfo.description;
-        if (!isNull(parsedInfo.description)) {
-            show(scriptDescription, "block");
-        } else {
-            hide(scriptDescription);
+    var scriptHeader = document.getElementById('script-header');
+
+    var scriptExecutor = findRunningExecutor(selectedScript);
+
+    var scriptConfig;
+    if (isNull(scriptExecutor)) {
+        try {
+            var rawConfig = authorizedCallHttp('scripts/info?name=' + selectedScript);
+            scriptConfig = JSON.parse(rawConfig);
+        } catch (error) {
+            if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
+                logError(error);
+
+                errorPanel.innerHTML = 'Failed to load script info. Try to reload the page.'
+                    + ' Error message: <br> ' + error.message;
+                show(errorPanel);
+                scriptHeader.innerText = selectedScript;
+            }
+
+            return;
         }
-
-        parameterControls.clear();
-        if (!isNull(parsedInfo.parameters)) {
-            parsedInfo.parameters.forEach(function (parameter) {
-                var control = createParameterControl(parameter);
-                parameterControls.put(parameter, control);
-            });
-        }
-
-        if (!parameterControls.isEmpty()) {
-            show(paramsPanel, "block");
-
-            parsedInfo.parameters.forEach(function (parameter) {
-                var control = parameterControls.get(parameter);
-                var element = control.getElement();
-                addClass(element, "parameter");
-
-                paramsPanel.appendChild(element);
-                control.onAdd();
-            });
-        } else {
-            hide(paramsPanel);
-        }
-
-        hide(validationPanel);
-        destroyChildren(validationErrorsList);
-
-        show(stopButton, "inline");
-        show(executeButton, "inline");
-        setButtonEnabled(executeButton, true);
-        setButtonEnabled(stopButton, false);
-
-        hide(errorPanel);
-
-    } catch (error) {
-        scriptHeader.innerText = activeScript;
-        hide(paramsPanel);
-        hide(scriptDescription);
-        hide(validationPanel);
-        hide(stopButton);
-        hide(executeButton);
-
-        if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
-            errorPanel.innerHTML = "Failed to load script info. Try to reload the page. Error message: <br> " + error.message;
-            show(errorPanel, "block");
-        }
+    } else {
+        scriptConfig = scriptExecutor.scriptConfig;
     }
 
-    var logPanel = document.getElementById("logPanel");
-    var logContent = document.getElementById("logContent");
-    hide(logPanel);
-    logContent.innerText = "";
+    scriptHeader.innerText = scriptConfig.name;
 
-    var inputPanel = document.getElementById("inputPanel");
-    hide(inputPanel);
+    var scriptController = new ScriptController(scriptConfig, selectedScript, function (scriptExecutor) {
+        runningScriptExecutors.push(scriptExecutor);
+        updateMenuItemState(selectedScript);
 
-    var filesDownloadPanel = document.getElementById("filesDownloadPanel");
-    destroyChildren(filesDownloadPanel);
-    hide(filesDownloadPanel);
+        scriptExecutor.addListener({
+            'onExecutionStop': function () {
+                updateMenuItemState(selectedScript);
+            }
+        })
+    });
+
+    activeScriptController = scriptController;
+    scriptController.fillView(scriptPanelContainer);
+
+    if (!isNull(scriptExecutor)) {
+        scriptController.setExecutor(scriptExecutor);
+    }
+}
+
+function findRunningExecutor(selectedScript) {
+    var scriptExecutor = null;
+    runningScriptExecutors.forEach(function (executor) {
+        if (executor.scriptName === selectedScript) {
+            scriptExecutor = executor;
+        }
+    });
+    return scriptExecutor;
+}
+
+function bindTemplatedFieldLabel(field, label) {
+    field.id = 'script-input-field-' + guid(8);
+    label.for = field.id;
 }
 
 function createParameterControl(parameter) {
     if (parameter.withoutValue) {
         return new Checkbox(parameter.name, parameter.default, parameter.description);
 
-    } else if (parameter.type == "list") {
+    } else if (parameter.type === 'list') {
         return new Combobox(
             parameter.name,
             parameter.default,
@@ -517,13 +378,13 @@ function createParameterControl(parameter) {
 function selectScript(scriptName) {
     selectedScript = scriptName;
 
-    scriptListeners.forEach(function (listener) {
+    scriptSelectionListeners.forEach(function (listener) {
         listener(selectedScript);
     })
 }
 
 function getHash() {
-    if (location.hash == "undefined") {
+    if (location.hash === 'undefined') {
         return null;
     }
 
@@ -543,8 +404,42 @@ function setButtonEnabled(button, enabled) {
     }
 }
 
+function updateMenuItemState(scriptName) {
+    var executing = false;
+    var finished = false;
+
+    runningScriptExecutors.forEach(function (executor) {
+        if (executor.scriptName !== scriptName) {
+            return;
+        }
+
+        if (executor.isFinished()) {
+            finished = true;
+        } else {
+            executing = true;
+        }
+    });
+
+    var state = null;
+    if (executing) {
+        state = 'executing';
+    } else if (finished) {
+        state = 'finished';
+    }
+
+    var menuItem = scriptMenuItems.get(scriptName);
+    var stateElement = menuItem.stateElement;
+
+    removeClass(stateElement, 'finished');
+    removeClass(stateElement, 'executing');
+
+    if (!isNull(state)) {
+        addClass(stateElement, state);
+    }
+}
+
 function getValidByTypeError(value, type, min, max) {
-    if (type == "int") {
+    if (type === 'int') {
         var isInteger = /^(((\-?[1-9])(\d*))|0)$/.test(value);
         if (!isInteger) {
             return getInvalidTypeError(type);
@@ -585,177 +480,45 @@ function getValidByTypeError(value, type, min, max) {
 }
 
 function getInvalidTypeError(type) {
-    if (type == "int") {
+    if (type === 'int') {
         return "integer expected";
     }
 
     return type + " expected";
 }
 
-function ScriptController(processId) {
-    this.processId = processId;
-
-    var inputPanel = document.getElementById("inputPanel");
-    var executeButton = document.getElementById("executeButton");
-    var stopButton = document.getElementById("stopButton");
-
-    var location = window.location;
-
-    var https = location.protocol.toLowerCase() === "https:";
-    var wsProtocol = https ? "wss" : "ws";
-    var hostUrl = wsProtocol + "://" + location.host;
-
-    var dir = location.pathname.substring(0, location.pathname.lastIndexOf('/'));
-    if (dir) {
-        hostUrl += '/' + dir;
-    }
-
-    var ws = new WebSocket(hostUrl + "/scripts/execute/io/" + processId);
-
-    var receivedData = false;
-    var logContent = document.getElementById("logContent");
-
-    var logElements = [];
-    var publishLogs = function () {
-        for (i = 0; i < logElements.length; i++) {
-            logContent.appendChild(logElements[i]);
-        }
-        logElements = [];
-    };
-    var logPublisher = window.setInterval(publishLogs, 30);
-
-    ws.addEventListener("message", function (message) {
-        if (!receivedData) {
-            logContent.innerText = "";
-            receivedData = true;
-        }
-
-        var event = JSON.parse(message.data);
-
-        var eventType = event.event;
-        var data = event.data;
-
-        if (eventType == "output") {
-            var outputElement = null;
-
-            if (!isNull(data.text_color) || !isNull(data.background_color) || !isNull(data.text_styles)) {
-                outputElement = document.createElement('span');
-                if (!isNull(data.text_color)) {
-                    addClass(outputElement, 'text_color_' + data.text_color);
-                }
-                if (!isNull(data.background_color)) {
-                    addClass(outputElement, 'background_' + data.background_color);
-                }
-
-                if (!isNull(data.text_styles)) {
-                    for (styleIndex = 0; styleIndex < data.text_styles.length; styleIndex++) {
-                        addClass(outputElement, 'text_style_' + data.text_styles[styleIndex]);
-                    }
-                }
-
-                outputElement.appendChild(document.createTextNode(data.text));
-            } else {
-                outputElement = document.createTextNode(data.text);
-            }
-
-            logElements.push(outputElement);
-
-            return;
-
-        } else if (eventType == "input") {
-            var inputLabel = document.getElementById("inputLabel");
-            inputLabel.innerText = data;
-
-            var inputField = document.getElementById("inputField");
-            inputField.value = "";
-
-            inputField.onkeyup = function (event) {
-                if (event.keyCode == 13) {
-                    ws.send(inputField.value);
-
-                    inputField.value = "";
-                }
-            };
-
-            show(inputPanel, "block");
-            inputField.focus();
-
-        } else if (eventType == "file") {
-            var filesDownloadPanel = document.getElementById('filesDownloadPanel');
-            show(filesDownloadPanel, 'block');
-
-            var url = data.url;
-            var filename = data.filename;
-
-            var downloadLink = document.createElement('a');
-            addClass(downloadLink, 'waves-effect');
-            addClass(downloadLink, 'waves-teal');
-            addClass(downloadLink, 'btn-flat');
-            downloadLink.setAttribute("download", filename);
-            downloadLink.href = url;
-            downloadLink.target = '_blank';
-            downloadLink.appendChild(document.createTextNode(filename));
-
-            var downloadImage = document.createElement('img');
-            downloadImage.src = 'images/file_download.png';
-            downloadLink.appendChild(downloadImage);
-
-            filesDownloadPanel.appendChild(downloadLink);
-
-            return;
-        }
-    });
-
-    ws.addEventListener("close", function (event) {
-        window.clearInterval(logPublisher);
-        publishLogs();
-
-        setButtonEnabled(stopButton, false);
-        setButtonEnabled(executeButton, true);
-        runningScriptExecutor = null;
-
-        hide(inputPanel);
-    });
-
-    this.stop = function () {
-        authorizedCallHttp("scripts/execute/stop", {"processId": this.processId}, "POST");
-    };
-
-    this.abort = function () {
-        this.stop();
-
-        if (!this.isFinished()) {
-            ws.close();
-        }
-    };
-
-    this.isFinished = function () {
-        return ((ws.readyState == 2) && (ws.readyState == 3));
-    };
+function createTemplateElement(templateName) {
+    var template = $('#' + templateName).html().trim();
+    return $.parseHTML(template)[0];
 }
 
 function authorizedCallHttp(url, object, method, asyncHandler) {
     try {
         return callHttp(url, object, method, asyncHandler);
     } catch (error) {
-        if ((error instanceof HttpRequestError) && (error.code == 401)) {
-            var errorPanel = document.getElementById("errorPanel");
-            var logPanel = document.getElementById("logPanel");
-            var inputPanel = document.getElementById("inputPanel");
+        if ((error instanceof HttpRequestError) && (error.code === 401)) {
+            var errorPanel = document.getElementById('error-panel');
 
-            hide(logPanel);
-            hide(inputPanel);
+            var logPanels = document.getElementsByClassName('log-panel');
+            for (var i = 0; i < logPanels.length; i++) {
+                hide(logPanels[i]);
+            }
 
-            var link = document.createElement("a");
-            link.innerHTML = "relogin";
-            link.addEventListener("click", function () {
+            var inputPanels = document.getElementsByClassName('script-input-panel');
+            for (var i = 0; i < inputPanels.length; i++) {
+                hide(inputPanels[i]);
+            }
+
+            var link = document.createElement('a');
+            link.innerHTML = 'relogin';
+            link.addEventListener('click', function () {
                 location.reload();
             });
-            link.href = "javascript:void(0)";
+            link.href = 'javascript:void(0)';
 
-            errorPanel.innerHTML = "Credentials expired, please ";
+            errorPanel.innerHTML = 'Credentials expired, please ';
             errorPanel.appendChild(link);
-            show(errorPanel, "block");
+            show(errorPanel);
         }
 
         throw error;

@@ -1,7 +1,8 @@
-function loadScript(scriptPath) {
-    var code = callHttp(scriptPath);
-
-    window.eval(code);
+function loadScript(url) {
+    var script = document.createElement('script');
+    script.src = url;
+    script.async = false;
+    document.head.appendChild(script);
 }
 
 function findNeighbour(element, tag) {
@@ -9,7 +10,7 @@ function findNeighbour(element, tag) {
 
     var previous = element.previousSibling;
     while (!isNull(previous)) {
-        if (previous.tagName.toLowerCase() == tagLower) {
+        if (previous.tagName.toLowerCase() === tagLower) {
             return previous;
         }
 
@@ -18,7 +19,7 @@ function findNeighbour(element, tag) {
 
     var next = element.nextSibling;
     while (!isNull(next)) {
-        if (next.tagName.toLowerCase() == tagLower) {
+        if (next.tagName.toLowerCase() === tagLower) {
             return next;
         }
 
@@ -29,7 +30,7 @@ function findNeighbour(element, tag) {
 }
 
 function isEmptyString(value) {
-    return isNull(value) || value.length == 0;
+    return isNull(value) || value.length === 0;
 }
 
 function isEmptyObject(obj) {
@@ -103,7 +104,7 @@ function HttpRequestError(code, message) {
     this.code = code;
     this.message = message;
     var lastPart = new Error().stack.match(/[^\s]+$/);
-    this.stack = `${this.name} at ${lastPart}`;
+    this.stack = this.name + 'at' + lastPart;
 }
 HttpRequestError.prototype = Object.create(Error.prototype);
 HttpRequestError.prototype.name = "HttpRequestError";
@@ -112,7 +113,7 @@ HttpRequestError.prototype.code = -1;
 HttpRequestError.prototype.constructor = HttpRequestError;
 
 function isNull(object) {
-    return ((typeof object) == 'undefined' || (object == null));
+    return ((typeof object) === 'undefined' || (object === null));
 }
 
 function destroyChildren(element) {
@@ -122,11 +123,66 @@ function destroyChildren(element) {
 }
 
 function hide(element) {
-    element.style.display = "none";
+    var currentDisplay = window.getComputedStyle(element).display;
+    if (currentDisplay === 'none') {
+        return;
+    }
+
+    element.oldDisplay = currentDisplay;
+    element.style.display = 'none';
 }
 
 function show(element, displayStyle) {
-    displayStyle = displayStyle || "block";
+    if (isNull(displayStyle) && (isNull(element.oldDisplay))) {
+        var currentDisplay = window.getComputedStyle(element).display;
+        if (currentDisplay !== 'none') {
+            return;
+        }
+    }
+
+    displayStyle = displayStyle || element.oldDisplay || 'block';
     element.style.display = displayStyle;
 }
 
+function removeElement(array, element) {
+    var index = array.indexOf(element);
+    if (index >= 0) {
+        array.splice(index, 1);
+    }
+
+    return array;
+}
+
+function clearArray(array) {
+    array.splice(0, array.length);
+}
+
+function guid(length) {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+    }
+
+    var guid = s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+        s4() + '-' + s4() + s4() + s4();
+
+
+    if (length && length > 0) {
+        if (guid.length < length) {
+            while (guid.length < length) {
+                guid += guid;
+            }
+        }
+
+        if (guid.length > length) {
+            guid = guid.substring(0, length);
+        }
+    }
+
+    return guid;
+}
+
+function logError(error) {
+    (console.error || console.log).call(console, error.stack || error);
+}

@@ -25,3 +25,7 @@ Checkbox.prototype = new AbstractInput();
 Checkbox.prototype.getValue = function () {
     return this.checkBox.checked;
 };
+
+Checkbox.prototype.setValue = function (value) {
+    this.checkBox.checked = value || false;
+};
