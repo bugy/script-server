@@ -197,8 +197,12 @@ body {
 }
 
 #script-panel-container {
-    flex: 1;
+    flex-grow: 1;
     display: flex;
+}
+
+#script-panel-container.collapsed {
+    flex-grow: 0;
 }
 
 #content-panel .script-panel {

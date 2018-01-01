@@ -304,9 +304,12 @@ function showScript(selectedScript) {
             if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
                 logError(error);
 
-                errorPanel.innerHTML = 'Failed to load script info. Try to reload the page.'
-                    + ' Error message: <br> ' + error.message;
-                show(errorPanel);
+                //noinspection JSDuplicatedDeclaration
+                var errorPanel = showErrorPanel('Failed to load script info. Try to reload the page.'
+                    + ' Error message:');
+                errorPanel.appendChild(document.createElement('br'));
+                errorPanel.appendChild(document.createTextNode(error.message));
+
                 scriptHeader.innerText = selectedScript;
             }
 
@@ -500,18 +503,6 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
         return callHttp(url, object, method, asyncHandler);
     } catch (error) {
         if ((error instanceof HttpRequestError) && (error.code === 401)) {
-            var errorPanel = document.getElementById('error-panel');
-
-            var logPanels = document.getElementsByClassName('log-panel');
-            for (var i = 0; i < logPanels.length; i++) {
-                hide(logPanels[i]);
-            }
-
-            var inputPanels = document.getElementsByClassName('script-input-panel');
-            for (var i = 0; i < inputPanels.length; i++) {
-                hide(inputPanels[i]);
-            }
-
             var link = document.createElement('a');
             link.innerHTML = 'relogin';
             link.addEventListener('click', function () {
@@ -519,12 +510,39 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
             });
             link.href = 'javascript:void(0)';
 
-            errorPanel.innerHTML = 'Credentials expired, please ';
+            var errorPanel = showErrorPanel('Credentials expired, please ');
             errorPanel.appendChild(link);
-            show(errorPanel);
         }
 
         throw error;
     }
 }
 
+function showErrorPanel(text) {
+    var errorPanel = document.getElementById('error-panel');
+
+    var logPanels = document.getElementsByClassName('log-panel');
+    for (var i = 0; i < logPanels.length; i++) {
+        hide(logPanels[i]);
+    }
+
+    var inputPanels = document.getElementsByClassName('script-input-panel');
+    for (var i = 0; i < inputPanels.length; i++) {
+        hide(inputPanels[i]);
+    }
+
+    var validationPanels = document.getElementsByClassName('validation-panel');
+    for (var i = 0; i < validationPanels.length; i++) {
+        hide(validationPanels[i]);
+    }
+
+    var scriptPanelContainer = document.getElementById('script-panel-container');
+    addClass(scriptPanelContainer, 'collapsed');
+
+    destroyChildren(errorPanel);
+    errorPanel.innerText = text;
+
+    show(errorPanel);
+
+    return errorPanel;
+}
