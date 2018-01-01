@@ -4,8 +4,8 @@ import logging
 import logging.config
 import os
 import ssl
-import sys
 import threading
+import time
 from datetime import datetime
 from urllib.parse import urlencode
 from urllib.parse import urljoin
@@ -18,31 +18,27 @@ import tornado.web
 import tornado.websocket
 
 from auth import auth_base
-from execution import execution_base
-from execution import execution_popen
+from execution.executor import ScriptExecutor
 from execution.logging import ScriptOutputLogger
 from features import file_download_feature
 from model import external_model
 from model import model_helper
 from model import script_configs
 from model import server_conf
+from react.observable import Observable
 from utils import bash_utils as bash_utils
 from utils import file_utils as file_utils
 from utils import os_utils as os_utils
-from utils import process_utils as process_utils
 from utils import tool_utils
 from utils.audit_utils import get_all_audit_names
 from utils.audit_utils import get_audit_name
 
 TEMP_FOLDER = "temp"
 
-pty_supported = os_utils.is_linux()
-if pty_supported:
-    from execution import execution_pty
-
 CONFIG_FOLDER = "conf"
 SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, "conf.json")
 SCRIPT_CONFIGS_FOLDER = os.path.join(CONFIG_FOLDER, "runners")
+LOGGER = logging.getLogger('script_server')
 
 running_scripts = {}
 
@@ -53,8 +49,7 @@ def list_config_names():
             return script_configs.read_name(path, content)
 
         except:
-            logger = logging.getLogger("scriptServer")
-            logger.exception("Could not load script name: " + path)
+            LOGGER.exception('Could not load script name: ' + path)
 
     result = visit_script_configs(add_name)
 
@@ -66,10 +61,9 @@ def load_config(name):
         try:
             config_name = script_configs.read_name(path, content)
             if config_name == name:
-                return script_configs.from_json(path, content, pty_supported)
+                return script_configs.from_json(path, content, os_utils.is_pty_supported())
         except:
-            logger = logging.getLogger("scriptServer")
-            logger.exception("Could not load script config: " + path)
+            LOGGER.exception('Could not load script config: ' + path)
 
     configs = visit_script_configs(find_and_load)
     if configs:
@@ -97,8 +91,7 @@ def visit_script_configs(visitor):
                 result.append(visit_result)
 
         except:
-            logger = logging.getLogger('scriptServer')
-            logger.exception("Couldn't read the file: " + config_path)
+            LOGGER.exception("Couldn't read the file: " + config_path)
 
     return result
 
@@ -131,21 +124,19 @@ class TornadoAuth():
         return username.decode("utf-8")
 
     def authenticate(self, username, password, request_handler):
-        logger = logging.getLogger("scriptServer")
-
-        logger.info("Trying to authenticate user " + username)
+        LOGGER.info('Trying to authenticate user ' + username)
 
         try:
             self.authorizer.authenticate(username, password)
-            logger.info("Authenticated user " + username)
+            LOGGER.info('Authenticated user ' + username)
 
         except auth_base.AuthRejectedError as e:
-            logger.info("Authentication rejected for user " + username + ": " + e.get_message())
+            LOGGER.info('Authentication rejected for user ' + username + ': ' + e.get_message())
             respond_error(request_handler, 401, e.get_message())
             return
 
         except auth_base.AuthFailureError:
-            logger.exception("Authentication failed for user " + username)
+            LOGGER.exception('Authentication failed for user ' + username)
             respond_error(request_handler, 500, "Something went wrong. Please contact the administrator or try later")
             return
 
@@ -162,8 +153,7 @@ class TornadoAuth():
         if not username:
             return
 
-        logger = logging.getLogger("scriptServer")
-        logger.info("Logging out " + username)
+        LOGGER.info('Logging out ' + username)
 
         request_handler.clear_cookie("username")
 
@@ -289,33 +279,6 @@ class GetScriptInfo(BaseRequestHandler):
         self.write(external_model.config_to_json(config))
 
 
-def build_command_args(param_values, config, stringify=lambda value, param: value):
-    result = []
-
-    for parameter in config.get_parameters():
-        name = parameter.get_name()
-
-        if parameter.is_constant():
-            param_values[parameter.name] = model_helper.get_default(parameter)
-
-        if name in param_values:
-            value = param_values[name]
-
-            if parameter.is_no_value():
-                # do not replace == True, since REST service can start accepting boolean as string
-                if (value == True) or (value == "true"):
-                    result.append(parameter.get_param())
-            else:
-                if value:
-                    if parameter.get_param():
-                        result.append(parameter.get_param())
-
-                    value_string = stringify(value, parameter)
-                    result.append(value_string)
-
-    return result
-
-
 def stop_script(process_id):
     if process_id in running_scripts:
         running_scripts[process_id].stop()
@@ -338,51 +301,42 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
     def __init__(self, application, request, **kwargs):
         super().__init__(application, request, **kwargs)
 
-        self.process_wrapper = None
-        self.reading_thread = None
+        self.executor = None
 
     def open(self, process_id):
         auth = self.application.auth
         if not auth.is_authenticated(self):
             return None
 
-        logger = logging.getLogger("scriptServer")
+        executor = running_scripts.get(int(process_id))  # type: ScriptExecutor
 
-        self.process_wrapper = running_scripts.get(int(process_id))
-
-        if not self.process_wrapper:
+        if not executor:
             raise Exception("Couldn't find corresponding process")
+
+        self.executor = executor
 
         self.write_message(wrap_to_server_event("input", "your input >>"))
 
         self.write_message(wrap_script_output(" ---  OUTPUT  --- \n"))
 
-        audit_name = get_audit_name(self, logger)
+        audit_name = get_audit_name(self)
 
-        output_logger = self.create_script_output_logger(audit_name, logger)
-        output_logger.open()
-
-        reading_thread = threading.Thread(target=pipe_process_to_http, args=(
-            self.process_wrapper,
-            output_logger,
-            self.safe_write
-        ))
-        reading_thread.start()
+        output_stream = executor.get_unsecure_output_stream()
+        bash_formatting = executor.config.is_bash_formatting()
+        pipe_output_to_http(output_stream, bash_formatting, self.safe_write)
 
         web_socket = self
-        process_wrapper = self.process_wrapper
 
         class FinishListener(object):
             def finished(self):
-                reading_thread.join()
-
-                output_logger.close()
+                output_stream.wait_close()
+                script_output = ''.join(output_stream.get_old_data())
 
                 try:
                     downloadable_files = file_download_feature.prepare_downloadable_files(
-                        process_wrapper.get_config(),
-                        process_wrapper.get_full_output(),
-                        process_wrapper.execution_info.param_values,
+                        executor.config,
+                        script_output,
+                        executor.parameter_values,
                         audit_name,
                         get_tornado_secret(),
                         TEMP_FOLDER)
@@ -395,41 +349,17 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
                             'file',
                             {'url': relative_path.replace(os.path.sep, '/'), 'filename': filename}))
                 except:
-                    logger.exception("Couldn't prepare downloadable files")
+                    LOGGER.exception("Couldn't prepare downloadable files")
 
                 tornado.ioloop.IOLoop.current().add_callback(web_socket.close)
 
-        self.process_wrapper.add_finish_listener(FinishListener())
-
-    def create_script_output_logger(self, audit_name, logger):
-        command_identifier = self.process_wrapper.get_command_identifier()
-        log_identifier = self.create_log_identifier(audit_name, command_identifier)
-        log_file_path = os.path.join('logs', 'processes', log_identifier + '.log')
-
-        output_logger = ScriptOutputLogger(
-            log_file_path,
-            logger,
-            self.process_wrapper.config,
-            self.process_wrapper.execution_info)
-
-        return output_logger
-
-    @staticmethod
-    def create_log_identifier(audit_name, command_identifier):
-        if os_utils.is_win():
-            audit_name = audit_name.replace(":", "-")
-
-        date_string = datetime.today().strftime("%y%m%d_%H%M%S")
-        command_identifier = command_identifier.replace(" ", "_")
-        log_identifier = command_identifier + "_" + audit_name + "_" + date_string
-        return log_identifier
+        executor.add_finish_listener(FinishListener())
 
     def on_message(self, text):
-        self.process_wrapper.write_to_input(text)
+        self.executor.write_to_input(text)
 
     def on_close(self):
-        if not self.process_wrapper.is_finished():
-            self.process_wrapper.kill()
+        self.executor.kill()
 
     def safe_write(self, message):
         if self.ws_connection is not None:
@@ -437,11 +367,11 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
 
 class ScriptExecute(BaseRequestHandler):
-    process_wrapper = None
-
     @check_authorization
     def post(self):
         script_name = None
+
+        audit_name = get_audit_name(self)
 
         try:
             request_data = self.request.body
@@ -453,68 +383,45 @@ class ScriptExecute(BaseRequestHandler):
             config = load_config(script_name)
 
             if not config:
-                respond_error(self, 400, "Script with name '" + str(script_name) + "' not found")
+                message = 'Script with name "' + str(script_name) + '" not found'
+                LOGGER.error(message)
+                respond_error(self, 400, message)
                 return
-
-            working_directory = config.get_working_directory()
-            if working_directory is not None:
-                working_directory = file_utils.normalize_path(working_directory)
-
-            script_logger = logging.getLogger("scriptServer")
 
             valid_parameters = model_helper.validate_parameters(execution_info.param_values, config)
             if not valid_parameters:
-                respond_error(self, 400, 'Received invalid parameters')
+                message = 'Received invalid parameters'
+                LOGGER.error(message)
+                respond_error(self, 400, message)
                 return
 
-            script_base_command = process_utils.split_command(config.get_script_command(), working_directory)
+            executor = ScriptExecutor(config, execution_info.param_values, audit_name)
 
-            script_args = build_command_args(execution_info.param_values, config)
-            command = script_base_command + script_args
+            audit_command = executor.get_secure_command()
+            LOGGER.info('Calling script: ' + audit_command)
+            LOGGER.info('User info: ' + str(get_all_audit_names(self)))
 
-            audit_script_args = build_command_args(
-                execution_info.param_values,
-                config,
-                model_helper.value_to_str)
-            audit_command = script_base_command + audit_script_args
-
-            script_logger.info('Calling script: ' + ' '.join(audit_command))
-            script_logger.info('User info: ' + str(get_all_audit_names(self, script_logger)))
-
-            run_pty = config.is_requires_terminal()
-            if run_pty and not pty_supported:
-                script_logger.warning(
-                    "Requested PTY mode, but it's not supported for this OS (" + sys.platform + "). Falling back to POpen")
-                run_pty = False
-
-            if run_pty:
-                self.process_wrapper = execution_pty.PtyProcessWrapper(command,
-                                                                       config.get_name(),
-                                                                       working_directory,
-                                                                       config,
-                                                                       execution_info)
-            else:
-                self.process_wrapper = execution_popen.POpenProcessWrapper(command,
-                                                                           config.get_name(),
-                                                                           working_directory,
-                                                                           config,
-                                                                           execution_info)
-            self.process_wrapper.start()
-
-            process_id = self.process_wrapper.get_process_id()
-
-            running_scripts[process_id] = self.process_wrapper
+            process_id = executor.start()
+            running_scripts[process_id] = executor
 
             self.write(str(process_id))
 
+            secure_output_stream = executor.get_secure_output_stream()
+
+            self.start_script_output_logger(audit_name, script_name, secure_output_stream)
+
             alerts_config = self.application.alerts_config
             if alerts_config:
-                self.subscribe_fail_alerter(script_name, script_logger, alerts_config)
+                self.subscribe_fail_alerter(
+                    script_name,
+                    alerts_config,
+                    audit_name,
+                    executor,
+                    secure_output_stream)
 
 
         except Exception as e:
-            script_logger = logging.getLogger("scriptServer")
-            script_logger.exception("Error while calling the script")
+            LOGGER.exception("Error while calling the script")
 
             if hasattr(e, "strerror") and e.strerror:
                 error_output = e.strerror
@@ -529,24 +436,28 @@ class ScriptExecute(BaseRequestHandler):
             else:
                 script = "Some script"
 
-            audit_name = get_audit_name(self, script_logger)
-            send_alerts(self.application.alerts_config, script + ' NOT STARTED',
-                        "Couldn't start the script " + script + ' by ' + audit_name + '.\n\n' +
-                        result)
+            audit_name = audit_name
+            send_alerts(self.application.alerts_config,
+                        script + ' NOT STARTED',
+                        "Couldn't start the script " + script + ' by ' + audit_name + '.\n\n'
+                        + result)
 
             respond_error(self, 500, result)
 
-    def subscribe_fail_alerter(self, script_name, script_logger, alerts_config):
-        request_handler_self = self
+    def subscribe_fail_alerter(
+            self,
+            script_name,
+            alerts_config,
+            audit_name,
+            executor: ScriptExecutor,
+            output_stream: Observable):
 
         class Alerter(object):
             def finished(self):
-                return_code = request_handler_self.process_wrapper.get_return_code()
+                return_code = executor.get_return_code()
 
                 if return_code != 0:
                     script = str(script_name)
-
-                    audit_name = get_audit_name(request_handler_self, script_logger)
 
                     title = script + ' FAILED'
                     body = 'The script "' + script + '", started by ' + audit_name + \
@@ -554,22 +465,41 @@ class ScriptExecute(BaseRequestHandler):
                            ' Usually this means an error, occurred during the execution.' + \
                            ' Please check the corresponding logs'
 
-                    send_alerts(alerts_config, title, body)
+                    output_stream.wait_close()
+                    script_output = ''.join(output_stream.get_old_data())
 
-        self.process_wrapper.add_finish_listener(Alerter())
+                    send_alerts(alerts_config, title, body, script_output)
+
+        executor.add_finish_listener(Alerter())
+
+    def start_script_output_logger(self, audit_name, script_name, output_stream):
+        log_identifier = self.create_log_identifier(audit_name, script_name)
+        log_file_path = os.path.join('logs', 'processes', log_identifier + '.log')
+
+        output_logger = ScriptOutputLogger(log_file_path, output_stream)
+        output_logger.start()
+
+    @staticmethod
+    def create_log_identifier(audit_name, script_name):
+        if os_utils.is_win():
+            audit_name = audit_name.replace(":", "-")
+
+        date_string = datetime.today().strftime("%y%m%d_%H%M%S")
+        script_name = script_name.replace(" ", "_")
+        log_identifier = script_name + "_" + audit_name + "_" + date_string
+        return log_identifier
 
 
-def send_alerts(alerts_config, title, body):
+def send_alerts(alerts_config, title, body, logs=None):
     if (not alerts_config) or (not alerts_config.get_destinations()):
         return
 
     def _send():
         for destination in alerts_config.get_destinations():
             try:
-                destination.send(title, body)
+                destination.send(title, body, logs)
             except:
-                script_logger = logging.getLogger("scriptServer")
-                script_logger.exception("Couldn't send alert to " + str(destination))
+                LOGGER.exception("Couldn't send alert to " + str(destination))
 
     thread = threading.Thread(target=_send)
     thread.start()
@@ -624,16 +554,31 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
 
     @check_authorization
     def validate_absolute_path(self, root, absolute_path):
-        logger = logging.getLogger('scriptServer')
-
-        audit_name = get_audit_name(self, logger)
+        audit_name = get_audit_name(self)
 
         file_path = file_utils.relative_path(absolute_path, os.path.abspath(root))
         if not file_download_feature.allowed_to_download(file_path, audit_name, get_tornado_secret()):
-            logger.warning('Access attempt from ' + audit_name + ' to ' + absolute_path)
+            LOGGER.warning('Access attempt from ' + audit_name + ' to ' + absolute_path)
             raise tornado.web.HTTPError(404)
 
         return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
+
+
+# Use for testing only
+class ReceiveAlertHandler(BaseRequestHandler):
+    def post(self):
+        message = self.get_body_argument('message')
+        LOGGER.info('ReceiveAlertHandler. Received alert: ' + message)
+
+        log_files = self.request.files['log']
+        if log_files:
+            file = log_files[0]
+            filename = str(time.time()) + '_' + file.filename
+
+            LOGGER.info('ReceiveAlertHandler. Writing file ' + filename)
+
+            file_path = os.path.join('logs', 'alerts', filename)
+            file_utils.write_file(file_path, file.body.decode('utf-8'))
 
 
 def respond_error(request_handler, status_code, message):
@@ -663,21 +608,15 @@ def wrap_to_server_event(event_type, data):
     })
 
 
-def pipe_process_to_http(process_wrapper: execution_base.ProcessWrapper, output_logger, write_callback):
-    bash_formatting = process_wrapper.get_config().is_bash_formatting()
-
+def pipe_output_to_http(output_stream, bash_formatting, write_callback):
     reader = None
     if bash_formatting:
         reader = bash_utils.BashReader()
 
-    while True:
-        process_output = process_wrapper.read()
-
-        output_logger.log(process_output)
-
-        if process_output is not None:
+    class OutputToHttpListener:
+        def on_next(self, output):
             if reader:
-                read_iterator = reader.read(process_output)
+                read_iterator = reader.read(output)
                 for text in read_iterator:
                     write_callback(wrap_script_output(
                         text.text,
@@ -687,20 +626,12 @@ def pipe_process_to_http(process_wrapper: execution_base.ProcessWrapper, output_
                     ))
 
             else:
-                write_callback(wrap_script_output(process_output))
+                write_callback(wrap_script_output(output))
 
-        elif process_wrapper.is_finished():
-            if reader:
-                remaining_text = reader.get_current_text()
-                if remaining_text:
-                    write_callback(wrap_script_output(
-                        remaining_text.text,
-                        remaining_text.text_color,
-                        remaining_text.background_color,
-                        remaining_text.styles
-                    ))
+        def on_close(self):
+            pass
 
-            break
+    output_stream.subscribe(OutputToHttpListener())
 
 
 def get_tornado_secret():

@@ -1,4 +1,8 @@
 import smtplib
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formatdate
 
 from alerts import destination_base
 from model import model_helper
@@ -45,7 +49,7 @@ class EmailDestination(destination_base.Destination):
 
         if self.auth_enabled is None:
             self.auth_enabled = self.password or self.login
-        elif (self.auth_enabled == True) or (self.auth_enabled.lower() == 'true'):
+        elif (self.auth_enabled is True) or (self.auth_enabled.lower() == 'true'):
             self.auth_enabled = True
         else:
             self.auth_enabled = False
@@ -63,8 +67,14 @@ class EmailDestination(destination_base.Destination):
 
         return password
 
-    def send(self, title, body):
-        message = 'Subject: {}\n\n{}'.format(title, body)
+    def send(self, title, body, logs=None):
+        message = MIMEMultipart()
+        message['From'] = self.from_address
+        message['To'] = ','.join(self.to_addresses)
+        message['Date'] = formatdate(localtime=True)
+        message['Subject'] = title
+
+        message.attach(MIMEText(body))
 
         server = smtplib.SMTP(self.server)
         server.ehlo()
@@ -75,7 +85,13 @@ class EmailDestination(destination_base.Destination):
         if self.auth_enabled:
             server.login(self.login, self.password)
 
-        server.sendmail(self.from_address, self.to_addresses, message)
+        if logs:
+            logs_filename = 'log.txt'
+            part = MIMEApplication(logs, Name=logs_filename)
+            part['Content-Disposition'] = 'attachment; filename="%s"' % logs_filename
+            message.attach(part)
+
+        server.sendmail(self.from_address, self.to_addresses, message.as_string())
         server.quit()
 
     def __str__(self, *args, **kwargs):

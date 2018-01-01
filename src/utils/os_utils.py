@@ -24,6 +24,10 @@ def path_sep():
     return path_separator
 
 
+def is_pty_supported():
+    return is_linux()
+
+
 # THIS SHOULD BE USED IN TESTS ONLY!
 def reset_os():
     global os_name

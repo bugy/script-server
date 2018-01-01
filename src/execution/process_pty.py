@@ -6,29 +6,25 @@ import subprocess
 import sys
 import time
 
-from execution import execution_base
+from execution import process_base
+from utils import process_utils
 
 script_encodings = {}
 
-
-def set_script_encoding(command_identifier, encoding):
-    script_encodings[command_identifier] = encoding
+LOGGER = logging.getLogger('script_server.process_pty')
 
 
-class PtyProcessWrapper(execution_base.ProcessWrapper):
+class PtyProcessWrapper(process_base.ProcessWrapper):
     pty_master = None
     pty_slave = None
     encoding = None
 
-    def __init__(self, command, command_identifier, working_directory, config, execution_info):
-        if command_identifier in script_encodings:
-            self.encoding = script_encodings[command_identifier]
-        else:
-            self.encoding = sys.stdout.encoding
+    def __init__(self, command, working_directory):
+        super().__init__(command, working_directory)
 
-        super().__init__(command, command_identifier, working_directory, config, execution_info)
+        self.encoding = get_encoding(command, working_directory)
 
-    def init_process(self, command, working_directory):
+    def start_execution(self, command, working_directory):
         master, slave = pty.openpty()
         self.process = subprocess.Popen(command,
                                         cwd=working_directory,
@@ -53,7 +49,6 @@ class PtyProcessWrapper(execution_base.ProcessWrapper):
 
     def pipe_process_output(self):
         try:
-
             while True:
                 finished = False
                 wait_new_output = False
@@ -96,7 +91,7 @@ class PtyProcessWrapper(execution_base.ProcessWrapper):
 
                 if data:
                     output_text = data.decode(self.encoding)
-                    self.write_script_output(output_text)
+                    self._write_script_output(output_text)
 
                 if finished:
                     break
@@ -105,16 +100,37 @@ class PtyProcessWrapper(execution_base.ProcessWrapper):
                     time.sleep(0.01)
 
         except:
-            self.output_queue.put("Unexpected error occurred. Contact the administrator.")
+            self._write_script_output("Unexpected error occurred. Contact the administrator.")
 
-            logger = logging.getLogger("execution")
             try:
                 self.kill()
             except:
-                logger.exception("PtyProcessWrapper. Failed to kill a process")
+                LOGGER.exception('Failed to kill a process')
 
-            logger.exception("PtyProcessWrapper. Failed to read script output")
+            LOGGER.exception('Failed to read script output')
 
         finally:
             os.close(self.pty_master)
             os.close(self.pty_slave)
+            self.output_stream.close()
+
+
+def get_encoding(command, working_directory):
+    encoding = None
+
+    split_command = command
+    if isinstance(command, str):
+        split_command = process_utils.split_command(command, working_directory)
+
+    if split_command and split_command[0]:
+        program = split_command[0]
+        if program in script_encodings:
+            encoding = script_encodings[program]
+
+    if not encoding:
+        if sys.stdout.encoding:
+            encoding = sys.stdout.encoding
+        else:
+            encoding = 'utf-8'
+
+    return encoding

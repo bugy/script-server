@@ -10,6 +10,7 @@ KNOWN_REJECTIONS = [
     "user name is mandatory in simple bind",
     "password is mandatory in simple bind"]
 
+LOGGER = logging.getLogger('script_server.LdapAuthorizer')
 
 class LdapAuthorizer(auth_base.Authorizer):
     url = None
@@ -29,8 +30,6 @@ class LdapAuthorizer(auth_base.Authorizer):
             self.version = 3
 
     def authenticate(self, username, password):
-        logger = logging.getLogger("authorization")
-
         if self.username_template:
             user = self.username_template.substitute(username=username)
         else:
@@ -58,7 +57,7 @@ class LdapAuthorizer(auth_base.Authorizer):
             error = str(e)
 
             if error not in KNOWN_REJECTIONS:
-                logger.exception("Error occurred while ldap authentication")
+                LOGGER.exception("Error occurred while ldap authentication")
 
         if error in KNOWN_REJECTIONS:
             raise auth_base.AuthRejectedError("Invalid credentials")

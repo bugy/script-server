@@ -15,6 +15,7 @@ import utils.string_utils as string_utils
 
 RESULT_FILES_FOLDER = 'resultFiles'
 
+LOGGER = logging.getLogger('script_server.file_download_feature')
 
 def hash_user(name, secret_bytes):
     return hashlib.sha256(name.encode() + secret_bytes).hexdigest()
@@ -59,8 +60,6 @@ def prepare_downloadable_files(config, script_output, script_param_values, audit
         config.output_files,
         script_param_values)
 
-    logger = logging.getLogger("scriptServer")
-
     correct_files = []
 
     for output_file in output_files:
@@ -70,13 +69,13 @@ def prepare_downloadable_files(config, script_output, script_param_values, audit
             for file in files:
                 file_path = file_utils.normalize_path(file, config.get_working_directory())
                 if not os.path.exists(file_path):
-                    logger.warn('file ' + file + ' (full path = ' + file_path + ') not found')
+                    LOGGER.warning('file ' + file + ' (full path = ' + file_path + ') not found')
                 elif os.path.isdir(file_path):
-                    logger.warn('file ' + file + ' is a directory. Not allowed')
+                    LOGGER.warning('file ' + file + ' is a directory. Not allowed')
                 elif file_path not in correct_files:
                     correct_files.append(file_path)
         else:
-            logger.warn("Couldn't find file for " + output_file)
+            LOGGER.warning("Couldn't find file for " + output_file)
 
     if not correct_files:
         return []
@@ -84,7 +83,7 @@ def prepare_downloadable_files(config, script_output, script_param_values, audit
     user_hashed = get_user_download_folder(audit_name, secret)
 
     download_folder = build_download_path(user_hashed, temp_folder)
-    logger.info('Created download folder for ' + audit_name + ': ' + download_folder)
+    LOGGER.info('Created download folder for ' + audit_name + ': ' + download_folder)
 
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)
@@ -109,7 +108,7 @@ def prepare_downloadable_files(config, script_output, script_param_values, audit
                 i += 1
 
             if os.path.exists(download_file):
-                logger.warn("Couldn't create unique filename for " + file)
+                LOGGER.warning("Couldn't create unique filename for " + file)
                 continue
 
         copyfile(file, download_file)
@@ -129,7 +128,7 @@ def find_matching_files(file_pattern, script_output):
         if '#' in output_pattern:
             regex_start = output_pattern.find('#')
 
-            group_number_matches = re.findall('^\#\d+\#', output_pattern[regex_start:])
+            group_number_matches = re.findall('^#\d+#', output_pattern[regex_start:])
             if group_number_matches:
                 first_match = group_number_matches[0]
                 group_number = int(first_match[1:-1])
@@ -194,8 +193,6 @@ def get_result_files_folder(temp_folder):
 def autoclean_downloads(temp_folder):
     results_folder = get_result_files_folder(temp_folder)
 
-    logger = logging.getLogger('scriptServer')
-
     delay_secs = 60.0 * 60
 
     def clean_results():
@@ -212,7 +209,7 @@ def autoclean_downloads(temp_folder):
                     if (now - folder_date) > datetime.timedelta(hours=24):
                         folder_path = os.path.join(results_folder, user_folder, timed_folder)
 
-                        logger.info('Cleaning old download folder: ' + folder_path)
+                        LOGGER.info('Cleaning old download folder: ' + folder_path)
                         shutil.rmtree(folder_path)
 
         timer = threading.Timer(delay_secs, clean_results)

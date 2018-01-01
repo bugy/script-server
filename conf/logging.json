@@ -9,39 +9,24 @@
   "handlers": {
     "console": {
       "class": "logging.StreamHandler",
-      "level": "INFO",
+      "level": "DEBUG",
       "formatter": "simple",
       "stream": "ext://sys.stdout"
     },
     "file": {
       "class": "logging.FileHandler",
-      "level": "DEBUG",
+      "level": "INFO",
       "formatter": "simple",
       "filename": "logs/server.log"
     }
   },
   "loggers": {
-    "scriptServer": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file"
-      ],
-      "propagate": false
-    },
-    "execution": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file"
-      ],
-      "propagate": false
-    }
   },
   "root": {
     "level": "DEBUG",
     "handlers": [
-      "console"
+      "console",
+      "file"
     ]
   }
 }

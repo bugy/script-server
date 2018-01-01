@@ -30,13 +30,11 @@ def mock_request_handler(ip=None, proxy_username=None, auth_username=None):
 
 
 def get_audit_name(request_handler):
-    logger = logging.getLogger('tests')
-    return audit_utils.get_audit_name(request_handler, logger)
+    return audit_utils.get_audit_name(request_handler)
 
 
 def get_all_audit_names(request_handler):
-    logger = logging.getLogger('tests')
-    return audit_utils.get_all_audit_names(request_handler, logger)
+    return audit_utils.get_all_audit_names(request_handler)
 
 
 class TestGetAuditName(unittest.TestCase):

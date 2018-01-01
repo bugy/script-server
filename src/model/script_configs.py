@@ -193,7 +193,7 @@ def from_json(file_path, json_string, pty_enabled_default=False):
                 parameter.set_type(type)
 
             constant = parameter_json.get("constant")
-            if constant == True:
+            if constant is True:
                 if not parameter.get_default():
                     raise Exception("Constant should have default value specified")
                 parameter.set_constant(constant)
@@ -206,9 +206,9 @@ def from_json(file_path, json_string, pty_enabled_default=False):
 def read_boolean(name, json_object, default=None):
     value = json_object.get(name)
     if value is not None:
-        if value == True:
+        if value is True:
             return True
-        elif value == False:
+        elif value is False:
             return False
         else:
             raise Exception('"' + name + '" parameter should be True or False')

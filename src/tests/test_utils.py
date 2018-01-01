@@ -42,3 +42,19 @@ def set_linux():
 
 def set_win():
     os_utils.set_win()
+
+
+class SimpleStoringObserver:
+    def __init__(self):
+        self.data = []
+        self.closed = False
+
+    def on_next(self, chunk):
+        if not self.closed:
+            self.data.append(chunk)
+
+    def on_close(self):
+        if self.closed:
+            raise Exception('Already closed')
+
+        self.closed = True

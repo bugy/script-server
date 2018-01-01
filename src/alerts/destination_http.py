@@ -1,4 +1,4 @@
-import urllib.request
+import requests
 
 import alerts.destination_base as destination_base
 
@@ -15,11 +15,15 @@ class HttpDestination(destination_base.Destination):
         if not self.url.strip().lower().startswith('http'):
             self.url = 'http://' + self.url.strip()
 
-    def send(self, title, body):
+    def send(self, title, body, logs=None):
         message = title + '\n' + body
-        urlopen = urllib.request.urlopen(self.url, data=message.encode('utf-8'))
-        urlopen.read()
-        urlopen.close()
+        data = {'message': message.encode('utf-8')}
+
+        files = {}
+        if logs:
+            files['log'] = ('log.txt', logs)
+
+        requests.post(self.url, data=data, files=files)
 
     def __str__(self, *args, **kwargs):
         return 'Web-hook at ' + self.url

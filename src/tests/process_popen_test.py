@@ -1,6 +1,6 @@
 import unittest
 
-from execution.execution_popen import prepare_cmd_for_win
+from execution.process_popen import prepare_cmd_for_win
 from tests import test_utils
 
 

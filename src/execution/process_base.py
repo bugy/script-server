@@ -1,32 +1,28 @@
 import abc
 import os
-import queue
 import signal
 import subprocess
 import threading
 
+from react.observable import Observable
 from utils import os_utils
 
 
 class ProcessWrapper(metaclass=abc.ABCMeta):
-    def __init__(self, command, command_identifier, working_directory, config, execution_info):
+    def __init__(self, command, working_directory):
         self.process = None
 
         self.working_directory = working_directory
         self.command = command
-        self.execution_info = execution_info
 
-        self.command_identifier = command_identifier
-        self.config = config
         self.finish_listeners = []
 
-        self.output_queue = queue.Queue()
-        self.full_output = ''
+        self.output_stream = Observable()
 
     def start(self):
-        self.init_process(self.command, self.working_directory)
+        self.start_execution(self.command, self.working_directory)
 
-        read_output_thread = threading.Thread(target=self.pipe_process_output, args=())
+        read_output_thread = threading.Thread(target=self.pipe_process_output)
         read_output_thread.start()
 
         notify_finish_thread = threading.Thread(target=self.notify_finished)
@@ -37,7 +33,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def init_process(self, command, working_directory):
+    def start_execution(self, command, working_directory):
         pass
 
     @abc.abstractmethod
@@ -57,15 +53,8 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     def get_return_code(self):
         return self.process.returncode
 
-    def get_config(self):
-        return self.config
-
-    def write_script_output(self, text):
-        self.output_queue.put(text)
-        self.full_output += text
-
-    def get_full_output(self):
-        return self.full_output
+    def _write_script_output(self, text):
+        self.output_stream.push(text)
 
     def stop(self):
         if not self.is_finished():
@@ -86,33 +75,16 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
             else:
                 self.process.terminate()
 
-            self.output_queue.put("\n>> STOPPED BY USER\n")
+            self._write_script_output('\n>> STOPPED BY USER\n')
 
     def kill(self):
         if not self.is_finished():
             if not os_utils.is_win():
                 group_id = os.getpgid(self.get_process_id())
                 os.killpg(group_id, signal.SIGKILL)
-                self.output_queue.put("\n>> KILLED\n")
+                self._write_script_output('\n>> KILLED\n')
             else:
                 subprocess.Popen("taskkill /F /T /PID " + self.get_process_id())
-
-    def read(self):
-        while True:
-            try:
-                result = self.output_queue.get(True, 0.2)
-                try:
-                    added_text = result
-                    while added_text:
-                        added_text = self.output_queue.get_nowait()
-                        result += added_text
-                except queue.Empty:
-                    pass
-
-                return result
-            except queue.Empty:
-                if self.is_finished():
-                    break
 
     def add_finish_listener(self, listener):
         self.finish_listeners.append(listener)
@@ -125,6 +97,3 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
         for listener in self.finish_listeners:
             listener.finished()
-
-    def get_command_identifier(self):
-        return self.command_identifier

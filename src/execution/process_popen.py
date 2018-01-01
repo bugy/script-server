@@ -3,9 +3,10 @@ import os
 import subprocess
 import time
 
-from execution import execution_base
+from execution import process_base
 from utils import os_utils
 
+LOGGER = logging.getLogger('script_server.process_popen')
 
 def prepare_cmd_for_win(command):
     shell = False
@@ -20,11 +21,11 @@ def prepare_cmd_for_win(command):
     return command, shell
 
 
-class POpenProcessWrapper(execution_base.ProcessWrapper):
-    def __init__(self, command, command_identifier, working_directory, config, execution_info):
-        super().__init__(command, command_identifier, working_directory, config, execution_info)
+class POpenProcessWrapper(process_base.ProcessWrapper):
+    def __init__(self, command, working_directory):
+        super().__init__(command, working_directory)
 
-    def init_process(self, command, working_directory):
+    def start_execution(self, command, working_directory):
         shell = False
 
         if os_utils.is_win():
@@ -44,7 +45,7 @@ class POpenProcessWrapper(execution_base.ProcessWrapper):
         if not value.endswith("\n"):
             input_value += "\n"
 
-        self.output_queue.put(input_value)
+        self._write_script_output(input_value)
 
         self.process.stdin.write(input_value)
         self.process.stdin.flush()
@@ -71,7 +72,7 @@ class POpenProcessWrapper(execution_base.ProcessWrapper):
 
                 if data:
                     output_text = data
-                    self.write_script_output(output_text)
+                    self._write_script_output(output_text)
 
                 if finished:
                     break
@@ -80,12 +81,14 @@ class POpenProcessWrapper(execution_base.ProcessWrapper):
                     time.sleep(0.01)
 
         except:
-            self.output_queue.put("Unexpected error occurred. Contact the administrator.")
+            self._write_script_output("Unexpected error occurred. Contact the administrator.")
 
-            logger = logging.getLogger("execution")
             try:
                 self.kill()
             except:
-                logger.exception("POpenProcessWrapper. Failed to kill a process")
+                LOGGER.exception('Failed to kill a process')
 
-            logger.exception("POpenProcessWrapper. Failed to read script output")
+            LOGGER.exception('Failed to read script output')
+
+        finally:
+            self.output_stream.close()

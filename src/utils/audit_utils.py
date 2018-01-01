@@ -2,13 +2,17 @@ import base64
 import socket
 import sys
 
+import logging
+
 HOSTNAME = 'hostname'
 IP = 'ip'
 PROXIED_USERNAME = 'proxied_username'
 AUTH_USERNAME = 'auth_username'
 
+LOGGER = logging.getLogger('script_server.audit_utils')
 
-def get_all_audit_names(request_handler, logger):
+
+def get_all_audit_names(request_handler):
     result = {}
 
     auth = request_handler.application.auth
@@ -27,13 +31,13 @@ def get_all_audit_names(request_handler, logger):
         (hostname, aliases, ip_addresses) = socket.gethostbyaddr(remote_ip)
         result[HOSTNAME] = hostname
     except:
-        logger.warn("Couldn't get hostname for " + remote_ip)
+        LOGGER.warning("Couldn't get hostname for " + remote_ip)
 
     return result
 
 
-def get_audit_name(request_handler, logger):
-    audit_names = get_all_audit_names(request_handler, logger)
+def get_audit_name(request_handler):
+    audit_names = get_all_audit_names(request_handler)
 
     audit_types = [AUTH_USERNAME, PROXIED_USERNAME, HOSTNAME, IP]
 
