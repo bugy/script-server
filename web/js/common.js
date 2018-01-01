@@ -153,6 +153,13 @@ function removeElement(array, element) {
     return array;
 }
 
+function removeElements(array, elements) {
+    for (var i = 0; i < elements.length; i++) {
+        var element = elements[i];
+        removeElement(array, element);
+    }
+}
+
 function clearArray(array) {
     array.splice(0, array.length);
 }

@@ -258,12 +258,15 @@ function initWelcomeIcon() {
 
 function showScript(selectedScript) {
     if (!isNull(activeScriptController)) {
-        if (!isNull(activeScriptController.executor)) {
-            if (activeScriptController.executor.isFinished()) {
-                removeElement(runningScriptExecutors, activeScriptController.executor);
-            }
+        var previousScriptName = activeScriptController.scriptName;
+        var executorsToRemove = runningScriptExecutors.filter(function (executor) {
+            return (executor.scriptName === previousScriptName) && executor.isFinished();
+        });
 
-            updateMenuItemState(activeScriptController.scriptName);
+        if (executorsToRemove.length > 0) {
+            removeElements(runningScriptExecutors, executorsToRemove);
+
+            updateMenuItemState(previousScriptName);
         }
 
         activeScriptController.destroy();
