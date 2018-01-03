@@ -22,8 +22,7 @@ class ObservableBase(Generic[T], metaclass=abc.ABCMeta):
     def _push(self, data: T):
         self.chunks.append(data)
 
-        for listener in self.observers:
-            listener.on_next(data)
+        self._fire_on_next(data)
 
     def close(self):
         self._close()
@@ -33,8 +32,7 @@ class ObservableBase(Generic[T], metaclass=abc.ABCMeta):
             self.closed = True
             self.close_condition.notify_all()
 
-        for observer in self.observers:
-            observer.on_close()
+        self._fire_on_close()
 
     def subscribe(self, observer):
         for chunk in self.chunks:
@@ -45,6 +43,20 @@ class ObservableBase(Generic[T], metaclass=abc.ABCMeta):
             return
 
         self.observers.append(observer)
+
+    def _fire_on_next(self, data):
+        for observer in self.observers:
+            try:
+                observer.on_next(data)
+            except:
+                LOGGER.exception('Could not notify on_next, observer ' + str(observer))
+
+    def _fire_on_close(self):
+        for observer in self.observers:
+            try:
+                observer.on_close()
+            except:
+                LOGGER.exception('Could not notify on_close, observer ' + str(observer))
 
     def get_old_data(self) -> List[T]:
         return self.chunks

@@ -165,6 +165,97 @@ class TestObservable(unittest.TestCase):
 
         self.assertEqual(['m1', 'm2'], observable.get_old_data())
 
+    def test_on_next_exception_once(self):
+        observable = self.create_observable()
+
+        class FailingObserver(SimpleStoringObserver):
+            def __init__(self):
+                super().__init__()
+                self.count = 0
+
+            def on_next(self, chunk):
+                self.count += 1
+                if self.count == 1:
+                    raise Exception
+
+                super().on_next(chunk)
+
+        observer = FailingObserver()
+        observable.subscribe(observer)
+
+        observable.push('m1')
+        observable.push('m2')
+
+        self.assertEqual(['m2'], observer.data)
+
+    def test_on_next_exception_close_afterwards(self):
+        observable = self.create_observable()
+
+        class FailingObserver(SimpleStoringObserver):
+            def on_next(self, chunk):
+                raise Exception
+
+        observer = FailingObserver()
+        observable.subscribe(observer)
+
+        observable.push('m1')
+        observable.push('m2')
+        observable.close()
+
+        self.assertEqual([], observer.data)
+        self.assertTrue(observer.closed)
+
+    def test_on_next_exception_different_observers(self):
+        observable = self.create_observable()
+
+        class FailingObserver(SimpleStoringObserver):
+            def on_next(self, chunk):
+                raise Exception
+
+        failing_observer = FailingObserver()
+        observable.subscribe(failing_observer)
+
+        normal_observer = SimpleStoringObserver()
+        observable.subscribe(normal_observer)
+
+        observable.push('m1')
+        observable.push('m2')
+
+        self.assertEqual([], failing_observer.data)
+        self.assertEqual(['m1', 'm2'], normal_observer.data)
+
+    def test_on_close_exception_single_observer(self):
+        observable = self.create_observable()
+
+        class FailingObserver(SimpleStoringObserver):
+            def on_close(self):
+                raise Exception
+
+        observer = FailingObserver()
+        observable.subscribe(observer)
+
+        observable.close()
+
+        self.assertTrue(observable.closed)
+
+    def test_on_close_exception_different_observers(self):
+        observable = self.create_observable()
+
+        class FailingObserver(SimpleStoringObserver):
+            def on_close(self):
+                raise Exception
+
+        failing_observer = FailingObserver()
+        observable.subscribe(failing_observer)
+
+        normal_observer = SimpleStoringObserver()
+        observable.subscribe(normal_observer)
+
+        observable.close()
+
+        self.assertTrue(observable.closed)
+        self.assertTrue(normal_observer.closed)
+
     def test_map_single_update(self):
         observable = self.create_observable()
 
