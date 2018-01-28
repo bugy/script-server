@@ -179,7 +179,6 @@ body {
 
 @media (max-width: 992px) {
     #scriptsPanel {
-        display: flex;
         flex-flow: column;
     }
 
@@ -197,8 +196,16 @@ body {
 }
 
 #script-panel-container {
-    flex-grow: 1;
+    flex: 1 1 auto;
     display: flex;
+
+    /* (firefox)
+    we have to specify min-size explicitly, because by default it's content size.
+    It means, that when child content is larger than parent, it will grow out of parent
+    See https://drafts.csswg.org/css-flexbox/#min-size-auto
+    and https://bugzilla.mozilla.org/show_bug.cgi?id=1114904
+    */
+    min-height: 0;
 }
 
 #script-panel-container.collapsed {
