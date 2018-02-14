@@ -130,6 +130,20 @@
         "two",
         "three"
       ]
+    },
+    {
+      "name": "Very long list",
+      "description": "List with very long values",
+      "type": "list",
+      "param": "--very long list",
+      "values": [
+        "some quite long line",
+        "short",
+        "a bit longer",
+        "abcdefghijklmopqrstuvwxyz",
+        "/home/whoever/wherever/temp/stuff/internal/my_important_file-180214.txt",
+        "abcde-fghijk:lmopqr.stuvwx_yzabcd efghij.klmopq-rstuv%wxyz"
+      ]
     }
   ]
 }

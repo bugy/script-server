@@ -439,6 +439,10 @@ h6.header {
     top: -14px;
 }
 
+#content-panel .script-parameters-panel .dropdown-content {
+    max-width: 50vw;
+}
+
 #welcome-panel {
     flex: 1;
     color: #9e9e9e;
