@@ -224,16 +224,23 @@ body {
 
 #content-panel .script-parameters-panel {
     margin-top: 15px;
+    margin-right: 24px;
+    display: flex;
+    flex-wrap: wrap;
 }
 
 #content-panel .script-parameters-panel .parameter {
     margin: 7px 0 20px 24px;
 
-    display: inline-block;
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: 180px;
+    max-width: 220px;
 }
 
 #content-panel .script-parameters-panel .parameter input {
     margin: 0;
+    width: 100%;
 }
 
 #content-panel .log-panel {
