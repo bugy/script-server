@@ -3,7 +3,7 @@ import abc
 
 class Authorizer(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def authenticate(self, username, password):
+    def authenticate(self, request_handler):
         pass
 
 
@@ -28,3 +28,10 @@ class AuthFailureError(Exception):
 
     def get_message(self):
         return self.message
+
+
+class AuthRedirectedException(Exception):
+    """Server-side exception to forward authentication to another URL"""
+
+    def __init__(self, redirect_url):
+        self.redirect_url = redirect_url

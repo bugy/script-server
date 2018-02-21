@@ -4,6 +4,7 @@ from string import Template
 from ldap3 import Connection, SIMPLE
 
 from auth import auth_base
+from model import model_helper
 
 KNOWN_REJECTIONS = [
     "invalidCredentials",
@@ -12,15 +13,14 @@ KNOWN_REJECTIONS = [
 
 LOGGER = logging.getLogger('script_server.LdapAuthorizer')
 
+
 class LdapAuthorizer(auth_base.Authorizer):
     url = None
     username_template = None
     version = None
 
     def __init__(self, params_dict):
-        self.url = params_dict.get("url")
-        if not self.url:
-            raise Exception("Url is compulsory parameter for LDAP auth")
+        self.url = model_helper.read_obligatory(params_dict, 'url', ' for LDAP auth')
 
         if params_dict.get("username_pattern"):
             self.username_template = Template(params_dict.get("username_pattern"))
@@ -29,7 +29,12 @@ class LdapAuthorizer(auth_base.Authorizer):
         if not self.version:
             self.version = 3
 
-    def authenticate(self, username, password):
+    def authenticate(self, request_handler):
+        username = request_handler.get_argument('username')
+        password = request_handler.get_argument('password')
+
+        LOGGER.info('Logging in user ' + username)
+
         if self.username_template:
             user = self.username_template.substitute(username=username)
         else:
@@ -49,7 +54,7 @@ class LdapAuthorizer(auth_base.Authorizer):
 
             if connection.bound:
                 connection.unbind()
-                return True
+                return username
 
             error = connection.last_error
 
@@ -57,9 +62,10 @@ class LdapAuthorizer(auth_base.Authorizer):
             error = str(e)
 
             if error not in KNOWN_REJECTIONS:
-                LOGGER.exception("Error occurred while ldap authentication")
+                LOGGER.exception('Error occurred while ldap authentication of user ' + username)
 
         if error in KNOWN_REJECTIONS:
-            raise auth_base.AuthRejectedError("Invalid credentials")
+            LOGGER.info('Invalid credentials for user ' + username)
+            raise auth_base.AuthRejectedError('Invalid credentials')
 
         raise auth_base.AuthFailureError(error)

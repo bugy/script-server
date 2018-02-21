@@ -11,11 +11,13 @@ from urllib.parse import urlencode
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
+import tornado.concurrent
 import tornado.escape
 import tornado.httpserver as httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+from tornado import gen
 
 from auth import auth_base
 from execution.executor import ScriptExecutor
@@ -123,27 +125,49 @@ class TornadoAuth():
 
         return username.decode("utf-8")
 
-    def authenticate(self, username, password, request_handler):
-        LOGGER.info('Trying to authenticate user ' + username)
+    @gen.coroutine
+    def authenticate(self, request_handler):
+        if not self.is_enabled():
+            return
+
+        LOGGER.info('Trying to authenticate user')
+
+        login_generic_error = 'Something went wrong. Please contact the administrator or try later'
 
         try:
-            self.authorizer.authenticate(username, password)
-            LOGGER.info('Authenticated user ' + username)
+            username = self.authorizer.authenticate(request_handler)
+            if isinstance(username, tornado.concurrent.Future):
+                username = yield username
 
         except auth_base.AuthRejectedError as e:
-            LOGGER.info('Authentication rejected for user ' + username + ': ' + e.get_message())
             respond_error(request_handler, 401, e.get_message())
             return
 
         except auth_base.AuthFailureError:
-            LOGGER.exception('Authentication failed for user ' + username)
-            respond_error(request_handler, 500, "Something went wrong. Please contact the administrator or try later")
+            respond_error(request_handler, 500, login_generic_error)
             return
 
-        request_handler.set_secure_cookie("username", username)
+        except auth_base.AuthRedirectedException as e:
+            redirect(e.redirect_url, request_handler)
+            return
+        except:
+            LOGGER.exception('Failed to call authenticate')
+            respond_error(request_handler, 500, login_generic_error)
+            return
 
-        path = tornado.escape.url_unescape(request_handler.get_argument("next", "/"))
-        redirect(path, request_handler)
+        LOGGER.info('Authenticated user ' + username)
+
+        request_handler.set_secure_cookie('username', username)
+
+        path = tornado.escape.url_unescape(request_handler.get_argument('next', '/'))
+        if path.startswith('http'):
+            path = '/'
+
+        url_fragment = request_handler.get_argument('url_fragment', '')
+        if url_fragment:
+            path += '#' + tornado.escape.url_unescape(url_fragment)
+
+        redirect_relative(path, request_handler)
 
     def logout(self, request_handler):
         if not self.is_enabled():
@@ -158,9 +182,25 @@ class TornadoAuth():
         request_handler.clear_cookie("username")
 
 
-def redirect(relative_url, request_handler, *args, **kwargs):
+def redirect_relative(relative_url, request_handler, *args, **kwargs):
     full_url = get_full_url(relative_url, request_handler)
-    request_handler.redirect(full_url, *args, **kwargs)
+    redirect(full_url, request_handler, *args, **kwargs)
+
+
+def is_ajax(request):
+    requested_with = request.headers.get('X-Requested-With')
+    return requested_with == 'XMLHttpRequest'
+
+
+def redirect(full_url, request_handler, *args, **kwargs):
+    if is_ajax(request_handler.request):
+        # For AJAX we need custom handling because of:
+        #   1. browsers ignore url fragments (#hash) of redirects inside ajax
+        #   2. redirecting ajax to external resources causes allowed origin header issues
+        request_handler.set_header('Location', full_url)
+        request_handler.set_status(200)
+    else:
+        request_handler.redirect(full_url, *args, **kwargs)
 
 
 def get_full_url(relative_url, request_handler):
@@ -178,7 +218,7 @@ def is_allowed_during_login(request_path, login_url, request_handler):
         if request_path == '/favicon.ico':
             return True
 
-        if request_path == login_url:
+        if (request_path == login_url) or (request_path == '/auth/type'):
             return True
 
         login_resources = ['/js/login.js',
@@ -190,7 +230,9 @@ def is_allowed_during_login(request_path, login_url, request_handler):
                            '/css/fonts/roboto/Roboto-Regular.woff2',
                            '/css/fonts/roboto/Roboto-Regular.woff',
                            '/css/fonts/roboto/Roboto-Regular.ttf',
-                           '/images/titleBackground.jpg']
+                           '/images/titleBackground.jpg',
+                           '/images/g-logo-plain.png',
+                           '/images/g-logo-plain-pressed.png']
 
         if request_path not in login_resources:
             return False
@@ -225,7 +267,7 @@ def check_authorization(func):
 
         login_url += "?" + urlencode(dict(next=request_path))
 
-        redirect(login_url, self)
+        redirect_relative(login_url, self)
 
         return
 
@@ -234,7 +276,7 @@ def check_authorization(func):
 
 class ProxiedRedirectHandler(tornado.web.RedirectHandler):
     def get(self, *args):
-        redirect(self._url.format(*args), self, *args)
+        redirect_relative(self._url.format(*args), self, *args)
 
 
 class BaseRequestHandler(tornado.web.RequestHandler):
@@ -516,14 +558,24 @@ class AuthorizedStaticFileHandler(BaseStaticHandler):
 
 class LoginHandler(BaseRequestHandler):
     def post(self):
+        return self._authenticate()
+
+    # GET is needed for oauth redirects
+    def get(self):
+        return self._authenticate()
+
+    def _authenticate(self):
+        auth = self.application.auth
+        return auth.authenticate(self)
+
+
+class AuthTypeHandler(BaseRequestHandler):
+    def get(self):
         auth = self.application.auth
         if not auth.is_enabled():
-            return
+            raise tornado.web.HTTPError(404)
 
-        username = self.get_argument("username")
-        password = self.get_argument("password")
-
-        auth.authenticate(username, password, self)
+        self.write(auth.authorizer.auth_type)
 
 
 class LogoutHandler(BaseRequestHandler):
@@ -690,8 +742,9 @@ def main():
                 (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
 
     if auth.is_enabled():
-        handlers.append((r"/login", LoginHandler))
-        handlers.append((r"/logout", LogoutHandler))
+        handlers.append((r'/login', LoginHandler))
+        handlers.append((r'/auth/type', AuthTypeHandler))
+        handlers.append((r'/logout', LogoutHandler))
 
     handlers.append((r"/username", GetUsernameHandler))
 

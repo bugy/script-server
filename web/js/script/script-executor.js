@@ -36,7 +36,7 @@ ScriptExecutor.prototype._startExecution = function (processId) {
     var wsProtocol = https ? 'wss' : 'ws';
     var hostUrl = wsProtocol + '://' + location.host;
 
-    var dir = location.pathname.substring(0, location.pathname.lastIndexOf('/'));
+    var dir = getUrlDir();
     if (dir) {
         hostUrl += '/' + dir;
     }

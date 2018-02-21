@@ -193,3 +193,43 @@ function guid(length) {
 function logError(error) {
     (console.error || console.log).call(console, error.stack || error);
 }
+
+function createTemplateElement(templateName) {
+    var template = $('#' + templateName).html().trim();
+    var element = $.parseHTML(template)[0];
+
+    var clazz = templateName.replace(/-template$/g, '');
+    addClass(element, clazz);
+
+    return element;
+}
+
+function bindTemplatedFieldLabel(field, label) {
+    field.id = 'script-input-field-' + guid(8);
+    label.for = field.id;
+}
+
+function readQueryParameters(url) {
+    var regex = new RegExp("[?&]([^=]+)(=([^&#]*)|&|#|$)");
+    var pairs = regex.exec(url);
+
+    var result = [];
+    for (var i = 1; i < pairs.length; i += 3) {
+        var key = pairs[i];
+
+        var value = '';
+        var valueIndex = i + 2;
+        if (valueIndex < pairs.length) {
+            value = pairs[valueIndex];
+        }
+
+        result.push({key: key, value: value})
+    }
+
+    return result;
+}
+
+function getUrlDir() {
+    var path = window.location.pathname;
+    return path.substring(0, path.lastIndexOf('/'));
+}

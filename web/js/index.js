@@ -350,11 +350,6 @@ function findRunningExecutor(selectedScript) {
     return scriptExecutor;
 }
 
-function bindTemplatedFieldLabel(field, label) {
-    field.id = 'script-input-field-' + guid(8);
-    label.for = field.id;
-}
-
 function createParameterControl(parameter) {
     if (parameter.withoutValue) {
         return new Checkbox(parameter.name, parameter.default, parameter.description);
@@ -491,11 +486,6 @@ function getInvalidTypeError(type) {
     }
 
     return type + " expected";
-}
-
-function createTemplateElement(templateName) {
-    var template = $('#' + templateName).html().trim();
-    return $.parseHTML(template)[0];
 }
 
 function authorizedCallHttp(url, object, method, asyncHandler) {

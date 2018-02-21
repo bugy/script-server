@@ -2,9 +2,11 @@ import json
 import os
 
 import utils.file_utils as file_utils
+from model import model_helper
 
 
 class ServerConfig(object):
+    address = None
     port = None
     ssl = False
     ssl_key_path = None
@@ -12,9 +14,6 @@ class ServerConfig(object):
     authorizer = None
     alerts_config = None
     title = None
-
-    def get_address(self):
-        return self.address
 
     def get_port(self):
         return self.port
@@ -60,14 +59,8 @@ def from_json(conf_path):
 
     ssl = json_object.get("ssl")
     if ssl is not None:
-        key_path = ssl.get("key_path")
-        cert_path = ssl.get("cert_path")
-
-        if not key_path:
-            raise Exception("key_path is required for ssl")
-
-        if not cert_path:
-            raise Exception("cert_path is required for ssl")
+        key_path = model_helper.read_obligatory(ssl, 'key_path', ' for ssl')
+        cert_path = model_helper.read_obligatory(ssl, 'cert_path', ' for ssl')
 
         config.ssl = True
         config.ssl_key_path = key_path
@@ -93,12 +86,16 @@ def from_json(conf_path):
             raise Exception("Auth type should be specified")
 
         auth_type = auth_type.strip().lower()
-        if auth_type == "ldap":
+        if auth_type == 'ldap':
             from auth.auth_ldap import LdapAuthorizer
             config.authorizer = LdapAuthorizer(auth_object)
-
+        elif auth_type == 'google_oauth':
+            from auth.auth_google_oauth import GoogleOauthAuthorizer
+            config.authorizer = GoogleOauthAuthorizer(auth_object)
         else:
             raise Exception(auth_type + " auth is not supported")
+
+        config.authorizer.auth_type = auth_type
 
     config.alerts_config = parse_alerts_config(json_object)
 

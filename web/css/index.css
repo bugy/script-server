@@ -496,12 +496,50 @@ h6.header {
     transform: translateY(-90%);
 }
 
-#login-button {
+#credentials-login-button {
     width: 100%;
     margin-top: 7px;
 }
 
-#login-error-label {
+#login-form .login-error-label {
+    text-align: center;
+}
+
+#login-form .login-google_oauth .login-error-label {
+    margin-top: 16px;
+}
+
+#login-google_oauth-button {
+    height: 40px;
+    width: 188px;
+    padding-left: 34px;
+    padding-top: 4px;
+    margin: auto;
+    margin-top: 34px;
+    display: block;
+
+    font-size: 14px;
+    font-weight: bold;
+    color: #757575;
+
+    border-radius: 2px;
+    box-shadow: 1px 1px 1px 1px grey;
+    border: none;
+
+    background-image: url('../images/g-logo-plain.png');
+    background-color: white;
+    background-position-y: 50%;
+    background-position-x: -4px;
+    background-size: 48px;
+    background-repeat: no-repeat;
+}
+
+#login-google_oauth-button:active {
+    background-color: #EEE;
+    background-image: url('../images/g-logo-plain-pressed.png');
+}
+
+.login-error-label {
     color: #F44336;
     line-height: 1em;
     font-size: 0.9em;

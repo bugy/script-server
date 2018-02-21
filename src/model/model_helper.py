@@ -1,5 +1,4 @@
 import logging
-import re
 
 import utils.env_utils as env_utils
 import utils.string_utils as string_utils
@@ -21,6 +20,14 @@ def get_default(parameter: Parameter):
 def unwrap_conf_value(value):
     if isinstance(value, str) and value.startswith(ENV_VAR_PREFIX):
         return env_utils.read_variable(value[2:])
+
+    return value
+
+
+def read_obligatory(values_dict, key, error_suffix=''):
+    value = values_dict.get(key)
+    if is_empty(value):
+        raise Exception('"' + key + '" is required attribute' + error_suffix)
 
     return value
 
