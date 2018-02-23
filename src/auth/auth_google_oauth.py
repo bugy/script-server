@@ -1,7 +1,6 @@
 import hashlib
 import logging
 import os
-import re
 import urllib.parse as urllib_parse
 
 import tornado.auth
@@ -11,6 +10,7 @@ from tornado import httputil
 from auth import auth_base
 from auth.auth_base import AuthRedirectedException, AuthFailureError, AuthRejectedError
 from model import model_helper
+from utils.tornado_utils import normalize_url
 
 LOGGER = logging.getLogger('script_server.GoogleOauthAuthorizer')
 
@@ -143,11 +143,3 @@ def get_path_for_redirect(request_handler):
                           + request_handler.request.host \
                           + request_handler.request.path
     return normalize_url(request_handler_url)
-
-
-def normalize_url(request_url):
-    request_url_path = urllib_parse.urlparse(request_url).path
-    normalized_path = re.sub('/{2,}', '/', request_url_path)
-    normalized_path = re.sub('/+$', '', normalized_path)
-    normalized_url = urllib_parse.urljoin(request_url, normalized_path)
-    return normalized_url

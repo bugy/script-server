@@ -8,7 +8,6 @@ import threading
 import time
 from datetime import datetime
 from urllib.parse import urlencode
-from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import tornado.concurrent
@@ -17,9 +16,8 @@ import tornado.httpserver as httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
-from tornado import gen
 
-from auth import auth_base
+from auth.tornado_auth import TornadoAuth
 from execution.executor import ScriptExecutor
 from execution.logging import ScriptOutputLogger
 from features import file_download_feature
@@ -34,6 +32,7 @@ from utils import os_utils as os_utils
 from utils import tool_utils
 from utils.audit_utils import get_all_audit_names
 from utils.audit_utils import get_audit_name
+from utils.tornado_utils import respond_error, redirect_relative
 
 TEMP_FOLDER = "temp"
 
@@ -98,157 +97,42 @@ def visit_script_configs(visitor):
     return result
 
 
-class TornadoAuth():
-    authorizer = None
-
-    def __init__(self, authorizer):
-        self.authorizer = authorizer
-
-    def is_enabled(self):
-        return bool(self.authorizer)
-
-    def is_authenticated(self, request_handler):
-        if not self.is_enabled():
-            return True
-
-        username = request_handler.get_secure_cookie("username")
-
-        return bool(username)
-
-    def get_username(self, request_handler):
-        if not self.is_enabled():
-            return None
-
-        username = request_handler.get_secure_cookie("username")
-        if not username:
-            return None
-
-        return username.decode("utf-8")
-
-    @gen.coroutine
-    def authenticate(self, request_handler):
-        if not self.is_enabled():
-            return
-
-        LOGGER.info('Trying to authenticate user')
-
-        login_generic_error = 'Something went wrong. Please contact the administrator or try later'
-
-        try:
-            username = self.authorizer.authenticate(request_handler)
-            if isinstance(username, tornado.concurrent.Future):
-                username = yield username
-
-        except auth_base.AuthRejectedError as e:
-            respond_error(request_handler, 401, e.get_message())
-            return
-
-        except auth_base.AuthFailureError:
-            respond_error(request_handler, 500, login_generic_error)
-            return
-
-        except auth_base.AuthRedirectedException as e:
-            redirect(e.redirect_url, request_handler)
-            return
-        except:
-            LOGGER.exception('Failed to call authenticate')
-            respond_error(request_handler, 500, login_generic_error)
-            return
-
-        LOGGER.info('Authenticated user ' + username)
-
-        request_handler.set_secure_cookie('username', username)
-
-        path = tornado.escape.url_unescape(request_handler.get_argument('next', '/'))
-        if path.startswith('http'):
-            path = '/'
-
-        url_fragment = request_handler.get_argument('url_fragment', '')
-        if url_fragment:
-            path += '#' + tornado.escape.url_unescape(url_fragment)
-
-        redirect_relative(path, request_handler)
-
-    def logout(self, request_handler):
-        if not self.is_enabled():
-            return
-
-        username = self.get_username(request_handler)
-        if not username:
-            return
-
-        LOGGER.info('Logging out ' + username)
-
-        request_handler.clear_cookie("username")
-
-
-def redirect_relative(relative_url, request_handler, *args, **kwargs):
-    full_url = get_full_url(relative_url, request_handler)
-    redirect(full_url, request_handler, *args, **kwargs)
-
-
-def is_ajax(request):
-    requested_with = request.headers.get('X-Requested-With')
-    return requested_with == 'XMLHttpRequest'
-
-
-def redirect(full_url, request_handler, *args, **kwargs):
-    if is_ajax(request_handler.request):
-        # For AJAX we need custom handling because of:
-        #   1. browsers ignore url fragments (#hash) of redirects inside ajax
-        #   2. redirecting ajax to external resources causes allowed origin header issues
-        request_handler.set_header('Location', full_url)
-        request_handler.set_status(200)
-    else:
-        request_handler.redirect(full_url, *args, **kwargs)
-
-
-def get_full_url(relative_url, request_handler):
-    request = request_handler.request
-    host_url = request.protocol + "://" + request.host
-    return urljoin(host_url, relative_url)
-
-
 def is_allowed_during_login(request_path, login_url, request_handler):
-    if request_handler.request.method == 'POST':
-        if request_path == '/login':
+    if request_handler.request.method != 'GET':
+        return False
+
+    if request_path == '/favicon.ico':
+        return True
+
+    if request_path == login_url:
+        return True
+
+    login_resources = ['/js/login.js',
+                       '/js/common.js',
+                       '/js/libs/jquery.min.js',
+                       '/js/libs/materialize.min.js',
+                       '/css/libs/materialize.min.css',
+                       '/css/index.css',
+                       '/css/fonts/roboto/Roboto-Regular.woff2',
+                       '/css/fonts/roboto/Roboto-Regular.woff',
+                       '/css/fonts/roboto/Roboto-Regular.ttf',
+                       '/images/titleBackground.jpg',
+                       '/images/g-logo-plain.png',
+                       '/images/g-logo-plain-pressed.png']
+
+    if request_path not in login_resources:
+        return False
+
+    referer = request_handler.request.headers.get('Referer')
+    if referer:
+        referer = urlparse(referer).path
+    else:
+        return False
+
+    allowed_referrers = [login_url, '/css/libs/materialize.min.css', '/css/index.css']
+    for allowed_referrer in allowed_referrers:
+        if referer.endswith(allowed_referrer):
             return True
-
-    elif request_handler.request.method == 'GET':
-        if request_path == '/favicon.ico':
-            return True
-
-        if (request_path == login_url) or (request_path == '/auth/type'):
-            return True
-
-        login_resources = ['/js/login.js',
-                           '/js/common.js',
-                           '/js/libs/jquery.min.js',
-                           '/js/libs/materialize.min.js',
-                           '/css/libs/materialize.min.css',
-                           '/css/index.css',
-                           '/css/fonts/roboto/Roboto-Regular.woff2',
-                           '/css/fonts/roboto/Roboto-Regular.woff',
-                           '/css/fonts/roboto/Roboto-Regular.ttf',
-                           '/images/titleBackground.jpg',
-                           '/images/g-logo-plain.png',
-                           '/images/g-logo-plain-pressed.png']
-
-        if request_path not in login_resources:
-            return False
-
-        referer = request_handler.request.headers.get('Referer')
-        if referer:
-            referer = urlparse(referer).path
-        else:
-            return False
-
-        allowed_referrers = [login_url, '/css/libs/materialize.min.css', '/css/index.css']
-        for allowed_referrer in allowed_referrers:
-            if referer.endswith(allowed_referrer):
-                return True
-
-    return False
 
 
 # This decorator is used for REST requests, in which we don't redirect explicitly, but reply with Unauthorized code.
@@ -631,11 +515,6 @@ class ReceiveAlertHandler(BaseRequestHandler):
 
             file_path = os.path.join('logs', 'alerts', filename)
             file_utils.write_file(file_path, file.body.decode('utf-8'))
-
-
-def respond_error(request_handler, status_code, message):
-    request_handler.set_status(status_code)
-    request_handler.write(message)
 
 
 def wrap_script_output(text, text_color=None, background_color=None, text_styles=None):
