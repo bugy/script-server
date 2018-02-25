@@ -1,14 +1,11 @@
-import hashlib
 import logging
-import os
 import urllib.parse as urllib_parse
 
 import tornado.auth
 from tornado import gen, httpclient, escape
-from tornado import httputil
 
 from auth import auth_base
-from auth.auth_base import AuthRedirectedException, AuthFailureError, AuthRejectedError
+from auth.auth_base import AuthFailureError, AuthBadRequestException
 from model import model_helper
 from utils.tornado_utils import normalize_url
 
@@ -18,39 +15,30 @@ LOGGER = logging.getLogger('script_server.GoogleOauthAuthorizer')
 # noinspection PyProtectedMember
 class GoogleOauthAuthorizer(auth_base.Authorizer):
     def __init__(self, params_dict):
+        super().__init__()
+
         self.client_id = model_helper.read_obligatory(params_dict, 'client_id', ' for Google OAuth')
-        self.secret = model_helper.read_obligatory(params_dict, 'secret', ' for Google OAuth')
+
+        secret_value = model_helper.read_obligatory(params_dict, 'secret', ' for Google OAuth')
+        self.secret = model_helper.unwrap_conf_value(secret_value)
+
         self.states = {}
+
+        self.client_visible_config['client_id'] = self.client_id
+        self.client_visible_config['oauth_url'] = tornado.auth.GoogleOAuth2Mixin._OAUTH_AUTHORIZE_URL
+        self.client_visible_config['oauth_scope'] = 'email'
 
     def authenticate(self, request_handler):
         code = request_handler.get_argument('code', False)
 
         if not code:
-            oauth_url = self._build_redirect_url(request_handler)
-            raise AuthRedirectedException(redirect_url=oauth_url)
-        else:
-            return self.read_user(code, request_handler)
+            LOGGER.error('Code is not specified')
+            raise AuthBadRequestException('Missing authorization information. Please contact your administrator')
 
-    def _build_redirect_url(self, request_handler):
-        state = hashlib.sha256(os.urandom(1024)).hexdigest()
-
-        args = {
-            'redirect_uri': get_path_for_redirect(request_handler),
-            'state': state,
-            'client_id': self.client_id,
-            'scope': 'email',
-            'response_type': 'code'
-        }
-        google_auth_url = tornado.auth.GoogleOAuth2Mixin._OAUTH_AUTHORIZE_URL
-
-        self.save_state(request_handler, state)
-
-        return httputil.url_concat(google_auth_url, args)
+        return self.read_user(code, request_handler)
 
     @gen.coroutine
     def read_user(self, code, request_handler):
-        self.restore_saved_state(request_handler)
-
         access_token = yield self.get_access_token(code, request_handler)
 
         oauth_mixin = tornado.auth.GoogleOAuth2Mixin()
@@ -109,37 +97,16 @@ class GoogleOauthAuthorizer(auth_base.Authorizer):
 
         return access_token
 
-    def save_state(self, request_handler, state_id):
-        self.states[state_id] = request_handler.request.arguments
-
-    # This method restores request arguments of the original request (from the client)
-    # And also validates, that incoming request is a reply to our previous redirection
-    def restore_saved_state(self, request_handler):
-        state = request_handler.get_argument('state', '')
-        if not state:
-            message = 'Missing redirect data'
-            LOGGER.error(message)
-            raise AuthRejectedError(message)
-
-        previous_arguments = self.states.pop(state, None)
-        if not previous_arguments:
-            message = 'Redirect data is wrong or was sent twice'
-            LOGGER.error(message)
-            raise AuthRejectedError(message)
-
-        for key, value in previous_arguments.items():
-            current_value = request_handler.get_argument(key, None)
-            if current_value is None:
-                request_handler.request.arguments[key] = value
-
 
 def get_path_for_redirect(request_handler):
-    request_url = request_handler.get_argument('request_url', '')
-    if request_url:
-        return normalize_url(request_url)
+    referer = request_handler.request.headers.get('Referer')
+    if not referer:
+        LOGGER.error('No referer')
+        raise AuthFailureError('Missing request header. Please contact system administrator')
 
-    LOGGER.warning('request_url argument is empty')
-    request_handler_url = request_handler.request.protocol + "://" \
-                          + request_handler.request.host \
-                          + request_handler.request.path
-    return normalize_url(request_handler_url)
+    parse_result = urllib_parse.urlparse(referer)
+    protocol = parse_result[0]
+    host = parse_result[1]
+    path = parse_result[2]
+
+    return urllib_parse.urlunparse((protocol, host, path, '', '', ''))

@@ -442,24 +442,17 @@ class AuthorizedStaticFileHandler(BaseStaticHandler):
 
 class LoginHandler(BaseRequestHandler):
     def post(self):
-        return self._authenticate()
-
-    # GET is needed for oauth redirects
-    def get(self):
-        return self._authenticate()
-
-    def _authenticate(self):
         auth = self.application.auth
         return auth.authenticate(self)
 
 
-class AuthTypeHandler(BaseRequestHandler):
+class AuthConfigHandler(BaseRequestHandler):
     def get(self):
         auth = self.application.auth
         if not auth.is_enabled():
             raise tornado.web.HTTPError(404)
 
-        self.write(auth.authorizer.auth_type)
+        self.write(auth.get_client_visible_config())
 
 
 class LogoutHandler(BaseRequestHandler):
@@ -622,7 +615,7 @@ def main():
 
     if auth.is_enabled():
         handlers.append((r'/login', LoginHandler))
-        handlers.append((r'/auth/type', AuthTypeHandler))
+        handlers.append((r'/auth/config', AuthConfigHandler))
         handlers.append((r'/logout', LogoutHandler))
 
     handlers.append((r"/username", GetUsernameHandler))

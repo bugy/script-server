@@ -1,20 +1,21 @@
 import logging
+
 import tornado.concurrent
 import tornado.escape
 from tornado import gen
 
 from auth import auth_base
-from utils.tornado_utils import respond_error, redirect_relative, redirect
+from utils.tornado_utils import respond_error, redirect_relative
 
 LOGGER = logging.getLogger('script_server.tornado_auth')
 
 
 class TornadoAuth():
-    def __init__(self, authorizer):
-        self.authorizer = authorizer
+    def __init__(self, authenticator):
+        self.authenticator = authenticator
 
     def is_enabled(self):
-        return bool(self.authorizer)
+        return bool(self.authenticator)
 
     def is_authenticated(self, request_handler):
         if not self.is_enabled():
@@ -44,7 +45,7 @@ class TornadoAuth():
         login_generic_error = 'Something went wrong. Please contact the administrator or try later'
 
         try:
-            username = self.authorizer.authenticate(request_handler)
+            username = self.authenticator.authenticate(request_handler)
             if isinstance(username, tornado.concurrent.Future):
                 username = yield username
 
@@ -56,9 +57,10 @@ class TornadoAuth():
             respond_error(request_handler, 500, login_generic_error)
             return
 
-        except auth_base.AuthRedirectedException as e:
-            redirect(e.redirect_url, request_handler)
+        except auth_base.AuthBadRequestException as e:
+            respond_error(request_handler, 400, e.get_message())
             return
+
         except:
             LOGGER.exception('Failed to call authenticate')
             respond_error(request_handler, 500, login_generic_error)
@@ -69,14 +71,19 @@ class TornadoAuth():
         request_handler.set_secure_cookie('username', username)
 
         path = tornado.escape.url_unescape(request_handler.get_argument('next', '/'))
+
+        # redirect only to internal URLs
         if path.startswith('http'):
             path = '/'
 
-        url_fragment = request_handler.get_argument('url_fragment', '')
-        if url_fragment:
-            path += '#' + tornado.escape.url_unescape(url_fragment)
-
         redirect_relative(path, request_handler)
+
+    def get_client_visible_config(self):
+        result = {'type': self.authenticator.auth_type}
+
+        result.update(self.authenticator.get_client_visible_config())
+
+        return result
 
     def logout(self, request_handler):
         if not self.is_enabled():

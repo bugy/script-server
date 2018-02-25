@@ -20,6 +20,8 @@ class LdapAuthorizer(auth_base.Authorizer):
     version = None
 
     def __init__(self, params_dict):
+        super().__init__()
+
         self.url = model_helper.read_obligatory(params_dict, 'url', ' for LDAP auth')
 
         if params_dict.get("username_pattern"):

@@ -57,26 +57,42 @@ function removeClass(element, clazz) {
     element.classList.remove(clazz);
 }
 
-function callHttp(url, object, method, asyncHandler) {
+function callHttp(url, object, method, asyncHandler, onError) {
     method = method || "GET";
 
     var xhttp = new XMLHttpRequest();
 
     var async = !isNull(asyncHandler);
     if (async) {
-        xhttp.onreadystatechange = function (event) {
-            if (xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200) {
-                asyncHandler(xhttp.responseText);
+        xhttp.onreadystatechange = function () {
+            if (xhttp.readyState === XMLHttpRequest.DONE) {
+                if (xhttp.status === 200) {
+                    asyncHandler(xhttp.responseText);
+                } else if (onError) {
+                    onError(xhttp.status, xhttp.responseText);
+                }
             }
         };
+
+        if (onError) {
+            xhttp.addEventListener('error', function (event) {
+                console.log('Failed to execute request: ' + event);
+                onError(-1, 'Unknown error occurred');
+            });
+        }
     }
 
     xhttp.open(method, url, async);
+    xhttp.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
     try {
-        if (!isNull(object)) {
-            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        if (object instanceof FormData) {
+            xhttp.send(object);
+
+        } else if (!isNull(object)) {
+            xhttp.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
             xhttp.send(JSON.stringify(object));
+
         } else {
             xhttp.send();
         }
@@ -85,7 +101,7 @@ function callHttp(url, object, method, asyncHandler) {
     }
 
     if (!async) {
-        if (xhttp.status == 200) {
+        if (xhttp.status === 200) {
             return xhttp.responseText;
 
         } else {
@@ -209,27 +225,41 @@ function bindTemplatedFieldLabel(field, label) {
     label.for = field.id;
 }
 
-function readQueryParameters(url) {
-    var regex = new RegExp("[?&]([^=]+)(=([^&#]*)|&|#|$)");
-    var pairs = regex.exec(url);
+function readQueryParameters() {
+    var argString = window.location.search;
+    if (!argString || argString.length <= 1) {
+        return {};
+    }
 
-    var result = [];
-    for (var i = 1; i < pairs.length; i += 3) {
-        var key = pairs[i];
+    var pairs = argString.substr(1).split('&');
 
-        var value = '';
-        var valueIndex = i + 2;
-        if (valueIndex < pairs.length) {
-            value = pairs[valueIndex];
+    var result = {};
+    for (var i = 0; i < pairs.length; i++) {
+        var keyAndValue = pairs[i].split('=', 2);
+
+        if (keyAndValue.length !== 2) {
+            continue;
         }
 
-        result.push({key: key, value: value})
+        var key = keyAndValue[0];
+        var value = keyAndValue[1];
+
+        result[key] = decodeURIComponent(value.replace(/\+/g, ' '));
     }
 
     return result;
 }
 
+function getQueryParameter(parameter, url) {
+    var parameters = readQueryParameters(url);
+    return parameters[parameter];
+}
+
 function getUrlDir() {
     var path = window.location.pathname;
     return path.substring(0, path.lastIndexOf('/'));
+}
+
+function getUnparameterizedUrl() {
+    return [location.protocol, '//', location.host, location.pathname].join('');
 }
