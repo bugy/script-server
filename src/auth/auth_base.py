@@ -1,7 +1,7 @@
 import abc
 
 
-class Authorizer(metaclass=abc.ABCMeta):
+class Authenticator(metaclass=abc.ABCMeta):
     def __init__(self) -> None:
         self.client_visible_config = {}
         self.auth_type = None

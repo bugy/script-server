@@ -263,3 +263,7 @@ function getUrlDir() {
 function getUnparameterizedUrl() {
     return [location.protocol, '//', location.host, location.pathname].join('');
 }
+
+function contains(array, element) {
+    return array.indexOf(element) !== -1
+}

@@ -13,7 +13,7 @@ LOGGER = logging.getLogger('script_server.GoogleOauthAuthorizer')
 
 
 # noinspection PyProtectedMember
-class GoogleOauthAuthorizer(auth_base.Authorizer):
+class GoogleOauthAuthenticator(auth_base.Authenticator):
     def __init__(self, params_dict):
         super().__init__()
 

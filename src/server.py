@@ -143,11 +143,15 @@ def check_authorization(func):
         request_path = self.request.path
         login_url = self.get_login_url()
 
-        if auth.is_authenticated(self) or is_allowed_during_login(request_path, login_url, self):
+        if (auth.is_authenticated(self) and (auth.is_authorized(self))) \
+                or is_allowed_during_login(request_path, login_url, self):
             return func(self, *args, **kwargs)
 
         if not isinstance(self, tornado.web.StaticFileHandler):
-            raise tornado.web.HTTPError(401, "Unauthorized")
+            if not auth.is_authenticated(self):
+                raise tornado.web.HTTPError(401, 'Not authenticated')
+            else:
+                raise tornado.web.HTTPError(403, 'Access denied')
 
         login_url += "?" + urlencode(dict(next=request_path))
 
@@ -597,7 +601,7 @@ def main():
         "login_url": "/login.html"
     }
 
-    auth = TornadoAuth(server_config.authorizer)
+    auth = TornadoAuth(server_config.authenticator, server_config.authorizer)
 
     result_files_folder = file_download_feature.get_result_files_folder(TEMP_FOLDER)
     file_download_feature.autoclean_downloads(TEMP_FOLDER)

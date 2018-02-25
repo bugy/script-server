@@ -2,18 +2,21 @@ import json
 import os
 
 import utils.file_utils as file_utils
+from auth.authorization import AnyUserAuthorizer, ListBasedAuthorizer
 from model import model_helper
 
 
 class ServerConfig(object):
-    address = None
-    port = None
-    ssl = False
-    ssl_key_path = None
-    ssl_cert_path = None
-    authorizer = None
-    alerts_config = None
-    title = None
+    def __init__(self) -> None:
+        self.address = None
+        self.port = None
+        self.ssl = False
+        self.ssl_key_path = None
+        self.ssl_cert_path = None
+        self.authenticator = None
+        self.authorizer = None
+        self.alerts_config = None
+        self.title = None
 
     def get_port(self):
         return self.port
@@ -26,9 +29,6 @@ class ServerConfig(object):
 
     def get_ssl_cert_path(self):
         return self.ssl_cert_path
-
-    def get_authorizer(self):
-        return self.authorizer
 
     def get_alerts_config(self):
         return self.alerts_config
@@ -78,28 +78,59 @@ def from_json(conf_path):
     if json_object.get('title'):
         config.title = json_object.get('title')
 
-    if json_object.get("auth"):
-        auth_object = json_object.get("auth")
-        auth_type = auth_object.get("type")
+    auth_config = json_object.get('auth')
+    if auth_config:
+        config.authenticator = create_authenticator(auth_config)
 
-        if not auth_type:
-            raise Exception("Auth type should be specified")
+        allowed_users = auth_config.get('allowed_users')
 
-        auth_type = auth_type.strip().lower()
-        if auth_type == 'ldap':
-            from auth.auth_ldap import LdapAuthorizer
-            config.authorizer = LdapAuthorizer(auth_object)
-        elif auth_type == 'google_oauth':
-            from auth.auth_google_oauth import GoogleOauthAuthorizer
-            config.authorizer = GoogleOauthAuthorizer(auth_object)
-        else:
-            raise Exception(auth_type + " auth is not supported")
+        auth_type = config.authenticator.auth_type
+        if auth_type == 'google_oauth' and allowed_users is None:
+            raise Exception('auth.allowed_users field is mandatory for ' + auth_type)
 
-        config.authorizer.auth_type = auth_type
+        config.authorizer = create_authorizer(allowed_users)
 
     config.alerts_config = parse_alerts_config(json_object)
 
     return config
+
+
+def create_authenticator(auth_object):
+    auth_type = auth_object.get('type')
+
+    if not auth_type:
+        raise Exception('Auth type should be specified')
+
+    auth_type = auth_type.strip().lower()
+    if auth_type == 'ldap':
+        from auth.auth_ldap import LdapAuthenticator
+        authenticator = LdapAuthenticator(auth_object)
+    elif auth_type == 'google_oauth':
+        from auth.auth_google_oauth import GoogleOauthAuthenticator
+        authenticator = GoogleOauthAuthenticator(auth_object)
+    else:
+        raise Exception(auth_type + ' auth is not supported')
+
+    authenticator.auth_type = auth_type
+
+    return authenticator
+
+
+def create_authorizer(allowed_users):
+    if (allowed_users is None) or (allowed_users == '*'):
+        return AnyUserAuthorizer()
+
+    elif not isinstance(allowed_users, list):
+        raise Exception('allowed_users should be list')
+
+    coerced_users = [user.strip() for user in allowed_users]
+    coerced_users = [user for user in coerced_users if len(user) > 0]
+
+    if '*' in coerced_users:
+        return AnyUserAuthorizer()
+
+    return ListBasedAuthorizer(coerced_users)
+
 
 
 def parse_alerts_config(json_object):

@@ -144,7 +144,7 @@ function sendLoginRequest(formData) {
     };
 
     var onError = function (errorCode, errorText) {
-        if ((errorCode === 401) || (errorCode === 500) || (errorCode === 400)) {
+        if (contains([400, 401, 403, 500], errorCode)) {
             showError(errorText);
 
         } else {

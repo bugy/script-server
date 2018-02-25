@@ -14,7 +14,7 @@ KNOWN_REJECTIONS = [
 LOGGER = logging.getLogger('script_server.LdapAuthorizer')
 
 
-class LdapAuthorizer(auth_base.Authorizer):
+class LdapAuthenticator(auth_base.Authenticator):
     url = None
     username_template = None
     version = None
