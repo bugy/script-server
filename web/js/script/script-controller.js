@@ -18,14 +18,15 @@ ScriptController.prototype.fillView = function (parent) {
     scriptView.createParameters(this.scriptConfig.parameters);
 
     scriptView.executeButtonCallback = function () {
+        this.scriptView.setExecuting();
         scriptView.setLog('Calling the script...');
 
-        var parameterValues = new Hashtable();
-        scriptView.parameterControls.each(function (parameter, control) {
-            parameterValues.put(parameter.name, control.getValue());
-        });
-
         try {
+            var parameterValues = new Hashtable();
+            scriptView.parameterControls.each(function (parameter, control) {
+                parameterValues.put(parameter.name, control.getValue());
+            });
+
             this.executor = new ScriptExecutor(this.scriptConfig, this.scriptName);
             this.executor.start(parameterValues);
             this.executionStartCallback(this.executor);
@@ -33,10 +34,14 @@ ScriptController.prototype.fillView = function (parent) {
             this._updateViewWithExecutor(this.executor);
 
         } catch (error) {
-            if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
+            this.scriptView.setStopEnabled(false);
+            this.scriptView.setExecutionEnabled(true);
+
+            if (!(error instanceof HttpUnauthorizedError)) {
                 logError(error);
 
-                scriptView.setLog(error.message);
+                var errorLogElement = '\n\n' + error.message;
+                scriptView.appendLogElement(document.createTextNode(errorLogElement));
             }
         }
     }.bind(this);
@@ -68,12 +73,11 @@ ScriptController.prototype.setExecutor = function (executor) {
 
     this.scriptView.setParameterValues(executor.parameterValues);
 
+    this.scriptView.setExecuting();
     this._updateViewWithExecutor(executor);
 };
 
 ScriptController.prototype._updateViewWithExecutor = function (executor) {
-    this.scriptView.setExecuting();
-
     this._startLogPublisher();
 
     this.executorListener = {
@@ -130,6 +134,6 @@ ScriptController.prototype._publishLogs = function () {
 
     for (; this.logLastIndex < logElements.length; this.logLastIndex++) {
         var logIndex = this.logLastIndex;
-        this.scriptView.appendLog(logElements[logIndex]);
+        this.scriptView.appendLogElement(logElements[logIndex]);
     }
 };

@@ -213,7 +213,7 @@ ScriptView.prototype.setLog = function (text) {
     this.logContent.innerText = text;
 };
 
-ScriptView.prototype.appendLog = function (logElement) {
+ScriptView.prototype.appendLogElement = function (logElement) {
     this.logContent.appendChild(logElement);
 };
 

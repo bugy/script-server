@@ -301,7 +301,7 @@ function showScript(selectedScript) {
             var rawConfig = authorizedCallHttp('scripts/info?name=' + selectedScript);
             scriptConfig = JSON.parse(rawConfig);
         } catch (error) {
-            if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
+            if (!(error instanceof HttpUnauthorizedError)) {
                 logError(error);
 
                 //noinspection JSDuplicatedDeclaration
@@ -503,6 +503,8 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
             var message = error.code === 401 ? 'Credentials expired' : 'Access denied';
             var errorPanel = showErrorPanel(message + ', please ');
             errorPanel.appendChild(link);
+
+            throw new HttpUnauthorizedError(error.code, message);
         }
 
         throw error;

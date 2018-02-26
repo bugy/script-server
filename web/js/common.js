@@ -116,17 +116,37 @@ function callHttp(url, object, method, asyncHandler, onError) {
     }
 }
 
-function HttpRequestError(code, message) {
-    this.code = code;
-    this.message = message;
-    var lastPart = new Error().stack.match(/[^\s]+$/);
-    this.stack = this.name + 'at' + lastPart;
+function _createErrorType(name, init) {
+    function NewErrorType(code, message) {
+        if (!Error.captureStackTrace) {
+            this.stack = (new Error()).stack;
+        } else {
+            Error.captureStackTrace(this, this.constructor);
+        }
+        if (arguments['message']) {
+            this.message = arguments['message'];
+        }
+
+        if (init) {
+            init.apply(this, arguments);
+        }
+    }
+
+    NewErrorType.prototype = Object.create(Error.prototype);
+    NewErrorType.prototype.name = name;
+    NewErrorType.prototype.constructor = NewErrorType;
+    return NewErrorType;
 }
-HttpRequestError.prototype = Object.create(Error.prototype);
-HttpRequestError.prototype.name = "HttpRequestError";
-HttpRequestError.prototype.message = "";
-HttpRequestError.prototype.code = -1;
-HttpRequestError.prototype.constructor = HttpRequestError;
+
+var HttpRequestError = _createErrorType('HttpRequestError', function (code, message) {
+    this.code = code || -1;
+    this.message = message || '';
+});
+
+var HttpUnauthorizedError = _createErrorType('HttpUnauthorizedError', function (code, message) {
+    this.code = code || -1;
+    this.message = message || '';
+});
 
 function isNull(object) {
     return ((typeof object) === 'undefined' || (object === null));
