@@ -17,6 +17,7 @@ class Config(object):
         self.working_directory = None
         self.bash_formatting = None
         self.output_files = None
+        self.kill_on_disconnect = True
 
         self.parameters = []
         self.output_files = []
@@ -154,6 +155,8 @@ def from_json(file_path, json_string, pty_enabled_default=False):
 
     config.requires_terminal = read_boolean("requires_terminal", json_object, pty_enabled_default)
     config.bash_formatting = read_boolean("bash_formatting", json_object, os_utils.is_linux() or os_utils.is_mac())
+
+    config.kill_on_disconnect = read_boolean('kill_on_disconnect', json_object, True)
 
     output_files = json_object.get("output_files")
     if output_files:

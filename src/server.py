@@ -289,7 +289,11 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         self.executor.write_to_input(text)
 
     def on_close(self):
-        self.executor.kill()
+        if self.executor.config.kill_on_disconnect:
+            self.executor.kill()
+
+        audit_name = get_audit_name(self)
+        LOGGER.info(audit_name + ' disconnected')
 
     def safe_write(self, message):
         if self.ws_connection is not None:
