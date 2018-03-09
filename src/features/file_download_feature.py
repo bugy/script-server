@@ -7,7 +7,7 @@ from shutil import copyfile
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
 import utils.string_utils as string_utils
-from utils.file_utils import get_unique_name
+from utils.file_utils import create_unique_filename
 
 RESULT_FILES_FOLDER = 'resultFiles'
 
@@ -63,7 +63,7 @@ class FileDownloadFeature:
             preferred_download_file = os.path.join(download_folder, os.path.basename(file))
 
             try:
-                download_file = get_unique_name(preferred_download_file)
+                download_file = create_unique_filename(preferred_download_file)
             except file_utils.FileExistsException:
                 LOGGER.exception('Cannot get unique name')
                 continue

@@ -18,8 +18,9 @@ class FileUploadFeature:
 
     def save_file(self, filename, body, username) -> str:
         upload_folder = self.user_file_storage.prepare_new_folder(username, self.folder)
-        result_path = os.path.join(upload_folder, filename)
+        pref_result_path = os.path.join(upload_folder, filename)
 
+        result_path = file_utils.create_unique_filename(pref_result_path)
         file_utils.write_file(result_path, body, True)
 
         return file_utils.normalize_path(result_path)

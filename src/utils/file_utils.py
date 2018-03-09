@@ -170,7 +170,7 @@ def to_filename(txt):
     return txt
 
 
-def get_unique_name(preferred_path, retries=9999999):
+def create_unique_filename(preferred_path, retries=9999999):
     original_filename = os.path.basename(preferred_path)
     folder = os.path.dirname(preferred_path)
 
