@@ -7,11 +7,6 @@ COMMAND_OPENING_CHARS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'K', 
 
 
 class FormattedText(object):
-    text = None
-    text_color = None
-    background_color = None
-    styles = []
-
     def __init__(self, text, text_color, background_color, styles):
         self.text = text
         self.text_color = text_color
@@ -20,15 +15,14 @@ class FormattedText(object):
 
 
 class BashReader(object):
-    buffer = ''
-    command_buffer = ''
-    command_next_expected = None
-
-    current_text_color = None
-    current_background_color = None
-    current_styles = []
-
     def __init__(self):
+        self.buffer = ''
+        self.command_buffer = ''
+        self.command_next_expected = None
+
+        self.current_text_color = None
+        self.current_background_color = None
+
         self.current_styles = []
 
     def read(self, process_output_chunk):
@@ -107,6 +101,7 @@ class BashReader(object):
             self.current_text_color,
             self.current_background_color,
             self.current_styles)
+
 
 TEXT_COLOR_DICT = {
     '39': None,

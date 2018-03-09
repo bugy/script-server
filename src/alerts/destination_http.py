@@ -4,8 +4,6 @@ import alerts.destination_base as destination_base
 
 
 class HttpDestination(destination_base.Destination):
-    url = None
-
     def __init__(self, params_dict):
         self.url = params_dict.get('url')
 

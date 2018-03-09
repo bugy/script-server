@@ -15,10 +15,6 @@ LOGGER = logging.getLogger('script_server.LdapAuthorizer')
 
 
 class LdapAuthenticator(auth_base.Authenticator):
-    url = None
-    username_template = None
-    version = None
-
     def __init__(self, params_dict):
         super().__init__()
 
@@ -26,6 +22,8 @@ class LdapAuthenticator(auth_base.Authenticator):
 
         if params_dict.get("username_pattern"):
             self.username_template = Template(params_dict.get("username_pattern"))
+        else:
+            self.username_template = None
 
         self.version = params_dict.get("version")
         if not self.version:

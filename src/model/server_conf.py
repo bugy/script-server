@@ -35,7 +35,8 @@ class ServerConfig(object):
 
 
 class AlertsConfig:
-    destinations = []
+    def __init__(self) -> None:
+        self.destinations = []
 
     def add_destination(self, destination):
         self.destinations.append(destination)
@@ -130,7 +131,6 @@ def create_authorizer(allowed_users):
         return AnyUserAuthorizer()
 
     return ListBasedAuthorizer(coerced_users)
-
 
 
 def parse_alerts_config(json_object):
