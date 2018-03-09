@@ -3,6 +3,7 @@ loadScript('js/components/abstract_input.js');
 loadScript('js/components/checkbox.js');
 loadScript('js/components/textfield.js');
 loadScript('js/components/combobox.js');
+loadScript('js/components/file_upload.js');
 loadScript('js/script/script-controller.js');
 loadScript('js/script/script-view.js');
 loadScript('js/script/script-executor.js');
@@ -361,6 +362,12 @@ function createParameterControl(parameter) {
             parameter.required,
             parameter.values,
             parameter.description);
+
+    } else if (parameter.type === 'file_upload') {
+        return new FileUpload(
+            parameter.name,
+            parameter.description,
+            parameter.required);
 
     } else {
         return new TextField(

@@ -1,4 +1,5 @@
 import logging
+import os
 
 import utils.env_utils as env_utils
 import utils.string_utils as string_utils
@@ -62,10 +63,16 @@ def validate_parameters(parameters, config):
                 return False
             continue
 
-        if parameter.get_type() == 'text':
+        if parameter.type == 'text':
             continue
 
-        if parameter.get_type() == 'int':
+        if parameter.type == 'file_upload':
+            if not os.path.exists(value):
+                LOGGER.error('Cannot find file ' + value)
+                return False
+            continue
+
+        if parameter.type == 'int':
             if not (isinstance(value, int) or (isinstance(value, str) and string_utils.is_integer(value))):
                 LOGGER.error('Parameter ' + name + ' should be integer, but has value ' + value_string)
                 return False
@@ -84,7 +91,7 @@ def validate_parameters(parameters, config):
 
             continue
 
-        if parameter.get_type() == 'list':
+        if parameter.type == 'list':
             if value not in parameter.get_values():
                 LOGGER.error('Parameter ' + name + ' has value ' + value_string +
                              ', but should be in [' + ','.join(parameter.get_values()) + ']')

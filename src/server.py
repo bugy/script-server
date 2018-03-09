@@ -20,13 +20,15 @@ import tornado.websocket
 from auth.tornado_auth import TornadoAuth
 from execution.executor import ScriptExecutor
 from execution.logging import ScriptOutputLogger
-from features import file_download_feature
+from features.file_download_feature import FileDownloadFeature
+from features.file_upload_feature import FileUploadFeature
+from files.user_file_storage import UserFileStorage
 from model import external_model
 from model import model_helper
 from model import script_configs
 from model import server_conf
 from react.observable import Observable
-from utils import bash_utils as bash_utils
+from utils import bash_utils as bash_utils, tornado_utils
 from utils import file_utils as file_utils
 from utils import os_utils as os_utils
 from utils import tool_utils
@@ -257,6 +259,8 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
         web_socket = self
 
+        file_download_feature = self.application.file_download_feature
+
         class FinishListener(object):
             def finished(self):
                 output_stream.wait_close()
@@ -267,9 +271,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
                         executor.config,
                         script_output,
                         executor.parameter_values,
-                        audit_name,
-                        get_tornado_secret(),
-                        TEMP_FOLDER)
+                        audit_name)
 
                     for file in downloadable_files:
                         filename = os.path.basename(file)
@@ -308,9 +310,8 @@ class ScriptExecute(BaseRequestHandler):
         audit_name = get_audit_name(self)
 
         try:
-            request_data = self.request.body
-
-            execution_info = external_model.to_execution_info(request_data.decode("UTF-8"))
+            arguments = tornado_utils.get_form_arguments(self)
+            execution_info = external_model.to_execution_info(arguments)
 
             script_name = execution_info.script
 
@@ -321,6 +322,13 @@ class ScriptExecute(BaseRequestHandler):
                 LOGGER.error(message)
                 respond_error(self, 400, message)
                 return
+
+            file_upload_feature = self.application.file_upload_feature
+            if self.request.files:
+                for key, value in self.request.files.items():
+                    file_info = value[0]
+                    file_path = file_upload_feature.save_file(file_info.filename, file_info.body, audit_name)
+                    execution_info.param_values[key] = file_path
 
             valid_parameters = model_helper.validate_parameters(execution_info.param_values, config)
             if not valid_parameters:
@@ -353,7 +361,6 @@ class ScriptExecute(BaseRequestHandler):
                     executor,
                     secure_output_stream)
 
-
         except Exception as e:
             LOGGER.exception("Error while calling the script")
 
@@ -378,8 +385,8 @@ class ScriptExecute(BaseRequestHandler):
 
             respond_error(self, 500, result)
 
+    @staticmethod
     def subscribe_fail_alerter(
-            self,
             script_name,
             alerts_config,
             audit_name,
@@ -415,8 +422,7 @@ class ScriptExecute(BaseRequestHandler):
 
     @staticmethod
     def create_log_identifier(audit_name, script_name):
-        if os_utils.is_win():
-            audit_name = audit_name.replace(":", "-")
+        audit_name = file_utils.to_filename(audit_name)
 
         date_string = datetime.today().strftime("%y%m%d_%H%M%S")
         script_name = script_name.replace(" ", "_")
@@ -493,8 +499,10 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
     def validate_absolute_path(self, root, absolute_path):
         audit_name = get_audit_name(self)
 
+        file_download_feature = self.application.file_download_feature
+
         file_path = file_utils.relative_path(absolute_path, os.path.abspath(root))
-        if not file_download_feature.allowed_to_download(file_path, audit_name, get_tornado_secret()):
+        if not file_download_feature.allowed_to_download(file_path, audit_name):
             LOGGER.warning('Access attempt from ' + audit_name + ' to ' + absolute_path)
             raise tornado.web.HTTPError(404)
 
@@ -607,8 +615,11 @@ def main():
 
     auth = TornadoAuth(server_config.authenticator, server_config.authorizer)
 
-    result_files_folder = file_download_feature.get_result_files_folder(TEMP_FOLDER)
-    file_download_feature.autoclean_downloads(TEMP_FOLDER)
+    user_file_storage = UserFileStorage(get_tornado_secret())
+    file_download_feature = FileDownloadFeature(user_file_storage, TEMP_FOLDER)
+    file_upload_feature = FileUploadFeature(user_file_storage, TEMP_FOLDER)
+
+    result_files_folder = file_download_feature.get_result_files_folder()
 
     handlers = [(r"/conf/title", GetServerTitle),
                 (r"/scripts/list", GetScripts),
@@ -616,7 +627,7 @@ def main():
                 (r"/scripts/execute", ScriptExecute),
                 (r"/scripts/execute/stop", ScriptStop),
                 (r"/scripts/execute/io/(.*)", ScriptStreamSocket),
-                (r'/' + file_download_feature.RESULT_FILES_FOLDER + '/(.*)',
+                (r'/' + os.path.basename(result_files_folder) + '/(.*)',
                  DownloadResultFile,
                  {'path': result_files_folder}),
                 (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
@@ -636,6 +647,9 @@ def main():
 
     application.alerts_config = server_config.get_alerts_config()
     application.server_title = server_config.title
+
+    application.file_download_feature = file_download_feature
+    application.file_upload_feature = file_upload_feature
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
     http_server.listen(server_config.port, address=server_config.address)

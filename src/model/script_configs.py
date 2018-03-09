@@ -58,7 +58,7 @@ class Parameter(object):
         self.description = None
         self.required = None
         self.default = None
-        self.type = "text"
+        self.type = 'text'
         self.min = None
         self.max = None
         self.constant = False
@@ -100,12 +100,6 @@ class Parameter(object):
 
     def get_default(self):
         return self.default
-
-    def set_type(self, value):
-        self.type = value
-
-    def get_type(self):
-        return self.type
 
     def set_min(self, value):
         self.min = value
@@ -191,9 +185,9 @@ def from_json(file_path, json_string, pty_enabled_default=False):
                 else:
                     raise Exception("Unsupported values")
 
-            type = parameter_json.get("type")
+            type = parameter_json.get('type')
             if type:
-                parameter.set_type(type)
+                parameter.type = type
 
             constant = parameter_json.get("constant")
             if constant is True:

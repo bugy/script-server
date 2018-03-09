@@ -13,19 +13,14 @@ function ScriptExecutor(scriptConfig, scriptName) {
 ScriptExecutor.prototype.start = function (parameterValues) {
     this.parameterValues = parameterValues;
 
-    var callParameters = [];
-    parameterValues.each(function (parameter, value) {
-        callParameters.push({
-            name: parameter,
-            value: value
-        });
-    });
-    var callBody = {
-        script: this.scriptConfig.name,
-        parameters: callParameters
-    };
+    var formData = new FormData();
+    formData.append('__script_name', this.scriptConfig.name);
 
-    this.processId = authorizedCallHttp('scripts/execute', callBody, 'POST');
+    parameterValues.each(function (parameter, value) {
+        formData.append(parameter, value);
+    });
+
+    this.processId = authorizedCallHttp('scripts/execute', formData, 'POST');
     this._startExecution(this.processId);
 };
 

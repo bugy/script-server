@@ -24,7 +24,10 @@ ScriptController.prototype.fillView = function (parent) {
         try {
             var parameterValues = new Hashtable();
             scriptView.parameterControls.each(function (parameter, control) {
-                parameterValues.put(parameter.name, control.getValue());
+                var value = control.getValue();
+                if (!isNull(value)) {
+                    parameterValues.put(parameter.name, value);
+                }
             });
 
             this.executor = new ScriptExecutor(this.scriptConfig, this.scriptName);

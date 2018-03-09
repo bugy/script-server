@@ -21,7 +21,7 @@ def config_to_json(config):
             "withoutValue": parameter.is_no_value(),
             "required": parameter.is_required(),
             "default": model_helper.get_default(parameter),
-            "type": parameter.get_type(),
+            "type": parameter.type,
             "min": parameter.get_min(),
             "max": parameter.get_max(),
             "values": parameter.get_values(),
@@ -35,23 +35,19 @@ def config_to_json(config):
     })
 
 
-def to_execution_info(request_data):
-    json_object = json.loads(request_data)
+def to_execution_info(request_parameters):
+    NAME_KEY = '__script_name'
 
-    script = json_object.get("script")
-
-    info = ExecutionInfo()
-    info.script = script
+    script_name = request_parameters.get(NAME_KEY)
 
     param_values = {}
-    parameters = json_object.get("parameters")
-    if parameters:
-        for parameter in parameters:
-            name = parameter.get("name")
-            value = parameter.get("value")
+    for name, value in request_parameters.items():
+        if name == NAME_KEY:
+            continue
+        param_values[name] = value
 
-            param_values[name] = value
-
+    info = ExecutionInfo()
+    info.script = script_name
     info.param_values = param_values
 
     return info

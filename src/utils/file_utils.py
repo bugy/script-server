@@ -5,6 +5,8 @@ import pathlib
 import stat
 import time
 
+from utils import os_utils
+
 
 def modification_date(file_path):
     time_string = time.ctime(os.path.getmtime(file_path))
@@ -159,3 +161,42 @@ def split_all(path):
 
     result.reverse()
     return result
+
+
+def to_filename(txt):
+    if os_utils.is_win():
+        return txt.replace(':', '-')
+
+    return txt
+
+
+def get_unique_name(preferred_path, retries=9999999):
+    original_filename = os.path.basename(preferred_path)
+    folder = os.path.dirname(preferred_path)
+
+    if not os.path.exists(preferred_path):
+        return preferred_path
+
+    i = 0
+
+    filename_split = os.path.splitext(original_filename)
+    extension = ''
+    name = ''
+    if len(filename_split) > 0:
+        name = filename_split[0]
+        if len(filename_split) > 1:
+            extension = filename_split[1]
+
+    while os.path.exists(preferred_path) and i < retries:
+        preferred_path = os.path.join(folder, name + '_' + str(i) + extension)
+        i += 1
+
+    if os.path.exists(preferred_path):
+        raise FileExistsException("Couldn't create unique filename for " + original_filename)
+
+    return preferred_path
+
+
+class FileExistsException(Exception):
+    def __init__(self, *args) -> None:
+        super().__init__(*args)

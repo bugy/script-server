@@ -41,3 +41,13 @@ def normalize_url(request_url):
     normalized_path = re.sub('/+$', '', normalized_path)
     normalized_url = urllib_parse.urljoin(request_url, normalized_path)
     return normalized_url
+
+
+def get_form_arguments(request_handler):
+    result = {}
+
+    for key in request_handler.request.arguments.keys():
+        value = request_handler.get_argument(key, None)
+        result[key] = value
+
+    return result
