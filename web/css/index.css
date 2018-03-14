@@ -498,6 +498,12 @@ h6.header {
 
 #content-panel .script-parameters-panel .dropdown-content {
     max-width: 50vw;
+    min-width: 100%;
+}
+
+#content-panel .script-parameters-panel .dropdown-content > li > span {
+    overflow-x: hidden;
+    text-overflow: ellipsis;
 }
 
 #welcome-panel {
