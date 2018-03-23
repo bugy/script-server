@@ -653,7 +653,10 @@ def main():
 
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
     http_server.listen(server_config.port, address=server_config.address)
-    print("Server is running on: http://%s:%s" % (server_config.address, server_config.port))
+
+    http_protocol = 'https' if server_config.ssl else 'http'
+    print('Server is running on: %s://%s:%s' % (http_protocol, server_config.address, server_config.port))
+
     tornado.ioloop.IOLoop.current().start()
 
 
