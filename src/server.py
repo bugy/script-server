@@ -16,7 +16,6 @@ import tornado.httpserver as httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
-
 from auth.tornado_auth import TornadoAuth
 from execution.executor import ScriptExecutor
 from execution.logging import ScriptOutputLogger
@@ -246,6 +245,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
             raise Exception("Couldn't find corresponding process")
 
         self.executor = executor
+        self.ioloop = tornado.ioloop.IOLoop.current()
 
         self.write_message(wrap_to_server_event("input", "your input >>"))
 
@@ -283,7 +283,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
                 except:
                     LOGGER.exception("Couldn't prepare downloadable files")
 
-                tornado.ioloop.IOLoop.current().add_callback(web_socket.close)
+                web_socket.ioloop.add_callback(web_socket.close)
 
         executor.add_finish_listener(FinishListener())
 
@@ -299,7 +299,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
     def safe_write(self, message):
         if self.ws_connection is not None:
-            self.write_message(message)
+            self.ioloop.add_callback(self.write_message, message)
 
 
 class ScriptExecute(BaseRequestHandler):
