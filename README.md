@@ -46,7 +46,7 @@ Internet connection is not needed. All the files are loaded from the server.
 
 ### Developer mode
 1. Clone/download the repository
-2. Run tools/init.py script (this will download javascript libraries)
+2. Run 'tools/init.py --dev' script (this will download javascript libraries)
 
 
 ## Setup and run
