@@ -44,7 +44,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     def wait_finish(self):
         pass
 
-    def get_process_id(self):
+    def _get_process_id(self):
         return self.process.pid
 
     def is_finished(self):
@@ -59,7 +59,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     def stop(self):
         if not self.is_finished():
             if not os_utils.is_win():
-                group_id = os.getpgid(self.get_process_id())
+                group_id = os.getpgid(self._get_process_id())
                 os.killpg(group_id, signal.SIGTERM)
 
                 class KillChildren(object):
@@ -80,11 +80,11 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
     def kill(self):
         if not self.is_finished():
             if not os_utils.is_win():
-                group_id = os.getpgid(self.get_process_id())
+                group_id = os.getpgid(self._get_process_id())
                 os.killpg(group_id, signal.SIGKILL)
                 self._write_script_output('\n>> KILLED\n')
             else:
-                subprocess.Popen("taskkill /F /T /PID " + self.get_process_id())
+                subprocess.Popen("taskkill /F /T /PID " + self._get_process_id())
 
     def add_finish_listener(self, listener):
         self.finish_listeners.append(listener)

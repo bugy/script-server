@@ -42,7 +42,8 @@ class BuildInfo():
     def get_files(self):
         return self.files
 
-init.prepare_project('')
+
+init.prepare_project('', prod=True)
 
 build_info = BuildInfo()
 build_info.include('launcher.py')

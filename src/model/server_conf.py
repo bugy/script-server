@@ -2,8 +2,10 @@ import json
 import os
 
 import utils.file_utils as file_utils
-from auth.authorization import AnyUserAuthorizer, ListBasedAuthorizer
+from auth.authorization import ANY_USER, Authorizer
 from model import model_helper
+from model.model_helper import read_list
+from utils.string_utils import strip
 
 
 class ServerConfig(object):
@@ -16,6 +18,7 @@ class ServerConfig(object):
         self.authenticator = None
         self.authorizer = None
         self.alerts_config = None
+        self.admin_config = None
         self.title = None
 
     def get_port(self):
@@ -80,6 +83,7 @@ def from_json(conf_path):
         config.title = json_object.get('title')
 
     auth_config = json_object.get('auth')
+    admin_users = _parse_admin_users(json_object)
     if auth_config:
         config.authenticator = create_authenticator(auth_config)
 
@@ -89,7 +93,9 @@ def from_json(conf_path):
         if auth_type == 'google_oauth' and allowed_users is None:
             raise Exception('auth.allowed_users field is mandatory for ' + auth_type)
 
-        config.authorizer = create_authorizer(allowed_users)
+        config.authorizer = _create_authorizer(allowed_users, admin_users)
+    else:
+        config.authorizer = _create_authorizer('*', admin_users)
 
     config.alerts_config = parse_alerts_config(json_object)
 
@@ -117,20 +123,21 @@ def create_authenticator(auth_object):
     return authenticator
 
 
-def create_authorizer(allowed_users):
+def _create_authorizer(allowed_users, admin_users):
     if (allowed_users is None) or (allowed_users == '*'):
-        return AnyUserAuthorizer()
+        coerced_users = [ANY_USER]
 
     elif not isinstance(allowed_users, list):
         raise Exception('allowed_users should be list')
 
-    coerced_users = [user.strip() for user in allowed_users]
-    coerced_users = [user for user in coerced_users if len(user) > 0]
+    else:
+        coerced_users = strip(allowed_users)
+        coerced_users = [user for user in coerced_users if len(user) > 0]
 
-    if '*' in coerced_users:
-        return AnyUserAuthorizer()
+        if '*' in coerced_users:
+            coerced_users = [ANY_USER]
 
-    return ListBasedAuthorizer(coerced_users)
+    return Authorizer(coerced_users, admin_users)
 
 
 def parse_alerts_config(json_object):
@@ -158,3 +165,10 @@ def parse_alerts_config(json_object):
             return alerts_config
 
     return None
+
+
+def _parse_admin_users(json_object):
+    default_admins = ['127.0.0.1', 'localhost', 'ip6-localhost']
+    admin_users = read_list(json_object, 'admin_users', default_admins)
+
+    return strip(admin_users)

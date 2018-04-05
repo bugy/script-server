@@ -14,11 +14,20 @@ LIBRARIES = {
     'materialize.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/js/materialize.min.js',
     'hashtable.js': 'https://github.com/timdown/jshashtable/releases/download/v3.0/jshashtable-3.0.js',
     'MaterialIcons-Regular.woff2':
-        'https://github.com/google/material-design-icons/blob/master/iconfont/MaterialIcons-Regular.woff2?raw=true'
+        'https://github.com/google/material-design-icons/blob/master/iconfont/MaterialIcons-Regular.woff2?raw=true',
+
+    'vue.js': {
+        'prod': 'https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.15/vue.min.js',
+        'dev': 'https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.15/vue.js'
+    },
+    'vue-router.js': {
+        'prod': 'https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.0.1/vue-router.min.js',
+        'dev': 'https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.0.1/vue-router.js'
+    }
 }
 
 
-def prepare_project(project_path):
+def prepare_project(project_path, prod=True):
     import_paths = tool_utils.get_import_paths(project_path)
 
     for import_path in import_paths:
@@ -33,6 +42,9 @@ def prepare_project(project_path):
 
         print('Downloading library ' + library + '...')
         url = LIBRARIES[library]
+        if isinstance(url, dict):
+            url = url['prod'] if prod else url['dev']
+
         urllib.request.urlretrieve(url, import_path)
 
     runners_conf = os.path.join(project_path, 'conf', 'runners')
@@ -47,4 +59,6 @@ if __name__ == "__main__":
     else:
         project_path = ''
 
-    prepare_project(project_path)
+    prod = '--dev' not in sys.argv
+
+    prepare_project(project_path, prod)

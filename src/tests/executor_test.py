@@ -330,7 +330,7 @@ class _MockProcessWrapper(ProcessWrapper):
         self.finished = False
         self.process_id = time.time()
 
-    def get_process_id(self):
+    def _get_process_id(self):
         return self.process_id
 
     def set_finished(self):

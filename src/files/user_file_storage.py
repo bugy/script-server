@@ -1,14 +1,13 @@
 import datetime
 import hashlib
 import logging
-import math
 import os
 import re
 import shutil
 import threading
-import time
 
 from utils import file_utils
+from utils.date_utils import get_current_millis
 
 LOGGER = logging.getLogger('script_server.user_file_storage')
 
@@ -32,7 +31,7 @@ class UserFileStorage:
         return path_chunks[0] == user_folder
 
     def prepare_new_folder(self, audit_name, parent_path):
-        millis = int(round(time.time() * 1000))
+        millis = get_current_millis()
         user_folder_name = self._get_user_download_folder(audit_name)
 
         temp_path = os.path.join(parent_path, user_folder_name, str(millis))

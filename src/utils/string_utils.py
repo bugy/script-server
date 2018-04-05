@@ -24,3 +24,22 @@ def unwrap_quotes(string):
         return string[1:-1]
 
     return string
+
+
+def strip(value):
+    if value is None:
+        return value
+
+    if isinstance(value, list):
+        return [strip(x) for x in value]
+
+    if isinstance(value, dict):
+        result = {}
+        for k, v in value.items():
+            result[strip(k)] = strip(v)
+        return result
+
+    if isinstance(value, str):
+        return value.strip()
+
+    return value

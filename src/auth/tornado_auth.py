@@ -31,7 +31,7 @@ class TornadoAuth():
             return True
 
         username = self._get_current_user(request_handler)
-        return self.authorizer.is_allowed(username)
+        return self.authorizer.is_allowed_in_app(username)
 
     @staticmethod
     def _get_current_user(request_handler):
@@ -81,7 +81,7 @@ class TornadoAuth():
 
         LOGGER.info('Authenticated user ' + username)
 
-        if not self.authorizer.is_allowed(username):
+        if not self.authorizer.is_allowed_in_app(username):
             LOGGER.info('User ' + username + ' have no access')
             respond_error(request_handler, 403, 'Access is prohibited. Please contact system administrator')
             return

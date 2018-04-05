@@ -36,7 +36,7 @@ class TestUserFileStorage(unittest.TestCase):
         self.storage.start_autoclean(test_utils.temp_folder, 2)
         self.assertTrue(os.path.exists(folder))
 
-        time.sleep(0.005)
+        time.sleep(0.020)
         self.assertFalse(os.path.exists(folder))
 
     def test_allow_to_access_own_folder(self):

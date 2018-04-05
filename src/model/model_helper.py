@@ -10,6 +10,7 @@ SECURE_MASK = '*' * 6
 
 LOGGER = logging.getLogger('script_server.model_helper')
 
+
 def get_default(parameter: Parameter):
     default = parameter.get_default()
     if not default:
@@ -31,6 +32,57 @@ def read_obligatory(values_dict, key, error_suffix=''):
         raise Exception('"' + key + '" is required attribute' + error_suffix)
 
     return value
+
+
+def read_list(values_dict, key, default=None):
+    """
+    Reads value from values_dict as a list
+    
+    If value is a list, then list is returned
+    
+    If value is missing, then default value is returned (or an empty list if not specified)
+    
+    If value is a dictionary, then error is raised
+    
+    Otherwise, a list of single element is returned as a value
+    """
+
+    value = values_dict.get(key)
+    if value is None:
+        if default is not None:
+            return default
+        return []
+
+    if isinstance(value, list):
+        return value
+
+    if isinstance(value, dict):
+        raise Exception('"' + key + '" has invalid type. List expected, got dictionary')
+
+    return [value]
+
+
+def read_dict(values_dict, key, default=None):
+    """
+    Reads value from values_dict as a dictionary
+
+    If value is a dict, then dict is returned
+
+    If value is missing, then default value is returned (or an empty dict if not specified)
+
+    Otherwise an error is raised
+    """
+
+    value = values_dict.get(key)
+    if value is None:
+        if default is not None:
+            return default
+        return {}
+
+    if isinstance(value, dict):
+        return value
+
+    raise Exception('"' + key + '" has invalid type. Dict expected')
 
 
 def is_empty(value):

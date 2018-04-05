@@ -3,6 +3,8 @@ import unittest
 
 from model import model_helper
 from model import script_configs
+from model.model_helper import read_list, read_dict
+from tests import test_utils
 
 
 class TestDefaultValue(unittest.TestCase):
@@ -325,6 +327,26 @@ class TestParametersValidation(unittest.TestCase):
         valid = model_helper.validate_parameters({'param': 0}, script_config)
         self.assertTrue(valid)
 
+    def test_file_upload_parameter_when_valid(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'file_upload'
+
+        uploaded_file = test_utils.create_file('test.xml')
+        valid = model_helper.validate_parameters({'param': uploaded_file}, script_config)
+        self.assertTrue(valid)
+
+    def test_file_upload_parameter_when_not_exists(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'file_upload'
+
+        uploaded_file = test_utils.create_file('test.xml')
+        valid = model_helper.validate_parameters({'param': uploaded_file + '_'}, script_config)
+        self.assertFalse(valid)
+
     def test_list_parameter_when_matches(self):
         script_config = script_configs.Config()
 
@@ -428,6 +450,73 @@ class TestParametersValidation(unittest.TestCase):
 
         return parameter
 
+    def setUp(self):
+        test_utils.setup()
 
-if __name__ == '__main__':
-    unittest.main()
+    def tearDown(self):
+        test_utils.cleanup()
+
+
+class TestReadList(unittest.TestCase):
+    def test_simple_list(self):
+        values_dict = {'list_key': [1, 2, 3]}
+        list_value = read_list(values_dict, 'list_key')
+        self.assertEqual(list_value, [1, 2, 3])
+
+    def test_single_value(self):
+        values_dict = {'list_key': 'hello'}
+        list_value = read_list(values_dict, 'list_key')
+        self.assertEqual(list_value, ['hello'])
+
+    def test_empty_single_value(self):
+        values_dict = {'list_key': ''}
+        list_value = read_list(values_dict, 'list_key')
+        self.assertEqual(list_value, [''])
+
+    def test_default_value_when_missing(self):
+        values_dict = {'another_key': 'hello'}
+        list_value = read_list(values_dict, 'list_key')
+        self.assertEqual(list_value, [])
+
+    def test_default_value_when_specified(self):
+        values_dict = {'another_key': 'hello'}
+        list_value = read_list(values_dict, 'list_key', [True, False])
+        self.assertEqual(list_value, [True, False])
+
+    def test_dict_not_allowed_value(self):
+        values_dict = {'list_key': {'key1': 'value1'}}
+        self.assertRaises(Exception, read_list, values_dict, 'list_key')
+
+
+class TestReadDict(unittest.TestCase):
+    def test_simple_dict(self):
+        values_dict = {'dict_key': {'key1': 'value1', 'key2': 'value2'}}
+        dict_value = read_dict(values_dict, 'dict_key')
+        self.assertEqual(dict_value, {'key1': 'value1', 'key2': 'value2'})
+
+    def test_list_value_not_allowed(self):
+        values_dict = {'dict_key': [1, 2]}
+        self.assertRaises(Exception, read_dict, values_dict, 'dict_key')
+
+    def test_single_value_not_allowed(self):
+        values_dict = {'dict_key': 'hello'}
+        self.assertRaises(Exception, read_dict, values_dict, 'dict_key')
+
+    def test_empty_value_not_allowed(self):
+        values_dict = {'dict_key': ''}
+        self.assertRaises(Exception, read_dict, values_dict, 'dict_key')
+
+    def test_empty_dict(self):
+        values_dict = {'dict_key': {}}
+        dict_value = read_dict(values_dict, 'dict_key', {'key1': 'value1'})
+        self.assertEqual(dict_value, {})
+
+    def test_default_when_missing(self):
+        values_dict = {'another_key': {'key1': 'value1'}}
+        dict_value = read_dict(values_dict, 'dict_key')
+        self.assertEqual(dict_value, {})
+
+    def test_default_when_specified(self):
+        values_dict = {'another_key': {'key1': 'value1'}}
+        dict_value = read_dict(values_dict, 'dict_key', {'key2': 'value2'})
+        self.assertEqual(dict_value, {'key2': 'value2'})

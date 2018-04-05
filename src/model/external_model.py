@@ -1,4 +1,5 @@
 import json
+from datetime import timezone
 
 from model import model_helper
 
@@ -33,6 +34,43 @@ def config_to_json(config):
         "description": config.get_description(),
         "parameters": parameters
     })
+
+
+def to_short_execution_log(history_entries, running_script_ids=None):
+    if running_script_ids is None:
+        running_script_ids = []
+
+    result = []
+    for entry in history_entries:
+        running = entry.id in running_script_ids
+        external_entry = _translate_history_entry(entry, running)
+        result.append(external_entry)
+
+    return result
+
+
+def to_long_execution_log(entry, log, running):
+    external_entry = _translate_history_entry(entry, running)
+    external_entry['command'] = entry.command
+    external_entry['log'] = log
+
+    return external_entry
+
+
+def _translate_history_entry(entry, running):
+    if entry.start_time:
+        start_time = entry.start_time.astimezone(timezone.utc).isoformat()
+    else:
+        start_time = None
+
+    return {
+        'id': entry.id,
+        'startTime': start_time,
+        'user': entry.username,
+        'script': entry.script_name,
+        'status': 'running' if running else 'finished',
+        'exitCode': entry.exit_code
+    }
 
 
 def to_execution_info(request_parameters):
