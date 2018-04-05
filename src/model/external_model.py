@@ -2,6 +2,7 @@ import json
 from datetime import timezone
 
 from model import model_helper
+from utils import date_utils
 
 
 class ExecutionInfo(object):
@@ -59,7 +60,7 @@ def to_long_execution_log(entry, log, running):
 
 def _translate_history_entry(entry, running):
     if entry.start_time:
-        start_time = entry.start_time.astimezone(timezone.utc).isoformat()
+        start_time = date_utils.astimezone(entry.start_time, timezone.utc).isoformat()
     else:
         start_time = None
 

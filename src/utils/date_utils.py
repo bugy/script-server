@@ -1,5 +1,6 @@
+import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 def get_current_millis():
@@ -16,3 +17,13 @@ def ms_to_datetime(time_millis):
 
 def sec_to_datetime(time_seconds):
     return datetime.fromtimestamp(time_seconds, tz=timezone.utc)
+
+
+def astimezone(datetime_value, new_timezone):
+    if (datetime_value.tzinfo is not None) or (sys.version_info >= (3, 6)):
+        return datetime_value.astimezone(new_timezone)
+    else:
+        local_timezone = timezone(timedelta(seconds=-time.timezone))
+        datetime_with_local_tz = datetime_value.replace(tzinfo=local_timezone)
+        transformed = datetime_with_local_tz.astimezone(new_timezone)
+        return transformed

@@ -1,6 +1,6 @@
 import random
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 
 from execution.logging import HistoryEntry
 from model.external_model import to_short_execution_log, to_long_execution_log
@@ -36,6 +36,22 @@ class TestHistoryEntry(unittest.TestCase):
             translated_entries[0],
             'id1',
             start_time_string='2018-04-03T15:55:22+00:00'
+        )
+
+    def test_start_time_without_timezone(self):
+        start_time_local = datetime(2018, 4, 5, 12, 34, 56, tzinfo=timezone.utc).astimezone(tz=None)
+        start_time_naive = start_time_local.replace(tzinfo=None)
+        entry = self._create_history_entry(
+            'id1',
+            start_time=start_time_naive
+        )
+
+        translated_entries = to_short_execution_log([entry])
+
+        self._validate_translated_entry(
+            translated_entries[0],
+            'id1',
+            start_time_string=start_time_local.astimezone(tz=timezone.utc).isoformat()
         )
 
     def test_missing_start_time(self):
@@ -84,7 +100,7 @@ class TestHistoryEntry(unittest.TestCase):
             id = str(self.random_instance.randint(0, 10000000))
 
         if start_time is None:
-            start_time = datetime.now()
+            start_time = datetime.now(timezone.utc)
 
         entry = HistoryEntry()
         entry.id = id
