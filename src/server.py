@@ -14,7 +14,6 @@ import tornado.httpserver as httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
-
 from alerts.alerts_service import AlertsService
 from auth.tornado_auth import TornadoAuth
 from execution.execution_service import ExecutionService
@@ -589,6 +588,7 @@ def main():
     logging_conf_file = os.path.join(CONFIG_FOLDER, 'logging.json')
     with open(logging_conf_file, "rt") as f:
         log_config = json.load(f)
+        file_utils.prepare_folder(os.path.join('logs'))
 
         logging.config.dictConfig(log_config)
 
