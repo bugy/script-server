@@ -1,7 +1,7 @@
 import os
 import unittest
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from execution.logging import ScriptOutputLogger, ExecutionLoggingService, OUTPUT_STARTED_MARKER, \
     PostExecutionInfoProvider
@@ -204,7 +204,7 @@ class TestLoggingService(unittest.TestCase):
 
         entry = self.logging_service.find_history_entry('id1')
         self.assertEqual(entry.start_time, start_time_with_tz)
-        self.assertEqual(entry.start_time.tzname(), 'UTC')
+        self.assertEqual(entry.start_time.utcoffset(), timedelta(hours=0, minutes=0))
 
     def validate_history_entry(self, entry, *,
                                id,
