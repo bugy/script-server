@@ -168,7 +168,7 @@ def parse_alerts_config(json_object):
 
 
 def _parse_admin_users(json_object):
-    default_admins = ['127.0.0.1', 'localhost', 'ip6-localhost']
+    default_admins = ['127.0.0.1']
     admin_users = read_list(json_object, 'admin_users', default_admins)
 
     return strip(admin_users)

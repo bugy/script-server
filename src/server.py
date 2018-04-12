@@ -29,11 +29,11 @@ from model import script_configs
 from model import server_conf
 from model.external_model import to_short_execution_log, to_long_execution_log
 from model.model_helper import is_empty
-from utils import bash_utils as bash_utils, tornado_utils
+from utils import bash_utils as bash_utils, tornado_utils, audit_utils
 from utils import file_utils as file_utils
 from utils import os_utils as os_utils
 from utils import tool_utils
-from utils.audit_utils import get_all_audit_names
+from utils.audit_utils import get_all_audit_names, AUTH_USERNAME
 from utils.audit_utils import get_audit_name
 from utils.tornado_utils import respond_error, redirect_relative
 
@@ -174,9 +174,18 @@ def requires_admin_rights(func):
     return wrapper
 
 
-def has_admin_rights(self):
-    audit_name = get_audit_name(self)
-    return self.application.authorizer.is_admin(audit_name)
+def has_admin_rights(request_handler):
+    names = get_all_audit_names(request_handler)
+    if AUTH_USERNAME in names:
+        username = names[audit_utils.AUTH_USERNAME]
+    else:
+        username = names.get(audit_utils.IP)
+
+    if not username:
+        LOGGER.warning('has_admin_rights: could not resolve username for %s', get_audit_name(request_handler))
+        return False
+
+    return request_handler.application.authorizer.is_admin(username)
 
 
 class ProxiedRedirectHandler(tornado.web.RedirectHandler):
