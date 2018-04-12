@@ -12,11 +12,11 @@ class TestSplitCommand(unittest.TestCase):
         self.assertEqual(command_split, ['python'])
 
     def test_full_path_command(self):
-        test_utils.create_file('test.sh')
+        file = test_utils.create_file('test.sh')
 
         command_split = process_utils.split_command('test.sh', test_utils.temp_folder)
 
-        self.assertEqual(command_split, [os.path.abspath(os.path.join(test_utils.temp_folder, 'test.sh'))])
+        self.assertEqual(command_split, [os.path.abspath(file)])
 
     def test_complex_command_linux(self):
         test_utils.set_linux()
@@ -59,6 +59,25 @@ class TestSplitCommand(unittest.TestCase):
         command_split = process_utils.split_command('\'"my script.py"\' "\'param 1\'"')
 
         self.assertEqual(command_split, ['"my script.py"', "'param 1'"])
+
+    def test_allow_not_quoted_file_with_whitespaces(self):
+        file = test_utils.create_file('my script.py')
+        command_split = process_utils.split_command('my script.py', test_utils.temp_folder)
+
+        self.assertEqual(command_split, [os.path.abspath(file)])
+
+    def test_allow_not_quoted_file_with_whitespaces_win(self):
+        test_utils.set_win()
+
+        file = test_utils.create_file('my script.py')
+        command_split = process_utils.split_command('my script.py', test_utils.temp_folder)
+
+        self.assertEqual(command_split, [os.path.abspath(file)])
+
+    def test_split_not_quoted_file_with_whitespaces_when_not_exists(self):
+        command_split = process_utils.split_command('my script.py', test_utils.temp_folder)
+
+        self.assertEqual(command_split, ['my', 'script.py'])
 
     def setUp(self):
         test_utils.setup()

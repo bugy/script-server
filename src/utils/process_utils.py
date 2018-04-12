@@ -1,3 +1,4 @@
+import logging
 import os
 import shlex
 import subprocess
@@ -5,6 +6,8 @@ import subprocess
 from utils import file_utils
 from utils import os_utils
 from utils import string_utils
+
+LOGGER = logging.getLogger('script_server.process_utils')
 
 
 def invoke(command, work_dir='.'):
@@ -40,11 +43,14 @@ def invoke(command, work_dir='.'):
 
 def split_command(script_command, working_directory=None):
     if ' ' in script_command:
-        posix = not os_utils.is_win()
-        args = shlex.split(script_command, posix=posix)
+        if _is_file_path(script_command, working_directory):
+            args = [script_command]
+        else:
+            posix = not os_utils.is_win()
+            args = shlex.split(script_command, posix=posix)
 
-        if not posix:
-            args = [string_utils.unwrap_quotes(arg) for arg in args]
+            if not posix:
+                args = [string_utils.unwrap_quotes(arg) for arg in args]
     else:
         args = [script_command]
 
@@ -56,3 +62,18 @@ def split_command(script_command, working_directory=None):
             script_args[i] = expanded
 
     return [script_path] + script_args
+
+
+def _is_file_path(script_command_with_whitespaces, working_directory):
+    if script_command_with_whitespaces.startswith('"') \
+            or script_command_with_whitespaces.startswith("'"):
+        return False
+
+    file_exists = file_utils.exists(script_command_with_whitespaces, working_directory)
+    if file_exists:
+        LOGGER.warning('"%s" is a file with whitespaces'
+                       ', please wrap it with quotes to avoid ambiguity',
+                       script_command_with_whitespaces)
+        return True
+
+    return False

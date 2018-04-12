@@ -21,7 +21,7 @@ class ScriptExecutor:
 
         self.working_directory = self._get_working_directory()
         self.script_base_command = process_utils.split_command(
-            self.config.get_script_command(),
+            self.config.script_command,
             self.working_directory)
         self.secure_replacements = self.__init_secure_replacements()
 

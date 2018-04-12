@@ -105,8 +105,8 @@ def make_executable(filename):
     os.chmod(filename, st.st_mode | stat.S_IEXEC)
 
 
-def exists(filename):
-    path = normalize_path(filename)
+def exists(filename, current_folder=None):
+    path = normalize_path(filename, current_folder)
     return os.path.exists(path)
 
 

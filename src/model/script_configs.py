@@ -25,9 +25,6 @@ class Config(object):
     def get_config_path(self):
         return self.config_path
 
-    def get_script_command(self):
-        return self.script_command
-
     def get_name(self):
         return self.name
 
