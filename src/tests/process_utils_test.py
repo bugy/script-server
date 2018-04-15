@@ -58,7 +58,7 @@ class TestSplitCommand(unittest.TestCase):
 
         command_split = process_utils.split_command('\'"my script.py"\' "\'param 1\'"')
 
-        self.assertEqual(command_split, ['"my script.py"', "'param 1'"])
+        self.assertEqual(command_split, ['my script.py', "param 1"])
 
     def test_allow_not_quoted_file_with_whitespaces(self):
         file = test_utils.create_file('my script.py')

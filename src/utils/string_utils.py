@@ -19,9 +19,9 @@ def is_integer(text):
 
 def unwrap_quotes(string):
     if string.startswith('"') and string.endswith('"'):
-        return string[1:-1]
+        return unwrap_quotes(string[1:-1])
     elif string.startswith("'") and string.endswith("'"):
-        return string[1:-1]
+        return unwrap_quotes(string[1:-1])
 
     return string
 

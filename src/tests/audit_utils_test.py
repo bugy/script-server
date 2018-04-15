@@ -1,7 +1,7 @@
 import base64
 import unittest
 
-from utils import audit_utils
+from utils import audit_utils, os_utils
 
 
 def mock_object():
@@ -36,6 +36,11 @@ def get_audit_name(request_handler):
 def normalize_hostname(hostname):
     if hostname == 'ip6-localhost':
         return 'localhost'
+    if os_utils.is_win():
+        import platform
+        if hostname == platform.node():
+            return 'localhost'
+
     return hostname
 
 
