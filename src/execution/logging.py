@@ -72,7 +72,7 @@ class ScriptOutputLogger:
     def write_line(self, text):
         self._ensure_file_open()
 
-        self.__log(text + os.linesep)
+        self.__log(text + '\n')
 
 
 class HistoryEntry:
@@ -167,7 +167,7 @@ class ExecutionLoggingService:
             return None
 
         file_content = file_utils.read_file(os.path.join(self._output_folder, file))
-        log = file_content.split(OUTPUT_STARTED_MARKER + os.linesep, 1)[1]
+        log = file_content.split(OUTPUT_STARTED_MARKER + '\n', 1)[1]
         return log
 
     def _extract_history_entry(self, file):
@@ -182,9 +182,9 @@ class ExecutionLoggingService:
     def _read_parameters_text(file_path):
         parameters_text = ''
         correct_format = False
-        with open(file_path) as f:
+        with open(file_path, 'r') as f:
             for line in f:
-                if line.rstrip(os.linesep) == OUTPUT_STARTED_MARKER:
+                if line.rstrip('\n') == OUTPUT_STARTED_MARKER:
                     correct_format = True
                     break
                 parameters_text += line
@@ -229,13 +229,13 @@ class ExecutionLoggingService:
                 continue
 
             if current_key is not None:
-                parameters[current_key] = current_value.rstrip(os.linesep)
+                parameters[current_key] = current_value.rstrip('\n')
 
             current_key = match.group(1)
             current_value = match.group(2)
 
         if current_key is not None:
-            parameters[current_key] = current_value.rstrip(os.linesep)
+            parameters[current_key] = current_value.rstrip('\n')
 
         id = parameters.get('id')
         if not id:
@@ -317,12 +317,12 @@ class ExecutionLoggingService:
                 id = next(id_generator)
 
             new_begin = ''
-            new_begin += 'id:' + id + os.linesep
-            new_begin += 'user:' + username + os.linesep
-            new_begin += 'script:' + script_name + os.linesep
-            new_begin += 'start_time:' + str(to_millis(start_time)) + os.linesep
-            new_begin += 'command:unknown' + os.linesep
-            new_begin += OUTPUT_STARTED_MARKER + os.linesep
+            new_begin += 'id:' + id + '\n'
+            new_begin += 'user:' + username + '\n'
+            new_begin += 'script:' + script_name + '\n'
+            new_begin += 'start_time:' + str(to_millis(start_time)) + '\n'
+            new_begin += 'command:unknown' + '\n'
+            new_begin += OUTPUT_STARTED_MARKER + '\n'
 
             file_content = file_utils.read_file(old_file)
             file_content = new_begin + file_content
@@ -338,9 +338,9 @@ class ExecutionLoggingService:
 
         file_content = file_utils.read_file(log_file_path)
 
-        file_parts = file_content.split(OUTPUT_STARTED_MARKER + os.linesep, 1)
+        file_parts = file_content.split(OUTPUT_STARTED_MARKER + '\n', 1)
         parameters_text = file_parts[0]
-        parameters_text += 'exit_code:' + str(exit_code) + os.linesep
+        parameters_text += 'exit_code:' + str(exit_code) + '\n'
 
-        new_content = parameters_text + OUTPUT_STARTED_MARKER + os.linesep + file_parts[1]
+        new_content = parameters_text + OUTPUT_STARTED_MARKER + '\n' + file_parts[1]
         file_utils.write_file(log_file_path, new_content)
