@@ -17,7 +17,8 @@ GUI is very straightforward and easy-to-use for anyone. Example of the user inte
 6. Transparent logging and auditing
 7. Bash colors/styles support [conf-script]
 8. Download script execution results [conf-script]
-9. Running multiple scripts for a user in parallel
+9. Admin page (admin.html) with script execution logs and information
+10. Running multiple scripts for a user in parallel
 
 [conf-script] These features are configurable per script, see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details
 
