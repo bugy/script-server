@@ -19,9 +19,9 @@ class ScriptExecutor:
         self.parameter_values = parameter_values
         self.audit_name = audit_name
 
-        self.working_directory = self.get_working_directory()
+        self.working_directory = self._get_working_directory()
         self.script_base_command = process_utils.split_command(
-            self.config.get_script_command(),
+            self.config.script_command,
             self.working_directory)
         self.secure_replacements = self.__init_secure_replacements()
 
@@ -29,7 +29,7 @@ class ScriptExecutor:
         self.output_stream = None
         self.secure_output_stream = None
 
-    def get_working_directory(self):
+    def _get_working_directory(self):
         working_directory = self.config.get_working_directory()
         if working_directory is not None:
             working_directory = file_utils.normalize_path(working_directory)
@@ -69,8 +69,6 @@ class ScriptExecutor:
                 .map(self.__replace_secure_variables)
         else:
             self.secure_output_stream = self.output_stream
-
-        return process_wrapper.get_process_id()
 
     def __init_secure_replacements(self):
         word_replacements = {}
@@ -119,6 +117,9 @@ class ScriptExecutor:
 
     def get_return_code(self):
         return self.process_wrapper.get_return_code()
+
+    def is_finished(self):
+        return self.process_wrapper.is_finished()
 
     def add_finish_listener(self, listener):
         self.process_wrapper.add_finish_listener(listener)

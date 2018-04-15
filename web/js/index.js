@@ -3,6 +3,7 @@ loadScript('js/components/abstract_input.js');
 loadScript('js/components/checkbox.js');
 loadScript('js/components/textfield.js');
 loadScript('js/components/combobox.js');
+loadScript('js/components/file_upload.js');
 loadScript('js/script/script-controller.js');
 loadScript('js/script/script-view.js');
 loadScript('js/script/script-executor.js');
@@ -301,7 +302,7 @@ function showScript(selectedScript) {
             var rawConfig = authorizedCallHttp('scripts/info?name=' + selectedScript);
             scriptConfig = JSON.parse(rawConfig);
         } catch (error) {
-            if (!(error instanceof HttpRequestError) || (error.code !== 401)) {
+            if (!(error instanceof HttpUnauthorizedError)) {
                 logError(error);
 
                 //noinspection JSDuplicatedDeclaration
@@ -350,11 +351,6 @@ function findRunningExecutor(selectedScript) {
     return scriptExecutor;
 }
 
-function bindTemplatedFieldLabel(field, label) {
-    field.id = 'script-input-field-' + guid(8);
-    label.for = field.id;
-}
-
 function createParameterControl(parameter) {
     if (parameter.withoutValue) {
         return new Checkbox(parameter.name, parameter.default, parameter.description);
@@ -366,6 +362,12 @@ function createParameterControl(parameter) {
             parameter.required,
             parameter.values,
             parameter.description);
+
+    } else if (parameter.type === 'file_upload') {
+        return new FileUpload(
+            parameter.name,
+            parameter.description,
+            parameter.required);
 
     } else {
         return new TextField(
@@ -493,16 +495,11 @@ function getInvalidTypeError(type) {
     return type + " expected";
 }
 
-function createTemplateElement(templateName) {
-    var template = $('#' + templateName).html().trim();
-    return $.parseHTML(template)[0];
-}
-
 function authorizedCallHttp(url, object, method, asyncHandler) {
     try {
         return callHttp(url, object, method, asyncHandler);
     } catch (error) {
-        if ((error instanceof HttpRequestError) && (error.code === 401)) {
+        if ((error instanceof HttpRequestError) && contains([401, 403], error.code)) {
             var link = document.createElement('a');
             link.innerHTML = 'relogin';
             link.addEventListener('click', function () {
@@ -510,8 +507,11 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
             });
             link.href = 'javascript:void(0)';
 
-            var errorPanel = showErrorPanel('Credentials expired, please ');
+            var message = error.code === 401 ? 'Credentials expired' : 'Access denied';
+            var errorPanel = showErrorPanel(message + ', please ');
             errorPanel.appendChild(link);
+
+            throw new HttpUnauthorizedError(error.code, message);
         }
 
         throw error;

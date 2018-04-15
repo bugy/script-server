@@ -1,8 +1,7 @@
 import base64
-import logging
 import unittest
 
-from utils import audit_utils
+from utils import audit_utils, os_utils
 
 
 def mock_object():
@@ -30,11 +29,27 @@ def mock_request_handler(ip=None, proxy_username=None, auth_username=None):
 
 
 def get_audit_name(request_handler):
-    return audit_utils.get_audit_name(request_handler)
+    audit_name = audit_utils.get_audit_name(request_handler)
+    return normalize_hostname(audit_name)
+
+
+def normalize_hostname(hostname):
+    if hostname == 'ip6-localhost':
+        return 'localhost'
+    if os_utils.is_win():
+        import platform
+        if hostname == platform.node():
+            return 'localhost'
+
+    return hostname
 
 
 def get_all_audit_names(request_handler):
-    return audit_utils.get_all_audit_names(request_handler)
+    names = audit_utils.get_all_audit_names(request_handler)
+    if 'hostname' in names:
+        names['hostname'] = normalize_hostname(names['hostname'])
+
+    return names
 
 
 class TestGetAuditName(unittest.TestCase):

@@ -57,26 +57,42 @@ function removeClass(element, clazz) {
     element.classList.remove(clazz);
 }
 
-function callHttp(url, object, method, asyncHandler) {
+function callHttp(url, object, method, asyncHandler, onError) {
     method = method || "GET";
 
     var xhttp = new XMLHttpRequest();
 
     var async = !isNull(asyncHandler);
     if (async) {
-        xhttp.onreadystatechange = function (event) {
-            if (xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200) {
-                asyncHandler(xhttp.responseText);
+        xhttp.onreadystatechange = function () {
+            if (xhttp.readyState === XMLHttpRequest.DONE) {
+                if (xhttp.status === 200) {
+                    asyncHandler(xhttp.responseText);
+                } else if (onError) {
+                    onError(xhttp.status, xhttp.responseText);
+                }
             }
         };
+
+        if (onError) {
+            xhttp.addEventListener('error', function (event) {
+                console.log('Failed to execute request: ' + event);
+                onError(-1, 'Unknown error occurred');
+            });
+        }
     }
 
     xhttp.open(method, url, async);
+    xhttp.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
     try {
-        if (!isNull(object)) {
-            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        if (object instanceof FormData) {
+            xhttp.send(object);
+
+        } else if (!isNull(object)) {
+            xhttp.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
             xhttp.send(JSON.stringify(object));
+
         } else {
             xhttp.send();
         }
@@ -85,7 +101,7 @@ function callHttp(url, object, method, asyncHandler) {
     }
 
     if (!async) {
-        if (xhttp.status == 200) {
+        if (xhttp.status === 200) {
             return xhttp.responseText;
 
         } else {
@@ -100,17 +116,37 @@ function callHttp(url, object, method, asyncHandler) {
     }
 }
 
-function HttpRequestError(code, message) {
-    this.code = code;
-    this.message = message;
-    var lastPart = new Error().stack.match(/[^\s]+$/);
-    this.stack = this.name + 'at' + lastPart;
+function _createErrorType(name, init) {
+    function NewErrorType(code, message) {
+        if (!Error.captureStackTrace) {
+            this.stack = (new Error()).stack;
+        } else {
+            Error.captureStackTrace(this, this.constructor);
+        }
+        if (arguments['message']) {
+            this.message = arguments['message'];
+        }
+
+        if (init) {
+            init.apply(this, arguments);
+        }
+    }
+
+    NewErrorType.prototype = Object.create(Error.prototype);
+    NewErrorType.prototype.name = name;
+    NewErrorType.prototype.constructor = NewErrorType;
+    return NewErrorType;
 }
-HttpRequestError.prototype = Object.create(Error.prototype);
-HttpRequestError.prototype.name = "HttpRequestError";
-HttpRequestError.prototype.message = "";
-HttpRequestError.prototype.code = -1;
-HttpRequestError.prototype.constructor = HttpRequestError;
+
+var HttpRequestError = _createErrorType('HttpRequestError', function (code, message) {
+    this.code = code || -1;
+    this.message = message || '';
+});
+
+var HttpUnauthorizedError = _createErrorType('HttpUnauthorizedError', function (code, message) {
+    this.code = code || -1;
+    this.message = message || '';
+});
 
 function isNull(object) {
     return ((typeof object) === 'undefined' || (object === null));
@@ -192,4 +228,62 @@ function guid(length) {
 
 function logError(error) {
     (console.error || console.log).call(console, error.stack || error);
+}
+
+function createTemplateElement(templateName) {
+    var template = $('#' + templateName).html().trim();
+    var element = $.parseHTML(template)[0];
+
+    var clazz = templateName.replace(/-template$/g, '');
+    addClass(element, clazz);
+
+    return element;
+}
+
+function bindTemplatedFieldLabel(field, label) {
+    field.id = 'script-input-field-' + guid(8);
+    label.for = field.id;
+}
+
+function readQueryParameters() {
+    var argString = window.location.search;
+    if (!argString || argString.length <= 1) {
+        return {};
+    }
+
+    var pairs = argString.substr(1).split('&');
+
+    var result = {};
+    for (var i = 0; i < pairs.length; i++) {
+        var keyAndValue = pairs[i].split('=', 2);
+
+        if (keyAndValue.length !== 2) {
+            continue;
+        }
+
+        var key = keyAndValue[0];
+        var value = keyAndValue[1];
+
+        result[key] = decodeURIComponent(value.replace(/\+/g, ' '));
+    }
+
+    return result;
+}
+
+function getQueryParameter(parameter, url) {
+    var parameters = readQueryParameters(url);
+    return parameters[parameter];
+}
+
+function getUrlDir() {
+    var path = window.location.pathname;
+    return path.substring(0, path.lastIndexOf('/'));
+}
+
+function getUnparameterizedUrl() {
+    return [location.protocol, '//', location.host, location.pathname].join('');
+}
+
+function contains(array, element) {
+    return array.indexOf(element) !== -1
 }

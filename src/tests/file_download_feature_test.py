@@ -58,6 +58,23 @@ class TestFileMatching(unittest.TestCase):
             os.path.join(test_utils.temp_folder, 'f2', 'test3.txt')
         })
 
+    def test_double_asterisk_match_multiple_files_when_complex(self):
+        test_utils.create_file(os.path.join('f1', 'test1.txt'))
+        test_utils.create_file(os.path.join('f1', 'test2.txt'))
+        test_utils.create_file(os.path.join('d2', 'test3.txt'))
+        test_utils.create_file(os.path.join('d2', 'd3', 'test4.txt'))
+        test_utils.create_file(os.path.join('d3', 'd4', 'd5', 'test5.png'))
+        test_utils.create_file(os.path.join('d3', 'd6', 'd7', 'test6.txt'))
+
+        temp_folder = file_utils.normalize_path(test_utils.temp_folder)
+        files = set(file_download_feature.find_matching_files(temp_folder + '/d*/**/*.txt', None))
+
+        self.assertEqual(files, {
+            os.path.join(temp_folder, 'd2', 'test3.txt'),
+            os.path.join(temp_folder, 'd2', 'd3', 'test4.txt'),
+            os.path.join(temp_folder, 'd3', 'd6', 'd7', 'test6.txt')
+        })
+
     def test_regex_only_0_matches(self):
         files = file_download_feature.find_matching_files('#\d+#', 'some text without numbers')
 

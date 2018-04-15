@@ -3,7 +3,7 @@ function ScriptExecutor(scriptConfig, scriptName) {
     this.scriptName = scriptName;
     this.parameterValues = null;
     this.websocket = null;
-    this.processId = null;
+    this.executionId = null;
     this.logElements = [];
     this.listeners = [];
     this.inputPromtText = null;
@@ -13,35 +13,30 @@ function ScriptExecutor(scriptConfig, scriptName) {
 ScriptExecutor.prototype.start = function (parameterValues) {
     this.parameterValues = parameterValues;
 
-    var callParameters = [];
-    parameterValues.each(function (parameter, value) {
-        callParameters.push({
-            name: parameter,
-            value: value
-        });
-    });
-    var callBody = {
-        script: this.scriptConfig.name,
-        parameters: callParameters
-    };
+    var formData = new FormData();
+    formData.append('__script_name', this.scriptConfig.name);
 
-    this.processId = authorizedCallHttp('scripts/execute', callBody, 'POST');
-    this._startExecution(this.processId);
+    parameterValues.each(function (parameter, value) {
+        formData.append(parameter, value);
+    });
+
+    this.executionId = authorizedCallHttp('scripts/execute', formData, 'POST');
+    this._startExecution(this.executionId);
 };
 
-ScriptExecutor.prototype._startExecution = function (processId) {
+ScriptExecutor.prototype._startExecution = function (executionId) {
     var location = window.location;
 
     var https = location.protocol.toLowerCase() === 'https:';
     var wsProtocol = https ? 'wss' : 'ws';
     var hostUrl = wsProtocol + '://' + location.host;
 
-    var dir = location.pathname.substring(0, location.pathname.lastIndexOf('/'));
+    var dir = getUrlDir();
     if (dir) {
         hostUrl += '/' + dir;
     }
 
-    this.websocket = new WebSocket(hostUrl + '/scripts/execute/io/' + processId);
+    this.websocket = new WebSocket(hostUrl + '/scripts/execute/io/' + executionId);
 
     this.websocket.addEventListener('message', function (message) {
         var event = JSON.parse(message.data);
@@ -153,8 +148,8 @@ ScriptExecutor.prototype.isFinished = function () {
 };
 
 ScriptExecutor.prototype.stop = function () {
-    var processId = this.processId;
-    authorizedCallHttp('scripts/execute/stop', {'processId': processId}, 'POST');
+    var executionId = this.executionId;
+    authorizedCallHttp('scripts/execute/stop', {'executionId': executionId}, 'POST');
 };
 
 ScriptExecutor.prototype.abort = function () {

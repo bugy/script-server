@@ -15,12 +15,11 @@ LOGGER = logging.getLogger('script_server.process_pty')
 
 
 class PtyProcessWrapper(process_base.ProcessWrapper):
-    pty_master = None
-    pty_slave = None
-    encoding = None
-
     def __init__(self, command, working_directory):
         super().__init__(command, working_directory)
+
+        self.pty_master = None
+        self.pty_slave = None
 
         self.encoding = get_encoding(command, working_directory)
 

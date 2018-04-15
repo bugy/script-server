@@ -2,19 +2,24 @@ import json
 import os
 
 import utils.file_utils as file_utils
+from auth.authorization import ANY_USER, Authorizer
+from model import model_helper
+from model.model_helper import read_list
+from utils.string_utils import strip
 
 
 class ServerConfig(object):
-    port = None
-    ssl = False
-    ssl_key_path = None
-    ssl_cert_path = None
-    authorizer = None
-    alerts_config = None
-    title = None
-
-    def get_address(self):
-        return self.address
+    def __init__(self) -> None:
+        self.address = None
+        self.port = None
+        self.ssl = False
+        self.ssl_key_path = None
+        self.ssl_cert_path = None
+        self.authenticator = None
+        self.authorizer = None
+        self.alerts_config = None
+        self.admin_config = None
+        self.title = None
 
     def get_port(self):
         return self.port
@@ -28,15 +33,13 @@ class ServerConfig(object):
     def get_ssl_cert_path(self):
         return self.ssl_cert_path
 
-    def get_authorizer(self):
-        return self.authorizer
-
     def get_alerts_config(self):
         return self.alerts_config
 
 
 class AlertsConfig:
-    destinations = []
+    def __init__(self) -> None:
+        self.destinations = []
 
     def add_destination(self, destination):
         self.destinations.append(destination)
@@ -60,14 +63,8 @@ def from_json(conf_path):
 
     ssl = json_object.get("ssl")
     if ssl is not None:
-        key_path = ssl.get("key_path")
-        cert_path = ssl.get("cert_path")
-
-        if not key_path:
-            raise Exception("key_path is required for ssl")
-
-        if not cert_path:
-            raise Exception("cert_path is required for ssl")
+        key_path = model_helper.read_obligatory(ssl, 'key_path', ' for ssl')
+        cert_path = model_helper.read_obligatory(ssl, 'cert_path', ' for ssl')
 
         config.ssl = True
         config.ssl_key_path = key_path
@@ -85,24 +82,62 @@ def from_json(conf_path):
     if json_object.get('title'):
         config.title = json_object.get('title')
 
-    if json_object.get("auth"):
-        auth_object = json_object.get("auth")
-        auth_type = auth_object.get("type")
+    auth_config = json_object.get('auth')
+    admin_users = _parse_admin_users(json_object)
+    if auth_config:
+        config.authenticator = create_authenticator(auth_config)
 
-        if not auth_type:
-            raise Exception("Auth type should be specified")
+        allowed_users = auth_config.get('allowed_users')
 
-        auth_type = auth_type.strip().lower()
-        if auth_type == "ldap":
-            from auth.auth_ldap import LdapAuthorizer
-            config.authorizer = LdapAuthorizer(auth_object)
+        auth_type = config.authenticator.auth_type
+        if auth_type == 'google_oauth' and allowed_users is None:
+            raise Exception('auth.allowed_users field is mandatory for ' + auth_type)
 
-        else:
-            raise Exception(auth_type + " auth is not supported")
+        config.authorizer = _create_authorizer(allowed_users, admin_users)
+    else:
+        config.authorizer = _create_authorizer('*', admin_users)
 
     config.alerts_config = parse_alerts_config(json_object)
 
     return config
+
+
+def create_authenticator(auth_object):
+    auth_type = auth_object.get('type')
+
+    if not auth_type:
+        raise Exception('Auth type should be specified')
+
+    auth_type = auth_type.strip().lower()
+    if auth_type == 'ldap':
+        from auth.auth_ldap import LdapAuthenticator
+        authenticator = LdapAuthenticator(auth_object)
+    elif auth_type == 'google_oauth':
+        from auth.auth_google_oauth import GoogleOauthAuthenticator
+        authenticator = GoogleOauthAuthenticator(auth_object)
+    else:
+        raise Exception(auth_type + ' auth is not supported')
+
+    authenticator.auth_type = auth_type
+
+    return authenticator
+
+
+def _create_authorizer(allowed_users, admin_users):
+    if (allowed_users is None) or (allowed_users == '*'):
+        coerced_users = [ANY_USER]
+
+    elif not isinstance(allowed_users, list):
+        raise Exception('allowed_users should be list')
+
+    else:
+        coerced_users = strip(allowed_users)
+        coerced_users = [user for user in coerced_users if len(user) > 0]
+
+        if '*' in coerced_users:
+            coerced_users = [ANY_USER]
+
+    return Authorizer(coerced_users, admin_users)
 
 
 def parse_alerts_config(json_object):
@@ -130,3 +165,10 @@ def parse_alerts_config(json_object):
             return alerts_config
 
     return None
+
+
+def _parse_admin_users(json_object):
+    default_admins = ['127.0.0.1']
+    admin_users = read_list(json_object, 'admin_users', default_admins)
+
+    return strip(admin_users)

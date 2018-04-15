@@ -1,16 +1,21 @@
 import abc
 
 
-class Authorizer(metaclass=abc.ABCMeta):
+class Authenticator(metaclass=abc.ABCMeta):
+    def __init__(self) -> None:
+        self.client_visible_config = {}
+        self.auth_type = None
+
     @abc.abstractmethod
-    def authenticate(self, username, password):
+    def authenticate(self, request_handler):
         pass
+
+    def get_client_visible_config(self):
+        return self.client_visible_config
 
 
 class AuthRejectedError(Exception):
     """Credentials, provided by user, were rejected by the authentication mechanism (user is unknown to the server)"""
-    message = None
-
     def __init__(self, message=None):
         self.message = message
 
@@ -21,7 +26,17 @@ class AuthRejectedError(Exception):
 class AuthFailureError(Exception):
     """Server-side error, which shows, that authentication process failed because of some internal error.
     These kind of errors are not related to user credentials"""
-    message = None
+
+    def __init__(self, message=None):
+        self.message = message
+
+    def get_message(self):
+        return self.message
+
+
+class AuthBadRequestException(Exception):
+    """Server-side exception, when the data provided by user has invalid format or some data is missing.
+    Usually it means wrong behaviour on client-side"""
 
     def __init__(self, message=None):
         self.message = message

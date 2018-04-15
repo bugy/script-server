@@ -17,15 +17,13 @@ class Config(object):
         self.working_directory = None
         self.bash_formatting = None
         self.output_files = None
+        self.kill_on_disconnect = True
 
         self.parameters = []
         self.output_files = []
 
     def get_config_path(self):
         return self.config_path
-
-    def get_script_command(self):
-        return self.script_command
 
     def get_name(self):
         return self.name
@@ -57,7 +55,7 @@ class Parameter(object):
         self.description = None
         self.required = None
         self.default = None
-        self.type = "text"
+        self.type = 'text'
         self.min = None
         self.max = None
         self.constant = False
@@ -99,12 +97,6 @@ class Parameter(object):
 
     def get_default(self):
         return self.default
-
-    def set_type(self, value):
-        self.type = value
-
-    def get_type(self):
-        return self.type
 
     def set_min(self, value):
         self.min = value
@@ -155,6 +147,8 @@ def from_json(file_path, json_string, pty_enabled_default=False):
     config.requires_terminal = read_boolean("requires_terminal", json_object, pty_enabled_default)
     config.bash_formatting = read_boolean("bash_formatting", json_object, os_utils.is_linux() or os_utils.is_mac())
 
+    config.kill_on_disconnect = read_boolean('kill_on_disconnect', json_object, True)
+
     output_files = json_object.get("output_files")
     if output_files:
         config.output_files = output_files
@@ -188,9 +182,9 @@ def from_json(file_path, json_string, pty_enabled_default=False):
                 else:
                     raise Exception("Unsupported values")
 
-            type = parameter_json.get("type")
+            type = parameter_json.get('type')
             if type:
-                parameter.set_type(type)
+                parameter.type = type
 
             constant = parameter_json.get("constant")
             if constant is True:

@@ -87,6 +87,14 @@ Combobox.prototype.onAdd = function () {
 
     var input = findNeighbour(this.selectField, "input");
     input.removeAttribute("readonly"); //otherwise the field will ignore "setCustomValidity"
+    input.setAttribute("data-constrainwidth", false);
+
+    $(this.selectField).siblings('ul').children('li').each(function () {
+        var text = $(this).children('span:first-child').text();
+        if (text) {
+            this.title = text;
+        }
+    });
 
     this.validate();
 };

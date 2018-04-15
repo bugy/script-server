@@ -1,30 +1,81 @@
-import datetime
 import glob
-import hashlib
 import logging
 import os
 import re
-import shutil
-import threading
-import time
 from shutil import copyfile
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
 import utils.string_utils as string_utils
+from utils.file_utils import create_unique_filename
 
 RESULT_FILES_FOLDER = 'resultFiles'
 
 LOGGER = logging.getLogger('script_server.file_download_feature')
 
-def hash_user(name, secret_bytes):
-    return hashlib.sha256(name.encode() + secret_bytes).hexdigest()
 
+class FileDownloadFeature:
+    def __init__(self, user_file_storage, temp_folder) -> None:
+        self.user_file_storage = user_file_storage
+        self.result_folder = os.path.join(temp_folder, RESULT_FILES_FOLDER)
 
-def build_download_path(user_hash, temp_folder):
-    millis = int(round(time.time() * 1000))
+        user_file_storage.start_autoclean(self.result_folder, 1000 * 60 * 60 * 24)
 
-    return os.path.join(temp_folder, RESULT_FILES_FOLDER, user_hash, str(millis))
+    def get_result_files_folder(self):
+        return self.result_folder
+
+    def prepare_downloadable_files(self, config, script_output, script_param_values, audit_name):
+        output_files = config.output_files
+
+        if not output_files:
+            return []
+
+        output_files = substitute_parameter_values(
+            config.parameters,
+            config.output_files,
+            script_param_values)
+
+        correct_files = []
+
+        for output_file in output_files:
+            files = find_matching_files(output_file, script_output)
+
+            if files:
+                for file in files:
+                    file_path = file_utils.normalize_path(file, config.get_working_directory())
+                    if not os.path.exists(file_path):
+                        LOGGER.warning('file ' + file + ' (full path = ' + file_path + ') not found')
+                    elif os.path.isdir(file_path):
+                        LOGGER.warning('file ' + file + ' is a directory. Not allowed')
+                    elif file_path not in correct_files:
+                        correct_files.append(file_path)
+            else:
+                LOGGER.warning("Couldn't find file for " + output_file)
+
+        if not correct_files:
+            return []
+
+        download_folder = self.user_file_storage.prepare_new_folder(audit_name, self.result_folder)
+        LOGGER.info('Created download folder for ' + audit_name + ': ' + download_folder)
+
+        result = []
+        for file in correct_files:
+            preferred_download_file = os.path.join(download_folder, os.path.basename(file))
+
+            try:
+                download_file = create_unique_filename(preferred_download_file)
+            except file_utils.FileExistsException:
+                LOGGER.exception('Cannot get unique name')
+                continue
+
+            copyfile(file, download_file)
+
+            result.append(download_file)
+
+        return result
+
+    def allowed_to_download(self, file_path, audit_name):
+        return self.user_file_storage.allowed_to_access(file_path, audit_name)
 
 
 def substitute_parameter_values(parameter_configs, output_files, values):
@@ -47,75 +98,6 @@ def substitute_parameter_values(parameter_configs, output_files, values):
 
         output_file_parsed.append(output_file)
     return output_file_parsed
-
-
-def prepare_downloadable_files(config, script_output, script_param_values, audit_name, secret, temp_folder):
-    output_files = config.output_files
-
-    if not output_files:
-        return []
-
-    output_files = substitute_parameter_values(
-        config.parameters,
-        config.output_files,
-        script_param_values)
-
-    correct_files = []
-
-    for output_file in output_files:
-        files = find_matching_files(output_file, script_output)
-
-        if files:
-            for file in files:
-                file_path = file_utils.normalize_path(file, config.get_working_directory())
-                if not os.path.exists(file_path):
-                    LOGGER.warning('file ' + file + ' (full path = ' + file_path + ') not found')
-                elif os.path.isdir(file_path):
-                    LOGGER.warning('file ' + file + ' is a directory. Not allowed')
-                elif file_path not in correct_files:
-                    correct_files.append(file_path)
-        else:
-            LOGGER.warning("Couldn't find file for " + output_file)
-
-    if not correct_files:
-        return []
-
-    user_hashed = get_user_download_folder(audit_name, secret)
-
-    download_folder = build_download_path(user_hashed, temp_folder)
-    LOGGER.info('Created download folder for ' + audit_name + ': ' + download_folder)
-
-    if not os.path.exists(download_folder):
-        os.makedirs(download_folder)
-
-    result = []
-    for file in correct_files:
-        download_file = os.path.join(download_folder, os.path.basename(file))
-
-        if os.path.exists(download_file):
-            i = 0
-
-            filename_split = os.path.splitext(os.path.basename(file))
-            extension = ''
-            name = ''
-            if len(filename_split) > 0:
-                name = filename_split[0]
-                if len(filename_split) > 1:
-                    extension = filename_split[1]
-
-            while os.path.exists(download_file) and i < 1000:
-                download_file = os.path.join(download_folder, name + '_' + str(i) + extension)
-                i += 1
-
-            if os.path.exists(download_file):
-                LOGGER.warning("Couldn't create unique filename for " + file)
-                continue
-
-        copyfile(file, download_file)
-
-        result.append(download_file)
-
-    return result
 
 
 def find_matching_files(file_pattern, script_output):
@@ -165,57 +147,7 @@ def find_matching_files(file_pattern, script_output):
 
         else:
             recursive = '**' in output_pattern
-            matching_files = glob.glob(output_pattern, recursive=recursive)
+            matching_files = file_utils.search_glob(output_pattern, recursive=recursive)
             files.extend(matching_files)
 
     return files
-
-
-def get_user_download_folder(audit_name, secret):
-    user_hashed = hash_user(audit_name, secret)
-    if len(user_hashed) > 12:
-        user_hashed = user_hashed[:12]
-    return user_hashed
-
-
-def allowed_to_download(file_path, audit_name, secret_bytes):
-    user_folder = get_user_download_folder(audit_name, secret_bytes)
-
-    path_chunks = file_utils.split_all(file_path)
-
-    return path_chunks[0] == user_folder
-
-
-def get_result_files_folder(temp_folder):
-    return os.path.join(temp_folder, RESULT_FILES_FOLDER)
-
-
-def autoclean_downloads(temp_folder):
-    results_folder = get_result_files_folder(temp_folder)
-
-    delay_secs = 60.0 * 60
-
-    def clean_results():
-        if os.path.exists(results_folder):
-            for user_folder in os.listdir(results_folder):
-                for timed_folder in os.listdir(os.path.join(results_folder, user_folder)):
-                    if not re.match('\d+', timed_folder):
-                        continue
-
-                    millis = int(timed_folder)
-                    folder_date = datetime.datetime.fromtimestamp(millis / 1000.0)
-                    now = datetime.datetime.now()
-
-                    if (now - folder_date) > datetime.timedelta(hours=24):
-                        folder_path = os.path.join(results_folder, user_folder, timed_folder)
-
-                        LOGGER.info('Cleaning old download folder: ' + folder_path)
-                        shutil.rmtree(folder_path)
-
-        timer = threading.Timer(delay_secs, clean_results)
-        timer.setDaemon(True)
-        timer.start()
-
-    timer = threading.Timer(delay_secs, clean_results)
-    timer.setDaemon(True)
-    timer.start()

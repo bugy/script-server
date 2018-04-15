@@ -24,8 +24,9 @@ GUI is very straightforward and easy-to-use for anyone. Example of the user inte
 
 ## Requirements
 ### Server-side
-Python 3.4+ with following modules:
-* Tornado
+Python 3.4 or higher with the following modules:
+* Tornado 4/5
+* typing *(for python 3.4 only)*
 
 Some features can require additional modules. Such requirements are specified in a corresponding feature description.
 
@@ -46,7 +47,7 @@ Internet connection is not needed. All the files are loaded from the server.
 
 ### Developer mode
 1. Clone/download the repository
-2. Run tools/init.py script (this will download javascript libraries)
+2. Run 'tools/init.py --dev' script (this will download javascript libraries)
 
 
 ## Setup and run

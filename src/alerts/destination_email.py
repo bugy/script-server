@@ -19,14 +19,6 @@ def split_addresses(addresses_string):
 
 
 class EmailDestination(destination_base.Destination):
-    from_address = None
-    to_addresses = None
-    server = None
-    login = None
-    password = None
-    auth_enabled = None
-    tls = None
-
     def __init__(self, params_dict):
         self.from_address = params_dict.get('from')
         self.to_addresses = params_dict.get('to')

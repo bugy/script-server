@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
@@ -24,16 +25,24 @@ def create_file(filepath):
 
 def setup():
     if os.path.exists(temp_folder):
-        shutil.rmtree(temp_folder)
+        _rmtree()
 
     os.makedirs(temp_folder)
 
 
 def cleanup():
     if os.path.exists(temp_folder):
-        shutil.rmtree(temp_folder)
+        _rmtree()
 
     os_utils.reset_os()
+
+
+def _rmtree():
+    def on_rm_error(func, path, exc_info):
+        os.chmod(path, stat.S_IWRITE)
+        os.remove(path)
+
+    shutil.rmtree(temp_folder, onerror=on_rm_error)
 
 
 def set_linux():

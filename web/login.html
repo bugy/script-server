@@ -15,8 +15,14 @@
 </head>
 
 <body id="login-body" onload="onLoad()" class="valign-wrapper">
-<form id="login-form" action="login" class="card">
-    <div class="card-content">
+<div id="login-panel" class="card">
+    <div class="card-content" id="login-content-container">
+    </div>
+</div>
+</body>
+
+<script type="text/template" id="login-credentials-template">
+    <form class="login-form">
         <div class="input-field">
             <input id="username" name="username" type="text" class="validate" autofocus>
             <label for="username">Username</label>
@@ -27,11 +33,17 @@
             <label for="password">Password</label>
         </div>
 
-        <div id="login-error-label"></div>
+        <div class="login-error-label"></div>
 
-        <input type="submit" id="login-button" class="btn" value="Log in">
+        <input type="submit" id="credentials-login-button" class="btn" value="Log in">
+    </form>
+</script>
+
+<script type="text/template" id="login-google_oauth-template">
+    <div>
+        <input type="submit" id="login-google_oauth-button" value="Sign in with Google">
+        <div class="login-error-label"></div>
     </div>
-</form>
-</body>
+</script>
 
 </html>
