@@ -6,6 +6,7 @@ import shutil
 import zipfile
 
 import init
+from utils import file_utils
 
 BUILD_FOLDER = 'build'
 
@@ -15,13 +16,13 @@ class BuildInfo():
         self.files = set()
 
     def include(self, path):
-        matching_files = glob.glob(path, recursive=True)
+        matching_files = file_utils.search_glob(path, recursive=True)
 
         for file in matching_files:
             self.files.add(file)
 
     def exclude(self, path):
-        matching_files = glob.glob(path, recursive=True)
+        matching_files = file_utils.search_glob(path, recursive=True)
 
         for excluded in matching_files:
             if excluded in self.files:
@@ -31,7 +32,7 @@ class BuildInfo():
                 files_to_remove = []
 
                 for file in self.files:
-                    common_path = os.path.commonpath([excluded, file])
+                    common_path = os.path.commonprefix([excluded, file])
 
                     if common_path == excluded:
                         files_to_remove.append(file)
