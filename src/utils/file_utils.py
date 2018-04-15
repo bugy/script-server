@@ -1,8 +1,11 @@
 import datetime
+import glob
 import os
 import os.path
 import pathlib
+import re
 import stat
+import sys
 import time
 
 from utils import os_utils
@@ -200,3 +203,73 @@ def create_unique_filename(preferred_path, retries=9999999):
 class FileExistsException(Exception):
     def __init__(self, *args) -> None:
         super().__init__(*args)
+
+
+def search_glob(path_pattern, recursive=None):
+    if sys.version_info >= (3, 5):
+        return glob.glob(path_pattern, recursive=recursive)
+    else:
+        if not recursive:
+            return glob.glob(path_pattern)
+        else:
+            return _pre_3_5_recursive_glob(path_pattern)
+
+
+def _pre_3_5_recursive_glob(path_pattern, parent_path=None):
+    if path_pattern.startswith('~'):
+        path_pattern = os.path.expanduser(path_pattern)
+
+    file_name_regex = '([\w.-]|(\\\ ))*'
+
+    pattern_chunks = path_pattern.split(os_utils.path_sep())
+
+    current_paths = []
+    if parent_path is not None:
+        current_paths.append(parent_path)
+    elif os.path.isabs(path_pattern):
+        root_path = os.path.abspath(os.sep)
+        current_paths.append(root_path)
+    else:
+        current_paths.append('')
+
+    for i, pattern_chunk in enumerate(pattern_chunks):
+        new_paths = []
+        for current_path in current_paths:
+            if '*' not in pattern_chunk:
+                new_path = os.path.join(current_path, pattern_chunk)
+                if os.path.exists(new_path):
+                    new_paths.append(new_path)
+            elif '**' not in pattern_chunk:
+                if os.path.exists(current_path) and os.path.isdir(current_path):
+                    pattern_chunk = pattern_chunk.replace('*', file_name_regex)
+                    for file in os.listdir(current_path):
+                        if re.match(pattern_chunk, file):
+                            new_path = os.path.join(current_path, file)
+                            new_paths.append(new_path)
+            else:
+                all_paths = []
+
+                next_path_pattern = os.path.sep.join(pattern_chunks[i + 1:])
+                if next_path_pattern == '':
+                    next_path_pattern = '*'
+                    all_paths.append(current_path + os.path.sep)
+                all_paths.extend(_pre_3_5_recursive_glob(next_path_pattern, current_path))
+
+                remaining_pattern = os.path.sep.join(pattern_chunks[i:])
+                if os.path.exists(current_path) and os.path.isdir(current_path):
+                    for file in os.listdir(current_path):
+                        file_path = os.path.join(current_path, file)
+                        if os.path.isdir(file_path):
+                            all_paths.extend(_pre_3_5_recursive_glob(remaining_pattern, file_path))
+
+                for child_path in all_paths:
+                    if child_path.endswith('/') and child_path[:-1] in all_paths:
+                        continue
+                    new_paths.append(child_path)
+
+        current_paths = new_paths
+
+        if '**' in pattern_chunk:
+            break
+
+    return current_paths

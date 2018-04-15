@@ -147,7 +147,7 @@ def find_matching_files(file_pattern, script_output):
 
         else:
             recursive = '**' in output_pattern
-            matching_files = glob.glob(output_pattern, recursive=recursive)
+            matching_files = file_utils.search_glob(output_pattern, recursive=recursive)
             files.extend(matching_files)
 
     return files
