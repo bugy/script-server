@@ -1,12 +1,9 @@
 import logging
-import time
-import uuid
 
 from alerts.alerts_service import AlertsService
 from execution.executor import ScriptExecutor
 from execution.logging import ExecutionLoggingService
 from react.observable import Observable
-from utils.date_utils import get_current_millis
 
 LOGGER = logging.getLogger('script_server.execution_service')
 
@@ -52,6 +49,10 @@ class ExecutionService:
         if execution_id in self._running_scripts:
             self._running_scripts[execution_id].stop()
 
+    def kill_script(self, execution_id):
+        if execution_id in self._running_scripts:
+            self._running_scripts[execution_id].kill()
+
     def get_exit_code(self, execution_id):
         executor = self._running_scripts.get(execution_id)  # type: ScriptExecutor
         if executor is None:
@@ -93,3 +94,11 @@ class ExecutionService:
                     alerts_service.send_alert(title, body, script_output)
 
         executor.add_finish_listener(Alerter())
+
+    def get_running_processes(self):
+        result = []
+        for id, executor in self._running_scripts.items():
+            if not executor.is_finished():
+                result.append(id)
+
+        return result

@@ -3,6 +3,7 @@ import json
 import logging
 import logging.config
 import os
+import signal
 import ssl
 import time
 from urllib.parse import urlencode
@@ -14,6 +15,7 @@ import tornado.httpserver as httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+
 from alerts.alerts_service import AlertsService
 from auth.tornado_auth import TornadoAuth
 from execution.execution_service import ExecutionService
@@ -680,10 +682,42 @@ def main():
     http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
     http_server.listen(server_config.port, address=server_config.address)
 
+    io_loop = tornado.ioloop.IOLoop.current()
+
+    intercept_stop_when_running_scripts(io_loop, execution_service)
+
     http_protocol = 'https' if server_config.ssl else 'http'
     print('Server is running on: %s://%s:%s' % (http_protocol, server_config.address, server_config.port))
+    io_loop.start()
 
-    tornado.ioloop.IOLoop.current().start()
+
+def intercept_stop_when_running_scripts(io_loop, execution_service):
+    def signal_handler(signum, frame):
+        can_stop = True
+
+        running_processes = execution_service.get_running_processes()
+        if len(running_processes) > 0:
+            try:
+                user_input = input('Some scripts are still running. Do you want to stop server anyway? Y/N: \n')
+                can_stop = (user_input.strip().lower()[0] == 'y')
+            except EOFError:
+                # EOF happens, when input is not available (e.g. when run under systemd)
+                LOGGER.warning('Some scripts are still running, killing them forcefully')
+                can_stop = True
+
+            if can_stop:
+                try:
+                    LOGGER.info('Killing the running processes: ' + str(running_processes))
+                    for id in running_processes:
+                        execution_service.kill_script(id)
+                except:
+                    LOGGER.exception('Could not kill running scripts, trying to stop the server')
+
+        if can_stop:
+            LOGGER.info('Stopping server on interrupt')
+            io_loop.add_callback(io_loop.stop)
+
+    signal.signal(signal.SIGINT, signal_handler)
 
 
 if __name__ == "__main__":
