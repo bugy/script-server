@@ -12,7 +12,7 @@ def to_millis(datetime):
 
 
 def ms_to_datetime(time_millis):
-    return datetime.fromtimestamp(time_millis // 1000.0, tz=timezone.utc)
+    return datetime.fromtimestamp(time_millis / 1000.0, tz=timezone.utc)
 
 
 def sec_to_datetime(time_seconds):

@@ -29,7 +29,7 @@ def mock_request_handler(ip=None, proxy_username=None, auth_username=None):
 
 
 def get_audit_name(request_handler):
-    audit_name = audit_utils.get_audit_name(request_handler)
+    audit_name = audit_utils.get_audit_name_from_request(request_handler)
     return normalize_hostname(audit_name)
 
 

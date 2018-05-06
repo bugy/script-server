@@ -4,10 +4,10 @@ import uuid
 from datetime import datetime, timedelta
 
 from execution.logging import ScriptOutputLogger, ExecutionLoggingService, OUTPUT_STARTED_MARKER, \
-    PostExecutionInfoProvider
+    PostExecutionInfoProvider, LogNameCreator
 from react.observable import Observable
 from tests import test_utils
-from utils import file_utils
+from utils import file_utils, audit_utils
 from utils.date_utils import get_current_millis, ms_to_datetime, to_millis
 
 
@@ -173,7 +173,7 @@ class TestLoggingService(unittest.TestCase):
     def test_history_entries_after_restart(self):
         self.simulate_logging(execution_id='id1')
 
-        new_service = ExecutionLoggingService(test_utils.temp_folder)
+        new_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
         entry = new_service.get_history_entries()[0]
         self.validate_history_entry(entry, id='id1')
 
@@ -193,7 +193,7 @@ class TestLoggingService(unittest.TestCase):
     def test_find_history_entry_after_restart(self):
         self.simulate_logging(execution_id='id1')
 
-        new_service = ExecutionLoggingService(test_utils.temp_folder)
+        new_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
         entry = new_service.find_history_entry('id1')
         self.assertIsNotNone(entry)
         self.validate_history_entry(entry, id='id1')
@@ -239,6 +239,10 @@ class TestLoggingService(unittest.TestCase):
             execution_id = str(uuid.uuid1())
 
         output_stream = Observable()
+
+        all_audit_names = {}
+        all_audit_names[audit_utils.AUTH_USERNAME] = user
+
         self.logging_service.start_logging(
             execution_id,
             user,
@@ -246,6 +250,7 @@ class TestLoggingService(unittest.TestCase):
             command,
             output_stream,
             self.post_info_provider,
+            all_audit_names,
             start_time_millis)
 
         if log_lines:
@@ -272,7 +277,7 @@ class TestLoggingService(unittest.TestCase):
         self.exit_codes = {}
         self.post_info_provider = _MapBasedPostExecInfo(self.exit_codes)
 
-        self.logging_service = ExecutionLoggingService(test_utils.temp_folder)
+        self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
 
     def tearDown(self):
         test_utils.cleanup()

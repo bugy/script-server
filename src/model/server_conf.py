@@ -18,6 +18,7 @@ class ServerConfig(object):
         self.authenticator = None
         self.authorizer = None
         self.alerts_config = None
+        self.logging_config = None
         self.admin_config = None
         self.title = None
 
@@ -46,6 +47,12 @@ class AlertsConfig:
 
     def get_destinations(self):
         return self.destinations
+
+
+class LoggingConfig:
+    def __init__(self) -> None:
+        self.filename_pattern = None
+        self.date_format = None
 
 
 def from_json(conf_path):
@@ -98,6 +105,7 @@ def from_json(conf_path):
         config.authorizer = _create_authorizer('*', admin_users)
 
     config.alerts_config = parse_alerts_config(json_object)
+    config.logging_config = parse_logging_config(json_object)
 
     return config
 
@@ -165,6 +173,17 @@ def parse_alerts_config(json_object):
             return alerts_config
 
     return None
+
+
+def parse_logging_config(json_object):
+    config = LoggingConfig()
+
+    if json_object.get('logging'):
+        json_logging_config = json_object.get('logging')
+        config.filename_pattern = json_logging_config.get('execution_file')
+        config.date_format = json_logging_config.get('execution_date_format')
+
+    return config
 
 
 def _parse_admin_users(json_object):

@@ -4,8 +4,10 @@ import logging
 import os
 import re
 from datetime import datetime
+from string import Template
 
-from utils import file_utils
+from utils import file_utils, audit_utils
+from utils.audit_utils import get_audit_name
 from utils.date_utils import get_current_millis, ms_to_datetime, sec_to_datetime, to_millis
 
 OUTPUT_STARTED_MARKER = '>>>>>  OUTPUT STARTED <<<<<'
@@ -92,8 +94,9 @@ class PostExecutionInfoProvider(metaclass=abc.ABCMeta):
 
 
 class ExecutionLoggingService:
-    def __init__(self, output_folder):
+    def __init__(self, output_folder, log_name_creator):
         self._output_folder = output_folder
+        self._log_name_creator = log_name_creator
 
         self._visited_files = set()
         self._ids_to_file_map = {}
@@ -107,13 +110,15 @@ class ExecutionLoggingService:
                       command,
                       output_stream,
                       post_execution_info_provider,
+                      all_audit_names,
                       start_time_millis=None):
 
         if start_time_millis is None:
             start_time_millis = get_current_millis()
 
-        log_identifier = self._create_log_identifier(username, script_name, start_time_millis)
-        log_file_path = os.path.join(self._output_folder, log_identifier + '.log')
+        log_filename = self._log_name_creator.create_filename(
+            execution_id, all_audit_names, script_name, start_time_millis)
+        log_file_path = os.path.join(self._output_folder, log_filename)
         log_file_path = file_utils.create_unique_filename(log_file_path)
 
         def write_post_execution_info():
@@ -344,3 +349,38 @@ class ExecutionLoggingService:
 
         new_content = parameters_text + OUTPUT_STARTED_MARKER + '\n' + file_parts[1]
         file_utils.write_file(log_file_path, new_content)
+
+
+class LogNameCreator:
+    def __init__(self, filename_pattern=None, date_format=None) -> None:
+        self._date_format = date_format if date_format else '%y%m%d_%H%M%S'
+        if not filename_pattern:
+            filename_pattern = '${SCRIPT}_${AUDIT_NAME}_${DATE}'
+        self._filename_template = Template(filename_pattern)
+
+    def create_filename(self, execution_id, all_audit_names, script_name, start_time):
+        audit_name = get_audit_name(all_audit_names)
+        audit_name = file_utils.to_filename(audit_name)
+
+        date_string = ms_to_datetime(start_time).strftime(self._date_format)
+
+        proxied_username = all_audit_names.get(audit_utils.PROXIED_USERNAME)
+        username = all_audit_names.get(audit_utils.AUTH_USERNAME, proxied_username)
+
+        mapping = {
+            'ID': execution_id,
+            'USERNAME': username,
+            'HOSTNAME': all_audit_names.get(audit_utils.HOSTNAME, 'unknown-host'),
+            'IP': all_audit_names.get(audit_utils.IP),
+            'DATE': date_string,
+            'AUDIT_NAME': audit_name,
+            'SCRIPT': script_name
+        }
+
+        filename = self._filename_template.safe_substitute(mapping)
+        if not filename.lower().endswith('.log'):
+            filename += '.log'
+
+        filename = filename.replace(" ", "_")
+
+        return filename

@@ -1,8 +1,7 @@
 import base64
+import logging
 import socket
 import sys
-
-import logging
 
 HOSTNAME = 'hostname'
 IP = 'ip'
@@ -36,18 +35,22 @@ def get_all_audit_names(request_handler):
     return result
 
 
-def get_audit_name(request_handler):
-    audit_names = get_all_audit_names(request_handler)
-
+def get_audit_name(all_audit_names):
     audit_types = [AUTH_USERNAME, PROXIED_USERNAME, HOSTNAME, IP]
 
     for name_type in audit_types:
-        name = audit_names.get(name_type)
+        name = all_audit_names.get(name_type)
 
         if name:
             return name
 
     return None
+
+
+def get_audit_name_from_request(request_handler):
+    audit_names = get_all_audit_names(request_handler)
+
+    return get_audit_name(audit_names)
 
 
 def find_basic_auth_username(request_handler):

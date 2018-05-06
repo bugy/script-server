@@ -22,7 +22,7 @@ class ExecutionService:
     def get_active_executor(self, execution_id):
         return self._running_scripts.get(execution_id)
 
-    def start_script(self, config, values, audit_name):
+    def start_script(self, config, values, audit_name, all_audit_names):
         script_name = config.name
 
         executor = ScriptExecutor(config, values, audit_name)
@@ -37,7 +37,7 @@ class ExecutionService:
         secure_output_stream = executor.get_secure_output_stream()
 
         self._execution_logging_service.start_logging(
-            execution_id, audit_name, script_name, audit_command, secure_output_stream, self)
+            execution_id, audit_name, script_name, audit_command, secure_output_stream, self, all_audit_names)
 
         self.subscribe_fail_alerter(
             script_name,

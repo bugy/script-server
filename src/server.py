@@ -19,7 +19,7 @@ from auth.tornado_auth import TornadoAuth
 from execution.execution_service import ExecutionService
 from execution.executor import ScriptExecutor
 from execution.id_generator import IdGenerator
-from execution.logging import ExecutionLoggingService
+from execution.logging import ExecutionLoggingService, LogNameCreator
 from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
 from files.user_file_storage import UserFileStorage
@@ -34,7 +34,7 @@ from utils import file_utils as file_utils
 from utils import os_utils as os_utils
 from utils import tool_utils
 from utils.audit_utils import get_all_audit_names, AUTH_USERNAME
-from utils.audit_utils import get_audit_name
+from utils.audit_utils import get_audit_name_from_request
 from utils.tornado_utils import respond_error, redirect_relative
 
 TEMP_FOLDER = "temp"
@@ -166,7 +166,8 @@ def check_authorization(func):
 def requires_admin_rights(func):
     def wrapper(self, *args, **kwargs):
         if not has_admin_rights(self):
-            LOGGER.warning('User %s tried to access admin REST service %s', get_audit_name(self), self.request.path)
+            LOGGER.warning('User %s tried to access admin REST service %s',
+                           get_audit_name_from_request(self), self.request.path)
             raise tornado.web.HTTPError(403, 'Access denied')
 
         return func(self, *args, **kwargs)
@@ -182,7 +183,8 @@ def has_admin_rights(request_handler):
         username = names.get(audit_utils.IP)
 
     if not username:
-        LOGGER.warning('has_admin_rights: could not resolve username for %s', get_audit_name(request_handler))
+        LOGGER.warning('has_admin_rights: could not resolve username for %s',
+                       get_audit_name_from_request(request_handler))
         return False
 
     return request_handler.application.authorizer.is_admin(username)
@@ -271,7 +273,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
         self.write_message(wrap_script_output(" ---  OUTPUT  --- \n"))
 
-        audit_name = get_audit_name(self)
+        audit_name = get_audit_name_from_request(self)
 
         output_stream = executor.get_unsecure_output_stream()
         bash_formatting = executor.config.is_bash_formatting()
@@ -314,7 +316,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         if self.executor.config.kill_on_disconnect:
             self.executor.kill()
 
-        audit_name = get_audit_name(self)
+        audit_name = get_audit_name_from_request(self)
         LOGGER.info(audit_name + ' disconnected')
 
     def safe_write(self, message):
@@ -327,7 +329,7 @@ class ScriptExecute(BaseRequestHandler):
     def post(self):
         script_name = None
 
-        audit_name = get_audit_name(self)
+        audit_name = get_audit_name_from_request(self)
 
         try:
             arguments = tornado_utils.get_form_arguments(self)
@@ -357,12 +359,14 @@ class ScriptExecute(BaseRequestHandler):
                 respond_error(self, 400, message)
                 return
 
-            LOGGER.info('Calling script ' + script_name + '. User ' + str(get_all_audit_names(self)))
+            all_audit_names = get_all_audit_names(self)
+            LOGGER.info('Calling script ' + script_name + '. User ' + str(all_audit_names))
 
             execution_id = self.application.execution_service.start_script(
                 config,
                 execution_info.param_values,
-                audit_name)
+                audit_name,
+                all_audit_names)
 
             self.write(str(execution_id))
 
@@ -402,7 +406,8 @@ class AuthorizedStaticFileHandler(BaseStaticHandler):
         relative_path = file_utils.relative_path(absolute_path, root)
         if self.is_admin_file(relative_path):
             if not has_admin_rights(self):
-                LOGGER.warning('User %s tried to access admin static file %s', get_audit_name(self), relative_path)
+                LOGGER.warning('User %s tried to access admin static file %s',
+                               get_audit_name_from_request(self), relative_path)
                 raise tornado.web.HTTPError(403)
 
         return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
@@ -466,7 +471,7 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
 
     @check_authorization
     def validate_absolute_path(self, root, absolute_path):
-        audit_name = get_audit_name(self)
+        audit_name = get_audit_name_from_request(self)
 
         file_download_feature = self.application.file_download_feature
 
@@ -660,7 +665,10 @@ def main():
     application.alerts_service = alerts_service
 
     execution_logs_path = os.path.join('logs', 'processes')
-    execution_logging_service = ExecutionLoggingService(execution_logs_path)
+    log_name_creator = LogNameCreator(
+        server_config.logging_config.filename_pattern,
+        server_config.logging_config.date_format)
+    execution_logging_service = ExecutionLoggingService(execution_logs_path, log_name_creator)
     application.execution_logging_service = execution_logging_service
 
     existing_ids = [entry.id for entry in execution_logging_service.get_history_entries()]
