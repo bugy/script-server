@@ -1,11 +1,8 @@
 import base64
 import unittest
 
+from tests.test_utils import mock_object
 from utils import audit_utils, os_utils
-
-
-def mock_object():
-    return type('', (), {})()
 
 
 def mock_request_handler(ip=None, proxy_username=None, auth_username=None):

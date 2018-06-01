@@ -1,6 +1,6 @@
-function ScriptExecutor(scriptConfig, scriptName) {
+function ScriptExecutor(scriptConfig) {
     this.scriptConfig = scriptConfig;
-    this.scriptName = scriptName;
+    this.scriptName = scriptConfig.name;
     this.parameterValues = null;
     this.websocket = null;
     this.executionId = null;
@@ -16,11 +16,11 @@ ScriptExecutor.prototype.start = function (parameterValues) {
     var formData = new FormData();
     formData.append('__script_name', this.scriptConfig.name);
 
-    parameterValues.each(function (parameter, value) {
+    forEachKeyValue(parameterValues, function (parameter, value) {
         formData.append(parameter, value);
     });
 
-    this.executionId = authorizedCallHttp('scripts/execute', formData, 'POST');
+    this.executionId = authorizedCallHttp('scripts/execution', formData, 'POST');
     this._startExecution(this.executionId);
 };
 
@@ -36,7 +36,7 @@ ScriptExecutor.prototype._startExecution = function (executionId) {
         hostUrl += '/' + dir;
     }
 
-    this.websocket = new WebSocket(hostUrl + '/scripts/execute/io/' + executionId);
+    this.websocket = new WebSocket(hostUrl + '/scripts/execution/io/' + executionId);
 
     this.websocket.addEventListener('message', function (message) {
         var event = JSON.parse(message.data);
@@ -94,13 +94,19 @@ ScriptExecutor.prototype._startExecution = function (executionId) {
     }.bind(this));
 
     this.websocket.addEventListener('close', function () {
-        this.listeners.forEach(function (listener) {
-            if (listener.onExecutionStop) {
-                listener.onExecutionStop(this);
-            }
-        }.bind(this));
-    }.bind(this));
+        try {
+            this.listeners.forEach(function (listener) {
+                if (listener.onExecutionStop) {
+                    listener.onExecutionStop(this);
+                }
+            }.bind(this));
 
+        } finally {
+            if (this.isFinished()) {
+                authorizedCallHttp('scripts/execution/cleanup/' + executionId, null, 'POST');
+            }
+        }
+    }.bind(this));
 };
 
 ScriptExecutor.prototype.addListener = function (listener) {
@@ -149,7 +155,7 @@ ScriptExecutor.prototype.isFinished = function () {
 
 ScriptExecutor.prototype.stop = function () {
     var executionId = this.executionId;
-    authorizedCallHttp('scripts/execute/stop', {'executionId': executionId}, 'POST');
+    authorizedCallHttp('scripts/execution/stop/' + executionId, null, 'POST');
 };
 
 ScriptExecutor.prototype.abort = function () {
@@ -159,3 +165,33 @@ ScriptExecutor.prototype.abort = function () {
         this.websocket.close();
     }
 };
+
+function restoreExecutor(executionId, callback) {
+    var dataContainer = {rawConfig: null, rawValues: null};
+    var loadHandler = function () {
+        if (isNull(dataContainer.rawValues) || isNull(dataContainer.rawConfig)) {
+            return;
+        }
+
+        var scriptConfig = JSON.parse(dataContainer.rawConfig);
+        var parameterValues = JSON.parse(dataContainer.rawValues);
+
+        var executor = new ScriptExecutor(scriptConfig);
+        executor.executionId = executionId;
+        executor.parameterValues = parameterValues;
+        executor._startExecution(executionId);
+
+        callback(executor);
+    };
+
+    authorizedCallHttp('scripts/execution/config/' + executionId, null, 'GET', function (rawConfig) {
+        dataContainer.rawConfig = rawConfig;
+        loadHandler();
+    });
+
+    authorizedCallHttp('scripts/execution/values/' + executionId, null, 'GET', function (rawValues) {
+        dataContainer.rawValues = rawValues;
+        loadHandler();
+    });
+
+}

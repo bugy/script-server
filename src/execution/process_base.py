@@ -4,9 +4,12 @@ import signal
 import subprocess
 import threading
 
-from react.observable import Observable
+import logging
+
+from react.observable import ReplayObservable
 from utils import os_utils
 
+LOGGER = logging.getLogger('script_server.process_base')
 
 class ProcessWrapper(metaclass=abc.ABCMeta):
     def __init__(self, command, working_directory):
@@ -17,7 +20,9 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
         self.finish_listeners = []
 
-        self.output_stream = Observable()
+        self.output_stream = ReplayObservable()
+
+        self.notify_finish_thread = None
 
     def start(self):
         self.start_execution(self.command, self.working_directory)
@@ -25,8 +30,8 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
         read_output_thread = threading.Thread(target=self.pipe_process_output)
         read_output_thread.start()
 
-        notify_finish_thread = threading.Thread(target=self.notify_finished)
-        notify_finish_thread.start()
+        self.notify_finish_thread = threading.Thread(target=self.notify_finished)
+        self.notify_finish_thread.start()
 
     @abc.abstractmethod
     def pipe_process_output(self):
@@ -87,13 +92,20 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
                 subprocess.Popen("taskkill /F /T /PID " + self._get_process_id())
 
     def add_finish_listener(self, listener):
-        self.finish_listeners.append(listener)
-
         if self.is_finished():
-            self.notify_finished()
+            listener.finished()
+            return
+
+        self.finish_listeners.append(listener)
 
     def notify_finished(self):
         self.wait_finish()
 
         for listener in self.finish_listeners:
-            listener.finished()
+            try:
+                listener.finished()
+            except:
+                LOGGER.exception('Failed to notify listener: ' + str(listener))
+
+    def cleanup(self):
+        self.output_stream.dispose()

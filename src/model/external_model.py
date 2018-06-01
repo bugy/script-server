@@ -90,3 +90,12 @@ def to_execution_info(request_parameters):
     info.param_values = param_values
 
     return info
+
+
+def to_external_parameter_values(values):
+    result_dict = {}
+
+    for key, value in values.items():
+        result_dict[key] = value
+
+    return json.dumps(result_dict)

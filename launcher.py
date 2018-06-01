@@ -6,6 +6,6 @@ import sys
 sys.path.append("src")
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-import server
+import main
 
-server.main()
+main.main()

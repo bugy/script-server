@@ -1,6 +1,9 @@
+import json
 import re
 from urllib import parse as urllib_parse
 from urllib.parse import urljoin
+
+from model.model_helper import is_empty
 
 
 def respond_error(request_handler, status_code, message):
@@ -51,3 +54,11 @@ def get_form_arguments(request_handler):
         result[key] = value
 
     return result
+
+
+def get_request_body(request_handler):
+    raw_request_body = request_handler.request.body.decode('UTF-8')
+    if is_empty(raw_request_body):
+        return {}
+
+    return json.loads(raw_request_body)

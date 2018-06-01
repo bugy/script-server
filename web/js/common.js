@@ -287,3 +287,24 @@ function getUnparameterizedUrl() {
 function contains(array, element) {
     return array.indexOf(element) !== -1
 }
+
+function forEachKeyValue(array, callback) {
+    for (var key in array) {
+        if (array.hasOwnProperty(key)) {
+            var value = array[key];
+            callback(key, value);
+        }
+    }
+}
+
+function toBoolean(value) {
+    if (typeof(value) === 'boolean') {
+        return value;
+
+    } else if (typeof(value) === 'string') {
+        return value.toLowerCase() === 'true';
+
+    } else {
+        return Boolean(value);
+    }
+}

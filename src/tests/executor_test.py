@@ -3,9 +3,9 @@ import unittest
 
 from execution import executor
 from execution.executor import ScriptExecutor
-from execution.process_base import ProcessWrapper
 from model import script_configs
-from tests.test_utils import SimpleStoringObserver
+from react.observable import _StoringObserver, read_until_closed
+from tests.test_utils import _MockProcessWrapper
 
 
 class TestBuildCommandArgs(unittest.TestCase):
@@ -167,7 +167,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         parameter.secure = True
         config.add_parameter(parameter)
 
-        executor = ScriptExecutor(config, {}, 'executor_test')
+        executor = ScriptExecutor(config, {})
         secure_command = executor.get_secure_command()
 
         self.assertEqual('ls', secure_command)
@@ -182,7 +182,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         parameter.secure = True
         config.add_parameter(parameter)
 
-        executor = ScriptExecutor(config, {'p1': 'value'}, 'executor_test')
+        executor = ScriptExecutor(config, {'p1': 'value'})
         secure_command = executor.get_secure_command()
 
         self.assertEqual('ls -p1 ******', secure_command)
@@ -202,18 +202,18 @@ class TestBuildCommandArgs(unittest.TestCase):
         parameter.param = '-p2'
         config.add_parameter(parameter)
 
-        executor = ScriptExecutor(config, {'p1': 'value', 'p2': 'value'}, 'executor_test')
+        executor = ScriptExecutor(config, {'p1': 'value', 'p2': 'value'})
         secure_command = executor.get_secure_command()
 
         self.assertEqual('ls -p1 ****** -p2 value', secure_command)
 
 
 class TestProcessOutput(unittest.TestCase):
-    def test_log_unsecure_single_line(self):
+    def test_log_raw_single_line(self):
         self.create_and_start_executor()
 
-        observer = SimpleStoringObserver()
-        self.executor.get_unsecure_output_stream().subscribe(observer)
+        observer = _StoringObserver()
+        self.executor.get_raw_output_stream().subscribe(observer)
 
         self.write_process_output('some text')
 
@@ -221,11 +221,11 @@ class TestProcessOutput(unittest.TestCase):
 
         self.assertEqual(['some text'], observer.data)
 
-    def test_log_unsecure_single_buffer(self):
+    def test_log_raw_single_buffer(self):
         self.create_and_start_executor()
 
-        observer = SimpleStoringObserver()
-        self.executor.get_unsecure_output_stream().subscribe(observer)
+        observer = _StoringObserver()
+        self.executor.get_raw_output_stream().subscribe(observer)
 
         self.write_process_output('some text')
         self.write_process_output(' and continuation')
@@ -234,11 +234,11 @@ class TestProcessOutput(unittest.TestCase):
 
         self.assertEqual(['some text and continuation'], observer.data)
 
-    def test_log_unsecure_multiple_buffers(self):
+    def test_log_raw_multiple_buffers(self):
         self.create_and_start_executor()
 
-        observer = SimpleStoringObserver()
-        self.executor.get_unsecure_output_stream().subscribe(observer)
+        observer = _StoringObserver()
+        self.executor.get_raw_output_stream().subscribe(observer)
 
         self.write_process_output('some text')
 
@@ -287,6 +287,7 @@ class TestProcessOutput(unittest.TestCase):
     def setUp(self):
         self.config = script_configs.Config()
         self.config.script_command = 'ls'
+        executor._process_creator = _MockProcessWrapper
 
         super().setUp()
 
@@ -294,7 +295,7 @@ class TestProcessOutput(unittest.TestCase):
         super().tearDown()
 
         self.finish_process()
-        self.executor.kill()
+        self.executor.cleanup()
 
     def write_process_output(self, text):
         wrapper = self.executor.process_wrapper
@@ -302,53 +303,21 @@ class TestProcessOutput(unittest.TestCase):
 
     # noinspection PyUnresolvedReferences
     def finish_process(self):
-        self.executor.process_wrapper.set_finished()
+        self.executor.process_wrapper.kill()
 
     def get_finish_output(self):
-        output_stream = self.executor.get_secure_output_stream()
-        output_stream.wait_close()
-        output = ''.join(output_stream.get_old_data())
+        data = read_until_closed(self.executor.get_anonymized_output_stream(), timeout=0.1)
+        output = ''.join(data)
         return output
 
     def create_and_start_executor(self, parameter_values=None):
         if parameter_values is None:
             parameter_values = {}
 
-        self.executor = ScriptExecutor(self.config, parameter_values, 'executor_test')
-        self.executor.start(_MockProcessWrapper)
+        self.executor = ScriptExecutor(self.config, parameter_values)
+        self.executor.start()
         return self.executor
 
 
 def wait_buffer_flush():
     time.sleep((executor.TIME_BUFFER_MS * 1.5) / 1000.0)
-
-
-class _MockProcessWrapper(ProcessWrapper):
-    def __init__(self, command, working_directory):
-        super().__init__(command, working_directory)
-
-        self.finished = False
-        self.process_id = time.time()
-
-    def _get_process_id(self):
-        return self.process_id
-
-    def set_finished(self):
-        self.finished = True
-        self.output_stream.close()
-
-    def is_finished(self):
-        return self.finished
-
-    def pipe_process_output(self):
-        pass
-
-    def start_execution(self, command, working_directory):
-        pass
-
-    def wait_finish(self):
-        while not self.finished:
-            time.sleep(0.001)
-
-    def write_to_input(self, value):
-        pass

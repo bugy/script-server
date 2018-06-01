@@ -13,11 +13,29 @@ LOGGER = logging.getLogger('script_server.ScriptExecutor')
 mock_process = False
 
 
+def create_process_wrapper(executor, command, working_directory):
+    run_pty = executor.config.is_requires_terminal()
+    if run_pty and not os_utils.is_pty_supported():
+        LOGGER.warning(
+            "Requested PTY mode, but it's not supported for this OS (" + sys.platform + '). Falling back to POpen')
+        run_pty = False
+
+    if run_pty:
+        from execution import process_pty
+        process_wrapper = process_pty.PtyProcessWrapper(command, working_directory)
+    else:
+        process_wrapper = process_popen.POpenProcessWrapper(command, working_directory)
+
+    return process_wrapper
+
+
+_process_creator = create_process_wrapper
+
+
 class ScriptExecutor:
-    def __init__(self, config, parameter_values, audit_name):
+    def __init__(self, config, parameter_values):
         self.config = config
         self.parameter_values = parameter_values
-        self.audit_name = audit_name
 
         self.working_directory = self._get_working_directory()
         self.script_base_command = process_utils.split_command(
@@ -26,8 +44,8 @@ class ScriptExecutor:
         self.secure_replacements = self.__init_secure_replacements()
 
         self.process_wrapper = None  # type: process_base.ProcessWrapper
-        self.output_stream = None
-        self.secure_output_stream = None
+        self.raw_output_stream = None
+        self.protected_output_stream = None
 
     def _get_working_directory(self):
         working_directory = self.config.get_working_directory()
@@ -35,40 +53,27 @@ class ScriptExecutor:
             working_directory = file_utils.normalize_path(working_directory)
         return working_directory
 
-    def start(self, process_constructor=None):
+    def start(self):
         if self.process_wrapper is not None:
             raise Exception('Executor already started')
 
         script_args = build_command_args(self.parameter_values, self.config)
         command = self.script_base_command + script_args
 
-        if process_constructor:
-            process_wrapper = process_constructor(command, self.working_directory)
-        else:
-            run_pty = self.config.is_requires_terminal()
-            if run_pty and not os_utils.is_pty_supported():
-                LOGGER.warning(
-                    "Requested PTY mode, but it's not supported for this OS (" + sys.platform + '). Falling back to POpen')
-                run_pty = False
-
-            if run_pty:
-                from execution import process_pty
-                process_wrapper = process_pty.PtyProcessWrapper(command, self.working_directory)
-            else:
-                process_wrapper = process_popen.POpenProcessWrapper(command, self.working_directory)
-
+        process_wrapper = _process_creator(self, command, self.working_directory)
         process_wrapper.start()
 
         self.process_wrapper = process_wrapper
 
-        self.output_stream = process_wrapper.output_stream \
-            .time_buffered(TIME_BUFFER_MS, _concat_output)
+        output_stream = process_wrapper.output_stream.time_buffered(TIME_BUFFER_MS, _concat_output)
+        self.raw_output_stream = output_stream.replay()
 
         if self.secure_replacements:
-            self.secure_output_stream = self.output_stream \
-                .map(self.__replace_secure_variables)
+            self.protected_output_stream = output_stream \
+                .map(self.__replace_secure_variables) \
+                .replay()
         else:
-            self.secure_output_stream = self.output_stream
+            self.protected_output_stream = self.raw_output_stream
 
     def __init_secure_replacements(self):
         word_replacements = {}
@@ -109,11 +114,11 @@ class ScriptExecutor:
         command = self.script_base_command + audit_script_args
         return ' '.join(command)
 
-    def get_secure_output_stream(self):
-        return self.secure_output_stream
+    def get_anonymized_output_stream(self):
+        return self.protected_output_stream
 
-    def get_unsecure_output_stream(self):
-        return self.output_stream
+    def get_raw_output_stream(self):
+        return self.raw_output_stream
 
     def get_return_code(self):
         return self.process_wrapper.get_return_code()
@@ -138,6 +143,11 @@ class ScriptExecutor:
     def stop(self):
         if not self.process_wrapper.is_finished():
             self.process_wrapper.stop()
+
+    def cleanup(self):
+        self.raw_output_stream.dispose()
+        self.protected_output_stream.dispose()
+        self.process_wrapper.cleanup()
 
 
 def build_command_args(param_values, config, stringify=lambda value, param: value):

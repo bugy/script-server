@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import logging
 import logging.config
 import os
 import signal
@@ -16,88 +15,24 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
-from alerts.alerts_service import AlertsService
 from auth.tornado_auth import TornadoAuth
+from config.config_service import ConfigService
 from execution.execution_service import ExecutionService
-from execution.executor import ScriptExecutor
-from execution.id_generator import IdGenerator
-from execution.logging import ExecutionLoggingService, LogNameCreator
+from execution.logging import ExecutionLoggingService
 from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
-from files.user_file_storage import UserFileStorage
 from model import external_model
 from model import model_helper
-from model import script_configs
-from model import server_conf
 from model.external_model import to_short_execution_log, to_long_execution_log
 from model.model_helper import is_empty
+from model.server_conf import ServerConfig
 from utils import bash_utils as bash_utils, tornado_utils, audit_utils
 from utils import file_utils as file_utils
-from utils import os_utils as os_utils
-from utils import tool_utils
-from utils.audit_utils import get_all_audit_names, AUTH_USERNAME
+from utils.audit_utils import get_all_audit_names, get_safe_username
 from utils.audit_utils import get_audit_name_from_request
 from utils.tornado_utils import respond_error, redirect_relative
 
-TEMP_FOLDER = "temp"
-
-CONFIG_FOLDER = "conf"
-SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, "conf.json")
-SCRIPT_CONFIGS_FOLDER = os.path.join(CONFIG_FOLDER, "runners")
-LOGGER = logging.getLogger('script_server')
-
-
-def list_config_names():
-    def add_name(path, content):
-        try:
-            return script_configs.read_name(path, content)
-
-        except:
-            LOGGER.exception('Could not load script name: ' + path)
-
-    result = visit_script_configs(add_name)
-
-    return result
-
-
-def load_config(name):
-    def find_and_load(path, content):
-        try:
-            config_name = script_configs.read_name(path, content)
-            if config_name == name:
-                return script_configs.from_json(path, content, os_utils.is_pty_supported())
-        except:
-            LOGGER.exception('Could not load script config: ' + path)
-
-    configs = visit_script_configs(find_and_load)
-    if configs:
-        return configs[0]
-
-    return None
-
-
-def visit_script_configs(visitor):
-    configs_dir = SCRIPT_CONFIGS_FOLDER
-    files = os.listdir(configs_dir)
-
-    configs = [file for file in files if file.lower().endswith(".json")]
-
-    result = []
-
-    for config_path in configs:
-        path = os.path.join(configs_dir, config_path)
-
-        try:
-            content = file_utils.read_file(path)
-
-            visit_result = visitor(path, content)
-            if visit_result is not None:
-                result.append(visit_result)
-
-        except:
-            LOGGER.exception("Couldn't read the file: " + config_path)
-
-    return result
+LOGGER = logging.getLogger('web_server')
 
 
 def is_allowed_during_login(request_path, login_url, request_handler):
@@ -179,10 +114,8 @@ def requires_admin_rights(func):
 
 def has_admin_rights(request_handler):
     names = get_all_audit_names(request_handler)
-    if AUTH_USERNAME in names:
-        username = names[audit_utils.AUTH_USERNAME]
-    else:
-        username = names.get(audit_utils.IP)
+
+    username = audit_utils.get_safe_username(names)
 
     if not username:
         LOGGER.warning('has_admin_rights: could not resolve username for %s',
@@ -216,7 +149,7 @@ class GetServerTitle(BaseRequestHandler):
 class GetScripts(BaseRequestHandler):
     @check_authorization
     def get(self):
-        config_names = list_config_names()
+        config_names = self.application.config_service.list_config_names()
 
         self.write(json.dumps(config_names))
 
@@ -230,7 +163,7 @@ class GetScriptInfo(BaseRequestHandler):
             respond_error(self, 400, "Script name is not specified")
             return
 
-        config = load_config(name)
+        config = self.application.config_service.load_config(name)
 
         if not config:
             respond_error(self, 400, "Couldn't find a script by name")
@@ -241,15 +174,10 @@ class GetScriptInfo(BaseRequestHandler):
 
 class ScriptStop(BaseRequestHandler):
     @check_authorization
-    def post(self):
-        request_body = self.request.body.decode("UTF-8")
-        execution_id = json.loads(request_body).get('executionId')
+    def post(self, execution_id):
+        validate_execution_id(execution_id, self)
 
-        if execution_id:
-            self.application.execution_service.stop_script(execution_id)
-        else:
-            respond_error(self, 400, "Invalid stop request")
-            return
+        self.application.execution_service.stop_script(execution_id)
 
 
 class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
@@ -263,61 +191,52 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         if not auth.is_authenticated(self):
             return None
 
-        executor = self.application.execution_service.get_active_executor(execution_id)  # type: ScriptExecutor
+        validate_execution_id(execution_id, self)
 
-        if not executor:
-            raise Exception("Couldn't find corresponding process")
+        execution_service = self.application.execution_service
 
-        self.executor = executor
+        config = execution_service.get_config(execution_id)
+        self.executor = execution_service.get_active_executor(execution_id)
+
         self.ioloop = tornado.ioloop.IOLoop.current()
 
-        self.write_message(wrap_to_server_event("input", "your input >>"))
+        self.write_message(wrap_to_server_event('input', 'your input >>'))
 
-        self.write_message(wrap_script_output(" ---  OUTPUT  --- \n"))
+        self.write_message(wrap_script_output(' ---  OUTPUT  --- \n'))
 
-        audit_name = get_audit_name_from_request(self)
-
-        output_stream = executor.get_unsecure_output_stream()
-        bash_formatting = executor.config.is_bash_formatting()
+        audit_names = audit_utils.get_all_audit_names(self)
+        output_stream = execution_service.get_raw_output_stream(execution_id, audit_names)
+        bash_formatting = config.is_bash_formatting()
         pipe_output_to_http(output_stream, bash_formatting, self.safe_write)
 
-        web_socket = self
+        def finished(web_socket, downloads_folder, file_download_feature):
+            try:
+                downloadable_files = file_download_feature.get_downloadable_files(execution_id)
 
-        file_download_feature = self.application.file_download_feature
+                for file in downloadable_files:
+                    filename = os.path.basename(file)
+                    relative_path = file_utils.relative_path(file, downloads_folder)
 
-        class FinishListener(object):
-            def finished(self):
-                output_stream.wait_close()
-                script_output = ''.join(output_stream.get_old_data())
+                    url_path = relative_path.replace(os.path.sep, '/')
+                    url_path = 'result_files/' + url_path
 
-                try:
-                    downloadable_files = file_download_feature.prepare_downloadable_files(
-                        executor.config,
-                        script_output,
-                        executor.parameter_values,
-                        audit_name)
+                    web_socket.safe_write(wrap_to_server_event(
+                        'file',
+                        {'url': url_path, 'filename': filename}))
+            except:
+                LOGGER.exception('Could not prepare downloadable files')
 
-                    for file in downloadable_files:
-                        filename = os.path.basename(file)
-                        relative_path = file_utils.relative_path(file, TEMP_FOLDER)
+            web_socket.ioloop.add_callback(web_socket.close)
 
-                        web_socket.safe_write(wrap_to_server_event(
-                            'file',
-                            {'url': relative_path.replace(os.path.sep, '/'), 'filename': filename}))
-                except:
-                    LOGGER.exception("Couldn't prepare downloadable files")
-
-                web_socket.ioloop.add_callback(web_socket.close)
-
-        executor.add_finish_listener(FinishListener())
+        output_stream.subscribe_on_close(finished,
+                                         self,
+                                         self.application.downloads_folder,
+                                         self.application.file_download_feature)
 
     def on_message(self, text):
         self.executor.write_to_input(text)
 
     def on_close(self):
-        if self.executor.config.kill_on_disconnect:
-            self.executor.kill()
-
         audit_name = get_audit_name_from_request(self)
         LOGGER.info(audit_name + ' disconnected')
 
@@ -339,7 +258,7 @@ class ScriptExecute(BaseRequestHandler):
 
             script_name = execution_info.script
 
-            config = load_config(script_name)
+            config = self.application.config_service.load_config(script_name)
 
             if not config:
                 message = 'Script with name "' + str(script_name) + '" not found'
@@ -367,7 +286,6 @@ class ScriptExecute(BaseRequestHandler):
             execution_id = self.application.execution_service.start_script(
                 config,
                 execution_info.param_values,
-                audit_name,
                 all_audit_names)
 
             self.write(str(execution_id))
@@ -395,6 +313,61 @@ class ScriptExecute(BaseRequestHandler):
                 + result)
 
             respond_error(self, 500, result)
+
+
+class GetActiveExecutionIds(BaseRequestHandler):
+    @check_authorization
+    def get(self):
+        all_audit_names = audit_utils.get_all_audit_names(self)
+        execution_service = self.application.execution_service
+
+        active_executions = execution_service.get_active_executions(all_audit_names)
+
+        self.write(json.dumps(active_executions))
+
+
+class GetExecutingScriptConfig(BaseRequestHandler):
+    @check_authorization
+    def get(self, execution_id):
+        validate_execution_id(execution_id, self)
+
+        config = self.application.execution_service.get_config(execution_id)
+
+        self.write(external_model.config_to_json(config))
+
+
+class GetExecutingScriptValues(BaseRequestHandler):
+    @check_authorization
+    def get(self, execution_id):
+        validate_execution_id(execution_id, self)
+
+        values = self.application.execution_service.get_parameter_values(execution_id)
+
+        self.write(external_model.to_external_parameter_values(values))
+
+
+class CleanupExecutingScript(BaseRequestHandler):
+    @check_authorization
+    def post(self, execution_id):
+        validate_execution_id(execution_id, self)
+
+        self.application.execution_service.cleanup_execution(execution_id)
+
+
+def validate_execution_id(execution_id, request_handler):
+    if is_empty(execution_id):
+        raise tornado.web.HTTPError(400, reason='Execution id is missing')
+
+    execution_service = request_handler.application.execution_service
+
+    if not execution_service.is_active(execution_id):
+        raise tornado.web.HTTPError(400, reason='No (active) executor found for id ' + execution_id)
+
+    all_audit_names = audit_utils.get_all_audit_names(request_handler)
+    if not execution_service.can_access(execution_id, all_audit_names):
+        LOGGER.warning('Prohibited access to not owned execution #%s (user=%s)',
+                       execution_id, str(all_audit_names))
+        raise tornado.web.HTTPError(403, reason='Prohibited access to not owned execution')
 
 
 class AuthorizedStaticFileHandler(BaseStaticHandler):
@@ -474,13 +447,14 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
     @check_authorization
     def validate_absolute_path(self, root, absolute_path):
         audit_name = get_audit_name_from_request(self)
+        username = get_safe_username(get_all_audit_names(self))
 
         file_download_feature = self.application.file_download_feature
 
         file_path = file_utils.relative_path(absolute_path, os.path.abspath(root))
-        if not file_download_feature.allowed_to_download(file_path, audit_name):
-            LOGGER.warning('Access attempt from ' + audit_name + ' to ' + absolute_path)
-            raise tornado.web.HTTPError(404)
+        if not file_download_feature.allowed_to_download(file_path, username):
+            LOGGER.warning('Access attempt from ' + username + '(' + audit_name + ') to ' + absolute_path)
+            raise tornado.web.HTTPError(403)
 
         return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
 
@@ -586,116 +560,11 @@ def pipe_output_to_http(output_stream, bash_formatting, write_callback):
     output_stream.subscribe(OutputToHttpListener())
 
 
-def get_tornado_secret():
-    secret_file = os.path.join("temp", "secret.dat")
-    if os.path.exists(secret_file):
-        secret = file_utils.read_file(secret_file, byte_content=True)
-        if secret:
-            return secret
-
-    secret = os.urandom(256)
-    file_utils.write_file(secret_file, secret, byte_content=True)
-    return secret
-
-
-def main():
-    tool_utils.validate_web_imports_exist(os.getcwd())
-
-    logging_conf_file = os.path.join(CONFIG_FOLDER, 'logging.json')
-    with open(logging_conf_file, "rt") as f:
-        log_config = json.load(f)
-        file_utils.prepare_folder(os.path.join('logs'))
-
-        logging.config.dictConfig(log_config)
-
-    file_utils.prepare_folder(CONFIG_FOLDER)
-    file_utils.prepare_folder(SCRIPT_CONFIGS_FOLDER)
-
-    server_config = server_conf.from_json(SERVER_CONF_PATH)
-    ssl_context = None
-    if server_config.is_ssl():
-        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(server_config.get_ssl_cert_path(),
-                                    server_config.get_ssl_key_path())
-
-    file_utils.prepare_folder(TEMP_FOLDER)
-
-    settings = {
-        "cookie_secret": get_tornado_secret(),
-        "login_url": "/login.html"
-    }
-
-    auth = TornadoAuth(server_config.authenticator, server_config.authorizer)
-
-    user_file_storage = UserFileStorage(get_tornado_secret())
-    file_download_feature = FileDownloadFeature(user_file_storage, TEMP_FOLDER)
-    result_files_folder = file_download_feature.get_result_files_folder()
-
-    handlers = [(r"/conf/title", GetServerTitle),
-                (r"/scripts/list", GetScripts),
-                (r"/scripts/info", GetScriptInfo),
-                (r"/scripts/execute", ScriptExecute),
-                (r"/scripts/execute/stop", ScriptStop),
-                (r"/scripts/execute/io/(.*)", ScriptStreamSocket),
-                (r'/admin/execution_log/short', GetShortHistoryEntriesHandler),
-                (r'/admin/execution_log/long/(.*)', GetLongHistoryEntryHandler),
-                (r'/' + os.path.basename(result_files_folder) + '/(.*)',
-                 DownloadResultFile,
-                 {'path': result_files_folder}),
-                (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
-
-    if auth.is_enabled():
-        handlers.append((r'/login', LoginHandler))
-        handlers.append((r'/auth/config', AuthConfigHandler))
-        handlers.append((r'/logout', LogoutHandler))
-
-    handlers.append((r"/username", GetUsernameHandler))
-
-    handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
-
-    application = tornado.web.Application(handlers, **settings)
-
-    application.auth = auth
-
-    application.server_title = server_config.title
-    application.authorizer = server_config.authorizer
-
-    application.file_download_feature = file_download_feature
-    application.file_upload_feature = FileUploadFeature(user_file_storage, TEMP_FOLDER)
-
-    alerts_service = AlertsService(server_config.get_alerts_config())
-    application.alerts_service = alerts_service
-
-    execution_logs_path = os.path.join('logs', 'processes')
-    log_name_creator = LogNameCreator(
-        server_config.logging_config.filename_pattern,
-        server_config.logging_config.date_format)
-    execution_logging_service = ExecutionLoggingService(execution_logs_path, log_name_creator)
-    application.execution_logging_service = execution_logging_service
-
-    existing_ids = [entry.id for entry in execution_logging_service.get_history_entries()]
-    id_generator = IdGenerator(existing_ids)
-
-    execution_service = ExecutionService(execution_logging_service, alerts_service, id_generator)
-    application.execution_service = execution_service
-
-    http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
-    http_server.listen(server_config.port, address=server_config.address)
-
-    io_loop = tornado.ioloop.IOLoop.current()
-
-    intercept_stop_when_running_scripts(io_loop, execution_service)
-
-    http_protocol = 'https' if server_config.ssl else 'http'
-    print('Server is running on: %s://%s:%s' % (http_protocol, server_config.address, server_config.port))
-    io_loop.start()
-
-
 def intercept_stop_when_running_scripts(io_loop, execution_service):
     def signal_handler(signum, frame):
         can_stop = True
 
-        running_processes = execution_service.get_running_processes()
+        running_processes = execution_service.get_running_executions()
         if len(running_processes) > 0:
             try:
                 user_input = input('Some scripts are still running. Do you want to stop server anyway? Y/N: \n')
@@ -720,6 +589,74 @@ def intercept_stop_when_running_scripts(io_loop, execution_service):
     signal.signal(signal.SIGINT, signal_handler)
 
 
-if __name__ == "__main__":
-    os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-    main()
+def init(server_config: ServerConfig,
+         execution_service: ExecutionService,
+         execution_logging_service: ExecutionLoggingService,
+         config_service: ConfigService,
+         file_upload_feature: FileUploadFeature,
+         file_download_feature: FileDownloadFeature,
+         secret):
+    settings = {
+        "cookie_secret": secret,
+        "login_url": "/login.html"
+    }
+
+    ssl_context = None
+    if server_config.is_ssl():
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(server_config.get_ssl_cert_path(),
+                                    server_config.get_ssl_key_path())
+
+    auth = TornadoAuth(server_config.authenticator, server_config.authorizer)
+
+    downloads_folder = file_download_feature.get_result_files_folder()
+
+    handlers = [(r"/conf/title", GetServerTitle),
+                (r"/scripts/list", GetScripts),
+                (r"/scripts/info", GetScriptInfo),
+                (r"/scripts/execution", ScriptExecute),
+                (r"/scripts/execution/stop/(.*)", ScriptStop),
+                (r"/scripts/execution/io/(.*)", ScriptStreamSocket),
+                (r"/scripts/execution/active", GetActiveExecutionIds),
+                (r"/scripts/execution/config/(.*)", GetExecutingScriptConfig),
+                (r"/scripts/execution/values/(.*)", GetExecutingScriptValues),
+                (r"/scripts/execution/cleanup/(.*)", CleanupExecutingScript),
+                (r'/admin/execution_log/short', GetShortHistoryEntriesHandler),
+                (r'/admin/execution_log/long/(.*)', GetLongHistoryEntryHandler),
+                (r'/result_files/(.*)',
+                 DownloadResultFile,
+                 {'path': downloads_folder}),
+                (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
+
+    if auth.is_enabled():
+        handlers.append((r'/login', LoginHandler))
+        handlers.append((r'/auth/config', AuthConfigHandler))
+        handlers.append((r'/logout', LogoutHandler))
+
+    handlers.append((r"/username", GetUsernameHandler))
+
+    handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
+
+    application = tornado.web.Application(handlers, **settings)
+
+    application.auth = auth
+
+    application.server_title = server_config.title
+    application.authorizer = server_config.authorizer
+    application.downloads_folder = downloads_folder
+    application.file_download_feature = file_download_feature
+    application.file_upload_feature = file_upload_feature
+    application.execution_service = execution_service
+    application.execution_logging_service = execution_logging_service
+    application.config_service = config_service
+
+    io_loop = tornado.ioloop.IOLoop.current()
+
+    http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
+    http_server.listen(server_config.port, address=server_config.address)
+
+    intercept_stop_when_running_scripts(io_loop, execution_service)
+
+    http_protocol = 'https' if server_config.ssl else 'http'
+    print('Server is running on: %s://%s:%s' % (http_protocol, server_config.address, server_config.port))
+    io_loop.start()

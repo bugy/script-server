@@ -1,104 +1,204 @@
 import logging
+from collections import namedtuple
 
-from alerts.alerts_service import AlertsService
+from typing import Optional, Dict, Callable, Any
+
 from execution.executor import ScriptExecutor
-from execution.logging import ExecutionLoggingService
-from react.observable import Observable
+from model import script_configs
+from utils import audit_utils
 
 LOGGER = logging.getLogger('script_server.execution_service')
 
+_ExecutionInfo = namedtuple('_ExecutionInfo',
+                            ['execution_id', 'owner', 'audit_name', 'config', 'audit_command', 'all_audit_names'])
 
 class ExecutionService:
-    def __init__(self, execution_logging_service, alerts_service, id_generator):
-        self._execution_logging_service = execution_logging_service  # type: ExecutionLoggingService
-        self._alerts_service = alerts_service  # type: AlertsService
+    def __init__(self,
+                 id_generator):
         self._id_generator = id_generator
 
-        self._running_scripts = {}
+        self._executors = {}  # type: Dict[str, ScriptExecutor]
+        self._execution_infos = {}  # type: Dict[str, _ExecutionInfo]
+
+        # active from user perspective:
+        #   - either they are running
+        #   - OR user haven't yet seen execution results
+        self._active_executor_ids = set()
+
+        self._finish_listeners = []
+        self._start_listeners = []
 
     def get_active_executor(self, execution_id):
-        return self._running_scripts.get(execution_id)
+        if execution_id not in self._active_executor_ids:
+            return None
 
-    def start_script(self, config, values, audit_name, all_audit_names):
-        script_name = config.name
+        return self._executors.get(execution_id)
 
-        executor = ScriptExecutor(config, values, audit_name)
+    def start_script(self, config, values, all_audit_names):
+        owner_user = audit_utils.get_safe_username(all_audit_names)
+        audit_name = audit_utils.get_audit_name(all_audit_names)
+
+        executor = ScriptExecutor(config, values)
         execution_id = self._id_generator.next_id()
 
         audit_command = executor.get_secure_command()
         LOGGER.info('Calling script #%s: %s', execution_id, audit_command)
 
         executor.start()
-        self._running_scripts[execution_id] = executor
+        self._executors[execution_id] = executor
+        self._execution_infos[execution_id] = _ExecutionInfo(
+            execution_id=execution_id,
+            owner=owner_user,
+            audit_name=audit_name,
+            audit_command=audit_command,
+            config=config,
+            all_audit_names=all_audit_names)
+        self._active_executor_ids.add(execution_id)
 
-        secure_output_stream = executor.get_secure_output_stream()
+        self._add_post_finish_handling(execution_id, executor)
 
-        self._execution_logging_service.start_logging(
-            execution_id, audit_name, script_name, audit_command, secure_output_stream, self, all_audit_names)
-
-        self.subscribe_fail_alerter(
-            script_name,
-            self._alerts_service,
-            audit_name,
-            executor,
-            secure_output_stream)
+        self._fire_execution_started(execution_id)
 
         return execution_id
 
     def stop_script(self, execution_id):
-        if execution_id in self._running_scripts:
-            self._running_scripts[execution_id].stop()
+        if execution_id in self._executors:
+            self._executors[execution_id].stop()
 
     def kill_script(self, execution_id):
-        if execution_id in self._running_scripts:
-            self._running_scripts[execution_id].kill()
+        if execution_id in self._executors:
+            self._executors[execution_id].kill()
 
     def get_exit_code(self, execution_id):
-        executor = self._running_scripts.get(execution_id)  # type: ScriptExecutor
-        if executor is None:
-            return None
-
-        return executor.get_return_code()
+        return self._get_for_executor(execution_id, lambda e: e.get_return_code())
 
     def is_running(self, execution_id):
-        executor = self._running_scripts.get(execution_id)  # type: ScriptExecutor
+        executor = self._executors.get(execution_id)  # type: ScriptExecutor
         if executor is None:
             return False
 
         return not executor.is_finished()
 
-    @staticmethod
-    def subscribe_fail_alerter(
-            script_name,
-            alerts_service,
-            audit_name,
-            executor: ScriptExecutor,
-            output_stream: Observable):
-
-        class Alerter(object):
-            def finished(self):
-                return_code = executor.get_return_code()
-
-                if return_code != 0:
-                    script = str(script_name)
-
-                    title = script + ' FAILED'
-                    body = 'The script "' + script + '", started by ' + audit_name + \
-                           ' exited with return code ' + str(return_code) + '.' + \
-                           ' Usually this means an error, occurred during the execution.' + \
-                           ' Please check the corresponding logs'
-
-                    output_stream.wait_close()
-                    script_output = ''.join(output_stream.get_old_data())
-
-                    alerts_service.send_alert(title, body, script_output)
-
-        executor.add_finish_listener(Alerter())
-
-    def get_running_processes(self):
+    def get_active_executions(self, all_audit_names):
         result = []
-        for id, executor in self._running_scripts.items():
-            if not executor.is_finished():
+        for id in self._active_executor_ids:
+            execution_info = self._execution_infos[id]
+
+            if self._can_access_execution(execution_info, all_audit_names):
                 result.append(id)
 
         return result
+
+    def get_running_executions(self):
+        result = []
+        for id, executor in self._executors.items():
+            if executor.is_finished():
+                continue
+            result.append(id)
+
+        return result
+
+    def get_config(self, execution_id) -> Optional[script_configs.Config]:
+        return self._get_for_execution_info(execution_id,
+                                            lambda i: i.config)
+
+    def is_active(self, execution_id):
+        return execution_id in self._active_executor_ids
+
+    def can_access(self, execution_id, all_audit_names):
+        execution_info = self._execution_infos.get(execution_id)
+        return self._can_access_execution(execution_info, all_audit_names)
+
+    @staticmethod
+    def _can_access_execution(execution_info: _ExecutionInfo, all_audit_names):
+        username = audit_utils.get_safe_username(all_audit_names)
+        return (execution_info is not None) and (execution_info.owner == username)
+
+    def get_parameter_values(self, execution_id):
+        return self._get_for_executor(execution_id,
+                                      lambda e: e.parameter_values)
+
+    def get_owner(self, execution_id):
+        return self._get_for_execution_info(execution_id,
+                                            lambda i: i.owner)
+
+    def get_audit_name(self, execution_id):
+        return self._get_for_execution_info(execution_id,
+                                            lambda i: i.audit_name)
+
+    def get_audit_command(self, execution_id):
+        return self._get_for_execution_info(execution_id,
+                                            lambda i: i.audit_command)
+
+    def get_all_audit_names(self, execution_id):
+        return self._get_for_execution_info(execution_id,
+                                            lambda i: i.all_audit_names)
+
+    def get_anonymized_output_stream(self, execution_id):
+        return self._get_for_executor(execution_id,
+                                      lambda e: e.get_anonymized_output_stream())
+
+    def get_raw_output_stream(self, execution_id, all_audit_names):
+        owner = self.get_owner(execution_id)
+
+        def getter(executor):
+            username = audit_utils.get_safe_username(all_audit_names)
+            if username != owner:
+                LOGGER.warning(username + ' tried to access execution #' + execution_id + ' with owner ' + owner)
+            return executor.get_raw_output_stream()
+
+        return self._get_for_executor(execution_id, getter)
+
+    def _get_for_executor(self, execution_id, getter: Callable[[ScriptExecutor], Any]):
+        executor = self._executors.get(execution_id)
+        if executor is None:
+            return None
+
+        return getter(executor)
+
+    def _get_for_execution_info(self, execution_id, getter: Callable[[_ExecutionInfo], Any]):
+        info = self._execution_infos.get(execution_id)
+        if info is None:
+            return None
+
+        return getter(info)
+
+    def cleanup_execution(self, execution_id):
+        executor = self._executors.get(execution_id)
+        if executor is None:
+            return
+
+        if not executor.is_finished():
+            raise Exception('Executor ' + execution_id + ' is not yet finished')
+
+        executor.cleanup()
+        self._active_executor_ids.remove(execution_id)
+
+    def add_finish_listener(self, callback):
+        self._finish_listeners.append(callback)
+
+    def _add_post_finish_handling(self, execution_id, executor):
+        self_service = self
+
+        class FinishListener:
+            def finished(self):
+                self_service._fire_execution_finished(execution_id)
+
+        executor.add_finish_listener(FinishListener())
+
+    def _fire_execution_finished(self, execution_id):
+        for callback in self._finish_listeners:
+            try:
+                callback(execution_id)
+            except:
+                LOGGER.exception('Could not notify finish listener (%s), execution: %s', str(callback), execution_id)
+
+    def add_start_listener(self, callback):
+        self._start_listeners.append(callback)
+
+    def _fire_execution_started(self, execution_id):
+        for callback in self._start_listeners:
+            try:
+                callback(execution_id)
+            except:
+                LOGGER.exception('Could not notify start listener (%s), execution: %s', str(callback), execution_id)

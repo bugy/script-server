@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from string import Template
 
+from execution.execution_service import ExecutionService
 from utils import file_utils, audit_utils
 from utils.audit_utils import get_audit_name
 from utils.date_utils import get_current_millis, ms_to_datetime, sec_to_datetime, to_millis
@@ -384,3 +385,32 @@ class LogNameCreator:
         filename = filename.replace(" ", "_")
 
         return filename
+
+
+class ExecutionLoggingInitiator:
+    def __init__(self, execution_service: ExecutionService, execution_logging_service):
+        self._execution_logging_service = execution_logging_service
+        self._execution_service = execution_service
+
+    def start(self):
+        execution_service = self._execution_service
+        logging_service = self._execution_logging_service
+
+        def started(execution_id):
+            script_config = execution_service.get_config(execution_id)
+            script_name = str(script_config.name)
+            audit_name = execution_service.get_audit_name(execution_id)
+            all_audit_names = execution_service.get_all_audit_names(execution_id)
+            output_stream = execution_service.get_anonymized_output_stream(execution_id)
+            audit_command = execution_service.get_audit_command(execution_id)
+
+            logging_service.start_logging(
+                execution_id,
+                audit_name,
+                script_name,
+                audit_command,
+                output_stream,
+                execution_service,
+                all_audit_names)
+
+        self._execution_service.add_start_listener(started)

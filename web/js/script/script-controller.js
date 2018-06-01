@@ -1,6 +1,6 @@
-function ScriptController(scriptConfig, scriptName, executionStartCallback) {
+function ScriptController(scriptConfig, executionStartCallback) {
     this.scriptConfig = scriptConfig;
-    this.scriptName = scriptName;
+    this.scriptName = scriptConfig.name;
     this.executionStartCallback = executionStartCallback;
     this.scriptView = null;
 
@@ -22,15 +22,15 @@ ScriptController.prototype.fillView = function (parent) {
         scriptView.setLog('Calling the script...');
 
         try {
-            var parameterValues = new Hashtable();
+            var parameterValues = {};
             scriptView.parameterControls.each(function (parameter, control) {
                 var value = control.getValue();
                 if (!isNull(value)) {
-                    parameterValues.put(parameter.name, value);
+                    parameterValues[parameter.name] = value;
                 }
             });
 
-            this.executor = new ScriptExecutor(this.scriptConfig, this.scriptName);
+            this.executor = new ScriptExecutor(this.scriptConfig);
             this.executor.start(parameterValues);
             this.executionStartCallback(this.executor);
 

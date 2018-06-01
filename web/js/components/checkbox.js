@@ -27,5 +27,5 @@ Checkbox.prototype.getValue = function () {
 };
 
 Checkbox.prototype.setValue = function (value) {
-    this.checkBox.checked = value || false;
+    this.checkBox.checked = toBoolean(value);
 };

@@ -68,7 +68,7 @@ ScriptView.prototype.createParameters = function (parameters) {
 
 ScriptView.prototype.setParameterValues = function (parameterValues) {
     this.parameterControls.each(function (parameter, control) {
-        var value = parameterValues.get(parameter.name);
+        var value = parameterValues[parameter.name];
         if (!isNull(value)) {
             control.setValue(value);
         } else {

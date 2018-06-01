@@ -1,7 +1,7 @@
 import unittest
 
 from execution.logging import LogNameCreator
-from utils import audit_utils
+from tests.test_utils import create_audit_names
 
 _DATETIME = 1525595426234  # 08:30:25.234 06 May 2018
 
@@ -54,16 +54,3 @@ class TestLogNameCreator(unittest.TestCase):
 
         creator = LogNameCreator(filename_pattern, date_format)
         return creator.create_filename(id, all_audit_names, script_name, datetime)
-
-
-def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostname=None):
-    result = {}
-    if ip is not None:
-        result[audit_utils.IP] = ip
-    if auth_username is not None:
-        result[audit_utils.AUTH_USERNAME] = auth_username
-    if proxy_username is not None:
-        result[audit_utils.PROXIED_USERNAME] = proxy_username
-    if hostname is not None:
-        result[audit_utils.HOSTNAME] = hostname
-    return result

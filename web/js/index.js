@@ -1,3 +1,5 @@
+'use strict';
+
 loadScript('js/components/component.js');
 loadScript('js/components/abstract_input.js');
 loadScript('js/components/checkbox.js');
@@ -6,7 +8,7 @@ loadScript('js/components/combobox.js');
 loadScript('js/components/file_upload.js');
 loadScript('js/script/script-controller.js');
 loadScript('js/script/script-view.js');
-loadScript('js/script/script-executor.js');
+loadScript('js/script/script-execution-model.js');
 
 
 var selectedScript = null;
@@ -109,6 +111,25 @@ function onLoad() {
 
     initLogoutPanel();
     initWelcomeIcon();
+
+    loadActiveExecutions();
+}
+
+
+function loadActiveExecutions() {
+    authorizedCallHttp('scripts/execution/active', null, null, function (response) {
+        var activeExecutionIds = JSON.parse(response);
+        for (var i = 0; i < activeExecutionIds.length; i++) {
+            var executionId = activeExecutionIds[i];
+            restoreExecutor(executionId, function (executor) {
+                addRunningExecutor(executor);
+
+                if (selectedScript === executor.scriptName) {
+                    selectScript(executor.scriptName);
+                }
+            });
+        }
+    });
 }
 
 function initSearchPanel() {
@@ -257,6 +278,16 @@ function initWelcomeIcon() {
     });
 }
 
+function addRunningExecutor(scriptExecutor) {
+    runningScriptExecutors.push(scriptExecutor);
+    updateMenuItemState(scriptExecutor.scriptName);
+
+    scriptExecutor.addListener({
+        'onExecutionStop': function () {
+            updateMenuItemState(scriptExecutor.scriptName);
+        }
+    })
+}
 function showScript(selectedScript) {
     if (!isNull(activeScriptController)) {
         var previousScriptName = activeScriptController.scriptName;
@@ -322,15 +353,8 @@ function showScript(selectedScript) {
 
     scriptHeader.innerText = scriptConfig.name;
 
-    var scriptController = new ScriptController(scriptConfig, selectedScript, function (scriptExecutor) {
-        runningScriptExecutors.push(scriptExecutor);
-        updateMenuItemState(selectedScript);
-
-        scriptExecutor.addListener({
-            'onExecutionStop': function () {
-                updateMenuItemState(selectedScript);
-            }
-        })
+    var scriptController = new ScriptController(scriptConfig, function (scriptExecutor) {
+        addRunningExecutor(scriptExecutor);
     });
 
     activeScriptController = scriptController;
@@ -521,20 +545,12 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
 function showErrorPanel(text) {
     var errorPanel = document.getElementById('error-panel');
 
-    var logPanels = document.getElementsByClassName('log-panel');
-    for (var i = 0; i < logPanels.length; i++) {
-        hide(logPanels[i]);
-    }
-
-    var inputPanels = document.getElementsByClassName('script-input-panel');
-    for (var i = 0; i < inputPanels.length; i++) {
-        hide(inputPanels[i]);
-    }
-
-    var validationPanels = document.getElementsByClassName('validation-panel');
-    for (var i = 0; i < validationPanels.length; i++) {
-        hide(validationPanels[i]);
-    }
+    var hideThis = function () {
+        hide(this);
+    };
+    $(errorPanel).children('.log-panel').each(hideThis);
+    $(errorPanel).children('.script-input-panel').each(hideThis);
+    $(errorPanel).children('.validation-panel').each(hideThis);
 
     var scriptPanelContainer = document.getElementById('script-panel-container');
     addClass(scriptPanelContainer, 'collapsed');

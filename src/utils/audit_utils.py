@@ -47,6 +47,19 @@ def get_audit_name(all_audit_names):
     return None
 
 
+def get_safe_username(all_audit_names):
+    """
+    Get the user credentials, which safely authorizes the user (either script-server auth username or IP)
+    Safely means, that it's not easy for a fraud to imitate the name
+    :param all_audit_names: 
+    :return: user credentials (string)
+    """
+    if AUTH_USERNAME in all_audit_names:
+        return all_audit_names[AUTH_USERNAME]
+    else:
+        return all_audit_names.get(IP)
+
+
 def get_audit_name_from_request(request_handler):
     audit_names = get_all_audit_names(request_handler)
 

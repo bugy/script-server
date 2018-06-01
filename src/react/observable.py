@@ -2,7 +2,8 @@ import abc
 import logging
 import threading
 import time
-from typing import List, TypeVar, Generic
+
+from typing import TypeVar, Generic
 
 T = TypeVar('T')
 
@@ -13,15 +14,12 @@ class ObservableBase(Generic[T], metaclass=abc.ABCMeta):
     def __init__(self):
         self.observers = []
         self.closed = False
-        self.chunks = []
         self.close_condition = threading.Condition()
 
     def push(self, data: T):
         self._push(data)
 
     def _push(self, data: T):
-        self.chunks.append(data)
-
         self._fire_on_next(data)
 
     def close(self):
@@ -34,15 +32,24 @@ class ObservableBase(Generic[T], metaclass=abc.ABCMeta):
 
         self._fire_on_close()
 
-    def subscribe(self, observer):
-        for chunk in self.chunks:
-            observer.on_next(chunk)
+        del self.observers[:]
 
+    def subscribe(self, observer):
         if self.closed:
             observer.on_close()
             return
 
         self.observers.append(observer)
+
+    def subscribe_on_close(self, callback, *args):
+        self.subscribe(_CloseSubscriber(callback, *args))
+
+    def unsubscribe(self, observer):
+        if self.closed:
+            return
+
+        while observer in self.observers:
+            self.observers.remove(observer)
 
     def _fire_on_next(self, data):
         for observer in self.observers:
@@ -58,24 +65,61 @@ class ObservableBase(Generic[T], metaclass=abc.ABCMeta):
             except:
                 LOGGER.exception('Could not notify on_close, observer ' + str(observer))
 
-    def get_old_data(self) -> List[T]:
-        return self.chunks
-
     def time_buffered(self, period_millis, aggregate_function=None):
         return _TimeBufferedPipe(self, period_millis, aggregate_function)
 
     def map(self, map_function):
         return _MappedPipe(self, map_function)
 
-    def wait_close(self):
+    def replay(self):
+        return _ReplayPipe(self)
+
+    def wait_close(self, timeout=None):
+        if (timeout is not None) and (timeout > 0):
+            self._wait_close_timed(timeout)
+        else:
+            self._wait_close_unlimited()
+
+    def _wait_close_unlimited(self):
         with self.close_condition:
             while not self.closed:
                 self.close_condition.wait()
+
+    def _wait_close_timed(self, timeout=None):
+        end_time = time.time() + timeout
+
+        with self.close_condition:
+            while not self.closed:
+                wait_period = end_time - time.time()
+                if wait_period <= 0:
+                    return
+
+                self.close_condition.wait(wait_period)
 
 
 class Observable(ObservableBase[T]):
     def __init__(self):
         super().__init__()
+
+
+class ReplayObservable(ObservableBase[T]):
+    def __init__(self):
+        super().__init__()
+        self.chunks = []
+
+    def _push(self, data: T):
+        self.chunks.append(data)
+        super()._push(data)
+
+    def subscribe(self, observer):
+        for chunk in self.chunks:
+            observer.on_next(chunk)
+
+        super().subscribe(observer)
+
+    def dispose(self):
+        self._close()
+        del self.chunks[:]
 
 
 class _PipedObservable(ObservableBase[T]):
@@ -89,6 +133,32 @@ class _PipedObservable(ObservableBase[T]):
 
     def close(self):
         raise RuntimeError('Piped observable is read-only')
+
+
+class _ReplayPipe(ReplayObservable):
+    def __init__(self, source_observable):
+        super().__init__()
+        self.source = source_observable
+        self.source.subscribe(self)
+
+    def push(self, data: T):
+        raise RuntimeError('Piped observable is read-only')
+
+    def close(self):
+        raise RuntimeError('Piped observable is read-only')
+
+    def on_next(self, data):
+        self._push(data)
+
+    def on_close(self):
+        self._close()
+
+    def dispose(self):
+        self.source.subscribe_on_close(self._defer_dispose)
+
+    def _defer_dispose(self):
+        self.source.unsubscribe(self)
+        super().dispose()
 
 
 class _MappedPipe(_PipedObservable):
@@ -131,14 +201,7 @@ class _TimeBufferedPipe(_PipedObservable):
 
     def subscribe(self, observer):
         with self.subscriber_lock:
-            for chunk in self.chunks:
-                observer.on_next(chunk)
-
-            if self.closed:
-                observer.on_close()
-                return
-
-            self.observers.append(observer)
+            super().subscribe(observer)
 
     def flush_buffer(self):
         while not self.closed:
@@ -163,3 +226,51 @@ class _TimeBufferedPipe(_PipedObservable):
                     return
 
             time.sleep(self.period_millis / 1000.)
+
+
+class _StoringObserver:
+    def __init__(self):
+        self.data = []
+        self.closed = False
+
+    def on_next(self, chunk):
+        if not self.closed:
+            self.data.append(chunk)
+
+    def on_close(self):
+        if self.closed:
+            raise Exception('Already closed')
+
+        self.closed = True
+
+
+def read_until_closed(observable, timeout=None):
+    """
+    Reads and returns all available data in observable until it's closed
+    :param observable: data to be read from
+    :param timeout: (in sec, float) if timeout is set (non None and > 0) and wait takes more time, 
+    then TimeoutError is raised
+    :return: all data (list), which will be read 
+    """
+    observer = _StoringObserver()
+
+    observable.subscribe(observer)
+    observable.wait_close(timeout)
+
+    if (timeout is not None) and (not observable.closed):
+        observable.unsubscribe(observer)
+        raise TimeoutError('Observable was not closed within timeout period of ' + str(timeout) + ' sec')
+
+    return observer.data
+
+
+class _CloseSubscriber:
+    def __init__(self, callback, *args) -> None:
+        self._callback = callback
+        self._args = args
+
+    def on_next(self, data):
+        pass
+
+    def on_close(self):
+        self._callback(*self._args)
