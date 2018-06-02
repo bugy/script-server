@@ -93,7 +93,8 @@ ScriptExecutor.prototype._startExecution = function (executionId) {
         }
     }.bind(this));
 
-    this.websocket.addEventListener('close', function () {
+    this.websocket.addEventListener('close', function (event) {
+        var executionFinished = (event.code === 1000);
         try {
             this.listeners.forEach(function (listener) {
                 if (listener.onExecutionStop) {
@@ -102,7 +103,7 @@ ScriptExecutor.prototype._startExecution = function (executionId) {
             }.bind(this));
 
         } finally {
-            if (this.isFinished()) {
+            if (executionFinished) {
                 authorizedCallHttp('scripts/execution/cleanup/' + executionId, null, 'POST');
             }
         }

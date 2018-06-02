@@ -226,7 +226,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
             except:
                 LOGGER.exception('Could not prepare downloadable files')
 
-            web_socket.ioloop.add_callback(web_socket.close)
+            web_socket.ioloop.add_callback(web_socket.close, code=1000)
 
         output_stream.subscribe_on_close(finished,
                                          self,
@@ -596,10 +596,6 @@ def init(server_config: ServerConfig,
          file_upload_feature: FileUploadFeature,
          file_download_feature: FileDownloadFeature,
          secret):
-    settings = {
-        "cookie_secret": secret,
-        "login_url": "/login.html"
-    }
 
     ssl_context = None
     if server_config.is_ssl():
@@ -636,6 +632,13 @@ def init(server_config: ServerConfig,
     handlers.append((r"/username", GetUsernameHandler))
 
     handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
+
+    settings = {
+        "cookie_secret": secret,
+        "login_url": "/login.html",
+        'websocket_ping_interval': 30,
+        'websocket_ping_timeout': 300
+    }
 
     application = tornado.web.Application(handlers, **settings)
 
