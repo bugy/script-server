@@ -1,6 +1,6 @@
 {
   "name": "Write to file",
-  "script_path": "scripts/my_script.sh",
+  "script_path": "scripts/write_file.sh",
   "description": "This script does very simple change, putting \"I'm called\" into user home simple.txt file",
   "working_directory": "./samples",
   "parameters": [
