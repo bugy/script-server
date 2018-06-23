@@ -53,6 +53,16 @@ class TestScriptOutputLogging(unittest.TestCase):
 
         self.assertIsNone(self.read_log())
 
+    def test_caret_return(self):
+        self.output_logger = self.create_logger()
+        self.output_logger.start()
+
+        self.output_stream.push('some text\r')
+        self.output_stream.push('another text')
+        self.output_stream.close()
+
+        self.assertEqual(self.read_log(), 'some text\ranother text')
+
     def create_logger(self):
         self.file_path = os.path.join(test_utils.temp_folder, 'TestScriptOutputLogging.log')
 
@@ -62,7 +72,7 @@ class TestScriptOutputLogging(unittest.TestCase):
 
     def read_log(self):
         if self.file_path and os.path.exists(self.file_path):
-            return file_utils.read_file(self.file_path)
+            return file_utils.read_file(self.file_path, keep_newlines=True)
 
         return None
 
@@ -105,6 +115,13 @@ class TestLoggingService(unittest.TestCase):
         log_file = self.get_log_files()[0]
         log_content = self.read_logs_only(log_file)
         self.assertEqual('line 1\nsome text\n', log_content)
+
+    def test_write_log_with_caret_return(self):
+        self.simulate_logging(log_lines=['line 1\r', 'some text\r'])
+
+        log_file = self.get_log_files()[0]
+        log_content = self.read_logs_only(log_file)
+        self.assertEqual('line 1\r\nsome text\r\n', log_content)
 
     def test_when_different_users_then_independent_files(self):
         self.simulate_logging(user='user1', log_lines=['text for user1'])
@@ -223,7 +240,7 @@ class TestLoggingService(unittest.TestCase):
         self.assertEqual(exit_code, entry.exit_code)
 
     def read_logs_only(self, log_file):
-        content = file_utils.read_file(log_file)
+        content = file_utils.read_file(log_file, keep_newlines=True)
         self.assertTrue(OUTPUT_STARTED_MARKER in content)
         log_start = content.index(OUTPUT_STARTED_MARKER) + len(OUTPUT_STARTED_MARKER) + 1
         return content[log_start:]

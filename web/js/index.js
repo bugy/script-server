@@ -6,6 +6,7 @@ loadScript('js/components/checkbox.js');
 loadScript('js/components/textfield.js');
 loadScript('js/components/combobox.js');
 loadScript('js/components/file_upload.js');
+loadScript('js/components/log_panel.js');
 loadScript('js/script/script-controller.js');
 loadScript('js/script/script-view.js');
 loadScript('js/script/script-execution-model.js');

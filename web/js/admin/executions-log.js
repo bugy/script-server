@@ -45,7 +45,7 @@ var executionsLogPage;
                     <readonly-field title="Status" :value="fullStatus"></readonly-field>
                     <readonly-field class="long" title="Command" :value="command"></readonly-field>
                 </div>
-                <log-panel :log="log" :autoscrollEnabled="false"></log-panel>
+                <log-panel ref="logPanel" :autoscrollEnabled="false"></log-panel>
             </div>`,
 
         mounted: function () {
@@ -59,7 +59,7 @@ var executionsLogPage;
                 this.startTime = executionLog.startTimeString;
                 this.fullStatus = executionLog.fullStatus;
                 this.command = executionLog.command;
-                this.log = executionLog.log;
+                this.$refs.logPanel.setLog(executionLog.log);
 
                 this.$set(this.pageState, 'selectedExecution', executionLog);
 

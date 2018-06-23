@@ -69,10 +69,13 @@ def _translate_history_entry(entry, running):
         'startTime': start_time,
         'user': entry.username,
         'script': entry.script_name,
-        'status': 'running' if running else 'finished',
+        'status': running_flag_to_status(running),
         'exitCode': entry.exit_code
     }
 
+
+def running_flag_to_status(running):
+    return 'running' if running else 'finished'
 
 def to_execution_info(request_parameters):
     NAME_KEY = '__script_name'

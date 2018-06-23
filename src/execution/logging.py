@@ -11,6 +11,8 @@ from utils import file_utils, audit_utils
 from utils.audit_utils import get_audit_name
 from utils.date_utils import get_current_millis, ms_to_datetime, sec_to_datetime, to_millis
 
+ENCODING = 'utf8'
+
 OUTPUT_STARTED_MARKER = '>>>>>  OUTPUT STARTED <<<<<'
 
 LOGGER = logging.getLogger('script_server.execution.logging')
@@ -35,7 +37,7 @@ class ScriptOutputLogger:
             return
 
         try:
-            self.log_file = open(self.log_file_path, 'w')
+            self.log_file = open(self.log_file_path, 'wb')
         except:
             LOGGER.exception("Couldn't create a log file")
 
@@ -51,7 +53,7 @@ class ScriptOutputLogger:
 
         try:
             if text is not None:
-                self.log_file.write(text)
+                self.log_file.write(text.encode(ENCODING))
                 self.log_file.flush()
         except:
             LOGGER.exception("Couldn't write to the log file")
@@ -75,7 +77,7 @@ class ScriptOutputLogger:
     def write_line(self, text):
         self._ensure_file_open()
 
-        self.__log(text + '\n')
+        self.__log(text + os.linesep)
 
 
 class HistoryEntry:
@@ -172,7 +174,8 @@ class ExecutionLoggingService:
             LOGGER.warning('find_log: file for %s id not found', execution_id)
             return None
 
-        file_content = file_utils.read_file(os.path.join(self._output_folder, file))
+        file_content = file_utils.read_file(os.path.join(self._output_folder, file),
+                                            keep_newlines=True)
         log = file_content.split(OUTPUT_STARTED_MARKER + '\n', 1)[1]
         return log
 
@@ -188,7 +191,7 @@ class ExecutionLoggingService:
     def _read_parameters_text(file_path):
         parameters_text = ''
         correct_format = False
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding=ENCODING) as f:
             for line in f:
                 if line.rstrip('\n') == OUTPUT_STARTED_MARKER:
                     correct_format = True
@@ -342,14 +345,14 @@ class ExecutionLoggingService:
         if exit_code is None:
             return
 
-        file_content = file_utils.read_file(log_file_path)
+        file_content = file_utils.read_file(log_file_path, keep_newlines=True)
 
-        file_parts = file_content.split(OUTPUT_STARTED_MARKER + '\n', 1)
+        file_parts = file_content.split(OUTPUT_STARTED_MARKER + os.linesep, 1)
         parameters_text = file_parts[0]
-        parameters_text += 'exit_code:' + str(exit_code) + '\n'
+        parameters_text += 'exit_code:' + str(exit_code) + os.linesep
 
-        new_content = parameters_text + OUTPUT_STARTED_MARKER + '\n' + file_parts[1]
-        file_utils.write_file(log_file_path, new_content)
+        new_content = parameters_text + OUTPUT_STARTED_MARKER + os.linesep + file_parts[1]
+        file_utils.write_file(log_file_path, new_content.encode(ENCODING), byte_content=True)
 
 
 class LogNameCreator:

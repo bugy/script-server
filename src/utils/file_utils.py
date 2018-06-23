@@ -50,7 +50,7 @@ def normalize_path(path_string, current_folder=None):
     return path_string
 
 
-def read_file(filename, byte_content=False):
+def read_file(filename, byte_content=False, keep_newlines=False):
     path = normalize_path(filename)
 
     mode = 'r'
@@ -59,7 +59,8 @@ def read_file(filename, byte_content=False):
             return f.read()
 
     try:
-        with open(path, mode) as f:
+        newline = '' if keep_newlines else None
+        with open(path, mode, newline=newline) as f:
             return f.read()
 
     except UnicodeDecodeError as e:

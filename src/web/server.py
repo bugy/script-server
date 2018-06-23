@@ -26,10 +26,11 @@ from model import model_helper
 from model.external_model import to_short_execution_log, to_long_execution_log
 from model.model_helper import is_empty
 from model.server_conf import ServerConfig
-from utils import bash_utils as bash_utils, tornado_utils, audit_utils
 from utils import file_utils as file_utils
+from utils import tornado_utils, audit_utils
 from utils.audit_utils import get_all_audit_names, get_safe_username
 from utils.audit_utils import get_audit_name_from_request
+from utils.terminal_formatter import TerminalOutputTransformer, TerminalOutputChunk
 from utils.tornado_utils import respond_error, redirect_relative
 
 LOGGER = logging.getLogger('web_server')
@@ -202,8 +203,6 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
         self.write_message(wrap_to_server_event('input', 'your input >>'))
 
-        self.write_message(wrap_script_output(' ---  OUTPUT  --- \n'))
-
         audit_names = audit_utils.get_all_audit_names(self)
         output_stream = execution_service.get_raw_output_stream(execution_id, audit_names)
         bash_formatting = config.is_bash_formatting()
@@ -225,6 +224,11 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
                         {'url': url_path, 'filename': filename}))
             except:
                 LOGGER.exception('Could not prepare downloadable files')
+
+            connection = web_socket.ws_connection
+            if connection is not None:
+                # we need to stop callback explicitly and as soon as possible, to avoid sending ping after close
+                connection.ping_callback.stop()
 
             web_socket.ioloop.add_callback(web_socket.close, code=1000)
 
@@ -354,13 +358,22 @@ class CleanupExecutingScript(BaseRequestHandler):
         self.application.execution_service.cleanup_execution(execution_id)
 
 
-def validate_execution_id(execution_id, request_handler):
+class GetExecutionStatus(BaseRequestHandler):
+    @check_authorization
+    def get(self, execution_id):
+        validate_execution_id(execution_id, self, only_active=False)
+
+        running = self.application.execution_service.is_running(execution_id)
+        self.write(external_model.running_flag_to_status(running))
+
+
+def validate_execution_id(execution_id, request_handler, only_active=True):
     if is_empty(execution_id):
         raise tornado.web.HTTPError(400, reason='Execution id is missing')
 
     execution_service = request_handler.application.execution_service
 
-    if not execution_service.is_active(execution_id):
+    if only_active and (not execution_service.is_active(execution_id)):
         raise tornado.web.HTTPError(400, reason='No (active) executor found for id ' + execution_id)
 
     all_audit_names = audit_utils.get_all_audit_names(request_handler)
@@ -512,7 +525,7 @@ class GetLongHistoryEntryHandler(BaseRequestHandler):
         self.write(json.dumps(long_log))
 
 
-def wrap_script_output(text, text_color=None, background_color=None, text_styles=None):
+def wrap_script_output(text, text_color=None, background_color=None, text_styles=None, custom_position=None):
     output_object = {'text': text}
 
     if text_color:
@@ -524,7 +537,11 @@ def wrap_script_output(text, text_color=None, background_color=None, text_styles
     if text_styles:
         output_object['text_styles'] = text_styles
 
-    return wrap_to_server_event("output", output_object)
+    if custom_position:
+        output_object['replace'] = True
+        output_object['custom_position'] = {'x': custom_position.x, 'y': custom_position.y}
+
+    return wrap_to_server_event('output', output_object)
 
 
 def wrap_to_server_event(event_type, data):
@@ -535,29 +552,37 @@ def wrap_to_server_event(event_type, data):
 
 
 def pipe_output_to_http(output_stream, bash_formatting, write_callback):
-    reader = None
     if bash_formatting:
-        reader = bash_utils.BashReader()
 
-    class OutputToHttpListener:
-        def on_next(self, output):
-            if reader:
-                read_iterator = reader.read(output)
-                for text in read_iterator:
-                    write_callback(wrap_script_output(
-                        text.text,
-                        text.text_color,
-                        text.background_color,
-                        text.styles
-                    ))
+        terminal_output_stream = TerminalOutputTransformer(output_stream)
 
-            else:
+        class OutputToHttpListener:
+            def on_next(self, terminal_output: TerminalOutputChunk):
+                formatted_text = terminal_output.formatted_text
+                custom_position = terminal_output.custom_position
+
+                write_callback(wrap_script_output(
+                    formatted_text.text,
+                    text_color=formatted_text.text_color,
+                    background_color=formatted_text.background_color,
+                    text_styles=formatted_text.styles,
+                    custom_position=custom_position))
+
+            def on_close(self):
+                terminal_output_stream.dispose()
+                pass
+
+        terminal_output_stream.subscribe(OutputToHttpListener())
+
+    else:
+        class OutputToHttpListener:
+            def on_next(self, output):
                 write_callback(wrap_script_output(output))
 
-        def on_close(self):
-            pass
+            def on_close(self):
+                pass
 
-    output_stream.subscribe(OutputToHttpListener())
+        output_stream.subscribe(OutputToHttpListener())
 
 
 def intercept_stop_when_running_scripts(io_loop, execution_service):
@@ -617,6 +642,7 @@ def init(server_config: ServerConfig,
                 (r"/scripts/execution/config/(.*)", GetExecutingScriptConfig),
                 (r"/scripts/execution/values/(.*)", GetExecutingScriptValues),
                 (r"/scripts/execution/cleanup/(.*)", CleanupExecutingScript),
+                (r"/scripts/execution/status/(.*)", GetExecutionStatus),
                 (r'/admin/execution_log/short', GetShortHistoryEntriesHandler),
                 (r'/admin/execution_log/long/(.*)', GetLongHistoryEntryHandler),
                 (r'/result_files/(.*)',

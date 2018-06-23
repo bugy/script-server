@@ -27,6 +27,9 @@ class ObservableBase(Generic[T], metaclass=abc.ABCMeta):
 
     def _close(self):
         with self.close_condition:
+            if self.closed:
+                return
+
             self.closed = True
             self.close_condition.notify_all()
 
@@ -122,7 +125,7 @@ class ReplayObservable(ObservableBase[T]):
         del self.chunks[:]
 
 
-class _PipedObservable(ObservableBase[T]):
+class PipedObservable(ObservableBase[T]):
     def __init__(self, source_observable):
         super().__init__()
 
@@ -161,7 +164,7 @@ class _ReplayPipe(ReplayObservable):
         super().dispose()
 
 
-class _MappedPipe(_PipedObservable):
+class _MappedPipe(PipedObservable):
     def __init__(self, source_observable, map_function):
         super().__init__(source_observable)
 
@@ -176,7 +179,7 @@ class _MappedPipe(_PipedObservable):
         self._close()
 
 
-class _TimeBufferedPipe(_PipedObservable):
+class _TimeBufferedPipe(PipedObservable):
     def __init__(self, source_observable: ObservableBase, period_millis, aggregate_function=None):
         super().__init__(source_observable)
 

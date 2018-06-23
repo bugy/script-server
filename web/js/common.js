@@ -308,3 +308,8 @@ function toBoolean(value) {
         return Boolean(value);
     }
 }
+
+function getLinesCount(text) {
+    var linesMatch = text.match(/\n/g);
+    return isNull(linesMatch) ? 0 : linesMatch.length;
+}

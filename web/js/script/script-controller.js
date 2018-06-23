@@ -1,3 +1,5 @@
+'use strict';
+
 function ScriptController(scriptConfig, executionStartCallback) {
     this.scriptConfig = scriptConfig;
     this.scriptName = scriptConfig.name;
@@ -17,19 +19,11 @@ ScriptController.prototype.fillView = function (parent) {
     scriptView.setScriptDescription(this.scriptConfig.description);
     scriptView.createParameters(this.scriptConfig.parameters);
 
-    scriptView.executeButtonCallback = function () {
+    scriptView.setExecutionCallback(function (parameterValues) {
         this.scriptView.setExecuting();
         scriptView.setLog('Calling the script...');
 
         try {
-            var parameterValues = {};
-            scriptView.parameterControls.each(function (parameter, control) {
-                var value = control.getValue();
-                if (!isNull(value)) {
-                    parameterValues[parameter.name] = value;
-                }
-            });
-
             this.executor = new ScriptExecutor(this.scriptConfig);
             this.executor.start(parameterValues);
             this.executionStartCallback(this.executor);
@@ -44,16 +38,16 @@ ScriptController.prototype.fillView = function (parent) {
                 logError(error);
 
                 var errorLogElement = '\n\n' + error.message;
-                scriptView.appendLogElement(document.createTextNode(errorLogElement));
+                scriptView.appendLog(errorLogElement);
             }
         }
-    }.bind(this);
+    }.bind(this));
 
-    scriptView.stopButtonCallback = function () {
+    scriptView.setStopCallback(function () {
         if (!isNull(this.executor)) {
             this.executor.stop();
         }
-    }.bind(this);
+    }.bind(this));
 
     return scriptView.scriptPanel;
 };
@@ -129,14 +123,26 @@ ScriptController.prototype._publishLogs = function () {
         return;
     }
 
-    var logElements = this.executor.logElements;
+    var logChunks = this.executor.logChunks;
 
-    if ((this.logLastIndex === 0) && (logElements.length > 0)) {
+    if ((this.logLastIndex === 0) && (logChunks.length > 0)) {
         this.scriptView.setLog('');
     }
 
-    for (; this.logLastIndex < logElements.length; this.logLastIndex++) {
+    for (; this.logLastIndex < logChunks.length; this.logLastIndex++) {
         var logIndex = this.logLastIndex;
-        this.scriptView.appendLogElement(logElements[logIndex]);
+
+        var logChunk = logChunks[logIndex];
+
+        var text = logChunk.text;
+        var textColor = logChunk.text_color;
+        var backgroundColor = logChunk.background_color;
+        var textStyles = logChunk.text_styles;
+
+        if (toBoolean(logChunk.replace)) {
+            this.scriptView.replaceLog(text, textColor, backgroundColor, textStyles, logChunk.custom_position.x, logChunk.custom_position.y);
+        } else {
+            this.scriptView.appendLog(text, textColor, backgroundColor, textStyles);
+        }
     }
 };

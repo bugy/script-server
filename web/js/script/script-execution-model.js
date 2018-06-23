@@ -1,10 +1,12 @@
+"use strict";
+
 function ScriptExecutor(scriptConfig) {
     this.scriptConfig = scriptConfig;
     this.scriptName = scriptConfig.name;
     this.parameterValues = null;
     this.websocket = null;
     this.executionId = null;
-    this.logElements = [];
+    this.logChunks = [];
     this.listeners = [];
     this.inputPromtText = null;
     this.files = [];
@@ -45,29 +47,7 @@ ScriptExecutor.prototype._startExecution = function (executionId) {
         var data = event.data;
 
         if (eventType === 'output') {
-            var outputElement = null;
-
-            if (!isNull(data.text_color) || !isNull(data.background_color) || !isNull(data.text_styles)) {
-                outputElement = document.createElement('span');
-                if (!isNull(data.text_color)) {
-                    addClass(outputElement, 'text_color_' + data.text_color);
-                }
-                if (!isNull(data.background_color)) {
-                    addClass(outputElement, 'background_' + data.background_color);
-                }
-
-                if (!isNull(data.text_styles)) {
-                    for (styleIndex = 0; styleIndex < data.text_styles.length; styleIndex++) {
-                        addClass(outputElement, 'text_style_' + data.text_styles[styleIndex]);
-                    }
-                }
-
-                outputElement.appendChild(document.createTextNode(data.text));
-            } else {
-                outputElement = document.createTextNode(data.text);
-            }
-
-            this.logElements.push(outputElement);
+            this.logChunks.push(data);
 
         } else if (eventType === 'input') {
             this.inputPromtText = data;
@@ -103,7 +83,14 @@ ScriptExecutor.prototype._startExecution = function (executionId) {
             }.bind(this));
 
         } finally {
-            if (executionFinished) {
+            if (!executionFinished) {
+                authorizedCallHttp('scripts/execution/status/' + executionId, null, 'GET', function (response) {
+                    if (response === 'finished') {
+                        authorizedCallHttp('scripts/execution/cleanup/' + executionId, null, 'POST');
+                    }
+                });
+
+            } else {
                 authorizedCallHttp('scripts/execution/cleanup/' + executionId, null, 'POST');
             }
         }

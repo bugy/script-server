@@ -10,6 +10,7 @@
     <script src="js/libs/jquery.min.js"></script>
     <script src="js/libs/materialize.min.js"></script>
     <script src="js/libs/hashtable.js"></script>
+    <script src="js/libs/vue.js"></script>
     <script src="js/common.js"></script>
     <script src="js/index.js"></script>
 
@@ -63,31 +64,6 @@
     </div>
 </div>
 </body>
-
-<script type="text/template" id="script-panel-template">
-    <div class="script-panel">
-        <p class="script-description"></p>
-        <div class="script-parameters-panel"></div>
-        <div>
-            <button class="button-execute btn">Execute</button>
-            <button class="button-stop btn red lighten-1">Stop</button>
-        </div>
-        <div class="log-panel">
-            <code class="log-content"></code>
-            <div class="log-panel-shadow"></div>
-        </div>
-        <div class="validation-panel">
-            <h6 class="header">Validation failed. Errors list:</h6>
-            <ul class="validation-errors-list"></ul>
-        </div>
-        <div class="files-download-panel"></div>
-        <div class="script-input-panel input-field">
-            <label class="script-input-label"></label>
-            <!--suppress HtmlFormInputWithoutLabel -->
-            <input class="script-input-field" type="text">
-        </div>
-    </div>
-</script>
 
 <script type="text/template" id="menu-item-state-template">
     <div class="menu-item-state">

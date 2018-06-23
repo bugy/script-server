@@ -1,270 +1,255 @@
+'use strict';
+
 function ScriptView(parent) {
-    this.parameterControls = new Hashtable();
+    var idSuffix = guid(8);
 
-    this.scriptPanel = createTemplateElement('script-panel-template');
-    this.scriptPanel.id = 'script-panel-' + guid(8);
+    var vueApp = document.createElement('div');
+    vueApp.id = 'script-panel-' + idSuffix;
+    vueApp.className = 'script-panel';
+    parent.appendChild(vueApp);
 
-    parent.appendChild(this.scriptPanel);
+    this.vueModel = new Vue({
+        el: "#" + vueApp.id,
 
-    this.logPanel = this.scriptPanel.getElementsByClassName('log-panel')[0];
-    this.logContent = this.scriptPanel.getElementsByClassName('log-content')[0];
-    this.inputPanel = this.scriptPanel.getElementsByClassName('script-input-panel')[0];
-    this.validationPanel = this.scriptPanel.getElementsByClassName('validation-panel')[0];
-    this.validationErrorsList = this.scriptPanel.getElementsByClassName('validation-errors-list')[0];
-    this.scriptDescription = this.scriptPanel.getElementsByClassName('script-description')[0];
-    this.stopButton = this.scriptPanel.getElementsByClassName('button-stop')[0];
-    this.executeButton = this.scriptPanel.getElementsByClassName('button-execute')[0];
-    this.paramsPanel = this.scriptPanel.getElementsByClassName('script-parameters-panel')[0];
-    this.filesDownloadPanel = this.scriptPanel.getElementsByClassName('files-download-panel')[0];
-    this.inputLabel = this.inputPanel.getElementsByClassName('script-input-label')[0];
-    this.inputField = this.inputPanel.getElementsByClassName('script-input-field')[0];
+        template:
+        '<div class="script-panel" :id="id">\n'
+        + ' <p class="script-description" v-show="scriptDescription">{{ scriptDescription }}</p>\n'
+        + ' <div class="script-parameters-panel" ref="parametersPanel"></div>\n'
+        + ' <div>\n'
+        + '     <button class="button-execute btn"'
+        + '         :disabled="!executeEnabled"'
+        + '         v-bind:class="{ disabled: !executeEnabled}"'
+        + '         @click="executeButtonHandler()">'
+        + '         Execute'
+        + '     </button>\n'
+        + '     <button class="button-stop btn red lighten-1" '
+        + '         :disabled="!stopEnabled"'
+        + '         v-bind:class="{ disabled: !stopEnabled}"'
+        + '         @click="stopButtonHandler()">'
+        + '         Stop'
+        + '     </button>\n'
+        + ' </div>\n'
+        + ' <log-panel ref="logPanel" v-show="everStarted && !hasErrors"/>\n'
+        + ' <div class="validation-panel" v-if="hasErrors">\n'
+        + '     <h6 class="header">Validation failed. Errors list:</h6>\n'
+        + '     <ul class="validation-errors-list">'
+        + '         <li v-for="error in errors">{{ error }}</li>'
+        + '     </ul>\n'
+        + ' </div>\n'
+        + ' <div class="files-download-panel" v-if="downloadableFiles && (downloadableFiles.length > 0)">'
+        + '     <a v-for="file in downloadableFiles"'
+        + '         class="waves-effect waves-teal btn-flat"'
+        + '         :download="file.filename"'
+        + '         :href="file.url"'
+        + '         target="_blank">'
+        + '         {{ file.filename }}'
+        + '         <img src="images/file_download.png">'
+        + '     </a>'
+        + ' </div>\n'
+        + ' <div class="script-input-panel input-field" v-if="inputPrompt">\n'
+        + '    <label class="script-input-label" for="inputField-' + idSuffix + '">{{ inputPrompt.text }}</label>\n'
+        + '    <input class="script-input-field" type="text" '
+        + '         id="inputField-' + idSuffix + '"'
+        + '         ref="inputField"'
+        + '         v-on:keyup="inputKeyUpHandler">\n'
+        + ' </div>\n' +
+        '</div>',
 
-    bindTemplatedFieldLabel(this.inputField, this.inputLabel);
+        data: function () {
+            return {
+                id: null,
+                executeEnabled: true,
+                stopEnabled: false,
+                parameterControls: {}
+            }
+        },
 
-    this._initLogPanel();
-    this._initExecuteButton();
-    this._initStopButton();
+        computed: {
+            hasErrors: function () {
+                return !isNull(this.errors) && (this.errors.length > 0);
+            }
+        },
 
-    hide(this.validationPanel);
+        methods: {
+            inputKeyUpHandler: function (event) {
+                if (event.keyCode === 13) {
+                    var inputField = this.$refs.inputField;
 
-    show(this.stopButton);
-    show(this.executeButton);
-    setButtonEnabled(this.executeButton, true);
-    setButtonEnabled(this.stopButton, false);
+                    this.inputPrompt.callback(inputField.value);
 
-    hide(this.logPanel);
-    hide(this.inputPanel);
-    hide(this.filesDownloadPanel);
+                    inputField.value = '';
+                }
+            }
+        },
+
+        mounted: function () {
+            this.id = 'script-panel-' + guid(8);
+        },
+
+        watch: {
+            parameters: function (parameters) {
+                destroyChildren(this.$refs.parametersPanel);
+                this.parameterControls = {};
+
+                if (parameters) {
+                    for (var i = 0; i < parameters.length; i++) {
+                        var parameter = parameters[i];
+
+                        var control = createParameterControl(parameter);
+                        this.parameterControls[parameter.name] = control;
+
+                        var element = control.getElement();
+                        addClass(element, 'parameter');
+
+                        this.$refs.parametersPanel.appendChild(element);
+                        control.onAdd();
+                    }
+                }
+            },
+
+            parameterValues: function (values) {
+                forEachKeyValue(this.parameterControls, function (parameterName, control) {
+                    var value = values[parameterName];
+                    if (!isNull(value)) {
+                        control.setValue(value);
+                    } else {
+                        control.setValue(null);
+                    }
+                });
+            },
+
+            inputPrompt: function (value) {
+                var fieldUpdater = function () {
+                    this.$refs.inputField.value = '';
+                    if (!isNull(value)) {
+                        this.$refs.inputField.focus();
+                    }
+                }.bind(this);
+
+                if (this.$refs.inputField) {
+                    fieldUpdater();
+                } else {
+                    this.$nextTick(fieldUpdater);
+                }
+            }
+        },
+
+        beforeDestroy: function () {
+            forEachKeyValue(this.parameterControls, function (parameterName, control) {
+                control.onDestroy();
+            });
+        },
+
+        props: {
+            executeButtonHandler: Function,
+            stopButtonHandler: Function,
+            errors: Array,
+            downloadableFiles: Array,
+            scriptDescription: {
+                type: String,
+                default: ''
+            },
+            everStarted: Boolean,
+            parameters: Array,
+            parameterValues: Object,
+            log: {
+                type: String,
+                default: ''
+            },
+            inputPrompt: Object
+        }
+    });
+
+    this.vueModel.executeButtonHandler = this._executeButtonHandler.bind(this);
+    this.executionCallback = function () {
+    };
 }
 
 ScriptView.prototype.setScriptDescription = function (description) {
-    if (!isNull(description)) {
-        show(this.scriptDescription);
-        this.scriptDescription.innerText = description;
-    } else {
-        hide(this.scriptDescription);
-    }
+    this.vueModel.scriptDescription = description;
 };
 
 ScriptView.prototype.createParameters = function (parameters) {
-    if (isNull(parameters) || (parameters.length === 0)) {
-        hide(this.paramsPanel);
-        return;
-    }
-
-    parameters.forEach(function (parameter) {
-        var control = createParameterControl(parameter);
-        this.parameterControls.put(parameter, control);
-
-        var element = control.getElement();
-        addClass(element, 'parameter');
-
-        this.paramsPanel.appendChild(element);
-        control.onAdd();
-    }.bind(this));
-
-    show(this.paramsPanel);
+    this.vueModel.parameters = parameters;
 };
 
 ScriptView.prototype.setParameterValues = function (parameterValues) {
-    this.parameterControls.each(function (parameter, control) {
-        var value = parameterValues[parameter.name];
-        if (!isNull(value)) {
-            control.setValue(value);
-        } else {
-            control.setValue(null);
-        }
-    });
-};
-
-ScriptView.prototype._initLogPanel = function () {
-    var logPanel = this.logPanel;
-    var logContent = this.logContent;
-    var shadow = logPanel.getElementsByClassName('log-panel-shadow')[0];
-
-    hide(logPanel);
-
-    var wasBottom = true;
-    var scrollStyleUpdate = function () {
-        var isTop = logContent.scrollTop === 0;
-        var isBottom = (logContent.scrollTop + logContent.clientHeight + 5) > (logContent.scrollHeight);
-
-        var shadowTop = !isTop;
-        var shadowBottom = !isBottom;
-
-        if (shadowTop && shadowBottom) {
-            addClass(shadow, 'shadow-top-bottom');
-            removeClass(shadow, 'shadow-top');
-            removeClass(shadow, 'shadow-bottom');
-        } else if (shadowTop) {
-            removeClass(shadow, 'shadow-top-bottom');
-            addClass(shadow, 'shadow-top');
-            removeClass(shadow, 'shadow-bottom');
-        } else if (shadowBottom) {
-            removeClass(shadow, 'shadow-top-bottom');
-            removeClass(shadow, 'shadow-top');
-            addClass(shadow, 'shadow-bottom');
-        } else {
-            removeClass(shadow, 'shadow-top-bottom');
-            removeClass(shadow, 'shadow-top');
-            removeClass(shadow, 'shadow-bottom');
-        }
-
-        wasBottom = isBottom;
-    };
-    logContent.addEventListener('scroll', scrollStyleUpdate);
-
-    var mouseDown = false;
-    logContent.addEventListener('mousedown', function () {
-        mouseDown = true;
-    });
-
-    logContent.addEventListener('mouseup', function () {
-        mouseDown = false;
-    });
-
-    var updateScroll = function () {
-        if ((wasBottom) && (!mouseDown)) {
-            logContent.scrollTop = logContent.scrollHeight;
-        } else {
-            scrollStyleUpdate();
-        }
-    };
-
-    //noinspection JSUnresolvedVariable
-    var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-    var observer = new MutationObserver(updateScroll);
-
-    window.addEventListener('resize', function () {
-        updateScroll([]);
-    });
-
-    var config = {childList: true, attributes: false, characterData: true, subtree: true};
-    observer.observe(logContent, config);
+    this.vueModel.parameterValues = parameterValues;
 };
 
 ScriptView.prototype.destroy = function () {
-    this.parameterControls.each(function (parameter, control) {
-        control.onDestroy();
-    });
+    this.vueModel.$destroy();
 };
 
-ScriptView.prototype._initStopButton = function () {
-    this.stopButton.addEventListener('click', function () {
-        this.stopButtonCallback();
-    }.bind(this));
+ScriptView.prototype.setExecutionCallback = function (callback) {
+    this.executionCallback = callback;
 };
 
-ScriptView.prototype.executeButtonCallback = function () {
-
+ScriptView.prototype.setStopCallback = function (callback) {
+    this.vueModel.stopButtonHandler = callback;
 };
 
-ScriptView.prototype.stopButtonCallback = function () {
+ScriptView.prototype._executeButtonHandler = function () {
+    var vueModel = this.vueModel;
 
-};
+    vueModel.errors = [];
+    vueModel.downloadableFiles = [];
 
-ScriptView.prototype._initExecuteButton = function () {
-    var executeButton = this.executeButton;
-    var logPanel = this.logPanel;
-    var errorsPanel = this.validationPanel;
-    var errorsList = this.validationErrorsList;
-    var filesDownloadPanel = this.filesDownloadPanel;
-    var parameterControls = this.parameterControls;
-
-    executeButton.addEventListener('click', function () {
-        destroyChildren(errorsList);
-        destroyChildren(filesDownloadPanel);
-        hide(filesDownloadPanel);
-
-        var errors = {};
-        parameterControls.each(function (parameter, control) {
-            if (!control.isValid()) {
-                errors[parameter.name] = control.getValidationError();
-            }
-        });
-
-        if (!isEmptyObject(errors)) {
-            show(errorsPanel);
-
-            for (var parameter in errors) {
-                var errorLabel = document.createElement('li');
-                errorLabel.innerText = parameter + ': ' + errors[parameter];
-                errorsList.appendChild(errorLabel);
-            }
-
-            hide(logPanel);
-            return;
+    var parameterValues = {};
+    forEachKeyValue(vueModel.parameterControls, function (parameterName, control) {
+        if (!control.isValid()) {
+            vueModel.errors.push(parameterName + ': ' + control.getValidationError());
         }
 
-        this.executeButtonCallback();
+        var value = control.getValue();
+        if (!isNull(value)) {
+            parameterValues[parameterName] = value;
+        }
+    });
 
-    }.bind(this));
+    if (vueModel.errors.length > 0) {
+        return;
+    }
+
+    this.executionCallback(parameterValues);
 };
 
 ScriptView.prototype.setExecutionEnabled = function (enabled) {
-    setButtonEnabled(this.executeButton, enabled);
+    this.vueModel.executeEnabled = enabled;
 };
 
 ScriptView.prototype.setStopEnabled = function (enabled) {
-    setButtonEnabled(this.stopButton, enabled);
+    this.vueModel.stopEnabled = enabled;
 };
 
 ScriptView.prototype.setLog = function (text) {
-    this.logContent.innerText = text;
+    this.vueModel.$refs.logPanel.setLog(text);
 };
 
-ScriptView.prototype.appendLogElement = function (logElement) {
-    this.logContent.appendChild(logElement);
+ScriptView.prototype.appendLog = function (text, textColor, backgroundColor, textStyles) {
+    this.vueModel.$refs.logPanel.appendLog(text, textColor, backgroundColor, textStyles);
+};
+
+ScriptView.prototype.replaceLog = function (text, textColor, backgroundColor, textStyles, x, y) {
+    this.vueModel.$refs.logPanel.replaceLog(text, textColor, backgroundColor, textStyles, x, y);
 };
 
 ScriptView.prototype.setExecuting = function () {
-    setButtonEnabled(this.executeButton, false);
-    setButtonEnabled(this.stopButton, true);
+    this.vueModel.everStarted = true;
+    this.vueModel.executeEnabled = false;
+    this.vueModel.stopEnabled = true;
 
-    hide(this.validationPanel);
-    show(this.logPanel);
+    this.vueModel.errors = [];
 };
 
 ScriptView.prototype.showInputField = function (promptText, userInputCallback) {
-    this.inputLabel.innerText = promptText;
-
-    this.inputField.value = '';
-
-    this.inputField.onkeyup = function (event) {
-        if (event.keyCode === 13) {
-            userInputCallback(this.inputField.value);
-
-            this.inputField.value = '';
-        }
-    }.bind(this);
-
-    show(this.inputPanel);
-    this.inputField.focus();
+    this.vueModel.inputPrompt = {'text': promptText, 'callback': userInputCallback};
 };
 
 ScriptView.prototype.hideInputField = function () {
-    this.inputLabel.innerText = '';
-    this.inputField.value = '';
-    this.inputField.onkeyup = null;
-    hide(this.inputPanel);
+    this.vueModel.inputPrompt = null;
 };
 
 ScriptView.prototype.addFileLink = function (url, filename) {
-    show(this.filesDownloadPanel);
-
-    var downloadLink = document.createElement('a');
-    addClass(downloadLink, 'waves-effect');
-    addClass(downloadLink, 'waves-teal');
-    addClass(downloadLink, 'btn-flat');
-    downloadLink.setAttribute('download', filename);
-    downloadLink.href = url;
-    downloadLink.target = '_blank';
-    downloadLink.appendChild(document.createTextNode(filename));
-
-    var downloadImage = document.createElement('img');
-    downloadImage.src = 'images/file_download.png';
-    downloadLink.appendChild(downloadImage);
-
-    this.filesDownloadPanel.appendChild(downloadLink);
+    this.vueModel.downloadableFiles.push({url: url, filename: filename});
 };
-

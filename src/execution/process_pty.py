@@ -4,6 +4,7 @@ import os
 import pty
 import subprocess
 import sys
+import termios
 import time
 
 from execution import process_base
@@ -12,6 +13,16 @@ from utils import process_utils
 script_encodings = {}
 
 LOGGER = logging.getLogger('script_server.process_pty')
+
+
+def _unset_output_flags(fd, *new_attributes):
+    attributes = termios.tcgetattr(fd)
+
+    for attribute in new_attributes:
+        # 1 stays for oflag (output flags)
+        attributes[1] = attributes[1] & ~attribute
+
+    termios.tcsetattr(fd, termios.TCSANOW, attributes)
 
 
 class PtyProcessWrapper(process_base.ProcessWrapper):
@@ -34,6 +45,8 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
         self.pty_slave = slave
         self.pty_master = master
 
+        # ONLCR - transform \n to \r\n
+        _unset_output_flags(self.pty_master, termios.ONLCR)
         fcntl.fcntl(self.pty_master, fcntl.F_SETFL, os.O_NONBLOCK)
 
     def write_to_input(self, value):

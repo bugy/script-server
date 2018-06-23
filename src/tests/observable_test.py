@@ -2,7 +2,7 @@ import threading
 import time
 import unittest
 
-from react.observable import Observable, _StoringObserver, ReplayObservable, _PipedObservable, \
+from react.observable import Observable, _StoringObserver, ReplayObservable, PipedObservable, \
     read_until_closed
 
 
@@ -873,7 +873,7 @@ class TestObservable(unittest.TestCase):
         super().tearDown()
 
         for observable in self._observables:
-            if not observable.closed and not isinstance(observable, _PipedObservable):
+            if not observable.closed and not isinstance(observable, PipedObservable):
                 observable.close()
 
             if isinstance(observable, ReplayObservable):
