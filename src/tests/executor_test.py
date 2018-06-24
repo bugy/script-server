@@ -7,6 +7,8 @@ from model import script_configs
 from react.observable import _StoringObserver, read_until_closed
 from tests.test_utils import _MockProcessWrapper
 
+BUFFER_FLUSH_WAIT_TIME = (executor.TIME_BUFFER_MS * 1.5) / 1000.0
+
 
 class TestBuildCommandArgs(unittest.TestCase):
     def test_no_parameters_no_values(self):
@@ -306,7 +308,7 @@ class TestProcessOutput(unittest.TestCase):
         self.executor.process_wrapper.kill()
 
     def get_finish_output(self):
-        data = read_until_closed(self.executor.get_anonymized_output_stream(), timeout=0.1)
+        data = read_until_closed(self.executor.get_anonymized_output_stream(), timeout=BUFFER_FLUSH_WAIT_TIME)
         output = ''.join(data)
         return output
 
@@ -320,4 +322,4 @@ class TestProcessOutput(unittest.TestCase):
 
 
 def wait_buffer_flush():
-    time.sleep((executor.TIME_BUFFER_MS * 1.5) / 1000.0)
+    time.sleep(BUFFER_FLUSH_WAIT_TIME)
