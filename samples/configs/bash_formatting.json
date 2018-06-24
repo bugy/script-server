@@ -1,5 +1,5 @@
 {
   "name": "Bash formatting",
   "script_path": "./samples/scripts/bash_formatting.py",
-  "description": "Test script for validating output in case of bash escape sequences: https://en.wikipedia.org/wiki/ANSI_escape_code"
+  "description": "Test script for validating output in case of bash escape sequences: [**ANSI wiki**](https://en.wikipedia.org/wiki/ANSI_escape_code). Supported features: \n - carriage return (\\r) \n - text colors/styles"
 }

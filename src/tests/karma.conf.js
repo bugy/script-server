@@ -19,6 +19,7 @@ module.exports = function (config) {
             '../../web/js/libs/*.js',
             '../../web/js/common.js',
             '../../web/js/components/log_panel.js',
+            '../../web/js/script/script-view.js',
             '*.js'
         ],
 

@@ -13,7 +13,7 @@ function ScriptView(parent) {
 
         template:
         '<div class="script-panel" :id="id">\n'
-        + ' <p class="script-description" v-show="scriptDescription">{{ scriptDescription }}</p>\n'
+        + ' <p class="script-description" v-show="scriptDescription" v-html="formattedDescription"></p>\n'
         + ' <div class="script-parameters-panel" ref="parametersPanel"></div>\n'
         + ' <div>\n'
         + '     <button class="button-execute btn"'
@@ -67,6 +67,26 @@ function ScriptView(parent) {
         computed: {
             hasErrors: function () {
                 return !isNull(this.errors) && (this.errors.length > 0);
+            },
+            formattedDescription: function () {
+                var descriptionHtml = marked(this.scriptDescription, {sanitize: true, gfm: true, breaks: true});
+                var paragraphRemoval = document.createElement('div');
+                paragraphRemoval.innerHTML = descriptionHtml.trim();
+
+                for (var i = 0; i < paragraphRemoval.childNodes.length; i++) {
+                    var child = paragraphRemoval.childNodes[i];
+                    if (child.tagName === 'P') {
+                        i += child.childNodes.length - 1;
+
+                        while (child.childNodes.length > 0) {
+                            paragraphRemoval.insertBefore(child.firstChild, child);
+                        }
+
+                        paragraphRemoval.removeChild(child);
+                    }
+                }
+
+                return paragraphRemoval.innerHTML;
             }
         },
 

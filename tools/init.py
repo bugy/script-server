@@ -23,6 +23,11 @@ LIBRARIES = {
     'vue-router.js': {
         'prod': 'https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.0.1/vue-router.min.js',
         'dev': 'https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.0.1/vue-router.js'
+    },
+
+    'marked.js': {
+        'prod': 'https://cdnjs.cloudflare.com/ajax/libs/marked/0.4.0/marked.min.js',
+        'dev': 'https://cdnjs.cloudflare.com/ajax/libs/marked/0.4.0/marked.js'
     }
 }
 
