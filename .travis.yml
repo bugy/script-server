@@ -1,6 +1,6 @@
 language: python
 python: 3.4
-install: pip install typing
+install: pip install -r requirements.txt
 before_script:
   - cd src
   - python3 -m unittest discover -s tests -p "*.py"
