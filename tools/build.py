@@ -48,6 +48,7 @@ init.prepare_project('', prod=True)
 
 build_info = BuildInfo()
 build_info.include('launcher.py')
+build_info.include('requirements.txt')
 build_info.include(os.path.join('src', '**', '*.py'))
 build_info.include(os.path.join('conf', 'logging.json'))
 build_info.include(os.path.join('web', '**'))
