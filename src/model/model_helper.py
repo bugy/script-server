@@ -85,6 +85,15 @@ def read_dict(values_dict, key, default=None):
     raise Exception('"' + key + '" has invalid type. Dict expected')
 
 
+def read_bool(value):
+    if isinstance(value, bool):
+        return value
+
+    if not isinstance(value, str):
+        raise Exception('Invalid value, should be bool or string. value=' + repr(value))
+
+    return value.lower() == 'true'
+
 def is_empty(value):
     return (not value) and (value != 0) and (value is not False)
 

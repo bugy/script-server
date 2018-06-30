@@ -15,6 +15,8 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
+from alerts.alerts_service import AlertsService
+from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from config.config_service import ConfigService
 from execution.execution_service import ExecutionService
@@ -28,7 +30,7 @@ from model.model_helper import is_empty
 from model.server_conf import ServerConfig
 from utils import file_utils as file_utils
 from utils import tornado_utils, audit_utils
-from utils.audit_utils import get_all_audit_names, get_safe_username
+from utils.audit_utils import get_all_audit_names
 from utils.audit_utils import get_audit_name_from_request
 from utils.terminal_formatter import TerminalOutputTransformer, TerminalOutputChunk
 from utils.tornado_utils import respond_error, redirect_relative
@@ -104,8 +106,9 @@ def check_authorization(func):
 def requires_admin_rights(func):
     def wrapper(self, *args, **kwargs):
         if not has_admin_rights(self):
-            LOGGER.warning('User %s tried to access admin REST service %s',
-                           get_audit_name_from_request(self), self.request.path)
+            user_id = _identify_user(self)
+            LOGGER.warning('User %s (%s) tried to access admin REST service %s',
+                           user_id, get_audit_name_from_request(self), self.request.path)
             raise tornado.web.HTTPError(403, 'Access denied')
 
         return func(self, *args, **kwargs)
@@ -114,16 +117,8 @@ def requires_admin_rights(func):
 
 
 def has_admin_rights(request_handler):
-    names = get_all_audit_names(request_handler)
-
-    username = audit_utils.get_safe_username(names)
-
-    if not username:
-        LOGGER.warning('has_admin_rights: could not resolve username for %s',
-                       get_audit_name_from_request(request_handler))
-        return False
-
-    return request_handler.application.authorizer.is_admin(username)
+    user_id = _identify_user(request_handler)
+    return request_handler.application.authorizer.is_admin(user_id)
 
 
 class ProxiedRedirectHandler(tornado.web.RedirectHandler):
@@ -203,8 +198,9 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
         self.write_message(wrap_to_server_event('input', 'your input >>'))
 
-        audit_names = audit_utils.get_all_audit_names(self)
-        output_stream = execution_service.get_raw_output_stream(execution_id, audit_names)
+        user_id = _identify_user(self)
+
+        output_stream = execution_service.get_raw_output_stream(execution_id, user_id)
         bash_formatting = config.is_bash_formatting()
         pipe_output_to_http(output_stream, bash_formatting, self.safe_write)
 
@@ -284,12 +280,14 @@ class ScriptExecute(BaseRequestHandler):
                 respond_error(self, 400, message)
                 return
 
+            user_id = _identify_user(self)
             all_audit_names = get_all_audit_names(self)
             LOGGER.info('Calling script ' + script_name + '. User ' + str(all_audit_names))
 
             execution_id = self.application.execution_service.start_script(
                 config,
                 execution_info.param_values,
+                user_id,
                 all_audit_names)
 
             self.write(str(execution_id))
@@ -322,10 +320,10 @@ class ScriptExecute(BaseRequestHandler):
 class GetActiveExecutionIds(BaseRequestHandler):
     @check_authorization
     def get(self):
-        all_audit_names = audit_utils.get_all_audit_names(self)
+        user_id = _identify_user(self)
         execution_service = self.application.execution_service
 
-        active_executions = execution_service.get_active_executions(all_audit_names)
+        active_executions = execution_service.get_active_executions(user_id)
 
         self.write(json.dumps(active_executions))
 
@@ -376,10 +374,10 @@ def validate_execution_id(execution_id, request_handler, only_active=True):
     if only_active and (not execution_service.is_active(execution_id)):
         raise tornado.web.HTTPError(400, reason='No (active) executor found for id ' + execution_id)
 
-    all_audit_names = audit_utils.get_all_audit_names(request_handler)
-    if not execution_service.can_access(execution_id, all_audit_names):
+    user_id = _identify_user(request_handler)
+    if not execution_service.can_access(execution_id, user_id):
         LOGGER.warning('Prohibited access to not owned execution #%s (user=%s)',
-                       execution_id, str(all_audit_names))
+                       execution_id, str(user_id))
         raise tornado.web.HTTPError(403, reason='Prohibited access to not owned execution')
 
 
@@ -394,8 +392,9 @@ class AuthorizedStaticFileHandler(BaseStaticHandler):
         relative_path = file_utils.relative_path(absolute_path, root)
         if self.is_admin_file(relative_path):
             if not has_admin_rights(self):
-                LOGGER.warning('User %s tried to access admin static file %s',
-                               get_audit_name_from_request(self), relative_path)
+                user_id = _identify_user(self)
+                LOGGER.warning('User %s (%s) tried to access admin static file %s',
+                               user_id, get_audit_name_from_request(self), relative_path)
                 raise tornado.web.HTTPError(403)
 
         return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
@@ -460,13 +459,13 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
     @check_authorization
     def validate_absolute_path(self, root, absolute_path):
         audit_name = get_audit_name_from_request(self)
-        username = get_safe_username(get_all_audit_names(self))
+        user_id = _identify_user(self)
 
         file_download_feature = self.application.file_download_feature
 
         file_path = file_utils.relative_path(absolute_path, os.path.abspath(root))
-        if not file_download_feature.allowed_to_download(file_path, username):
-            LOGGER.warning('Access attempt from ' + username + '(' + audit_name + ') to ' + absolute_path)
+        if not file_download_feature.allowed_to_download(file_path, user_id):
+            LOGGER.warning('Access attempt from ' + user_id + '(' + audit_name + ') to ' + absolute_path)
             raise tornado.web.HTTPError(403)
 
         return super(AuthorizedStaticFileHandler, self).validate_absolute_path(root, absolute_path)
@@ -585,6 +584,15 @@ def pipe_output_to_http(output_stream, bash_formatting, write_callback):
         output_stream.subscribe(OutputToHttpListener())
 
 
+def _identify_user(request_handler):
+    user_id = request_handler.application.identification.identify(request_handler)
+
+    if user_id is None:
+        raise Exception('Could not identify user: ' + audit_utils.get_all_audit_names(request_handler))
+
+    return user_id
+
+
 def intercept_stop_when_running_scripts(io_loop, execution_service):
     def signal_handler(signum, frame):
         can_stop = True
@@ -618,10 +626,10 @@ def init(server_config: ServerConfig,
          execution_service: ExecutionService,
          execution_logging_service: ExecutionLoggingService,
          config_service: ConfigService,
+         alerts_service: AlertsService,
          file_upload_feature: FileUploadFeature,
          file_download_feature: FileDownloadFeature,
          secret):
-
     ssl_context = None
     if server_config.is_ssl():
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -629,6 +637,10 @@ def init(server_config: ServerConfig,
                                     server_config.get_ssl_key_path())
 
     auth = TornadoAuth(server_config.authenticator, server_config.authorizer)
+    if auth.is_enabled():
+        identification = AuthBasedIdentification(auth)
+    else:
+        identification = IpBasedIdentification(server_config.trusted_ips)
 
     downloads_folder = file_download_feature.get_result_files_folder()
 
@@ -678,6 +690,8 @@ def init(server_config: ServerConfig,
     application.execution_service = execution_service
     application.execution_logging_service = execution_logging_service
     application.config_service = config_service
+    application.alerts_service = alerts_service
+    application.identification = identification
 
     io_loop = tornado.ioloop.IOLoop.current()
 

@@ -3,13 +3,13 @@ import abc
 import logging
 import os
 import re
-from datetime import datetime
 from string import Template
 
 from execution.execution_service import ExecutionService
 from utils import file_utils, audit_utils
 from utils.audit_utils import get_audit_name
-from utils.date_utils import get_current_millis, ms_to_datetime, sec_to_datetime, to_millis
+from utils.collection_utils import get_first_existing
+from utils.date_utils import get_current_millis, ms_to_datetime
 
 ENCODING = 'utf8'
 
@@ -82,7 +82,8 @@ class ScriptOutputLogger:
 
 class HistoryEntry:
     def __init__(self):
-        self.username = None
+        self.user_name = None
+        self.user_id = None
         self.start_time = None
         self.script_name = None
         self.command = None
@@ -107,9 +108,11 @@ class ExecutionLoggingService:
         file_utils.prepare_folder(output_folder)
 
         self._renew_files_cache()
-        self.__migrate_old_files(output_folder)
 
-    def start_logging(self, execution_id, username, script_name,
+    def start_logging(self, execution_id,
+                      user_name,
+                      user_id,
+                      script_name,
                       command,
                       output_stream,
                       post_execution_info_provider,
@@ -129,7 +132,8 @@ class ExecutionLoggingService:
 
         output_logger = ScriptOutputLogger(log_file_path, output_stream, write_post_execution_info)
         output_logger.write_line('id:' + execution_id)
-        output_logger.write_line('user:' + username)
+        output_logger.write_line('user_name:' + user_name)
+        output_logger.write_line('user_id:' + user_id)
         output_logger.write_line('script:' + script_name)
         output_logger.write_line('start_time:' + str(start_time_millis))
         output_logger.write_line('command:' + command)
@@ -184,8 +188,8 @@ class ExecutionLoggingService:
         correct_format, parameters_text = self._read_parameters_text(file_path)
         if not correct_format:
             return None
-        history_entry = self._parse_history_parameters(parameters_text, file_path)
-        return history_entry
+        parameters = self._parse_history_parameters(parameters_text)
+        return self._parameters_to_entry(parameters)
 
     @staticmethod
     def _read_parameters_text(file_path):
@@ -226,7 +230,7 @@ class ExecutionLoggingService:
         return log_identifier
 
     @staticmethod
-    def _parse_history_parameters(parameters_text, file_path):
+    def _parse_history_parameters(parameters_text):
         current_value = None
         current_key = None
 
@@ -246,6 +250,10 @@ class ExecutionLoggingService:
         if current_key is not None:
             parameters[current_key] = current_value.rstrip('\n')
 
+        return parameters
+
+    @staticmethod
+    def _parameters_to_entry(parameters):
         id = parameters.get('id')
         if not id:
             return None
@@ -253,7 +261,8 @@ class ExecutionLoggingService:
         entry = HistoryEntry()
         entry.id = id
         entry.script_name = parameters.get('script')
-        entry.username = parameters.get('user')
+        entry.user_name = parameters.get('user_name')
+        entry.user_id = parameters.get('user_id')
         entry.command = parameters.get('command')
 
         exit_code = parameters.get('exit_code')
@@ -265,79 +274,6 @@ class ExecutionLoggingService:
             entry.start_time = ms_to_datetime(int(start_time))
 
         return entry
-
-    def __migrate_old_files(self, output_folder):
-        log_files = [os.path.join(output_folder, file)
-                     for file in os.listdir(output_folder)
-                     if file.lower().endswith('.log')]
-
-        # from oldest to newest
-        log_files.sort(key=lambda file_path: file_path[-17:])
-
-        def is_new_format(log_file):
-            with open(log_file, 'r') as f:
-                first_line = f.readline().strip()
-
-                if not first_line.startswith('id:'):
-                    return False
-
-                for line in f:
-                    if line.strip() == OUTPUT_STARTED_MARKER:
-                        return True
-
-            return False
-
-        old_files = []
-        for log_file in log_files:
-            if is_new_format(log_file):
-                break
-            old_files.append(log_file)
-
-        if not old_files:
-            return
-
-        used_ids = set(self._ids_to_file_map.keys())
-
-        def id_generator_function():
-            counter = 0
-            while True:
-                id = str(counter)
-                if id not in used_ids:
-                    yield id
-
-                counter += 1
-
-        id_generator = id_generator_function()
-
-        for old_file in old_files:
-            log_basename = os.path.basename(old_file)
-            filename = os.path.splitext(log_basename)[0]
-
-            match = re.fullmatch('(.+)_([^_]+)_((\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d))', filename)
-            if match:
-                script_name = match.group(1)
-                username = match.group(2)
-                start_time = datetime.strptime(match.group(3), '%y%m%d_%H%M%S')
-                id = next(id_generator)
-            else:
-                script_name = 'unknown'
-                username = 'unknown'
-                start_time = sec_to_datetime(os.path.getctime(old_file))
-                id = next(id_generator)
-
-            new_begin = ''
-            new_begin += 'id:' + id + '\n'
-            new_begin += 'user:' + username + '\n'
-            new_begin += 'script:' + script_name + '\n'
-            new_begin += 'start_time:' + str(to_millis(start_time)) + '\n'
-            new_begin += 'command:unknown' + '\n'
-            new_begin += OUTPUT_STARTED_MARKER + '\n'
-
-            file_content = file_utils.read_file(old_file)
-            file_content = new_begin + file_content
-            file_utils.write_file(old_file, file_content)
-
-            self._ids_to_file_map[id] = log_basename
 
     @staticmethod
     def _write_post_execution_info(execution_id, log_file_path, post_execution_info_provider):
@@ -368,14 +304,14 @@ class LogNameCreator:
 
         date_string = ms_to_datetime(start_time).strftime(self._date_format)
 
-        proxied_username = all_audit_names.get(audit_utils.PROXIED_USERNAME)
-        username = all_audit_names.get(audit_utils.AUTH_USERNAME, proxied_username)
+        username = get_first_existing(all_audit_names, audit_utils.AUTH_USERNAME, audit_utils.PROXIED_USERNAME)
 
         mapping = {
             'ID': execution_id,
             'USERNAME': username,
-            'HOSTNAME': all_audit_names.get(audit_utils.HOSTNAME, 'unknown-host'),
-            'IP': all_audit_names.get(audit_utils.IP),
+            'HOSTNAME': get_first_existing(all_audit_names, audit_utils.PROXIED_HOSTNAME, audit_utils.HOSTNAME,
+                                           default='unknown-host'),
+            'IP': get_first_existing(all_audit_names, audit_utils.PROXIED_IP, audit_utils.IP),
             'DATE': date_string,
             'AUDIT_NAME': audit_name,
             'SCRIPT': script_name
@@ -403,6 +339,7 @@ class ExecutionLoggingInitiator:
             script_config = execution_service.get_config(execution_id)
             script_name = str(script_config.name)
             audit_name = execution_service.get_audit_name(execution_id)
+            owner = execution_service.get_owner(execution_id)
             all_audit_names = execution_service.get_all_audit_names(execution_id)
             output_stream = execution_service.get_anonymized_output_stream(execution_id)
             audit_command = execution_service.get_audit_command(execution_id)
@@ -410,6 +347,7 @@ class ExecutionLoggingInitiator:
             logging_service.start_logging(
                 execution_id,
                 audit_name,
+                owner,
                 script_name,
                 audit_command,
                 output_stream,

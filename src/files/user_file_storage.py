@@ -23,8 +23,8 @@ class UserFileStorage:
             user_hashed = user_hashed[:12]
         return user_hashed
 
-    def allowed_to_access(self, relative_file_path, audit_name):
-        user_folder = self._get_user_download_folder(audit_name)
+    def allowed_to_access(self, relative_file_path, user_id):
+        user_folder = self._get_user_download_folder(user_id)
 
         path_chunks = file_utils.split_all(relative_file_path)
 

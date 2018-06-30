@@ -67,7 +67,7 @@ def _translate_history_entry(entry, running):
     return {
         'id': entry.id,
         'startTime': start_time,
-        'user': entry.username,
+        'user': entry.user_name,
         'script': entry.script_name,
         'status': running_flag_to_status(running),
         'exitCode': entry.exit_code

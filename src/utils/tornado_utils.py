@@ -62,3 +62,19 @@ def get_request_body(request_handler):
         return {}
 
     return json.loads(raw_request_body)
+
+
+def get_proxied_ip(request_handler):
+    forwarded_for = request_handler.request.headers.get('X-Forwarded-For', None)
+    if forwarded_for:
+        return forwarded_for
+
+    return request_handler.request.headers.get('X-Real-IP', None)
+
+
+def get_secure_cookie(request_handler, key):
+    value = request_handler.get_secure_cookie(key)
+    if value is None:
+        return None
+
+    return value.decode('utf-8')

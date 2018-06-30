@@ -34,8 +34,7 @@ class ExecutionService:
 
         return self._executors.get(execution_id)
 
-    def start_script(self, config, values, all_audit_names):
-        owner_user = audit_utils.get_safe_username(all_audit_names)
+    def start_script(self, config, values, user_id, all_audit_names):
         audit_name = audit_utils.get_audit_name(all_audit_names)
 
         executor = ScriptExecutor(config, values)
@@ -48,7 +47,7 @@ class ExecutionService:
         self._executors[execution_id] = executor
         self._execution_infos[execution_id] = _ExecutionInfo(
             execution_id=execution_id,
-            owner=owner_user,
+            owner=user_id,
             audit_name=audit_name,
             audit_command=audit_command,
             config=config,
@@ -79,12 +78,12 @@ class ExecutionService:
 
         return not executor.is_finished()
 
-    def get_active_executions(self, all_audit_names):
+    def get_active_executions(self, user_id):
         result = []
         for id in self._active_executor_ids:
             execution_info = self._execution_infos[id]
 
-            if self._can_access_execution(execution_info, all_audit_names):
+            if self._can_access_execution(execution_info, user_id):
                 result.append(id)
 
         return result
@@ -105,14 +104,13 @@ class ExecutionService:
     def is_active(self, execution_id):
         return execution_id in self._active_executor_ids
 
-    def can_access(self, execution_id, all_audit_names):
+    def can_access(self, execution_id, user_id):
         execution_info = self._execution_infos.get(execution_id)
-        return self._can_access_execution(execution_info, all_audit_names)
+        return self._can_access_execution(execution_info, user_id)
 
     @staticmethod
-    def _can_access_execution(execution_info: _ExecutionInfo, all_audit_names):
-        username = audit_utils.get_safe_username(all_audit_names)
-        return (execution_info is not None) and (execution_info.owner == username)
+    def _can_access_execution(execution_info: _ExecutionInfo, user_id):
+        return (execution_info is not None) and (execution_info.owner == user_id)
 
     def get_parameter_values(self, execution_id):
         return self._get_for_executor(execution_id,
@@ -138,13 +136,12 @@ class ExecutionService:
         return self._get_for_executor(execution_id,
                                       lambda e: e.get_anonymized_output_stream())
 
-    def get_raw_output_stream(self, execution_id, all_audit_names):
+    def get_raw_output_stream(self, execution_id, user_id):
         owner = self.get_owner(execution_id)
 
         def getter(executor):
-            username = audit_utils.get_safe_username(all_audit_names)
-            if username != owner:
-                LOGGER.warning(username + ' tried to access execution #' + execution_id + ' with owner ' + owner)
+            if user_id != owner:
+                LOGGER.warning(user_id + ' tried to access execution #' + execution_id + ' with owner ' + owner)
             return executor.get_raw_output_stream()
 
         return self._get_for_executor(execution_id, getter)

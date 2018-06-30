@@ -10,7 +10,7 @@ class TestHistoryEntry(unittest.TestCase):
     def test_simple_short_entry(self):
         entry = self._create_history_entry(
             'id1',
-            user='my user',
+            user_name='my user',
             script_name='Destroy world',
             exit_code='5'
         )
@@ -68,7 +68,7 @@ class TestHistoryEntry(unittest.TestCase):
         self._validate_translated_entry(translated_entries[0], 'id1', status='running')
 
     def test_multiple_short_entries(self):
-        entry1 = self._create_history_entry('id1', user='my user', )
+        entry1 = self._create_history_entry('id1', user_name='my user', )
         entry2 = self._create_history_entry('id2', script_name='Destroy world', )
         entry3 = self._create_history_entry('id3', exit_code='13')
 
@@ -91,7 +91,8 @@ class TestHistoryEntry(unittest.TestCase):
 
     def _create_history_entry(self,
                               id,
-                              user='userX',
+                              user_name='userX',
+                              user_id=None,
                               script_name='my_script',
                               command='cmd',
                               start_time=None,
@@ -102,9 +103,13 @@ class TestHistoryEntry(unittest.TestCase):
         if start_time is None:
             start_time = datetime.now(timezone.utc)
 
+        if user_id is None:
+            user_id = user_name
+
         entry = HistoryEntry()
         entry.id = id
-        entry.username = user
+        entry.user_name = user_name
+        entry.user_id = user_id
         entry.start_time = start_time
         entry.script_name = script_name
         entry.command = command

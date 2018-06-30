@@ -3,6 +3,7 @@ import logging
 import logging.config
 import os
 
+import migrations.migrate
 from alerts.alerts_service import AlertsService
 from config.config_service import ConfigService
 from execution.execution_service import ExecutionService
@@ -48,6 +49,8 @@ def main():
     file_utils.prepare_folder(CONFIG_FOLDER)
     file_utils.prepare_folder(TEMP_FOLDER)
 
+    migrations.migrate.migrate(TEMP_FOLDER, CONFIG_FOLDER)
+
     server_config = server_conf.from_json(SERVER_CONF_PATH)
 
     secret = get_secret(TEMP_FOLDER)
@@ -84,6 +87,7 @@ def main():
         execution_service,
         execution_logging_service,
         config_service,
+        alerts_service,
         file_upload_feature,
         file_download_feature,
         secret)

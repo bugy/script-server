@@ -7,7 +7,7 @@
         template: `
             <div class="readonly-field">
                     <label>{{ title }}</label>
-                    <label>{{ value }}</label>                
+                    <label>{{ value || "&nbsp;" }}</label>                
             </div>`,
         props: ['title', 'value']
     });

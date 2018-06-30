@@ -60,15 +60,14 @@ class ExecutionServiceTest(unittest.TestCase):
         id1 = self._start(execution_service)
         id2 = self._start(execution_service)
 
-        self.assertCountEqual([id1, id2], execution_service.get_active_executions(DEFAULT_AUDIT_NAMES))
+        self.assertCountEqual([id1, id2], execution_service.get_active_executions(DEFAULT_USER))
 
     def test_active_executions_with_different_user(self):
         execution_service = self.create_execution_service()
         self._start(execution_service)
         self._start(execution_service)
 
-        another_user = create_audit_names('another_user')
-        self.assertCountEqual([], execution_service.get_active_executions(another_user))
+        self.assertCountEqual([], execution_service.get_active_executions('another_user'))
 
     def test_active_executions_when_2_started_and_1_cleanup(self):
         execution_service = self.create_execution_service()
@@ -78,7 +77,7 @@ class ExecutionServiceTest(unittest.TestCase):
         self.get_process(id1).stop()
         execution_service.cleanup_execution(id1)
 
-        self.assertCountEqual([id2], execution_service.get_active_executions(DEFAULT_AUDIT_NAMES))
+        self.assertCountEqual([id2], execution_service.get_active_executions(DEFAULT_USER))
 
     def test_active_executor(self):
         execution_service = self.create_execution_service()
@@ -105,16 +104,21 @@ class ExecutionServiceTest(unittest.TestCase):
 
     def test_can_access_same_user(self):
         execution_service = self.create_execution_service()
-        execution_ud = self._start(execution_service)
+        execution_id = self._start(execution_service)
 
-        self.assertTrue(execution_service.can_access(execution_ud, DEFAULT_AUDIT_NAMES))
+        self.assertTrue(execution_service.can_access(execution_id, DEFAULT_USER))
 
     def test_can_access_different_user(self):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
 
-        another_user = create_audit_names('another_user')
-        self.assertFalse(execution_service.can_access(execution_id, another_user))
+        self.assertFalse(execution_service.can_access(execution_id, 'another_user'))
+
+    def test_can_access_different_user_reversed(self):
+        execution_service = self.create_execution_service()
+        execution_id = self._start(execution_service, user_id='another_user')
+
+        self.assertFalse(execution_service.can_access(execution_id, DEFAULT_USER))
 
     def test_get_audit_name(self):
         execution_service = self.create_execution_service()
@@ -158,13 +162,14 @@ class ExecutionServiceTest(unittest.TestCase):
         self.get_process(id1).stop()
         self.assertCountEqual([id1, id2], finished_ids)
 
-    def _start(self, execution_service, parameter_values=None):
+    def _start(self, execution_service, parameter_values=None, user_id=DEFAULT_USER):
         if parameter_values is None:
             parameter_values = {}
 
         execution_id = execution_service.start_script(
             self._create_script_config(),
             parameter_values,
+            user_id,
             DEFAULT_AUDIT_NAMES)
         return execution_id
 

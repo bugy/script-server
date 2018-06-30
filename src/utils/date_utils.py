@@ -1,6 +1,11 @@
 import sys
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+
+MS_IN_SEC = 1000
+MS_IN_MIN = 60 * MS_IN_SEC
+MS_IN_HOUR = 60 * MS_IN_MIN
+MS_IN_DAY = 24 * MS_IN_HOUR
 
 
 def get_current_millis():
@@ -34,3 +39,11 @@ def astimezone(datetime_value, new_timezone):
         datetime_with_local_tz = datetime_value.replace(tzinfo=local_timezone)
         transformed = datetime_with_local_tz.astimezone(new_timezone)
         return transformed
+
+
+def days_to_ms(days):
+    return days * MS_IN_DAY
+
+
+def ms_to_days(ms):
+    return float(ms) / MS_IN_DAY

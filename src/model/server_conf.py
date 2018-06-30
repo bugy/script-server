@@ -21,6 +21,7 @@ class ServerConfig(object):
         self.logging_config = None
         self.admin_config = None
         self.title = None
+        self.trusted_ips = []
 
     def get_port(self):
         return self.port
@@ -90,7 +91,6 @@ def from_json(conf_path):
         config.title = json_object.get('title')
 
     auth_config = json_object.get('auth')
-    admin_users = _parse_admin_users(json_object)
     if auth_config:
         config.authenticator = create_authenticator(auth_config)
 
@@ -100,9 +100,17 @@ def from_json(conf_path):
         if auth_type == 'google_oauth' and allowed_users is None:
             raise Exception('auth.allowed_users field is mandatory for ' + auth_type)
 
-        config.authorizer = _create_authorizer(allowed_users, admin_users)
+        def_trusted_ips = []
+        def_admins = []
     else:
-        config.authorizer = _create_authorizer('*', admin_users)
+        allowed_users = '*'
+        def_trusted_ips = ['127.0.0.1', '::1']
+        def_admins = def_trusted_ips
+
+    config.trusted_ips = strip(read_list(json_object, 'trusted_ips', default=def_trusted_ips))
+
+    admin_users = _parse_admin_users(json_object, default_admins=def_admins)
+    config.authorizer = _create_authorizer(allowed_users, admin_users)
 
     config.alerts_config = parse_alerts_config(json_object)
     config.logging_config = parse_logging_config(json_object)
@@ -186,8 +194,5 @@ def parse_logging_config(json_object):
     return config
 
 
-def _parse_admin_users(json_object):
-    default_admins = ['127.0.0.1']
-    admin_users = read_list(json_object, 'admin_users', default_admins)
-
-    return strip(admin_users)
+def _parse_admin_users(json_object, default_admins=None):
+    return strip(read_list(json_object, 'admin_users', default=default_admins))

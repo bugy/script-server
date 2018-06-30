@@ -5,6 +5,7 @@ import tornado.escape
 from tornado import gen
 
 from auth import auth_base
+from utils import tornado_utils
 from utils.tornado_utils import respond_error, redirect_relative
 
 LOGGER = logging.getLogger('script_server.tornado_auth')
@@ -35,11 +36,7 @@ class TornadoAuth():
 
     @staticmethod
     def _get_current_user(request_handler):
-        username = request_handler.get_secure_cookie('username')
-        if username is None:
-            return None
-
-        return username.decode('utf-8')
+        return tornado_utils.get_secure_cookie(request_handler, 'username')
 
     def get_username(self, request_handler):
         if not self.is_enabled():

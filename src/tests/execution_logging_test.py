@@ -124,8 +124,8 @@ class TestLoggingService(unittest.TestCase):
         self.assertEqual('line 1\r\nsome text\r\n', log_content)
 
     def test_when_different_users_then_independent_files(self):
-        self.simulate_logging(user='user1', log_lines=['text for user1'])
-        self.simulate_logging(user='user2', log_lines=['user2 message'])
+        self.simulate_logging(user_name='user1', log_lines=['text for user1'])
+        self.simulate_logging(user_name='user2', log_lines=['user2 message'])
 
         user1_log_file = self.get_log_files('user1')[0]
         self.assertEqual('text for user1\n', self.read_logs_only(user1_log_file))
@@ -137,7 +137,7 @@ class TestLoggingService(unittest.TestCase):
         start_time = get_current_millis()
 
         self.simulate_logging(execution_id='id1',
-                              user='user1',
+                              user_name='user1',
                               script_name='My script',
                               log_lines=['some text'],
                               start_time_millis=start_time,
@@ -148,7 +148,7 @@ class TestLoggingService(unittest.TestCase):
         entry = entries[0]
         self.validate_history_entry(entry,
                                     id='id1',
-                                    user='user1',
+                                    user_name='user1',
                                     script_name='My script',
                                     start_time=start_time,
                                     command='./script.sh -p p1 --flag')
@@ -223,15 +223,27 @@ class TestLoggingService(unittest.TestCase):
         self.assertEqual(entry.start_time, start_time_with_tz)
         self.assertEqual(entry.start_time.utcoffset(), timedelta(hours=0, minutes=0))
 
+    def test_entry_with_user_id_name_different(self):
+        self.simulate_logging(execution_id='id1', user_name='userX', user_id='192.168.2.12')
+
+        entry = self.logging_service.find_history_entry('id1')
+        self.validate_history_entry(entry, id='id1', user_name='userX', user_id='192.168.2.12')
+
     def validate_history_entry(self, entry, *,
                                id,
-                               user='userX',
+                               user_name='userX',
+                               user_id=None,
                                script_name='my_script',
                                start_time='IGNORE',
                                command='cmd',
                                exit_code=0):
+
+        if user_id is None:
+            user_id = user_name
+
         self.assertEqual(id, entry.id)
-        self.assertEqual(user, entry.username)
+        self.assertEqual(user_name, entry.user_name)
+        self.assertEqual(user_id, entry.user_id)
         self.assertEqual(script_name, entry.script_name)
         self.assertEqual(command, entry.command)
         if start_time != 'IGNORE':
@@ -247,7 +259,8 @@ class TestLoggingService(unittest.TestCase):
 
     def simulate_logging(self,
                          execution_id=None,
-                         user='userX',
+                         user_name='userX',
+                         user_id=None,
                          script_name='my_script',
                          command='cmd',
                          log_lines=None,
@@ -255,14 +268,17 @@ class TestLoggingService(unittest.TestCase):
         if not execution_id:
             execution_id = str(uuid.uuid1())
 
+        if user_id is None:
+            user_id = user_name
+
         output_stream = Observable()
 
-        all_audit_names = {}
-        all_audit_names[audit_utils.AUTH_USERNAME] = user
+        all_audit_names = {audit_utils.AUTH_USERNAME: user_id}
 
         self.logging_service.start_logging(
             execution_id,
-            user,
+            user_name,
+            user_id,
             script_name,
             command,
             output_stream,
