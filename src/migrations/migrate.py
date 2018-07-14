@@ -1,4 +1,5 @@
 import itertools
+import json
 import logging
 import os
 import re
@@ -186,6 +187,49 @@ def __migrate_user_id():
 
         new_content = parameters_text + execution.logging.OUTPUT_STARTED_MARKER + os.linesep + file_parts[1]
         file_utils.write_file(log_file, new_content.encode(execution.logging.ENCODING), byte_content=True)
+
+
+@_migration('introduce_access_config')
+def __introduce_access_config():
+    file_path = os.path.join('conf', 'conf.json')
+
+    if not os.path.exists(file_path):
+        return
+
+    content = file_utils.read_file(file_path)
+    json_object = json.loads(content)
+
+    def move_to_access(field, parent_object):
+        if 'access' not in json_object:
+            json_object['access'] = {}
+
+        json_object['access'][field] = parent_object[field]
+        del parent_object[field]
+
+    changed = False
+
+    if 'auth' in json_object:
+        auth_object = json_object['auth']
+        if 'allowed_users' in auth_object:
+            move_to_access('allowed_users', auth_object)
+            changed = True
+
+    fields = ['admin_users', 'trusted_ips']
+    for field in fields:
+        if field in json_object:
+            changed = True
+            move_to_access(field, json_object)
+
+    if changed:
+        space_matches = re.findall('^\s+', content, flags=re.MULTILINE)
+        if space_matches:
+            indent_string = space_matches[0].replace('\t', '    ')
+            indent = min(len(indent_string), 8)
+        else:
+            indent = 4
+
+        with open(file_path, 'w') as fp:
+            json.dump(json_object, fp, indent=indent)
 
 
 def migrate(temp_folder, conf_folder):

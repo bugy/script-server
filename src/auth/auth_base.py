@@ -3,7 +3,7 @@ import abc
 
 class Authenticator(metaclass=abc.ABCMeta):
     def __init__(self) -> None:
-        self.client_visible_config = {}
+        self._client_visible_config = {}
         self.auth_type = None
 
     @abc.abstractmethod
@@ -11,11 +11,15 @@ class Authenticator(metaclass=abc.ABCMeta):
         pass
 
     def get_client_visible_config(self):
-        return self.client_visible_config
+        return self._client_visible_config
+
+    def get_groups(self, user):
+        return []
 
 
 class AuthRejectedError(Exception):
     """Credentials, provided by user, were rejected by the authentication mechanism (user is unknown to the server)"""
+
     def __init__(self, message=None):
         self.message = message
 

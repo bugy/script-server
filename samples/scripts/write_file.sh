@@ -38,7 +38,8 @@ shift # past argument or value
 done
 
 if $clear; then
-    echo "Clearing the file..." > ~/"$filename"
+    echo "Clearing the file..."
+     > ~/"$filename"
 fi
 
 read -p "Press enter to start writing to the file (~/$filename)"

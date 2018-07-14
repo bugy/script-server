@@ -31,7 +31,7 @@ def config_to_json(config):
         })
 
     return json.dumps({
-        "name": config.get_name(),
+        "name": config.name,
         "description": config.get_description(),
         "parameters": parameters
     })

@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 
@@ -7,29 +8,37 @@ from utils import os_utils, file_utils
 LOGGER = logging.getLogger('config_service')
 
 
+def _load_script_config(path, content_or_json_dict):
+    if isinstance(content_or_json_dict, str):
+        json_object = json.loads(content_or_json_dict)
+    else:
+        json_object = content_or_json_dict
+    return script_configs.from_json(path, json_object, os_utils.is_pty_supported())
+
+
 class ConfigService:
     def __init__(self, conf_folder) -> None:
         self._script_configs_folder = os.path.join(conf_folder, 'runners')
         file_utils.prepare_folder(self._script_configs_folder)
 
-    def list_config_names(self):
-        def add_name(path, content):
+    def list_configs(self):
+        def load_script(path, content):
             try:
-                return script_configs.read_name(path, content)
-
+                json_object = json.loads(content)
+                return _load_script_config(path, json_object)
             except:
-                LOGGER.exception('Could not load script name: ' + path)
+                LOGGER.exception('Could not load script: ' + path)
 
-        result = self.visit_script_configs(add_name)
-
-        return result
+        return self.visit_script_configs(load_script)
 
     def load_config(self, name):
         def find_and_load(path, content):
             try:
-                config_name = script_configs.read_name(path, content)
+                json_object = json.loads(content)
+
+                config_name = script_configs.read_name(path, json_object)
                 if config_name == name:
-                    return script_configs.from_json(path, content, os_utils.is_pty_supported())
+                    return _load_script_config(path, json_object)
             except:
                 LOGGER.exception('Could not load script config: ' + path)
 

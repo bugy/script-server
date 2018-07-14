@@ -81,18 +81,25 @@ def is_allowed_during_login(request_path, login_url, request_handler):
 def check_authorization(func):
     def wrapper(self, *args, **kwargs):
         auth = self.application.auth
-        request_path = self.request.path
-        login_url = self.get_login_url()
+        authorizer = self.application.authorizer
 
-        if (auth.is_authenticated(self) and (auth.is_authorized(self))) \
-                or is_allowed_during_login(request_path, login_url, self):
+        authenticated = auth.is_authenticated(self)
+        access_allowed = authenticated and authorizer.is_allowed_in_app(_identify_user(self))
+
+        if authenticated and (not access_allowed):
+            user = _identify_user(self)
+            LOGGER.warning('User ' + user + ' is not allowed')
+            raise tornado.web.HTTPError(403, 'Access denied. Please contact system administrator')
+
+        login_url = self.get_login_url()
+        request_path = self.request.path
+
+        login_resource = is_allowed_during_login(request_path, login_url, self)
+        if (authenticated and access_allowed) or login_resource:
             return func(self, *args, **kwargs)
 
         if not isinstance(self, tornado.web.StaticFileHandler):
-            if not auth.is_authenticated(self):
-                raise tornado.web.HTTPError(401, 'Not authenticated')
-            else:
-                raise tornado.web.HTTPError(403, 'Access denied')
+            raise tornado.web.HTTPError(401, 'Not authenticated')
 
         login_url += "?" + urlencode(dict(next=request_path))
 
@@ -121,6 +128,12 @@ def has_admin_rights(request_handler):
     return request_handler.application.authorizer.is_admin(user_id)
 
 
+def can_access_script(script_config, request_handler):
+    authorizer = request_handler.application.authorizer
+    user_id = _identify_user(request_handler)
+    return authorizer.is_allowed(user_id, script_config.allowed_users)
+
+
 class ProxiedRedirectHandler(tornado.web.RedirectHandler):
     def get(self, *args):
         redirect_relative(self._url.format(*args), self, *args)
@@ -129,6 +142,9 @@ class ProxiedRedirectHandler(tornado.web.RedirectHandler):
 class BaseRequestHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header('X-Frame-Options', 'DENY')
+
+    def write_error(self, status_code, **kwargs):
+        respond_error(self, status_code, self._reason)
 
 
 class BaseStaticHandler(tornado.web.StaticFileHandler):
@@ -145,9 +161,11 @@ class GetServerTitle(BaseRequestHandler):
 class GetScripts(BaseRequestHandler):
     @check_authorization
     def get(self):
-        config_names = self.application.config_service.list_config_names()
+        configs = self.application.config_service.list_configs()
 
-        self.write(json.dumps(config_names))
+        names = [conf.name for conf in configs if can_access_script(conf, self)]
+
+        self.write(json.dumps(names))
 
 
 class GetScriptInfo(BaseRequestHandler):
@@ -164,6 +182,9 @@ class GetScriptInfo(BaseRequestHandler):
         if not config:
             respond_error(self, 400, "Couldn't find a script by name")
             return
+
+        if not can_access_script(config, self):
+            raise tornado.web.HTTPError(403, reason='Access to the script is denied')
 
         self.write(external_model.config_to_json(config))
 
@@ -264,6 +285,11 @@ class ScriptExecute(BaseRequestHandler):
                 message = 'Script with name "' + str(script_name) + '" not found'
                 LOGGER.error(message)
                 respond_error(self, 400, message)
+                return
+
+            if not can_access_script(config, self):
+                LOGGER.warning('Access to the script "' + script_name + '" is denied for ' + audit_name)
+                respond_error(self, 403, 'Access to the script is denied')
                 return
 
             file_upload_feature = self.application.file_upload_feature
@@ -623,6 +649,8 @@ def intercept_stop_when_running_scripts(io_loop, execution_service):
 
 
 def init(server_config: ServerConfig,
+         authenticator,
+         authorizer,
          execution_service: ExecutionService,
          execution_logging_service: ExecutionLoggingService,
          config_service: ConfigService,
@@ -636,7 +664,7 @@ def init(server_config: ServerConfig,
         ssl_context.load_cert_chain(server_config.get_ssl_cert_path(),
                                     server_config.get_ssl_key_path())
 
-    auth = TornadoAuth(server_config.authenticator, server_config.authorizer)
+    auth = TornadoAuth(authenticator)
     if auth.is_enabled():
         identification = AuthBasedIdentification(auth)
     else:
@@ -683,7 +711,7 @@ def init(server_config: ServerConfig,
     application.auth = auth
 
     application.server_title = server_config.title
-    application.authorizer = server_config.authorizer
+    application.authorizer = authorizer
     application.downloads_folder = downloads_folder
     application.file_download_feature = file_download_feature
     application.file_upload_feature = file_upload_feature

@@ -5,6 +5,7 @@ import os
 
 import migrations.migrate
 from alerts.alerts_service import AlertsService
+from auth.authorization import create_group_provider, Authorizer
 from config.config_service import ConfigService
 from execution.execution_service import ExecutionService
 from execution.id_generator import IdGenerator
@@ -55,6 +56,11 @@ def main():
 
     secret = get_secret(TEMP_FOLDER)
 
+    group_provider = create_group_provider(
+        server_config.user_groups, server_config.authenticator, server_config.admin_users)
+
+    authorizer = Authorizer(server_config.allowed_users, server_config.admin_users, group_provider)
+
     config_service = ConfigService(CONFIG_FOLDER)
 
     alerts_service = AlertsService(server_config.get_alerts_config())
@@ -84,6 +90,8 @@ def main():
 
     server.init(
         server_config,
+        server_config.authenticator,
+        authorizer,
         execution_service,
         execution_logging_service,
         config_service,

@@ -24,9 +24,9 @@ class GoogleOauthAuthenticator(auth_base.Authenticator):
 
         self.states = {}
 
-        self.client_visible_config['client_id'] = self.client_id
-        self.client_visible_config['oauth_url'] = tornado.auth.GoogleOAuth2Mixin._OAUTH_AUTHORIZE_URL
-        self.client_visible_config['oauth_scope'] = 'email'
+        self._client_visible_config['client_id'] = self.client_id
+        self._client_visible_config['oauth_url'] = tornado.auth.GoogleOAuth2Mixin._OAUTH_AUTHORIZE_URL
+        self._client_visible_config['oauth_scope'] = 'email'
 
     def authenticate(self, request_handler):
         code = request_handler.get_argument('code', False)

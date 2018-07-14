@@ -2,7 +2,7 @@ import json
 import os
 
 import utils.file_utils as file_utils
-from auth.authorization import ANY_USER, Authorizer
+from auth.authorization import ANY_USER
 from model import model_helper
 from model.model_helper import read_list
 from utils.string_utils import strip
@@ -16,12 +16,14 @@ class ServerConfig(object):
         self.ssl_key_path = None
         self.ssl_cert_path = None
         self.authenticator = None
-        self.authorizer = None
+        self.allowed_users = None
         self.alerts_config = None
         self.logging_config = None
         self.admin_config = None
         self.title = None
         self.trusted_ips = []
+        self.user_groups = None
+        self.admin_users = []
 
     def get_port(self):
         return self.port
@@ -90,11 +92,17 @@ def from_json(conf_path):
     if json_object.get('title'):
         config.title = json_object.get('title')
 
+    access_config = json_object.get('access')
+    if access_config:
+        allowed_users = access_config.get('allowed_users')
+        user_groups = model_helper.read_dict(access_config, 'groups')
+    else:
+        allowed_users = None
+        user_groups = {}
+
     auth_config = json_object.get('auth')
     if auth_config:
         config.authenticator = create_authenticator(auth_config)
-
-        allowed_users = auth_config.get('allowed_users')
 
         auth_type = config.authenticator.auth_type
         if auth_type == 'google_oauth' and allowed_users is None:
@@ -103,17 +111,17 @@ def from_json(conf_path):
         def_trusted_ips = []
         def_admins = []
     else:
-        allowed_users = '*'
         def_trusted_ips = ['127.0.0.1', '::1']
         def_admins = def_trusted_ips
 
-    config.trusted_ips = strip(read_list(json_object, 'trusted_ips', default=def_trusted_ips))
+    config.trusted_ips = strip(read_list(access_config, 'trusted_ips', default=def_trusted_ips))
 
-    admin_users = _parse_admin_users(json_object, default_admins=def_admins)
-    config.authorizer = _create_authorizer(allowed_users, admin_users)
-
+    admin_users = _parse_admin_users(access_config, default_admins=def_admins)
+    config.allowed_users = _prepare_allowed_users(allowed_users, admin_users, user_groups)
     config.alerts_config = parse_alerts_config(json_object)
     config.logging_config = parse_logging_config(json_object)
+    config.user_groups = user_groups
+    config.admin_users = admin_users
 
     return config
 
@@ -139,21 +147,28 @@ def create_authenticator(auth_object):
     return authenticator
 
 
-def _create_authorizer(allowed_users, admin_users):
+def _prepare_allowed_users(allowed_users, admin_users, user_groups):
     if (allowed_users is None) or (allowed_users == '*'):
-        coerced_users = [ANY_USER]
+        return [ANY_USER]
 
     elif not isinstance(allowed_users, list):
         raise Exception('allowed_users should be list')
 
-    else:
-        coerced_users = strip(allowed_users)
-        coerced_users = [user for user in coerced_users if len(user) > 0]
+    coerced_users = strip(allowed_users)
+    coerced_users = {user for user in coerced_users if len(user) > 0}
 
-        if '*' in coerced_users:
-            coerced_users = [ANY_USER]
+    if '*' in coerced_users:
+        return [ANY_USER]
 
-    return Authorizer(coerced_users, admin_users)
+    if admin_users and (ANY_USER != admin_users) and (ANY_USER not in admin_users):
+        coerced_users.update(admin_users)
+
+    if user_groups:
+        for group, users in user_groups.items():
+            if (ANY_USER != users) and (ANY_USER not in users):
+                coerced_users.update(users)
+
+    return list(coerced_users)
 
 
 def parse_alerts_config(json_object):

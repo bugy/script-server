@@ -524,7 +524,7 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
     try {
         return callHttp(url, object, method, asyncHandler);
     } catch (error) {
-        if ((error instanceof HttpRequestError) && contains([401, 403], error.code)) {
+        if ((error instanceof HttpRequestError) && (error.code === 401)) {
             var link = document.createElement('a');
             link.innerHTML = 'relogin';
             link.addEventListener('click', function () {
@@ -532,8 +532,7 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
             });
             link.href = 'javascript:void(0)';
 
-            var message = error.code === 401 ? 'Credentials expired' : 'Access denied';
-            var errorPanel = showErrorPanel(message + ', please ');
+            var errorPanel = showErrorPanel('Credentials expired, please ');
             errorPanel.appendChild(link);
 
             throw new HttpUnauthorizedError(error.code, message);

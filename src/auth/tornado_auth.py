@@ -12,9 +12,8 @@ LOGGER = logging.getLogger('script_server.tornado_auth')
 
 
 class TornadoAuth():
-    def __init__(self, authenticator, authorizer):
+    def __init__(self, authenticator):
         self.authenticator = authenticator
-        self.authorizer = authorizer
 
     def is_enabled(self):
         return bool(self.authenticator)
@@ -26,13 +25,6 @@ class TornadoAuth():
         username = self._get_current_user(request_handler)
 
         return bool(username)
-
-    def is_authorized(self, request_handler):
-        if not self.is_enabled():
-            return True
-
-        username = self._get_current_user(request_handler)
-        return self.authorizer.is_allowed_in_app(username)
 
     @staticmethod
     def _get_current_user(request_handler):
@@ -77,11 +69,6 @@ class TornadoAuth():
             return
 
         LOGGER.info('Authenticated user ' + username)
-
-        if not self.authorizer.is_allowed_in_app(username):
-            LOGGER.info('User ' + username + ' have no access')
-            respond_error(request_handler, 403, 'Access is prohibited. Please contact system administrator')
-            return
 
         request_handler.set_secure_cookie('username', username)
 

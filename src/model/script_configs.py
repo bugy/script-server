@@ -3,7 +3,7 @@ import os
 
 import utils.os_utils as os_utils
 import utils.process_utils as process_utils
-
+from auth.authorization import ANY_USER
 
 class Config(object):
 
@@ -23,9 +23,6 @@ class Config(object):
 
     def get_config_path(self):
         return self.config_path
-
-    def get_name(self):
-        return self.name
 
     def get_description(self):
         return self.description
@@ -122,10 +119,8 @@ class Parameter(object):
         return self.values
 
 
-def read_name(file_path, json_string):
-    json_object = json.loads(json_string)
-
-    name = json_object.get("name")
+def read_name(file_path, json_object):
+    name = json_object.get('name')
     if not name:
         filename = os.path.basename(file_path)
         name = os.path.splitext(filename)[0]
@@ -133,11 +128,10 @@ def read_name(file_path, json_string):
     return name
 
 
-def from_json(file_path, json_string, pty_enabled_default=False):
-    json_object = json.loads(json_string)
+def from_json(file_path, json_object, pty_enabled_default=False):
     config = Config()
 
-    config.name = read_name(file_path, json_string)
+    config.name = read_name(file_path, json_object)
 
     config.script_command = json_object.get("script_path")
     config.description = json_object.get("description")
@@ -145,6 +139,10 @@ def from_json(file_path, json_string, pty_enabled_default=False):
 
     config.requires_terminal = read_boolean("requires_terminal", json_object, pty_enabled_default)
     config.bash_formatting = read_boolean("bash_formatting", json_object, os_utils.is_linux() or os_utils.is_mac())
+
+    config.allowed_users = json_object.get('allowed_users')
+    if config.allowed_users is None:
+        config.allowed_users = ANY_USER
 
     output_files = json_object.get("output_files")
     if output_files:
