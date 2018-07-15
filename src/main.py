@@ -52,7 +52,7 @@ def main():
 
     migrations.migrate.migrate(TEMP_FOLDER, CONFIG_FOLDER)
 
-    server_config = server_conf.from_json(SERVER_CONF_PATH)
+    server_config = server_conf.from_json(SERVER_CONF_PATH, TEMP_FOLDER)
 
     secret = get_secret(TEMP_FOLDER)
 

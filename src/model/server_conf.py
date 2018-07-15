@@ -58,7 +58,7 @@ class LoggingConfig:
         self.date_format = None
 
 
-def from_json(conf_path):
+def from_json(conf_path, temp_folder):
     if os.path.exists(conf_path):
         file_content = file_utils.read_file(conf_path)
     else:
@@ -102,7 +102,7 @@ def from_json(conf_path):
 
     auth_config = json_object.get('auth')
     if auth_config:
-        config.authenticator = create_authenticator(auth_config)
+        config.authenticator = create_authenticator(auth_config, temp_folder)
 
         auth_type = config.authenticator.auth_type
         if auth_type == 'google_oauth' and allowed_users is None:
@@ -126,7 +126,7 @@ def from_json(conf_path):
     return config
 
 
-def create_authenticator(auth_object):
+def create_authenticator(auth_object, temp_folder):
     auth_type = auth_object.get('type')
 
     if not auth_type:
@@ -135,7 +135,7 @@ def create_authenticator(auth_object):
     auth_type = auth_type.strip().lower()
     if auth_type == 'ldap':
         from auth.auth_ldap import LdapAuthenticator
-        authenticator = LdapAuthenticator(auth_object)
+        authenticator = LdapAuthenticator(auth_object, temp_folder)
     elif auth_type == 'google_oauth':
         from auth.auth_google_oauth import GoogleOauthAuthenticator
         authenticator = GoogleOauthAuthenticator(auth_object)
