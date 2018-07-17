@@ -86,6 +86,9 @@ def _validate_requirements():
 @_migration('add_execution_info_to_log_files')
 def __migrate_old_files():
     output_folder = os.path.join('logs', 'processes')
+    if not os.path.exists(output_folder):
+        return
+
     log_files = [os.path.join(output_folder, file)
                  for file in os.listdir(output_folder)
                  if file.lower().endswith('.log')]
@@ -156,6 +159,9 @@ def __migrate_old_files():
 @_migration('add_user_id_to_log_files', requires=['add_execution_info_to_log_files'])
 def __migrate_user_id():
     output_folder = os.path.join('logs', 'processes')
+    if not os.path.exists(output_folder):
+        return
+
     log_files = [os.path.join(output_folder, file)
                  for file in os.listdir(output_folder)
                  if file.lower().endswith('.log')]

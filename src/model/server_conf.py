@@ -114,9 +114,13 @@ def from_json(conf_path, temp_folder):
         def_trusted_ips = ['127.0.0.1', '::1']
         def_admins = def_trusted_ips
 
-    config.trusted_ips = strip(read_list(access_config, 'trusted_ips', default=def_trusted_ips))
+    if access_config:
+        config.trusted_ips = strip(read_list(access_config, 'trusted_ips', default=def_trusted_ips))
+        admin_users = _parse_admin_users(access_config, default_admins=def_admins)
+    else:
+        config.trusted_ips = def_trusted_ips
+        admin_users = def_admins
 
-    admin_users = _parse_admin_users(access_config, default_admins=def_admins)
     config.allowed_users = _prepare_allowed_users(allowed_users, admin_users, user_groups)
     config.alerts_config = parse_alerts_config(json_object)
     config.logging_config = parse_logging_config(json_object)
