@@ -19,7 +19,14 @@ ScriptExecutor.prototype.start = function (parameterValues) {
     formData.append('__script_name', this.scriptConfig.name);
 
     forEachKeyValue(parameterValues, function (parameter, value) {
-        formData.append(parameter, value);
+        if (Array.isArray(value)) {
+            for (var i = 0; i < value.length; i++) {
+                var valueElement = value[i];
+                formData.append(parameter, valueElement);
+            }
+        } else {
+            formData.append(parameter, value);
+        }
     });
 
     this.executionId = authorizedCallHttp('scripts/execution', formData, 'POST');

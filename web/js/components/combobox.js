@@ -1,7 +1,10 @@
-function Combobox(name, defaultValue, required, values, description) {
+'use strict';
+
+function Combobox(name, defaultValue, required, values, description, multiple) {
     AbstractInput.call(this);
 
     this.required = required;
+    this.multiple = multiple;
 
     var label = document.createElement("label");
     label.innerText = name;
@@ -13,6 +16,9 @@ function Combobox(name, defaultValue, required, values, description) {
     addClass(this.selectField, "validate");
     if (required) {
         this.selectField.setAttribute("required", "");
+    }
+    if (multiple) {
+        this.selectField.setAttribute('multiple', '');
     }
 
     var selectOption = document.createElement("option");
@@ -44,7 +50,15 @@ function Combobox(name, defaultValue, required, values, description) {
 Combobox.prototype = new AbstractInput();
 
 Combobox.prototype.getValue = function () {
-    return this.selectField.value;
+    return this._getValueInternal();
+};
+
+Combobox.prototype._getValueInternal = function () {
+    if (this.multiple) {
+        return $(this.selectField).val();
+    } else {
+        return this.selectField.value;
+    }
 };
 
 Combobox.prototype.setValue = function (value) {
@@ -58,10 +72,19 @@ Combobox.prototype.setValue = function (value) {
 Combobox.prototype._setValueInternal = function (value) {
     var foundMatching = false;
     if (!isNull(value)) {
-        var matchingChildren = $(this.selectField).children('option[value="' + value + '"]');
-        if (matchingChildren.size() === 1) {
-            matchingChildren.attr('selected', '');
-            foundMatching = true;
+        if (this.multiple && Array.isArray(value)) {
+            $(this.selectField).children('option').each(function () {
+                if (contains(value, this.value)) {
+                    $(this).prop('selected', true);
+                    foundMatching = true;
+                }
+            });
+        } else {
+            var matchingChildren = $(this.selectField).children('option[value="' + value + '"]');
+            if (matchingChildren.size() === 1) {
+                matchingChildren.prop('selected', true);
+                foundMatching = true;
+            }
         }
     }
 
@@ -73,7 +96,13 @@ Combobox.prototype._setValueInternal = function (value) {
 };
 
 Combobox.prototype.getValidationError = function () {
-    var empty = this.selectField.validity.valueMissing;
+    var empty;
+    if (this.multiple) {
+        var value = this._getValueInternal();
+        empty = isEmptyString(value) || (value.length <= 0);
+    } else {
+        empty = this.selectField.validity.valueMissing;
+    }
 
     if (this.required && empty) {
         return "required";

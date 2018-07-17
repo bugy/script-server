@@ -380,13 +380,14 @@ function createParameterControl(parameter) {
     if (parameter.withoutValue) {
         return new Checkbox(parameter.name, parameter.default, parameter.description);
 
-    } else if (parameter.type === 'list') {
+    } else if ((parameter.type === 'list') || (parameter.type === 'multiselect')) {
         return new Combobox(
             parameter.name,
             parameter.default,
             parameter.required,
             parameter.values,
-            parameter.description);
+            parameter.description,
+            parameter.type === 'multiselect');
 
     } else if (parameter.type === 'file_upload') {
         return new FileUpload(

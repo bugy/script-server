@@ -3,7 +3,7 @@ import unittest
 
 from model import model_helper
 from model import script_configs
-from model.model_helper import read_list, read_dict
+from model.model_helper import read_list, read_dict, prepare_multiselect_values
 from tests import test_utils
 
 
@@ -367,6 +367,76 @@ class TestParametersValidation(unittest.TestCase):
         valid = model_helper.validate_parameters({'param': 'val4'}, script_config)
         self.assertFalse(valid)
 
+    def test_multiselect_when_empty_string(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'multiselect'
+        parameter.values = ['val1', 'val2', 'val3']
+
+        valid = model_helper.validate_parameters({'param': ''}, script_config)
+        self.assertTrue(valid)
+
+    def test_multiselect_when_empty_list(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'multiselect'
+        parameter.values = ['val1', 'val2', 'val3']
+
+        valid = model_helper.validate_parameters({'param': []}, script_config)
+        self.assertTrue(valid)
+
+    def test_multiselect_when_single_matching_element(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'multiselect'
+        parameter.values = ['val1', 'val2', 'val3']
+
+        valid = model_helper.validate_parameters({'param': ['val2']}, script_config)
+        self.assertTrue(valid)
+
+    def test_multiselect_when_multiple_matching_elements(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'multiselect'
+        parameter.values = ['val1', 'val2', 'val3']
+
+        valid = model_helper.validate_parameters({'param': ['val2', 'val1']}, script_config)
+        self.assertTrue(valid)
+
+    def test_multiselect_when_multiple_elements_one_not_matching(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'multiselect'
+        parameter.values = ['val1', 'val2', 'val3']
+
+        valid = model_helper.validate_parameters({'param': ['val2', 'val1', 'X']}, script_config)
+        self.assertFalse(valid)
+
+    def test_multiselect_when_not_list_value(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'multiselect'
+        parameter.values = ['val1', 'val2', 'val3']
+
+        valid = model_helper.validate_parameters({'param': 'val1'}, script_config)
+        self.assertFalse(valid)
+
+    def test_multiselect_when_single_not_matching_element(self):
+        script_config = script_configs.Config()
+
+        parameter = self.add_parameter('param', script_config)
+        parameter.type = 'multiselect'
+        parameter.values = ['val1', 'val2', 'val3']
+
+        valid = model_helper.validate_parameters({'param': ['X']}, script_config)
+        self.assertFalse(valid)
+
     def test_multiple_required_parameters_when_all_defined(self):
         script_config = script_configs.Config()
 
@@ -520,3 +590,55 @@ class TestReadDict(unittest.TestCase):
         values_dict = {'another_key': {'key1': 'value1'}}
         dict_value = read_dict(values_dict, 'dict_key', {'key2': 'value2'})
         self.assertEqual(dict_value, {'key2': 'value2'})
+
+
+class TestPrepareMultiselectValues(unittest.TestCase):
+
+    def test_prepare_single_value(self):
+        parameter = self.create_parameter('param', 'multiselect')
+
+        values = self.prepare({parameter: 'val1'})
+        self.assertEqual(['val1'], values['param'])
+
+    def test_prepare_empty_string(self):
+        parameter = self.create_parameter('param', 'multiselect')
+
+        values = self.prepare({parameter: ''})
+        self.assertEqual([], values['param'])
+
+    def test_prepare_empty_list(self):
+        parameter = self.create_parameter('param', 'multiselect')
+
+        values = self.prepare({parameter: []})
+        self.assertEqual([], values['param'])
+
+    def test_prepare_some_list(self):
+        parameter = self.create_parameter('param', 'multiselect')
+
+        values = self.prepare({parameter: ['v1', 'v2']})
+        self.assertEqual(['v1', 'v2'], values['param'])
+
+    def test_prepare_only_multiselect(self):
+        param1 = self.create_parameter('param1', 'text')
+        multi_param = self.create_parameter('multi_param', 'multiselect')
+        param2 = self.create_parameter('param2', 'list')
+
+        values = self.prepare({
+            param1: 'xyz',
+            multi_param: 'xyz',
+            param2: 'xyz'})
+        self.assertEqual('xyz', values['param1'])
+        self.assertEqual(['xyz'], values['multi_param'])
+        self.assertEqual('xyz', values['param2'])
+
+    def prepare(self, parameter_values):
+        values = {param.name: value for param, value in parameter_values.items()}
+        parameters = list(parameter_values.keys())
+        prepare_multiselect_values(values, parameters)
+        return values
+
+    def create_parameter(self, name, type):
+        parameter = script_configs.Parameter()
+        parameter.name = name
+        parameter.type = type
+        return parameter

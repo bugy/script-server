@@ -1,5 +1,6 @@
 #!/bin/bash
 
+args=("$@")
 echo $@
 
 my_file=''
@@ -10,7 +11,7 @@ do
 key="$1"
 
 case $key in
-    -f)
+    --file_upload)
     my_file="$2"
     shift # past argument
     shift # past value
@@ -24,9 +25,13 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 echo
+echo 'Arguments:'
+printf '%s\n' "${args[@]}"
+
+echo
 if [ -z "$my_file" ]; then
-    echo '-f is empty'
+    echo '--file_upload is empty'
 else
-    echo '-f content:'
+    echo '--file_upload content:'
     cat "$my_file"
 fi

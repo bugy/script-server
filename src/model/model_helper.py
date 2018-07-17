@@ -159,6 +159,19 @@ def validate_parameters(parameters, config):
                 return False
             continue
 
+        if parameter.type == 'multiselect':
+            if not isinstance(value, list):
+                LOGGER.error(
+                    'Parameter ' + name + ' should be a list, but was: ' + value_string + '(' + str(type(value)) + ')')
+                return False
+            for value_element in value:
+                if value_element not in parameter.get_values():
+                    element_str = value_to_str(value_element, parameter)
+                    LOGGER.error('Parameter ' + name + ' has value ' + element_str +
+                                 ', but should be in [' + ','.join(parameter.get_values()) + ']')
+                    return False
+            continue
+
     return True
 
 
@@ -167,3 +180,15 @@ def value_to_str(value, parameter):
         return SECURE_MASK
 
     return str(value)
+
+
+def prepare_multiselect_values(param_values, parameters):
+    for param in parameters:
+        if (param.type == 'multiselect') and (param.name in param_values):
+            value = param_values[param.name]
+            if isinstance(value, list):
+                continue
+            if not is_empty(value):
+                param_values[param.name] = [value]
+            else:
+                param_values[param.name] = []

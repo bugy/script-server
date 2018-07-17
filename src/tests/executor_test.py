@@ -123,6 +123,96 @@ class TestBuildCommandArgs(unittest.TestCase):
 
         self.assertEqual(args_string, ['-p1', 5])
 
+    def test_parameter_multiselect_when_empty_string(self):
+        config = script_configs.Config()
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.param = '-p1'
+        parameter.type = 'multiselect'
+        config.add_parameter(parameter)
+
+        args_list = executor.build_command_args({'p1': ''}, config)
+
+        self.assertEqual(args_list, [])
+
+    def test_parameter_multiselect_when_empty_list(self):
+        config = script_configs.Config()
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.param = '-p1'
+        parameter.type = 'multiselect'
+        config.add_parameter(parameter)
+
+        args_list = executor.build_command_args({'p1': []}, config)
+
+        self.assertEqual(args_list, [])
+
+    def test_parameter_multiselect_when_single_list(self):
+        config = script_configs.Config()
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.param = '-p1'
+        parameter.type = 'multiselect'
+        config.add_parameter(parameter)
+
+        args_list = executor.build_command_args({'p1': ['val1']}, config)
+
+        self.assertEqual(args_list, ['-p1', 'val1'])
+
+    def test_parameter_multiselect_when_single_list_as_multiarg(self):
+        config = script_configs.Config()
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.param = '-p1'
+        parameter.type = 'multiselect'
+        config.add_parameter(parameter)
+
+        args_list = executor.build_command_args({'p1': ['val1']}, config)
+
+        self.assertEqual(args_list, ['-p1', 'val1'])
+
+    def test_parameter_multiselect_when_multiple_list(self):
+        config = script_configs.Config()
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.type = 'multiselect'
+        config.add_parameter(parameter)
+
+        args_list = executor.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
+
+        self.assertEqual(args_list, ['val1,val2,hello world'])
+
+    def test_parameter_multiselect_when_multiple_list_and_custom_separator(self):
+        config = script_configs.Config()
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.type = 'multiselect'
+        parameter.separator = '; '
+        config.add_parameter(parameter)
+
+        args_list = executor.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
+
+        self.assertEqual(args_list, ['val1; val2; hello world'])
+
+    def test_parameter_multiselect_when_multiple_list_as_multiarg(self):
+        config = script_configs.Config()
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.type = 'multiselect'
+        parameter.multiple_arguments = True
+        config.add_parameter(parameter)
+
+        args_list = executor.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
+
+        self.assertEqual(args_list, ['val1', 'val2', 'hello world'])
+
     def test_multiple_parameters_sequence(self):
         config = script_configs.Config()
 
@@ -209,6 +299,39 @@ class TestBuildCommandArgs(unittest.TestCase):
 
         self.assertEqual('ls -p1 ****** -p2 value', secure_command)
 
+    def test_parameter_secure_multiselect(self):
+        config = script_configs.Config()
+        config.script_command = 'ls'
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.param = '-p1'
+        parameter.secure = True
+        parameter.type = 'multiselect'
+        config.add_parameter(parameter)
+
+        executor = ScriptExecutor(config, {'p1': ['one', 'two', 'three']})
+        secure_command = executor.get_secure_command()
+
+        self.assertEqual('ls -p1 ******,******,******', secure_command)
+
+    def test_parameter_secure_multiselect_as_multiarg(self):
+        config = script_configs.Config()
+        config.script_command = 'ls'
+
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.param = '-p1'
+        parameter.secure = True
+        parameter.type = 'multiselect'
+        parameter.multiple_arguments = True
+        config.add_parameter(parameter)
+
+        executor = ScriptExecutor(config, {'p1': ['one', 'two', 'three']})
+        secure_command = executor.get_secure_command()
+
+        self.assertEqual('ls -p1 ****** ****** ******', secure_command)
+
 
 class TestProcessOutput(unittest.TestCase):
     def test_log_raw_single_line(self):
@@ -285,6 +408,24 @@ class TestProcessOutput(unittest.TestCase):
 
         output = self.get_finish_output()
         self.assertEqual(output, 'some text\nand a new line with some long long text')
+
+    def test_log_with_secure_when_multiselect(self):
+        parameter = script_configs.Parameter()
+        parameter.name = 'p1'
+        parameter.secure = True
+        parameter.type = 'multiselect'
+        self.config.add_parameter(parameter)
+
+        self.create_and_start_executor({'p1': ['123', 'password']})
+
+        self.write_process_output('some text(123)')
+        self.write_process_output('\nand a new line')
+        self.write_process_output(' with my password')
+
+        self.finish_process()
+
+        output = self.get_finish_output()
+        self.assertEqual(output, 'some text(******)\nand a new line with my ******')
 
     def setUp(self):
         self.config = script_configs.Config()

@@ -49,8 +49,12 @@ def normalize_url(request_url):
 def get_form_arguments(request_handler):
     result = {}
 
-    for key in request_handler.request.arguments.keys():
-        value = request_handler.get_argument(key, None)
+    arguments = request_handler.request.arguments
+    for key, raw_value in arguments.items():
+        if isinstance(raw_value, list) and (len(raw_value) > 1):
+            value = request_handler.get_arguments(key)
+        else:
+            value = request_handler.get_argument(key, None)
         result[key] = value
 
     return result

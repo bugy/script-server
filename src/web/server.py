@@ -299,6 +299,8 @@ class ScriptExecute(BaseRequestHandler):
                     file_path = file_upload_feature.save_file(file_info.filename, file_info.body, audit_name)
                     execution_info.param_values[key] = file_path
 
+            model_helper.prepare_multiselect_values(execution_info.param_values, config.parameters)
+
             valid_parameters = model_helper.validate_parameters(execution_info.param_values, config)
             if not valid_parameters:
                 message = 'Received invalid parameters'

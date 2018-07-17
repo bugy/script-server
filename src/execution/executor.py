@@ -82,15 +82,21 @@ class ScriptExecutor:
                 continue
 
             value = self.parameter_values.get(parameter.name)
-            if (value is None) or (value == ''):
+            if model_helper.is_empty(value):
                 continue
 
-            value_string = str(value)
-            if not value_string.strip():
-                continue
+            if isinstance(value, list):
+                elements = value
+            else:
+                elements = [value]
 
-            value_pattern = '\\b' + re.escape(value_string) + '\\b'
-            word_replacements[value_pattern] = model_helper.SECURE_MASK
+            for value_element in elements:
+                element_string = str(value_element)
+                if not element_string.strip():
+                    continue
+
+                value_pattern = '\\b' + re.escape(element_string) + '\\b'
+                word_replacements[value_pattern] = model_helper.SECURE_MASK
 
         return word_replacements
 
@@ -166,11 +172,17 @@ def build_command_args(param_values, config, stringify=lambda value, param: valu
                 # do not replace == True, since REST service can start accepting boolean as string
                 if (value is True) or (value == 'true'):
                     result.append(parameter.get_param())
-            else:
-                if value:
-                    if parameter.get_param():
-                        result.append(parameter.get_param())
+            elif value:
+                if parameter.get_param():
+                    result.append(parameter.get_param())
 
+                if parameter.type == 'multiselect':
+                    strings = [stringify(element, parameter) for element in value]
+                    if parameter.multiple_arguments:
+                        result.extend(strings)
+                    else:
+                        result.append(parameter.separator.join(strings))
+                else:
                     value_string = stringify(value, parameter)
                     result.append(value_string)
 

@@ -57,6 +57,8 @@ class Parameter(object):
         self.constant = False
         self.values = None
         self.secure = False
+        self.separator = ','
+        self.multiple_arguments = False
 
     def get_name(self):
         return self.name
@@ -153,15 +155,17 @@ def from_json(file_path, json_object, pty_enabled_default=False):
     if parameters_json is not None:
         for parameter_json in parameters_json:
             parameter = Parameter()
-            parameter.set_name(parameter_json.get("name"))
-            parameter.set_param(parameter_json.get("param"))
-            parameter.set_no_value(parameter_json.get("no_value"))
-            parameter.set_description(parameter_json.get("description"))
-            parameter.set_required(parameter_json.get("required"))
-            parameter.set_default(parameter_json.get("default"))
-            parameter.set_min(parameter_json.get("min"))
-            parameter.set_max(parameter_json.get("max"))
+            parameter.set_name(parameter_json.get('name'))
+            parameter.set_param(parameter_json.get('param'))
+            parameter.set_no_value(parameter_json.get('no_value'))
+            parameter.set_description(parameter_json.get('description'))
+            parameter.set_required(parameter_json.get('required'))
+            parameter.set_default(parameter_json.get('default'))
+            parameter.set_min(parameter_json.get('min'))
+            parameter.set_max(parameter_json.get('max'))
             parameter.secure = read_boolean('secure', parameter_json)
+            parameter.separator = parameter_json.get('separator', ',')
+            parameter.multiple_arguments = read_boolean('multiple_arguments', parameter_json, default=False)
 
             values = parameter_json.get("values")
             if values:
