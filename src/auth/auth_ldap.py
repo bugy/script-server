@@ -91,6 +91,7 @@ class LdapAuthenticator(auth_base.Authenticator):
             if connection.bound:
                 try:
                     user_groups = self._fetch_user_groups(username, full_username, connection)
+                    LOGGER.info('Loaded groups for ' + username + ': ' + str(user_groups))
                     self._set_user_groups(username, user_groups)
                 except:
                     LOGGER.exception('Failed to load groups for the user ' + username)
