@@ -69,6 +69,10 @@ function ScriptView(parent) {
                 return !isNull(this.errors) && (this.errors.length > 0);
             },
             formattedDescription: function () {
+                if (isEmptyString(this.scriptDescription)) {
+                    return '';
+                }
+
                 var descriptionHtml = marked(this.scriptDescription, {sanitize: true, gfm: true, breaks: true});
                 var paragraphRemoval = document.createElement('div');
                 paragraphRemoval.innerHTML = descriptionHtml.trim();
