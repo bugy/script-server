@@ -243,7 +243,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
                 LOGGER.exception('Could not prepare downloadable files')
 
             connection = web_socket.ws_connection
-            if connection is not None:
+            if (connection is not None) and (hasattr(connection, 'ping_callback')):
                 # we need to stop callback explicitly and as soon as possible, to avoid sending ping after close
                 connection.ping_callback.stop()
 
