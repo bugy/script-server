@@ -204,6 +204,17 @@ class ExecutionLoggingService:
         return correct_format, parameters_text
 
     def _renew_files_cache(self):
+        cache = self._ids_to_file_map
+
+        obsolete_ids = []
+        for id, file in cache.items():
+            path = os.path.join(self._output_folder, file)
+            if not os.path.exists(path):
+                obsolete_ids.append(id)
+
+        for obsolete_id in obsolete_ids:
+            del cache[obsolete_id]
+
         for file in os.listdir(self._output_folder):
             if not file.lower().endswith('.log'):
                 continue
@@ -217,7 +228,7 @@ class ExecutionLoggingService:
             if entry is None:
                 continue
 
-            self._ids_to_file_map[entry.id] = file
+            cache[entry.id] = file
 
     @staticmethod
     def _create_log_identifier(audit_name, script_name, start_time):
