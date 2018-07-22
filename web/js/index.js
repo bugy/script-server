@@ -321,8 +321,7 @@ function showScript(selectedScript) {
     var scriptPanelContainer = document.getElementById('script-panel-container');
     destroyChildren(scriptPanelContainer);
 
-    var errorPanel = document.getElementById('error-panel');
-    hide(errorPanel);
+    hideErrorPanel();
 
     var scriptHeader = document.getElementById('script-header');
 
@@ -536,7 +535,7 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
             var errorPanel = showErrorPanel('Credentials expired, please ');
             errorPanel.appendChild(link);
 
-            throw new HttpUnauthorizedError(error.code, message);
+            throw new HttpUnauthorizedError(error.code, 'User is not authenticated');
         }
 
         throw error;
@@ -546,15 +545,15 @@ function authorizedCallHttp(url, object, method, asyncHandler) {
 function showErrorPanel(text) {
     var errorPanel = document.getElementById('error-panel');
 
+    var scriptPanelContainer = document.getElementById('script-panel-container');
+    addClass(scriptPanelContainer, 'collapsed');
+
     var hideThis = function () {
         hide(this);
     };
-    $(errorPanel).children('.log-panel').each(hideThis);
-    $(errorPanel).children('.script-input-panel').each(hideThis);
-    $(errorPanel).children('.validation-panel').each(hideThis);
-
-    var scriptPanelContainer = document.getElementById('script-panel-container');
-    addClass(scriptPanelContainer, 'collapsed');
+    $(scriptPanelContainer).find('.log-panel').each(hideThis);
+    $(scriptPanelContainer).find('.script-input-panel').each(hideThis);
+    $(scriptPanelContainer).find('.validation-panel').each(hideThis);
 
     destroyChildren(errorPanel);
     errorPanel.innerText = text;
@@ -562,4 +561,14 @@ function showErrorPanel(text) {
     show(errorPanel);
 
     return errorPanel;
+}
+
+function hideErrorPanel() {
+    var errorPanel = document.getElementById('error-panel');
+    errorPanel.innerHTML = '';
+
+    var scriptPanelContainer = document.getElementById('script-panel-container');
+    removeClass(scriptPanelContainer, 'collapsed');
+
+    hide(errorPanel);
 }
