@@ -213,6 +213,7 @@ class ExecutionLoggingService:
                 obsolete_ids.append(id)
 
         for obsolete_id in obsolete_ids:
+            LOGGER.info('Logs for execution #' + obsolete_id + ' were deleted')
             del cache[obsolete_id]
 
         for file in os.listdir(self._output_folder):

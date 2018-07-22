@@ -194,6 +194,24 @@ class TestLoggingService(unittest.TestCase):
         entry = new_service.get_history_entries()[0]
         self.validate_history_entry(entry, id='id1')
 
+    def test_get_history_entries_after_delete(self):
+        self.simulate_logging(execution_id='id1')
+
+        for file in os.listdir(test_utils.temp_folder):
+            os.remove(os.path.join(test_utils.temp_folder, file))
+
+        entries = self.logging_service.get_history_entries()
+        self.assertCountEqual([], entries)
+
+    def test_find_history_entry_after_delete(self):
+        self.simulate_logging(execution_id='id1')
+
+        for file in os.listdir(test_utils.temp_folder):
+            os.remove(os.path.join(test_utils.temp_folder, file))
+
+        entry = self.logging_service.find_history_entry('id1')
+        self.assertIsNone(entry)
+
     def test_find_history_entry(self):
         self.simulate_logging(execution_id='id1')
 
