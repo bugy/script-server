@@ -143,6 +143,10 @@ function ScriptView(parent) {
             },
 
             inputPrompt: function (value) {
+                if (isNull(value) && isNull(this.$refs.inputField)) {
+                    return;
+                }
+
                 var fieldUpdater = function () {
                     this.$refs.inputField.value = '';
                     if (!isNull(value)) {
