@@ -19,9 +19,14 @@ LOGGER = logging.getLogger('script_server.LdapAuthorizer')
 
 
 def _resolve_base_dn(full_username):
-    if ',dc=' in full_username:
-        base_dn_start = full_username.find('dc=')
-        return full_username[base_dn_start:]
+    if not full_username:
+        return ''
+
+    username_lower = full_username.lower()
+    if ',dc=' in username_lower:
+        base_dn_start = username_lower.find('dc=')
+        return username_lower[base_dn_start:]
+
     elif '@' in full_username:
         domain_start = full_username.find('@') + 1
         domain = full_username[domain_start:]
@@ -30,6 +35,31 @@ def _resolve_base_dn(full_username):
         return ','.join(dcs)
     else:
         return ''
+
+
+def _search(dn, search_filter, attributes, connection):
+    success = connection.search(dn, search_filter, attributes=attributes)
+    if not success:
+        if connection.last_error:
+            LOGGER.warning('ldap search failed: ' + connection.last_error
+                           + '. dn:' + dn + ', filter: ' + search_filter)
+        return None
+
+    return connection.entries
+
+
+def _load_multiple_entries_values(dn, search_filter, attribute_name, connection):
+    entries = _search(dn, search_filter, [attribute_name], connection)
+    if entries is None:
+        return []
+
+    result = []
+    for entry in entries:
+        value = entry[attribute_name].value
+        if value is not None:
+            result.append(value)
+
+    return result
 
 
 class LdapAuthenticator(auth_base.Authenticator):
@@ -44,19 +74,19 @@ class LdapAuthenticator(auth_base.Authenticator):
         else:
             self.username_template = None
 
-        groups_base_dn = params_dict.get('groups_base_dn')
-        if groups_base_dn:
-            self._groups_base_dn = groups_base_dn.strip()
+        base_dn = params_dict.get('base_dn')
+        if base_dn:
+            self._base_dn = base_dn.strip()
         else:
             resolved_base_dn = _resolve_base_dn(username_pattern)
 
             if resolved_base_dn:
-                LOGGER.info('Resolved base dn for groups: ' + resolved_base_dn)
-                self._groups_base_dn = resolved_base_dn
+                LOGGER.info('Resolved base dn: ' + resolved_base_dn)
+                self._base_dn = resolved_base_dn
             else:
                 LOGGER.warning(
-                    'Cannot resolve LDAP base dn, so using empty. Please specify it using "groups_base_dn" attribute')
-                self._groups_base_dn = ''
+                    'Cannot resolve LDAP base dn, so using empty. Please specify it using "base_dn" attribute')
+                self._base_dn = ''
 
         self.version = params_dict.get("version")
         if not self.version:
@@ -90,7 +120,10 @@ class LdapAuthenticator(auth_base.Authenticator):
 
             if connection.bound:
                 try:
-                    user_groups = self._fetch_user_groups(username, full_username, connection)
+                    user_dn, user_uid = self._get_user_ids(full_username, connection)
+                    LOGGER.debug('user ids: ' + str((user_dn, user_uid)))
+
+                    user_groups = self._fetch_user_groups(user_dn, user_uid, connection)
                     LOGGER.info('Loaded groups for ' + username + ': ' + str(user_groups))
                     self._set_user_groups(username, user_groups)
                 except:
@@ -125,20 +158,49 @@ class LdapAuthenticator(auth_base.Authenticator):
     def get_groups(self, user):
         return self._get_groups(user)
 
-    def _fetch_user_groups(self, username, full_username, connection):
-        name_attribute = 'cn'
-        base_dn = self._groups_base_dn
+    def _fetch_user_groups(self, user_dn, user_uid, connection):
+        base_dn = self._base_dn
 
-        search_filter = '(|(member=%s)(&(objectClass=posixGroup)(memberUid=%s)))' % (full_username, username)
-        success = connection.search(base_dn, search_filter, attributes=[name_attribute])
-        if not success:
-            return []
+        result = set()
 
-        group_entries = connection.response
-        if not group_entries:
-            return []
+        result.update(_load_multiple_entries_values(base_dn, '(member=%s)' % user_dn, 'cn', connection))
 
-        return [entry['attributes'][name_attribute][0] for entry in group_entries]
+        if user_uid:
+            result.update(_load_multiple_entries_values(
+                base_dn,
+                '(&(objectClass=posixGroup)(memberUid=%s))' % user_uid,
+                'cn',
+                connection))
+
+        return sorted(list(result))
+
+    def _get_user_ids(self, full_username, connection):
+        base_dn = self._base_dn
+
+        username_lower = full_username.lower()
+        if ',dc=' in username_lower:
+            base_dn = username_lower
+            search_filter = '(objectClass=*)'
+        elif '@' in full_username:
+            search_filter = '(userPrincipalName=%s)' % full_username
+        elif '\\' in full_username:
+            username_index = full_username.rfind('\\') + 1
+            username = full_username[username_index:]
+            search_filter = '(sAMAccountName=%s)' % username
+        else:
+            LOGGER.warning('Unsupported username pattern for ' + full_username)
+            return full_username, None
+
+        entries = _search(base_dn, search_filter, ['uid'], connection)
+        if not entries:
+            return full_username, None
+
+        if len(entries) > 1:
+            LOGGER.warning('More than one user found by filter: ' + search_filter)
+            return full_username, None
+
+        entry = entries[0]
+        return entry.entry_dn, entry.uid.value
 
     def _load_groups(self, groups_file):
         if not os.path.exists(groups_file):
@@ -150,5 +212,5 @@ class LdapAuthenticator(auth_base.Authenticator):
     def _set_user_groups(self, user, groups):
         self._user_groups[user] = groups
 
-        with open(self._groups_file, 'w') as fd:
-            json.dump(self._user_groups, fd, indent=2)
+        new_groups_content = json.dumps(self._user_groups, indent=2)
+        file_utils.write_file(self._groups_file, new_groups_content)
