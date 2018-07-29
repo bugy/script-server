@@ -107,16 +107,7 @@ class LdapAuthenticator(auth_base.Authenticator):
             full_username = username
 
         try:
-            connection = Connection(
-                self.url,
-                user=full_username,
-                password=password,
-                authentication=SIMPLE,
-                read_only=True,
-                version=self.version
-            )
-
-            connection.bind()
+            connection = self._connect(full_username, password)
 
             if connection.bound:
                 try:
@@ -145,6 +136,18 @@ class LdapAuthenticator(auth_base.Authenticator):
             raise auth_base.AuthRejectedError('Invalid credentials')
 
         raise auth_base.AuthFailureError(error)
+
+    def _connect(self, full_username, password):
+        connection = Connection(
+            self.url,
+            user=full_username,
+            password=password,
+            authentication=SIMPLE,
+            read_only=True,
+            version=self.version
+        )
+        connection.bind()
+        return connection
 
     def _get_groups(self, user):
         groups = self._user_groups.get(user)
