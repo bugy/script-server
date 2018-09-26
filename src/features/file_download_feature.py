@@ -7,7 +7,7 @@ import utils.file_utils as file_utils
 import utils.os_utils as os_utils
 import utils.string_utils as string_utils
 from execution.execution_service import ExecutionService
-from model.model_helper import is_empty
+from model.model_helper import is_empty, fill_parameter_values
 from react.observable import read_until_closed
 from utils.file_utils import create_unique_filename
 
@@ -118,23 +118,10 @@ class FileDownloadFeature:
 
 def substitute_parameter_values(parameter_configs, output_files, values):
     output_file_parsed = []
-    for i, output_file in enumerate(output_files):
-        for parameter_config in parameter_configs:
-            if parameter_config.secure or parameter_config.no_value:
-                continue
+    for _, output_file in enumerate(output_files):
+        substituted_file = fill_parameter_values(parameter_configs, output_file, values)
+        output_file_parsed.append(substituted_file)
 
-            parameter_name = parameter_config.name
-            value = values.get(parameter_name)
-
-            if value is None:
-                value = ''
-
-            if not isinstance(value, str):
-                value = str(value)
-
-            output_file = re.sub('\$\$\$' + parameter_name, value, output_file)
-
-        output_file_parsed.append(output_file)
     return output_file_parsed
 
 

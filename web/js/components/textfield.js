@@ -1,100 +1,162 @@
-function TextField(name, defaultValue, required, type, min, max, description, secure) {
-    AbstractInput.call(this);
+'use strict';
 
-    this.required = required;
-    this.type = type;
-    this.min = min;
-    this.max = max;
-    this.secure = secure;
+(function () {
+    Vue.component('textfield', {
+        template:
+            '<div class="input-field" :title="config.description" :data-error="error">\n'
+            + '  <input :id="config.name" '
+            + '     :type="fieldType" '
+            + '     :value="value" '
+            + '     :required="config.required" '
+            + '     class="validate" '
+            + '     @input="inputFieldChanged"'
+            + '     ref="textField"/>\n'
+            + '  <label :for="config.name" v-bind:class="{ active: labelActive }">{{ config.name }}</label>\n'
+            + '</div>',
 
-    var label = document.createElement("label");
-    label.innerText = name;
-    label.setAttribute("for", name);
+        props: {
+            'value': [String, Number],
+            'config': Object
+        },
 
-    this.field = document.createElement("input");
-    this.field.id = name;
-    this.field.type = "text";
+        data: function () {
+            return {
+                error: ''
+            }
+        },
 
-    if (!isNull(this.type)) {
-        if (this.type === 'int') {
-            this.field.type = "number";
+        computed: {
+            fieldType() {
+                if (this.config.type === 'int') {
+                    return 'number';
+                } else if (this.config.secure) {
+                    return 'password';
+                }
+
+                return 'text';
+            },
+
+            labelActive() {
+                if (!isEmptyString(this.value)) {
+                    return true;
+                }
+
+                var textField = this.$refs.textField;
+                if (!isNull(textField) && (textField === document.activeElement)) {
+                    return true;
+                }
+
+                return false;
+            }
+        },
+
+        mounted: function () {
+            this.inputFieldChanged();
+        },
+
+        watch: {
+            'value': {
+                immediate: true,
+                handler(newValue) {
+                    var textField = this.$refs.textField;
+                    var textFieldValue = textField ? textField.value : '';
+
+                    if (textFieldValue === newValue) {
+                        this._doValidation();
+                    } else {
+                        this.$nextTick(function () {
+                            this._doValidation();
+                        }.bind(this));
+                    }
+                }
+            }
+        },
+
+        methods: {
+            inputFieldChanged() {
+                var textField = this.$refs.textField;
+                var value = textField.value;
+
+                this.$emit('input', value);
+            },
+
+            getValidationError(value, textField) {
+                var empty = isEmptyString(value) || isEmptyString(value.trim());
+
+                if ((textField.validity.badInput)) {
+                    return getInvalidTypeError(this.type);
+                }
+
+                if (this.config.required && empty) {
+                    return 'required';
+                }
+
+                if (!empty) {
+                    var typeError = getValidByTypeError(value, this.config.type, this.config.min, this.config.max);
+                    if (!isEmptyString(typeError)) {
+                        return typeError;
+                    }
+                }
+
+                return '';
+            },
+
+            _doValidation() {
+                var textField = this.$refs.textField;
+                this.error = this.getValidationError(this.value, textField);
+                textField.setCustomValidity(this.error);
+
+                this.$emit('error', this.error);
+            }
         }
-    }
+    });
 
-    if (this.secure) {
-        this.field.type = "password"
-    }
+    function getValidByTypeError(value, type, min, max) {
+        if (type === 'int') {
+            var isInteger = /^(((\-?[1-9])(\d*))|0)$/.test(value);
+            if (!isInteger) {
+                return getInvalidTypeError(type);
+            }
 
-    if (!isNull(defaultValue)) {
-        addClass(label, "active");
-        this.field.value = defaultValue;
-    }
+            var intValue = parseInt(value);
 
-    if (this.required) {
-        this.field.setAttribute("required", "");
-    }
+            var minMaxValid = true;
+            var minMaxError = "";
+            if (!isNull(min)) {
+                minMaxError += "min: " + min;
 
-    addClass(this.field, "validate");
+                if (intValue < parseInt(min)) {
+                    minMaxValid = false;
+                }
+            }
 
-    this.field.oninput = $.proxy(this.validate, this);
-    this.validate();
+            if (!isNull(max)) {
+                if (intValue > parseInt(max)) {
+                    minMaxValid = false;
+                }
 
-    this.panel.appendChild(this.field);
-    this.panel.appendChild(label);
-    if (!isEmptyString(description)) {
-        this.panel.title = description;
-    }
-}
+                if (!isEmptyString(minMaxError)) {
+                    minMaxError += ", ";
+                }
 
-TextField.prototype = new AbstractInput();
+                minMaxError += "max: " + max;
+            }
 
-TextField.prototype.getValue = function () {
-    return this.field.value;
-};
+            if (!minMaxValid) {
+                return minMaxError;
+            }
 
-TextField.prototype.setValue = function (value) {
-    var label = findNeighbour(this.field, 'label');
-
-    if (!isNull(value) && value !== '') {
-        addClass(label, 'active');
-        this.field.value = value;
-    } else {
-        removeClass(label, 'active');
-        this.field.value = '';
-    }
-
-    this.validate();
-};
-
-TextField.prototype.getValidationError = function () {
-    var value = this.getValue();
-    var empty = isEmptyString(value) || isEmptyString(value.trim());
-
-    if ((this.field.validity.badInput)) {
-        return getInvalidTypeError(this.type);
-    }
-
-    if (this.required && empty) {
-        return "required";
-    }
-
-    if (!empty) {
-        var typeError = getValidByTypeError(value, this.type, this.min, this.max);
-        if (!isEmptyString(typeError)) {
-            return typeError;
+            return "";
         }
+
+        return "";
     }
 
-    return "";
-};
+    function getInvalidTypeError(type) {
+        if (type === 'int') {
+            return "integer expected";
+        }
 
-TextField.prototype.validate = function () {
-    if (this.isValid()) {
-        this.field.setCustomValidity("");
-        this.panel.removeAttribute("data-error");
-    } else {
-        var error = this.getValidationError();
-        this.field.setCustomValidity(error);
-        this.panel.setAttribute("data-error", error);
+        return type + " expected";
     }
-};
+}());

@@ -1,31 +1,36 @@
-function Checkbox(name, defaultValue, description) {
-    AbstractInput.call(this);
+'use strict';
 
-    var label = document.createElement("label");
-    label.innerText = name;
-    label.setAttribute("for", name);
+(function () {
+    Vue.component('checkbox', {
+        template:
+            '<div class="input-field" :title="config.description">\n'
+            + '  <input :id="config.name" '
+            + '     type="checkbox" '
+            + '     :checked="boolValue" '
+            + '     @input="emitValueChange"'
+            + '     ref="checkbox"/>\n'
+            + '  <label :for="config.name">{{ config.name }}</label>\n'
+            + '</div>',
 
-    this.checkBox = document.createElement("input");
-    this.checkBox.id = name;
-    this.checkBox.type = "checkbox";
+        props: {
+            'value': [Boolean, String, Number],
+            'config': Object
+        },
 
-    if (!isNull(defaultValue)) {
-        this.checkBox.checked = defaultValue;
-    }
+        computed: {
+            boolValue() {
+                return toBoolean(this.value);
+            }
+        },
 
-    this.panel.appendChild(this.checkBox);
-    this.panel.appendChild(label);
-    if (!isEmptyString(description)) {
-        this.panel.title = description;
-    }
-}
+        mounted: function () {
+            this.emitValueChange();
+        },
 
-Checkbox.prototype = new AbstractInput();
-
-Checkbox.prototype.getValue = function () {
-    return this.checkBox.checked;
-};
-
-Checkbox.prototype.setValue = function (value) {
-    this.checkBox.checked = toBoolean(value);
-};
+        methods: {
+            emitValueChange() {
+                this.$emit('input', this.$refs.checkbox.checked)
+            }
+        }
+    });
+}());

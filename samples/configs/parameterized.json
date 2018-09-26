@@ -160,6 +160,14 @@
         "multi2",
         "multi 3"
       ]
+    },
+    {
+      "name": "Dependant list",
+      "description": "A list with values depending on other parameters",
+      "type": "list",
+      "values": {
+        "script": "ls /var/${Command-based list}/${Required Text}"
+      }
     }
   ]
 }

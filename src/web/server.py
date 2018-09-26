@@ -18,7 +18,8 @@ import tornado.websocket
 from alerts.alerts_service import AlertsService
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
-from config.config_service import ConfigService
+from config.config_service import ConfigService, ConfigNotFoundException, ParameterNotFoundException, \
+    InvalidValueException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
 from features.file_download_feature import FileDownloadFeature
@@ -51,7 +52,7 @@ def is_allowed_during_login(request_path, login_url, request_handler):
     login_resources = ['/js/login.js',
                        '/js/common.js',
                        '/js/libs/jquery.min.js',
-                       '/js/libs/materialize.min.js',
+                       '/js/libs/materialize.js',
                        '/css/libs/materialize.min.css',
                        '/css/index.css',
                        '/css/fonts/roboto/Roboto-Regular.woff2',
@@ -187,6 +188,30 @@ class GetScriptInfo(BaseRequestHandler):
             raise tornado.web.HTTPError(403, reason='Access to the script is denied')
 
         self.write(external_model.config_to_json(config))
+
+
+class GetConfigParameterValues(BaseRequestHandler):
+    @check_authorization
+    def get(self):
+        query_parameters = json.loads(self.get_query_argument('query_parameters'))
+
+        script_name = query_parameters['script_name']
+        parameter_name = query_parameters['parameter_name']
+        current_values = query_parameters['current_values']
+
+        try:
+            values = self.application.config_service.get_parameter_values(script_name, parameter_name,
+                                                                          current_values)
+            self.write(json.dumps(values))
+
+        except ConfigNotFoundException as e:
+            raise tornado.web.HTTPError(400, reason='Failed to find config ' + e.script_name)
+        except ParameterNotFoundException as e:
+            raise tornado.web.HTTPError(400, reason='Failed to find parameter ' + e.param_name
+                                                    + ' in config ' + e.script_name)
+        except InvalidValueException as e:
+            raise tornado.web.HTTPError(400,
+                                        reason='Invalid parameter "%s" value: %s' % (e.param_name, e.validation_error))
 
 
 class ScriptStop(BaseRequestHandler):
@@ -677,6 +702,7 @@ def init(server_config: ServerConfig,
     handlers = [(r"/conf/title", GetServerTitle),
                 (r"/scripts/list", GetScripts),
                 (r"/scripts/info", GetScriptInfo),
+                (r"/scripts/config/parameter-values", GetConfigParameterValues),
                 (r"/scripts/execution", ScriptExecute),
                 (r"/scripts/execution/stop/(.*)", ScriptStop),
                 (r"/scripts/execution/io/(.*)", ScriptStreamSocket),

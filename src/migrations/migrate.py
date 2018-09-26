@@ -10,6 +10,7 @@ import execution.logging
 from execution.logging import ExecutionLoggingService
 from utils import file_utils
 from utils.date_utils import sec_to_datetime, to_millis
+from utils.string_utils import is_blank
 
 __migrations_registry = OrderedDict()
 
@@ -227,15 +228,55 @@ def __introduce_access_config():
             move_to_access(field, json_object)
 
     if changed:
-        space_matches = re.findall('^\s+', content, flags=re.MULTILINE)
-        if space_matches:
-            indent_string = space_matches[0].replace('\t', '    ')
-            indent = min(len(indent_string), 8)
-        else:
-            indent = 4
+        _write_json(file_path, json_object, content)
 
-        with open(file_path, 'w') as fp:
-            json.dump(json_object, fp, indent=indent)
+
+@_migration('migrate_output_files_parameters_substitution')
+def __introduce_access_config():
+    conf_folder = os.path.join('conf', 'runners')
+
+    if not os.path.exists(conf_folder):
+        return
+
+    conf_files = [os.path.join(conf_folder, file)
+                  for file in os.listdir(conf_folder)
+                  if file.lower().endswith('.json')]
+
+    for conf_file in conf_files:
+        content = file_utils.read_file(conf_file)
+        json_object = json.loads(content, object_pairs_hook=OrderedDict)
+
+        if ('output_files' not in json_object) or ('parameters' not in json_object):
+            continue
+
+        output_files = json_object['output_files']
+        parameter_names = [p['name'] for p in json_object['parameters'] if not is_blank(p.get('name'))]
+
+        changed = False
+
+        for i in range(len(output_files)):
+            output_file = output_files[i]
+
+            for param_name in parameter_names:
+                output_file = re.sub('\$\$\$' + param_name, '${' + param_name + '}', output_file)
+
+            if output_file != output_files[i]:
+                output_files[i] = output_file
+                changed = True
+
+        if changed:
+            _write_json(conf_file, json_object, content)
+
+
+def _write_json(file_path, json_object, old_content):
+    space_matches = re.findall('^\s+', old_content, flags=re.MULTILINE)
+    if space_matches:
+        indent_string = space_matches[0].replace('\t', '    ')
+        indent = min(len(indent_string), 8)
+    else:
+        indent = 4
+    with open(file_path, 'w') as fp:
+        json.dump(json_object, fp, indent=indent)
 
 
 def migrate(temp_folder, conf_folder):

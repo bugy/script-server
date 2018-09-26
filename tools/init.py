@@ -11,7 +11,10 @@ from utils import tool_utils
 LIBRARIES = {
     'materialize.min.css': 'https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/css/materialize.min.css',
     'jquery.min.js': 'https://code.jquery.com/jquery-2.1.1.min.js',
-    'materialize.min.js': 'https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/js/materialize.min.js',
+    'materialize.js': {
+        'prod': 'https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/js/materialize.min.js',
+        'dev': 'https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/js/materialize.js',
+    },
     'hashtable.js': 'https://github.com/timdown/jshashtable/releases/download/v3.0/jshashtable-3.0.js',
     'MaterialIcons-Regular.woff2':
         'https://github.com/google/material-design-icons/blob/master/iconfont/MaterialIcons-Regular.woff2?raw=true',

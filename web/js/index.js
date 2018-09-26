@@ -1,13 +1,13 @@
 'use strict';
 
 loadScript('js/components/component.js');
-loadScript('js/components/abstract_input.js');
 loadScript('js/components/checkbox.js');
 loadScript('js/components/textfield.js');
 loadScript('js/components/combobox.js');
 loadScript('js/components/file_upload.js');
 loadScript('js/components/log_panel.js');
 loadScript('js/script/script-controller.js');
+loadScript('js/script/script-parameters-view.js');
 loadScript('js/script/script-view.js');
 loadScript('js/script/script-execution-model.js');
 
@@ -375,39 +375,6 @@ function findRunningExecutor(selectedScript) {
     return scriptExecutor;
 }
 
-function createParameterControl(parameter) {
-    if (parameter.withoutValue) {
-        return new Checkbox(parameter.name, parameter.default, parameter.description);
-
-    } else if ((parameter.type === 'list') || (parameter.type === 'multiselect')) {
-        return new Combobox(
-            parameter.name,
-            parameter.default,
-            parameter.required,
-            parameter.values,
-            parameter.description,
-            parameter.type === 'multiselect');
-
-    } else if (parameter.type === 'file_upload') {
-        return new FileUpload(
-            parameter.name,
-            parameter.description,
-            parameter.required);
-
-    } else {
-        return new TextField(
-            parameter.name,
-            parameter.default,
-            parameter.required,
-            parameter.type,
-            parameter.min,
-            parameter.max,
-            parameter.description,
-            parameter.secure);
-    }
-}
-
-
 function selectScript(scriptName) {
     selectedScript = scriptName;
 
@@ -469,55 +436,6 @@ function updateMenuItemState(scriptName) {
     if (!isNull(state)) {
         addClass(stateElement, state);
     }
-}
-
-function getValidByTypeError(value, type, min, max) {
-    if (type === 'int') {
-        var isInteger = /^(((\-?[1-9])(\d*))|0)$/.test(value);
-        if (!isInteger) {
-            return getInvalidTypeError(type);
-        }
-
-        var intValue = parseInt(value);
-
-        var minMaxValid = true;
-        var minMaxError = "";
-        if (!isNull(min)) {
-            minMaxError += "min: " + min;
-
-            if (intValue < parseInt(min)) {
-                minMaxValid = false;
-            }
-        }
-
-        if (!isNull(max)) {
-            if (intValue > parseInt(max)) {
-                minMaxValid = false;
-            }
-
-            if (!isEmptyString(minMaxError)) {
-                minMaxError += ", ";
-            }
-
-            minMaxError += "max: " + max;
-        }
-
-        if (!minMaxValid) {
-            return minMaxError;
-        }
-
-        return "";
-    }
-
-    return "";
-}
-
-function getInvalidTypeError(type) {
-    if (type === 'int') {
-        return "integer expected";
-    }
-
-    return type + " expected";
 }
 
 function authorizedCallHttp(url, object, method, asyncHandler) {

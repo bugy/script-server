@@ -10,16 +10,19 @@ function ScriptController(scriptConfig, executionStartCallback) {
     this.logLastIndex = 0;
     this.executor = null;
     this.executorListener = null;
+
+    this._initParameters(this.scriptName, this.scriptConfig.parameters);
 }
 
 ScriptController.prototype.fillView = function (parent) {
-    var scriptView = new ScriptView(parent);
+    var scriptView = new ScriptView(parent, this.parametersModel);
     this.scriptView = scriptView;
 
     scriptView.setScriptDescription(this.scriptConfig.description);
-    scriptView.createParameters(this.scriptConfig.parameters);
 
-    scriptView.setExecutionCallback(function (parameterValues) {
+    scriptView.setExecutionCallback(function () {
+        var parameterValues = $.extend({}, this.parametersModel.state.parameterValues);
+
         this.scriptView.setExecuting();
         scriptView.setLog('Calling the script...');
 
@@ -68,7 +71,7 @@ ScriptController.prototype.destroy = function () {
 ScriptController.prototype.setExecutor = function (executor) {
     this.executor = executor;
 
-    this.scriptView.setParameterValues(executor.parameterValues);
+    this._setParameterValues(executor.parameterValues);
 
     this.scriptView.setExecuting();
     this._updateViewWithExecutor(executor);
@@ -143,6 +146,124 @@ ScriptController.prototype._publishLogs = function () {
             this.scriptView.replaceLog(text, textColor, backgroundColor, textStyles, logChunk.custom_position.x, logChunk.custom_position.y);
         } else {
             this.scriptView.appendLog(text, textColor, backgroundColor, textStyles);
+        }
+    }
+};
+
+ScriptController.prototype._initParameters = function (scriptName, parameters) {
+    var parameterValues = {};
+
+    var dependantParameters = new Map();
+
+    for (var i = 0; i < parameters.length; i++) {
+        var parameter = parameters[i];
+
+        parameter.multiselect = (parameter.type === 'multiselect');
+        if (parameter.type === 'file_upload') {
+            parameter.default = null;
+        }
+
+        if (!isNull(parameter.default)) {
+            parameterValues[parameter.name] = parameter.default;
+        } else {
+            parameterValues[parameter.name] = null;
+        }
+
+        if (!isNull(parameter.values_dependencies) && (parameter.values_dependencies.length > 0)) {
+            dependantParameters.set(parameter, new Map());
+            for (var j = 0; j < parameter.values_dependencies.length; j++) {
+                var dependency = parameter.values_dependencies[j];
+                dependantParameters.get(parameter).set(dependency, undefined);
+            }
+        }
+    }
+
+    this.parametersModel = new Vue({
+        data: function () {
+            return {
+                state:
+                    {
+                        parameters: parameters,
+                        parameterValues: parameterValues
+                    }
+            };
+        },
+        watch: {
+            'state.parameterValues': {
+                immediate: true,
+                deep: true,
+                handler(newValues, oldValues) {
+                    dependantParameters.forEach(function (dependencies, parameter) {
+                        var hasChanges = false;
+                        var everythingFilled = true;
+
+                        dependencies.forEach(function (oldValue, dependency) {
+                            var newValue = newValues[dependency];
+
+                            if ((typeof oldValue === 'undefined') || (newValue !== oldValue)) {
+                                dependencies.set(dependency, newValue);
+                                hasChanges = true;
+                            }
+
+                            if (isEmptyValue(newValue)) {
+                                everythingFilled = false;
+                            }
+                        });
+
+                        if (!everythingFilled) {
+                            if (parameter.values.length > 0) {
+                                parameter.values = [];
+                            }
+                        } else if (hasChanges) {
+                            var currentValues = $.extend({}, this.state.parameterValues);
+
+                            var queryParameters = encodeURIComponent(JSON.stringify({
+                                'script_name': scriptName,
+                                'parameter_name': parameter.name,
+                                'current_values': currentValues
+                            }));
+                            callHttp('scripts/config/parameter-values?query_parameters=' + queryParameters,
+                                null,
+                                'GET',
+                                function (values) {
+                                    var dependenciesObsolete = false;
+                                    dependencies.forEach(function (oldValue, dependency) {
+                                        var currentValue = this.state.parameterValues[dependency];
+                                        if (currentValue !== currentValues[dependency]) {
+                                            dependenciesObsolete = true;
+                                        }
+                                    }.bind(this));
+
+                                    if (!dependenciesObsolete) {
+                                        parameter.values = JSON.parse(values);
+                                    }
+                                }.bind(this));
+                        }
+                    }.bind(this));
+                }
+            }
+        }
+    });
+};
+
+
+ScriptController.prototype._setParameterValues = function (values) {
+    for (var i = 0; i < this.parametersModel.state.parameters.length; i++) {
+        var parameter = this.parametersModel.state.parameters[i];
+        var parameterName = parameter.name;
+
+        var value = values[parameterName];
+
+        if (!isNull(value)) {
+            if (!isNull(parameter.values_dependencies)
+                && (parameter.values_dependencies.length > 0)
+                && (!contains(parameter.values, value))) {
+                parameter.values = [value];
+            }
+
+            this.parametersModel.state.parameterValues[parameterName] = value;
+        } else {
+            this.parametersModel.state.parameterValues[parameterName] = null;
         }
     }
 };

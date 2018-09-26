@@ -2,6 +2,7 @@ import logging
 import re
 import sys
 
+import model.script_configs
 from execution import process_popen, process_base
 from model import model_helper
 from utils import file_utils, process_utils, os_utils
@@ -163,7 +164,7 @@ def build_command_args(param_values, config, stringify=lambda value, param: valu
         name = parameter.get_name()
 
         if parameter.is_constant():
-            param_values[parameter.name] = model_helper.get_default(parameter)
+            param_values[parameter.name] = model.script_configs.get_default(parameter)
 
         if name in param_values:
             value = param_values[name]

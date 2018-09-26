@@ -33,6 +33,24 @@ function isEmptyString(value) {
     return isNull(value) || value.length === 0;
 }
 
+function isEmptyArray(value) {
+    return isNull(value) || value.length === 0;
+}
+
+function isEmptyValue(value) {
+    if (isNull(value)) {
+        return true;
+    }
+
+    if ((typeof value === 'string') || (Array.isArray(value))) {
+        return value.length === 0;
+    }
+
+    if (typeof value === 'object') {
+        return isEmptyObject(value);
+    }
+}
+
 function isEmptyObject(obj) {
     for (var prop in obj) {
         if (obj.hasOwnProperty(prop)) {
@@ -312,4 +330,45 @@ function toBoolean(value) {
 function getLinesCount(text) {
     var linesMatch = text.match(/\n/g);
     return isNull(linesMatch) ? 0 : linesMatch.length;
+}
+
+function arraysEqual(arr1, arr2) {
+    if (arr1 === arr2) {
+        return true;
+    }
+    if (isNull(arr1) && (isNull(arr2))) {
+        return true;
+    }
+    if (isNull(arr1) !== (isNull(arr2))) {
+        return false;
+    }
+    if (arr1.length !== arr2.length) {
+        return false;
+    }
+
+    for (var i = 0; i < arr1.length; ++i) {
+        if (arr1[i] !== arr2[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function setInputValue(inputField, value, triggerEvent) {
+    if (isNull(triggerEvent)) {
+        triggerEvent = false;
+    }
+
+    if (inputField instanceof jQuery) {
+        inputField = inputField.get(0);
+    }
+
+    inputField.value = value;
+
+    if (triggerEvent) {
+        var event = document.createEvent('HTMLEvents');
+        event.initEvent('input', true, true);
+        inputField.dispatchEvent(event);
+    }
 }

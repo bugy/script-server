@@ -211,7 +211,7 @@ class TestParametersSubstitute(unittest.TestCase):
 
         files = file_download_feature.substitute_parameter_values(
             [parameter],
-            ['/home/user/$$$param1.txt'],
+            ['/home/user/${param1}.txt'],
             {'param1': 'val1'})
 
         self.assertEqual(files, ['/home/user/val1.txt'])
@@ -225,7 +225,7 @@ class TestParametersSubstitute(unittest.TestCase):
 
         files = file_download_feature.substitute_parameter_values(
             [param1, param2],
-            ['/home/$$$param2/$$$param1.txt'],
+            ['/home/${param2}/${param1}.txt'],
             {'param1': 'val1', 'param2': 'val2'})
 
         self.assertEqual(files, ['/home/val2/val1.txt'])
@@ -239,7 +239,7 @@ class TestParametersSubstitute(unittest.TestCase):
 
         files = file_download_feature.substitute_parameter_values(
             [param1, param2],
-            ['/home/$$$param2/$$$param1.txt', '/tmp/$$$param2.txt', '/$$$param1'],
+            ['/home/${param2}/${param1}.txt', '/tmp/${param2}.txt', '/${param1}'],
             {'param1': 'val1', 'param2': 'val2'})
 
         self.assertEqual(files, ['/home/val2/val1.txt', '/tmp/val2.txt', '/val1'])
@@ -250,10 +250,10 @@ class TestParametersSubstitute(unittest.TestCase):
 
         files = file_download_feature.substitute_parameter_values(
             [param1],
-            ['/home/user/$$$paramX.txt'],
+            ['/home/user/${paramX}.txt'],
             {'param1': 'val1'})
 
-        self.assertEqual(files, ['/home/user/$$$paramX.txt'])
+        self.assertEqual(files, ['/home/user/${paramX}.txt'])
 
     def test_skip_secure_replace(self):
         param1 = Parameter()
@@ -262,10 +262,10 @@ class TestParametersSubstitute(unittest.TestCase):
 
         files = file_download_feature.substitute_parameter_values(
             [param1],
-            ['/home/user/$$$param1.txt'],
+            ['/home/user/${param1}.txt'],
             {'param1': 'val1'})
 
-        self.assertEqual(files, ['/home/user/$$$param1.txt'])
+        self.assertEqual(files, ['/home/user/${param1}.txt'])
 
     def test_skip_flag_replace(self):
         param1 = Parameter()
@@ -274,10 +274,10 @@ class TestParametersSubstitute(unittest.TestCase):
 
         files = file_download_feature.substitute_parameter_values(
             [param1],
-            ['/home/user/$$$param1.txt'],
+            ['/home/user/${param1}.txt'],
             {'param1': 'val1'})
 
-        self.assertEqual(files, ['/home/user/$$$param1.txt'])
+        self.assertEqual(files, ['/home/user/${param1}.txt'])
 
 
 if __name__ == '__main__':

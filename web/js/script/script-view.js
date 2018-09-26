@@ -1,6 +1,6 @@
 'use strict';
 
-function ScriptView(parent) {
+function ScriptView(parent, parametersState) {
     var idSuffix = guid(8);
 
     var vueApp = document.createElement('div');
@@ -14,7 +14,7 @@ function ScriptView(parent) {
         template:
         '<div class="script-panel" :id="id">\n'
         + ' <p class="script-description" v-show="scriptDescription" v-html="formattedDescription"></p>\n'
-        + ' <div class="script-parameters-panel" ref="parametersPanel"></div>\n'
+            + ' <script-parameters-view :parametersState="parametersState" ref="parametersView" />\n'
         + ' <div>\n'
         + '     <button class="button-execute btn"'
         + '         :disabled="!executeEnabled"'
@@ -60,7 +60,7 @@ function ScriptView(parent) {
                 id: null,
                 executeEnabled: true,
                 stopEnabled: false,
-                parameterControls: {}
+                parametersState: parametersState.state
             }
         },
 
@@ -111,37 +111,6 @@ function ScriptView(parent) {
         },
 
         watch: {
-            parameters: function (parameters) {
-                destroyChildren(this.$refs.parametersPanel);
-                this.parameterControls = {};
-
-                if (parameters) {
-                    for (var i = 0; i < parameters.length; i++) {
-                        var parameter = parameters[i];
-
-                        var control = createParameterControl(parameter);
-                        this.parameterControls[parameter.name] = control;
-
-                        var element = control.getElement();
-                        addClass(element, 'parameter');
-
-                        this.$refs.parametersPanel.appendChild(element);
-                        control.onAdd();
-                    }
-                }
-            },
-
-            parameterValues: function (values) {
-                forEachKeyValue(this.parameterControls, function (parameterName, control) {
-                    var value = values[parameterName];
-                    if (!isNull(value)) {
-                        control.setValue(value);
-                    } else {
-                        control.setValue(null);
-                    }
-                });
-            },
-
             inputPrompt: function (value) {
                 if (isNull(value) && isNull(this.$refs.inputField)) {
                     return;
@@ -162,24 +131,21 @@ function ScriptView(parent) {
             }
         },
 
-        beforeDestroy: function () {
-            forEachKeyValue(this.parameterControls, function (parameterName, control) {
-                control.onDestroy();
-            });
-        },
-
         props: {
             executeButtonHandler: Function,
             stopButtonHandler: Function,
             errors: Array,
-            downloadableFiles: Array,
+            downloadableFiles: {
+                type: Array,
+                default: function () {
+                    return []
+                }
+            },
             scriptDescription: {
                 type: String,
                 default: ''
             },
             everStarted: Boolean,
-            parameters: Array,
-            parameterValues: Object,
             log: {
                 type: String,
                 default: ''
@@ -195,14 +161,6 @@ function ScriptView(parent) {
 
 ScriptView.prototype.setScriptDescription = function (description) {
     this.vueModel.scriptDescription = description;
-};
-
-ScriptView.prototype.createParameters = function (parameters) {
-    this.vueModel.parameters = parameters;
-};
-
-ScriptView.prototype.setParameterValues = function (parameterValues) {
-    this.vueModel.parameterValues = parameterValues;
 };
 
 ScriptView.prototype.destroy = function () {
@@ -223,23 +181,15 @@ ScriptView.prototype._executeButtonHandler = function () {
     vueModel.errors = [];
     vueModel.downloadableFiles = [];
 
-    var parameterValues = {};
-    forEachKeyValue(vueModel.parameterControls, function (parameterName, control) {
-        if (!control.isValid()) {
-            vueModel.errors.push(parameterName + ': ' + control.getValidationError());
-        }
-
-        var value = control.getValue();
-        if (!isNull(value)) {
-            parameterValues[parameterName] = value;
-        }
-    });
-
-    if (vueModel.errors.length > 0) {
+    var errors = vueModel.$refs.parametersView.getErrors();
+    if (!isEmptyObject(errors)) {
+        forEachKeyValue(errors, function (paramName, error) {
+            vueModel.errors.push(paramName + ': ' + error);
+        });
         return;
     }
 
-    this.executionCallback(parameterValues);
+    this.executionCallback();
 };
 
 ScriptView.prototype.setExecutionEnabled = function (enabled) {

@@ -1,9 +1,11 @@
-import json
 import os
 
 import utils.os_utils as os_utils
-import utils.process_utils as process_utils
 from auth.authorization import ANY_USER
+from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
+    DependantScriptValuesProvider
+from model.model_helper import unwrap_conf_value
+
 
 class Config(object):
 
@@ -42,6 +44,12 @@ class Config(object):
     def is_bash_formatting(self):
         return self.bash_formatting
 
+    def find_parameter(self, param_name):
+        for parameter in self.parameters:
+            if parameter.name == param_name:
+                return parameter
+        return None
+
 
 class Parameter(object):
     def __init__(self):
@@ -55,7 +63,7 @@ class Parameter(object):
         self.min = None
         self.max = None
         self.constant = False
-        self.values = None
+        self.values_provider = None
         self.secure = False
         self.separator = ','
         self.multiple_arguments = False
@@ -114,11 +122,15 @@ class Parameter(object):
     def is_constant(self):
         return self.constant
 
-    def set_values(self, value):
-        self.values = value
+    def get_values(self, parameter_values):
+        if self.values_provider:
+            return self.values_provider.get_values(parameter_values)
+        return []
 
-    def get_values(self):
-        return self.values
+    def get_required_parameters(self):
+        if self.values_provider:
+            return self.values_provider.get_required_parameters()
+        return []
 
 
 def read_name(file_path, json_object):
@@ -153,6 +165,8 @@ def from_json(file_path, json_object, pty_enabled_default=False):
     parameters_json = json_object.get("parameters")
 
     if parameters_json is not None:
+        parameter_values = {}
+
         for parameter_json in parameters_json:
             parameter = Parameter()
             parameter.set_name(parameter_json.get('name'))
@@ -167,19 +181,7 @@ def from_json(file_path, json_object, pty_enabled_default=False):
             parameter.separator = parameter_json.get('separator', ',')
             parameter.multiple_arguments = read_boolean('multiple_arguments', parameter_json, default=False)
 
-            values = parameter_json.get("values")
-            if values:
-                if isinstance(values, list):
-                    parameter.set_values(values)
-
-                elif "script" in values:
-                    script_output = process_utils.invoke(values["script"])
-                    script_output = script_output.rstrip("\n")
-                    derived_values = script_output.split("\n")
-                    parameter.set_values(derived_values)
-
-                else:
-                    raise Exception("Unsupported values")
+            parameter_values[parameter] = parameter_json.get('values')
 
             type = parameter_json.get('type')
             if type:
@@ -193,7 +195,34 @@ def from_json(file_path, json_object, pty_enabled_default=False):
 
             config.add_parameter(parameter)
 
+        for parameter in config.parameters:
+            values = parameter_values.get(parameter)
+            if values is None:
+                continue
+
+            values_provider = _create_values_provider(values, parameter, config.parameters)
+            parameter.values_provider = values_provider
+
     return config
+
+
+def _create_values_provider(values, parameter, parameters):
+    if values:
+        if isinstance(values, list):
+            return ConstValuesProvider(values)
+
+        elif 'script' in values:
+            script = values['script']
+
+            if '${' not in script:
+                return ScriptValuesProvider(script)
+
+            return DependantScriptValuesProvider(script, parameters)
+
+        else:
+            raise Exception('Unsupported "values" format for ' + parameter.name)
+    else:
+        return EmptyValuesProvider()
 
 
 def read_boolean(name, json_object, default=None):
@@ -207,3 +236,11 @@ def read_boolean(name, json_object, default=None):
             raise Exception('"' + name + '" parameter should be True or False')
     else:
         return default
+
+
+def get_default(parameter: Parameter):
+    default = parameter.get_default()
+    if not default:
+        return default
+
+    return unwrap_conf_value(default)

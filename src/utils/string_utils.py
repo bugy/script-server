@@ -43,3 +43,11 @@ def strip(value):
         return value.strip()
 
     return value
+
+
+def is_blank(value):
+    if not value:
+        return True
+    if not value.strip():
+        return True
+    return False

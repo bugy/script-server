@@ -24,7 +24,7 @@ ScriptExecutor.prototype.start = function (parameterValues) {
                 var valueElement = value[i];
                 formData.append(parameter, valueElement);
             }
-        } else {
+        } else if (!isNull(value)) {
             formData.append(parameter, value);
         }
     });

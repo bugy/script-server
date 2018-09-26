@@ -1,150 +1,205 @@
 'use strict';
 
-function Combobox(name, defaultValue, required, values, description, multiple) {
-    AbstractInput.call(this);
+(function () {
+    Vue.component('combobox', {
+        template:
+            '<div class="input-field" :title="config.description" :data-error="error">\n'
+            + '  <select '
+            + '     :id="config.name" '
+            + '     ref="selectField" '
+            + '     class="validate" '
+            + '     :required="config.required"'
+            + '     :multiple="config.multiselect"'
+            + '     :disabled="options.length === 0">\n'
+            + '    <option :selected="!anythingSelected" value="" disabled>Choose your option</option>\n'
+            + '    <option v-for="option in options" :value="option.value" :selected="option.selected">{{ option.value }}</option>\n'
+            + '  </select>'
+            + '  <label :for="config.name">{{ config.name }}</label>\n'
+            + '</div>',
 
-    this.required = required;
-    this.multiple = multiple;
+        props: {
+            'config': Object,
+            'value': [String, Array]
+        },
 
-    var label = document.createElement("label");
-    label.innerText = name;
-    label.setAttribute("for", name);
+        data: function () {
+            return {
+                options: [],
+                anythingSelected: false,
+                error: ''
+            }
+        },
 
+        watch: {
+            'config.values': {
+                immediate: true,
+                handler(newOptionValues) {
+                    if (isNull(newOptionValues)) {
+                        this.options = [];
+                        return;
+                    }
 
-    this.selectField = document.createElement("select");
-    this.selectField.id = name;
-    addClass(this.selectField, "validate");
-    if (required) {
-        this.selectField.setAttribute("required", "");
-    }
-    if (multiple) {
-        this.selectField.setAttribute('multiple', '');
-    }
+                    var newOptions = [];
+                    for (var i = 0; i < newOptionValues.length; i++) {
+                        newOptions.push({
+                            value: newOptionValues[i],
+                            selected: false
+                        });
+                    }
 
-    var selectOption = document.createElement("option");
-    selectOption.setAttribute("disabled", "");
-    selectOption.setAttribute("value", "");
-    selectOption.innerHTML = "Choose your option";
-    this.selectField.appendChild(selectOption);
+                    this.options = newOptions;
+                    if (!this._fixValueByAllowedValues(this.config.values)) {
+                        this._selectValue(this.value);
 
-    for (var i = 0; i < values.length; i++) {
-        var value = values[i];
-
-        var valueOption = document.createElement("option");
-        valueOption.innerHTML = value;
-        valueOption.setAttribute("value", value);
-        this.selectField.appendChild(valueOption);
-    }
-
-    this._setValueInternal(defaultValue);
-
-    this.selectField.onchange = $.proxy(this.validate, this);
-
-    this.panel.appendChild(this.selectField);
-    this.panel.appendChild(label);
-    if (!isEmptyString(description)) {
-        this.panel.title = description;
-    }
-}
-
-Combobox.prototype = new AbstractInput();
-
-Combobox.prototype.getValue = function () {
-    return this._getValueInternal();
-};
-
-Combobox.prototype._getValueInternal = function () {
-    if (this.multiple) {
-        return $(this.selectField).val();
-    } else {
-        return this.selectField.value;
-    }
-};
-
-Combobox.prototype.setValue = function (value) {
-    $(this.selectField).children('option').removeAttr('selected');
-
-    this._setValueInternal(value);
-
-    $(this.selectField).material_select();
-};
-
-Combobox.prototype._setValueInternal = function (value) {
-    var foundMatching = false;
-    if (!isNull(value)) {
-        if (this.multiple && Array.isArray(value)) {
-            $(this.selectField).children('option').each(function () {
-                if (contains(value, this.value)) {
-                    $(this).prop('selected', true);
-                    foundMatching = true;
+                        this.$nextTick(function () {
+                            this.rerenderCombobox();
+                        }.bind(this));
+                    }
                 }
-            });
-        } else {
-            var matchingChildren = $(this.selectField).children('option[value="' + value + '"]');
-            if (matchingChildren.size() === 1) {
-                matchingChildren.prop('selected', true);
-                foundMatching = true;
+            },
+
+            'value': {
+                immediate: true,
+                handler(newValue) {
+                    if (!this._fixValueByAllowedValues(this.config.values)) {
+                        this._selectValue(newValue);
+                    }
+                }
+            }
+        },
+
+        mounted: function () {
+            // for some reason subscription in template (i.e. @change="..." doesn't work for select input)
+            $(this.$refs.selectField).on('change', function () {
+                var value;
+                if (this.config.multiselect) {
+                    value = $(this.$refs.selectField).val();
+                } else {
+                    value = this.$refs.selectField.value;
+                }
+                this.emitValueChange(value);
+            }.bind(this));
+
+            this.rerenderCombobox();
+
+            this.$watch('error', function (errorValue) {
+                var inputField = findNeighbour(this.$refs.selectField, 'input');
+                if (!isNull(inputField)) {
+                    inputField.setCustomValidity(errorValue);
+                }
+            }, {
+                immediate: true
+            })
+        },
+
+        destroyed: function () {
+            $(this.$refs.selectField).material_select('destroy');
+        },
+
+        methods: {
+            emitValueChange(value) {
+                this.$emit('input', value);
+            },
+
+            _fixValueByAllowedValues(allowedValues) {
+                if (isNull(this.value) || (this.value === '') || (this.value === [])) {
+                    return false;
+                }
+
+                var newValue;
+                if (this.config.multiselect) {
+                    if (!Array.isArray(this.value)) {
+                        if (contains(allowedValues, this.value)) {
+                            return false;
+                        }
+                        newValue = [this.value];
+                    } else {
+                        newValue = [];
+                        for (var i = 0; i < this.value.length; i++) {
+                            var valueElement = this.value[i];
+                            if (contains(allowedValues, valueElement)) {
+                                newValue.push(valueElement)
+                            }
+                        }
+
+                        if (newValue.length === this.value.length) {
+                            return false;
+                        }
+                    }
+                } else {
+                    if (contains(allowedValues, this.value)) {
+                        return false;
+                    }
+
+                    newValue = null;
+                }
+
+                this.emitValueChange(newValue);
+                return true;
+            },
+
+            _selectValue(value) {
+                var selectedValues = value;
+
+                if (isEmptyString(selectedValues)) {
+                    selectedValues = [];
+                } else if (!Array.isArray(selectedValues)) {
+                    selectedValues = [selectedValues];
+                }
+
+                this.anythingSelected = false;
+
+                var existingSelectedValues = new Set();
+
+                for (var i = 0; i < this.options.length; i++) {
+                    var option = this.options[i];
+                    option.selected = contains(selectedValues, option.value);
+
+                    if (option.selected) {
+                        this.anythingSelected = true;
+                        existingSelectedValues.add(option.value);
+                    }
+                }
+
+                if (this.config.required && (selectedValues.length === 0)) {
+                    this.error = 'required';
+                } else {
+                    this.error = '';
+                }
+                this.$emit('error', this.error);
+
+                var requiresReRender = true;
+
+                if (this.config.multiselect) {
+                    var comboboxValues = $(this.$refs.selectField).val();
+                    // rerendering combobox during selection closes popup, so we need to avoid it
+                    requiresReRender = !arraysEqual(comboboxValues, selectedValues);
+                }
+
+                if (requiresReRender) {
+                    this.$nextTick(function () {
+                        this.rerenderCombobox();
+                    }.bind(this));
+                }
+            },
+
+            rerenderCombobox() {
+                $(this.$refs.selectField).material_select();
+
+                var inputField = findNeighbour(this.$refs.selectField, 'input');
+
+                inputField.removeAttribute('readonly'); // otherwise the field will ignore "setCustomValidity"
+                inputField.setAttribute('data-constrainwidth', false);
+
+                $(this.$refs.selectField).siblings('ul').children('li').each(function () {
+                    var text = $(this).children('span:first-child').text();
+                    if (text) {
+                        this.title = text;
+                    }
+                });
+
+                inputField.setCustomValidity(this.error);
             }
         }
-    }
-
-    if (!foundMatching) {
-        $(this.selectField).children('option[value=""][disabled]').attr('selected', '');
-    }
-
-    this.validate();
-};
-
-Combobox.prototype.getValidationError = function () {
-    var empty;
-    if (this.multiple) {
-        var value = this._getValueInternal();
-        empty = isEmptyString(value) || (value.length <= 0);
-    } else {
-        empty = this.selectField.validity.valueMissing;
-    }
-
-    if (this.required && empty) {
-        return "required";
-    }
-
-    return "";
-};
-
-Combobox.prototype.onAdd = function () {
-    $(this.selectField).material_select();
-
-    var input = findNeighbour(this.selectField, "input");
-    input.removeAttribute("readonly"); //otherwise the field will ignore "setCustomValidity"
-    input.setAttribute("data-constrainwidth", false);
-
-    $(this.selectField).siblings('ul').children('li').each(function () {
-        var text = $(this).children('span:first-child').text();
-        if (text) {
-            this.title = text;
-        }
     });
-
-    this.validate();
-};
-
-Combobox.prototype.onDestroy = function () {
-    $(this.selectField).material_select('destroy');
-};
-
-Combobox.prototype.validate = function () {
-    var input = findNeighbour(this.selectField, "input");
-
-    if (this.isValid()) {
-        this.panel.removeAttribute("data-error");
-        if (!isNull(input)) {
-            input.setCustomValidity("");
-        }
-    } else {
-        var error = this.getValidationError();
-        this.panel.setAttribute("data-error", error);
-        if (!isNull(input)) {
-            input.setCustomValidity(error);
-        }
-    }
-};
+}());
