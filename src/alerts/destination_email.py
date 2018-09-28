@@ -55,7 +55,7 @@ class EmailDestination(destination_base.Destination):
     @staticmethod
     def read_password(params_dict):
         password = params_dict.get('password')
-        password = model_helper.unwrap_conf_value(password)
+        password = model_helper.resolve_env_var(password)
 
         return password
 

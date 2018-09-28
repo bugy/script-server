@@ -168,6 +168,17 @@
       "values": {
         "script": "ls /var/${Command-based list}/${Required Text}"
       }
+    },
+    {
+      "name": "Auth username",
+      "param": "-u",
+      "default": "${auth.username}"
+    },
+    {
+      "name": "Audit name",
+      "constant": true,
+      "param": "--audit_name",
+      "default": "${auth.audit_name}"
     }
   ]
 }

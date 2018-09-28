@@ -5,6 +5,7 @@ import os
 import signal
 import ssl
 import time
+from itertools import chain
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
@@ -18,8 +19,9 @@ import tornado.websocket
 from alerts.alerts_service import AlertsService
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
+from auth.user import User
 from config.config_service import ConfigService, ConfigNotFoundException, ParameterNotFoundException, \
-    InvalidValueException
+    InvalidValueException, ConfigNotAllowedException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
 from features.file_download_feature import FileDownloadFeature
@@ -111,6 +113,19 @@ def check_authorization(func):
     return wrapper
 
 
+def inject_user(func):
+    def wrapper(self, *args, **kwargs):
+        user_id = _identify_user(self)
+        audit_names = audit_utils.get_all_audit_names(self)
+
+        user = User(user_id, audit_names)
+
+        new_args = chain([user], args)
+        return func(self, *new_args, **kwargs)
+
+    return wrapper
+
+
 def requires_admin_rights(func):
     def wrapper(self, *args, **kwargs):
         if not has_admin_rights(self):
@@ -127,13 +142,6 @@ def requires_admin_rights(func):
 def has_admin_rights(request_handler):
     user_id = _identify_user(request_handler)
     return request_handler.application.authorizer.is_admin(user_id)
-
-
-def can_access_script(script_config, request_handler):
-    authorizer = request_handler.application.authorizer
-    user_id = _identify_user(request_handler)
-    return authorizer.is_allowed(user_id, script_config.allowed_users)
-
 
 class ProxiedRedirectHandler(tornado.web.RedirectHandler):
     def get(self, *args):
@@ -161,38 +169,41 @@ class GetServerTitle(BaseRequestHandler):
 
 class GetScripts(BaseRequestHandler):
     @check_authorization
-    def get(self):
-        configs = self.application.config_service.list_configs()
+    @inject_user
+    def get(self, user):
+        configs = self.application.config_service.list_configs(user)
 
-        names = [conf.name for conf in configs if can_access_script(conf, self)]
+        names = [conf.name for conf in configs]
 
         self.write(json.dumps(names))
 
 
 class GetScriptInfo(BaseRequestHandler):
     @check_authorization
-    def get(self):
+    @inject_user
+    def get(self, user):
         try:
             name = self.get_query_argument("name")
         except tornado.web.MissingArgumentError:
             respond_error(self, 400, "Script name is not specified")
             return
 
-        config = self.application.config_service.load_config(name)
+        try:
+            config = self.application.config_service.load_config(name, user)
+        except ConfigNotAllowedException:
+            raise tornado.web.HTTPError(403, reason='Access to the script is denied')
 
         if not config:
             respond_error(self, 400, "Couldn't find a script by name")
             return
-
-        if not can_access_script(config, self):
-            raise tornado.web.HTTPError(403, reason='Access to the script is denied')
 
         self.write(external_model.config_to_json(config))
 
 
 class GetConfigParameterValues(BaseRequestHandler):
     @check_authorization
-    def get(self):
+    @inject_user
+    def get(self, user):
         query_parameters = json.loads(self.get_query_argument('query_parameters'))
 
         script_name = query_parameters['script_name']
@@ -200,8 +211,8 @@ class GetConfigParameterValues(BaseRequestHandler):
         current_values = query_parameters['current_values']
 
         try:
-            values = self.application.config_service.get_parameter_values(script_name, parameter_name,
-                                                                          current_values)
+            values = self.application.config_service.get_parameter_values(
+                script_name, parameter_name, current_values, user)
             self.write(json.dumps(values))
 
         except ConfigNotFoundException as e:
@@ -293,7 +304,8 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
 class ScriptExecute(BaseRequestHandler):
     @check_authorization
-    def post(self):
+    @inject_user
+    def post(self, user):
         script_name = None
 
         audit_name = get_audit_name_from_request(self)
@@ -304,17 +316,12 @@ class ScriptExecute(BaseRequestHandler):
 
             script_name = execution_info.script
 
-            config = self.application.config_service.load_config(script_name)
+            config = self.application.config_service.load_config(script_name, user)
 
             if not config:
                 message = 'Script with name "' + str(script_name) + '" not found'
                 LOGGER.error(message)
                 respond_error(self, 400, message)
-                return
-
-            if not can_access_script(config, self):
-                LOGGER.warning('Access to the script "' + script_name + '" is denied for ' + audit_name)
-                respond_error(self, 403, 'Access to the script is denied')
                 return
 
             file_upload_feature = self.application.file_upload_feature
@@ -344,6 +351,11 @@ class ScriptExecute(BaseRequestHandler):
                 all_audit_names)
 
             self.write(str(execution_id))
+
+        except ConfigNotAllowedException:
+            LOGGER.warning('Access to the script "' + script_name + '" is denied for ' + audit_name)
+            respond_error(self, 403, 'Access to the script is denied')
+            return
 
         except Exception as e:
             LOGGER.exception("Error while calling the script")

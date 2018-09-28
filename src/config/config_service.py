@@ -9,38 +9,54 @@ LOGGER = logging.getLogger('config_service')
 
 
 class ConfigService:
-    def __init__(self, conf_folder) -> None:
+    def __init__(self, authorizer, conf_folder) -> None:
+        self._authorizer = authorizer
         self._script_configs_folder = os.path.join(conf_folder, 'runners')
         self._cached_configs = {}
 
         file_utils.prepare_folder(self._script_configs_folder)
 
-    def list_configs(self):
+    def list_configs(self, user):
+        conf_service = self
+
         def load_script(path, content):
             try:
                 json_object = json.loads(content)
-                return self._load_script_config(path, json_object)
+                short_config = script_configs.read_short(path, json_object)
+
+                if not conf_service._can_access_script(user, short_config):
+                    return None
+
+                return short_config
             except:
                 LOGGER.exception('Could not load script: ' + path)
 
         return self._visit_script_configs(load_script)
 
-    def load_config(self, name):
+    def load_config(self, name, user):
         def find_and_load(path, content):
             try:
                 json_object = json.loads(content)
-
-                config_name = script_configs.read_name(path, json_object)
-                if config_name == name:
-                    return self._load_script_config(path, json_object)
+                short_config = script_configs.read_short(path, json_object)
             except:
                 LOGGER.exception('Could not load script config: ' + path)
+                return None
+
+            if short_config.name != name:
+                return None
+
+            raise StopIteration((short_config, path, json_object))
 
         configs = self._visit_script_configs(find_and_load)
-        if configs:
-            return configs[0]
+        if not configs:
+            return None
 
-        return None
+        (short_config, path, json_object) = configs[0]
+
+        if not self._can_access_script(user, short_config):
+            raise ConfigNotAllowedException()
+
+        return self._load_script_config(path, json_object, user)
 
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
@@ -60,13 +76,17 @@ class ConfigService:
                 if visit_result is not None:
                     result.append(visit_result)
 
+            except StopIteration as e:
+                if e.value is not None:
+                    result.append(e.value)
+
             except:
                 LOGGER.exception("Couldn't read the file: " + config_path)
 
         return result
 
-    def get_parameter_values(self, script_name, param_name, current_values):
-        script_config = self._get_cached_config(script_name)
+    def get_parameter_values(self, script_name, param_name, current_values, user):
+        script_config = self._get_cached_config(script_name, user)
         if script_config is None:
             raise ConfigNotFoundException(script_name)
 
@@ -95,22 +115,30 @@ class ConfigService:
 
         return found_parameter.get_values(current_values)
 
-    def _get_cached_config(self, script_name):
+    def _get_cached_config(self, script_name, user):
         if script_name in self._cached_configs:
             return self._cached_configs[script_name]
 
-        return self.load_config(script_name)
+        return self.load_config(script_name, user)
 
-    def _load_script_config(self, path, content_or_json_dict):
+    def _load_script_config(self, path, content_or_json_dict, user):
         if isinstance(content_or_json_dict, str):
             json_object = json.loads(content_or_json_dict)
         else:
             json_object = content_or_json_dict
-        config = script_configs.from_json(path, json_object, os_utils.is_pty_supported())
+        config = script_configs.read_full(
+            path,
+            json_object,
+            user.get_username(),
+            user.get_audit_name(),
+            os_utils.is_pty_supported())
 
         self._cached_configs[config.name] = config
 
         return config
+
+    def _can_access_script(self, user, short_config):
+        return self._authorizer.is_allowed(user.user_id, short_config.allowed_users)
 
 
 class ConfigNotFoundException(Exception):
@@ -129,3 +157,8 @@ class InvalidValueException(Exception):
         self.param_name = param_name
         self.validation_error = validation_error
         self.script_name = script_name
+
+
+class ConfigNotAllowedException(Exception):
+    def __init__(self):
+        pass

@@ -130,3 +130,14 @@ class _MockProcessWrapper(ProcessWrapper):
 
     def write_to_input(self, value):
         pass
+
+
+class AnyUserAuthorizer:
+    def is_allowed_in_app(self, user_id):
+        return True
+
+    def is_allowed(self, user_id, allowed_users):
+        return True
+
+    def is_admin(self, user_id):
+        return True

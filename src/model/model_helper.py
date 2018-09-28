@@ -10,7 +10,7 @@ SECURE_MASK = '*' * 6
 LOGGER = logging.getLogger('script_server.model_helper')
 
 
-def unwrap_conf_value(value):
+def resolve_env_var(value):
     if isinstance(value, str) and value.startswith(ENV_VAR_PREFIX):
         return env_utils.read_variable(value[2:])
 
@@ -199,5 +199,19 @@ def fill_parameter_values(parameter_configs, template, values):
             value = str(value)
 
         result = result.replace('${' + parameter_name + '}', str(value))
+
+    return result
+
+
+def replace_auth_vars(text, username, audit_name):
+    result = text
+
+    if not username:
+        username = ''
+    if not audit_name:
+        audit_name = ''
+
+    result = result.replace('${auth.username}', str(username))
+    result = result.replace('${auth.audit_name}', str(audit_name))
 
     return result

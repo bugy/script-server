@@ -23,7 +23,7 @@ def config_to_json(config):
             "description": parameter.get_description(),
             "withoutValue": parameter.is_no_value(),
             "required": parameter.is_required(),
-            "default": model.script_configs.get_default(parameter),
+            "default": parameter.default,
             "type": parameter.type,
             "min": parameter.get_min(),
             "max": parameter.get_max(),

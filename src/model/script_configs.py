@@ -4,15 +4,22 @@ import utils.os_utils as os_utils
 from auth.authorization import ANY_USER
 from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
     DependantScriptValuesProvider
-from model.model_helper import unwrap_conf_value
+from model.model_helper import resolve_env_var, replace_auth_vars
 
+
+class ShortConfig(object):
+    def __init__(self):
+        self.name = None
+        self.allowed_users = []
 
 class Config(object):
 
     def __init__(self):
+        super().__init__()
+
+        self.name = None
         self.config_path = None
         self.script_command = None
-        self.name = None
         self.description = None
         self.requires_terminal = None
         self.parameters = None
@@ -98,12 +105,6 @@ class Parameter(object):
     def is_required(self):
         return self.required
 
-    def set_default(self, value):
-        self.default = value
-
-    def get_default(self):
-        return self.default
-
     def set_min(self, value):
         self.min = value
 
@@ -133,7 +134,7 @@ class Parameter(object):
         return []
 
 
-def read_name(file_path, json_object):
+def _read_name(file_path, json_object):
     name = json_object.get('name')
     if not name:
         filename = os.path.basename(file_path)
@@ -142,10 +143,23 @@ def read_name(file_path, json_object):
     return name
 
 
-def from_json(file_path, json_object, pty_enabled_default=False):
+def read_short(file_path, json_object):
+    config = ShortConfig()
+
+    config.name = _read_name(file_path, json_object)
+    config.allowed_users = json_object.get('allowed_users')
+    if config.allowed_users is None:
+        config.allowed_users = ANY_USER
+
+    return config
+
+
+def read_full(file_path, json_object, username, audit_name, pty_enabled_default=False):
+    short_config = read_short(file_path, json_object)
+
     config = Config()
 
-    config.name = read_name(file_path, json_object)
+    config.name = short_config.name
 
     config.script_command = json_object.get("script_path")
     config.description = json_object.get("description")
@@ -153,10 +167,6 @@ def from_json(file_path, json_object, pty_enabled_default=False):
 
     config.requires_terminal = read_boolean("requires_terminal", json_object, pty_enabled_default)
     config.bash_formatting = read_boolean("bash_formatting", json_object, os_utils.is_linux() or os_utils.is_mac())
-
-    config.allowed_users = json_object.get('allowed_users')
-    if config.allowed_users is None:
-        config.allowed_users = ANY_USER
 
     output_files = json_object.get("output_files")
     if output_files:
@@ -174,12 +184,13 @@ def from_json(file_path, json_object, pty_enabled_default=False):
             parameter.set_no_value(parameter_json.get('no_value'))
             parameter.set_description(parameter_json.get('description'))
             parameter.set_required(parameter_json.get('required'))
-            parameter.set_default(parameter_json.get('default'))
             parameter.set_min(parameter_json.get('min'))
             parameter.set_max(parameter_json.get('max'))
             parameter.secure = read_boolean('secure', parameter_json)
             parameter.separator = parameter_json.get('separator', ',')
             parameter.multiple_arguments = read_boolean('multiple_arguments', parameter_json, default=False)
+
+            parameter.default = _resolve_default(parameter_json.get('default'), username, audit_name)
 
             parameter_values[parameter] = parameter_json.get('values')
 
@@ -187,10 +198,10 @@ def from_json(file_path, json_object, pty_enabled_default=False):
             if type:
                 parameter.type = type
 
-            constant = parameter_json.get("constant")
+            constant = parameter_json.get('constant')
             if constant is True:
-                if not parameter.get_default():
-                    raise Exception("Constant should have default value specified")
+                if not parameter.default:
+                    raise Exception('Constant should have default value specified')
                 parameter.set_constant(constant)
 
             config.add_parameter(parameter)
@@ -238,9 +249,15 @@ def read_boolean(name, json_object, default=None):
         return default
 
 
-def get_default(parameter: Parameter):
-    default = parameter.get_default()
+def _resolve_default(default, username, audit_name):
     if not default:
         return default
 
-    return unwrap_conf_value(default)
+    if not isinstance(default, str):
+        return default
+
+    resolved_env_default = resolve_env_var(default)
+    if resolved_env_default != default:
+        return resolved_env_default
+
+    return replace_auth_vars(default, username, audit_name)

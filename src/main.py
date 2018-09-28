@@ -61,7 +61,7 @@ def main():
 
     authorizer = Authorizer(server_config.allowed_users, server_config.admin_users, group_provider)
 
-    config_service = ConfigService(CONFIG_FOLDER)
+    config_service = ConfigService(authorizer, CONFIG_FOLDER)
 
     alerts_service = AlertsService(server_config.get_alerts_config())
     alerts_service = alerts_service

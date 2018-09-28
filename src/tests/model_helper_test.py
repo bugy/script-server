@@ -1,7 +1,6 @@
 import os
 import unittest
 
-import model.script_configs
 from config.script.list_values import ConstValuesProvider, ValuesProvider
 from model import model_helper
 from model import script_configs
@@ -14,60 +13,72 @@ class TestDefaultValue(unittest.TestCase):
     env_key = 'test_val'
 
     def test_no_value(self):
-        parameter = script_configs.Parameter()
+        default = script_configs._resolve_default(None, None, None)
 
-        default = model.script_configs.get_default(parameter)
         self.assertEqual(default, None)
 
     def test_empty_value(self):
-        parameter = script_configs.Parameter()
-        parameter.set_default('')
+        default = script_configs._resolve_default('', None, None)
 
-        default = model.script_configs.get_default(parameter)
         self.assertEqual(default, '')
 
     def test_text_value(self):
-        parameter = script_configs.Parameter()
-        parameter.set_default('text')
+        default = script_configs._resolve_default('text', None, None)
 
-        default = model.script_configs.get_default(parameter)
         self.assertEqual(default, 'text')
 
     def test_unicode_value(self):
-        parameter = script_configs.Parameter()
-        parameter.set_default(u'text')
+        default = script_configs._resolve_default(u'text', None, None)
 
-        default = model.script_configs.get_default(parameter)
         self.assertEqual(default, u'text')
 
     def test_int_value(self):
-        parameter = script_configs.Parameter()
-        parameter.set_default(5)
+        default = script_configs._resolve_default(5, None, None)
 
-        default = model.script_configs.get_default(parameter)
         self.assertEqual(default, 5)
 
     def test_bool_value(self):
-        parameter = script_configs.Parameter()
-        parameter.set_default(True)
+        default = script_configs._resolve_default(True, None, None)
 
-        default = model.script_configs.get_default(parameter)
         self.assertEqual(default, True)
 
     def test_env_variable(self):
-        parameter = script_configs.Parameter()
-        parameter.set_default('$$test_val')
-
         os.environ[self.env_key] = 'text'
 
-        default = model.script_configs.get_default(parameter)
+        default = script_configs._resolve_default('$$test_val', None, None)
+
         self.assertEqual(default, 'text')
 
     def test_missing_env_variable(self):
-        parameter = script_configs.Parameter()
-        parameter.set_default('$$test_val')
+        self.assertRaises(Exception, script_configs._resolve_default, '$$test_val', None, None)
 
-        self.assertRaises(Exception, model.script_configs.get_default, parameter)
+    def test_auth_username(self):
+        default = script_configs._resolve_default('${auth.username}', 'buggy', None)
+        self.assertEqual('buggy', default)
+
+    def test_auth_username_when_none(self):
+        default = script_configs._resolve_default('${auth.username}', None, None)
+        self.assertEqual('', default)
+
+    def test_auth_username_when_inside_text(self):
+        default = script_configs._resolve_default('__${auth.username}__', 'usx', None)
+        self.assertEqual('__usx__', default)
+
+    def test_auth_audit_name(self):
+        default = script_configs._resolve_default('${auth.audit_name}', None, '127.0.0.1')
+        self.assertEqual('127.0.0.1', default)
+
+    def test_auth_audit_name_when_none(self):
+        default = script_configs._resolve_default('${auth.audit_name}', None, None)
+        self.assertEqual('', default)
+
+    def test_auth_audit_name_when_inside_text(self):
+        default = script_configs._resolve_default('__${auth.audit_name}__', None, 'usx')
+        self.assertEqual('__usx__', default)
+
+    def test_auth_username_and_audit_name(self):
+        default = script_configs._resolve_default('${auth.username}:${auth.audit_name}', 'buggy', 'localhost')
+        self.assertEqual('buggy:localhost', default)
 
     def tearDown(self):
         if self.env_key in os.environ:

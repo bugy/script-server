@@ -164,7 +164,7 @@ def build_command_args(param_values, config, stringify=lambda value, param: valu
         name = parameter.get_name()
 
         if parameter.is_constant():
-            param_values[parameter.name] = model.script_configs.get_default(parameter)
+            param_values[parameter.name] = parameter.default
 
         if name in param_values:
             value = param_values[name]
