@@ -59,9 +59,8 @@
                 immediate: true,
                 handler(newValue) {
                     var textField = this.$refs.textField;
-                    var textFieldValue = textField ? textField.value : '';
 
-                    if (textFieldValue === newValue) {
+                    if (!isNull(textField) && (textField.value === newValue)) {
                         this._doValidation();
                     } else {
                         this.$nextTick(function () {

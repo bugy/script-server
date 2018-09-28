@@ -109,6 +109,24 @@ describe('Test TextField', function () {
             assert.equal(this.textfield.value, 'abc def');
             assert.equal('abc def', inputField.val());
         });
+
+        it('Test empty value on init', async function () {
+            let textfield;
+            try {
+                textfield = createVue('textfield', {
+                    config: {
+                        name: 'Text param',
+                    },
+                    value: ''
+                });
+                assert.equal(textfield.value, '');
+            } finally {
+                if (textfield) {
+                    await vueTicks();
+                    textfield.$destroy();
+                }
+            }
+        });
     });
 
     describe('Test validaton', function () {
