@@ -34,14 +34,19 @@
                     <input id="searchButton" type="image" src="images/search.png">
                 </div>
 
-                <a href="https://github.com/bugy/script-server" target="_blank">
-                    <img src="images/github.png" id="githubLink">
-                </a>
+                <div id="header-link">
+                    <a class="teal-text" href="admin.html" id="adminLink" style="display: none">
+                        <i class="material-icons">settings</i>
+                    </a>
+                    <a href="https://github.com/bugy/script-server" target="_blank" id="githubLink">
+                        <img src="images/github.png">
+                    </a>
+                </div>
             </div>
 
             <div id="scripts" class="collection"></div>
 
-            <div id="logoutPanel">
+            <div id="logoutPanel" style="display: none">
                 <span id="usernameField"></span>
                 <input id="logoutButton" type="image" src="images/logout.png">
             </div>

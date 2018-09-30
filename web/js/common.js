@@ -192,6 +192,10 @@ function hide(element) {
 
 function show(element, displayStyle) {
     if (isNull(displayStyle) && (isNull(element.oldDisplay))) {
+        if (element.style.display === 'none') {
+            element.style.display = '';
+        }
+
         var currentDisplay = window.getComputedStyle(element).display;
         if (currentDisplay !== 'none') {
             return;

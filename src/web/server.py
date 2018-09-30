@@ -143,6 +143,7 @@ def has_admin_rights(request_handler):
     user_id = _identify_user(request_handler)
     return request_handler.application.authorizer.is_admin(user_id)
 
+
 class ProxiedRedirectHandler(tornado.web.RedirectHandler):
     def get(self, *args):
         redirect_relative(self._url.format(*args), self, *args)
@@ -486,6 +487,23 @@ class LoginHandler(BaseRequestHandler):
         return auth.authenticate(self)
 
 
+class AuthInfoHandler(BaseRequestHandler):
+    def get(self):
+        auth = self.application.auth
+
+        username = None
+        if auth.is_enabled:
+            username = auth.get_username(self)
+
+        info = {
+            'enabled': auth.is_enabled(),
+            'username': username,
+            'admin': has_admin_rights(self)
+        }
+
+        self.write(info)
+
+
 class AuthConfigHandler(BaseRequestHandler):
     def get(self):
         auth = self.application.auth
@@ -725,6 +743,7 @@ def init(server_config: ServerConfig,
                 (r"/scripts/execution/status/(.*)", GetExecutionStatus),
                 (r'/admin/execution_log/short', GetShortHistoryEntriesHandler),
                 (r'/admin/execution_log/long/(.*)', GetLongHistoryEntryHandler),
+                (r'/auth/info', AuthInfoHandler),
                 (r'/result_files/(.*)',
                  DownloadResultFile,
                  {'path': downloads_folder}),

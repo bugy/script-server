@@ -119,10 +119,11 @@ function onLoad() {
 
     initSearchPanel();
 
-    initLogoutPanel();
     initWelcomeIcon();
 
     loadActiveExecutions();
+
+    initAuthBasedElements();
 }
 
 
@@ -241,20 +242,30 @@ function stopRunningScripts() {
     return true;
 }
 
-function initLogoutPanel() {
+function initAuthBasedElements() {
+    hide(logoutPanel);
+
+    authorizedCallHttp('auth/info', null, 'GET', function (response) {
+        var authInfo = JSON.parse(response);
+
+        if (authInfo.enabled) {
+            initLogoutPanel(authInfo.username);
+        }
+
+        if (authInfo.admin) {
+            show(document.getElementById('adminLink'));
+            hide(document.getElementById('githubLink'));
+        }
+    });
+}
+
+function initLogoutPanel(username) {
     var usernameField = document.getElementById("usernameField");
     var logoutPanel = document.getElementById("logoutPanel");
 
-    try {
-        usernameField.innerHTML = authorizedCallHttp("username");
-    } catch (error) {
-        if (error.code === 404) {
-            hide(logoutPanel);
-            return;
-        } else {
-            throw error;
-        }
-    }
+    show(logoutPanel);
+
+    usernameField.innerText = username;
 
     var logoutButton = document.getElementById("logoutButton");
     logoutButton.addEventListener("click", function () {

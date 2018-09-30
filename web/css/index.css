@@ -77,9 +77,10 @@ body {
     margin-top: 1px;
 }
 
-#githubLink {
-    margin: 1rem;
-    display: block;
+#header-link {
+    margin: 0 1rem;
+    display: flex;
+    line-height: 0;
 }
 
 #scripts {
