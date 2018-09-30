@@ -71,8 +71,8 @@ function onLoad() {
     var contentPanel = document.getElementById('content-panel');
     hide(contentPanel);
 
-    scriptSelectionListeners.push(function (activeScript) {
-        showScript(activeScript)
+    scriptSelectionListeners.push(function (activeScript, parameterValues) {
+        showScript(activeScript, parameterValues);
     });
 
     var activateScriptFromHash = function () {
@@ -89,7 +89,16 @@ function onLoad() {
         }
 
         if (scripts.indexOf(scriptName) !== -1) {
-            selectScript(scriptName);
+            var queryParameters = readQueryParameters();
+            if (isEmptyObject(queryParameters)) {
+                queryParameters = null;
+            }
+
+            selectScript(scriptName, queryParameters);
+
+            if (!isEmptyObject(queryParameters)) {
+                history.pushState('', '', getUnparameterizedUrl() + window.location.hash)
+            }
         }
     };
     window.addEventListener('hashchange', activateScriptFromHash);
@@ -289,7 +298,8 @@ function addRunningExecutor(scriptExecutor) {
         }
     })
 }
-function showScript(selectedScript) {
+
+function showScript(selectedScript, parameterValues) {
     if (!isNull(activeScriptController)) {
         var previousScriptName = activeScriptController.scriptName;
         var executorsToRemove = runningScriptExecutors.filter(function (executor) {
@@ -362,6 +372,8 @@ function showScript(selectedScript) {
 
     if (!isNull(scriptExecutor)) {
         scriptController.setExecutor(scriptExecutor);
+    } else if (!isNull(parameterValues)) {
+        scriptController.setParameterValues(parameterValues);
     }
 }
 
@@ -375,11 +387,11 @@ function findRunningExecutor(selectedScript) {
     return scriptExecutor;
 }
 
-function selectScript(scriptName) {
+function selectScript(scriptName, parameterValues) {
     selectedScript = scriptName;
 
     scriptSelectionListeners.forEach(function (listener) {
-        listener(selectedScript);
+        listener(selectedScript, parameterValues);
     })
 }
 

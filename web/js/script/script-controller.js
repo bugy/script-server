@@ -246,6 +246,9 @@ ScriptController.prototype._initParameters = function (scriptName, parameters) {
     });
 };
 
+ScriptController.prototype.setParameterValues = function (values) {
+    this._setParameterValues(values);
+};
 
 ScriptController.prototype._setParameterValues = function (values) {
     for (var i = 0; i < this.parametersModel.state.parameters.length; i++) {

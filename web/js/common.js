@@ -52,6 +52,10 @@ function isEmptyValue(value) {
 }
 
 function isEmptyObject(obj) {
+    if (isNull(obj)) {
+        return true;
+    }
+
     for (var prop in obj) {
         if (obj.hasOwnProperty(prop)) {
             return false;
@@ -279,10 +283,10 @@ function readQueryParameters() {
             continue;
         }
 
-        var key = keyAndValue[0];
-        var value = keyAndValue[1];
+        var key = decodeURIComponent(keyAndValue[0].replace(/\+/g, ' '));
+        var value = decodeURIComponent(keyAndValue[1].replace(/\+/g, ' '));
 
-        result[key] = decodeURIComponent(value.replace(/\+/g, ' '));
+        result[key] = value;
     }
 
     return result;
