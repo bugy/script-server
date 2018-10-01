@@ -26,7 +26,7 @@ class TestFileMatching(unittest.TestCase):
 
         files = file_download_feature.find_matching_files('*/test*.txt', None)
 
-        self.assertEqual(files, [
+        self.assertCountEqual(files, [
             os.path.join(test_utils.temp_folder, 'test1.txt'),
             os.path.join(test_utils.temp_folder, 'test2.txt')
         ])
@@ -36,7 +36,7 @@ class TestFileMatching(unittest.TestCase):
 
         files = set(file_download_feature.find_matching_files(test_utils.temp_folder + '/**', None))
 
-        self.assertEqual(files, {
+        self.assertCountEqual(files, {
             os.path.join(test_utils.temp_folder, ''),
             os.path.join(test_utils.temp_folder, 'test'),
             os.path.join(test_utils.temp_folder, 'test', 'test.txt')
@@ -49,7 +49,7 @@ class TestFileMatching(unittest.TestCase):
 
         files = set(file_download_feature.find_matching_files(test_utils.temp_folder + '/**', None))
 
-        self.assertEqual(files, {
+        self.assertCountEqual(files, {
             os.path.join(test_utils.temp_folder, ''),
             os.path.join(test_utils.temp_folder, 'f1'),
             os.path.join(test_utils.temp_folder, 'f1', 'test1.txt'),
@@ -69,7 +69,7 @@ class TestFileMatching(unittest.TestCase):
         temp_folder = file_utils.normalize_path(test_utils.temp_folder)
         files = set(file_download_feature.find_matching_files(temp_folder + '/d*/**/*.txt', None))
 
-        self.assertEqual(files, {
+        self.assertCountEqual(files, {
             os.path.join(temp_folder, 'd2', 'test3.txt'),
             os.path.join(temp_folder, 'd2', 'd3', 'test4.txt'),
             os.path.join(temp_folder, 'd3', 'd6', 'd7', 'test6.txt')
