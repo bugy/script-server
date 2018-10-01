@@ -4,6 +4,10 @@ var logPanelComponent;
 
 (function () {
 
+    var urlRegex = new RegExp('https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}' +
+        '(\\.*([-a-zA-Z0-9@:%_\+~#?//=])+(&amp;)?)*',
+        'g');
+
     function getLogElementTextNode(logElement) {
         if (logElement.nodeType === 3) {
             return logElement;
@@ -313,20 +317,20 @@ var logPanelComponent;
     //noinspection JSAnnotator
     logPanelComponent = Vue.component('log-panel', {
         template: ''
-        + '<div class="log-panel">'
-        + '    <code class="log-content" '
-        + '        v-on:scroll="recalculateScrollPosition" '
-        + '        ref="logContent"'
-        + '        v-on:mousedown="mouseDown = true"'
-        + '        v-on:mouseup="mouseDown = false"></code>'
-        + '    <div class="log-panel-shadow" v-bind:class="{'
-        + '            \'shadow-top\': !atTop && atBottom,'
-        + '            \'shadow-bottom\': atTop && !atBottom,'
-        + '            \'shadow-top-bottom\': !atTop && !atBottom'
-        + '        }">'
-        + '        '
-        + '    </div>'
-        + '</div>',
+            + '<div class="log-panel">'
+            + '    <code class="log-content" '
+            + '        v-on:scroll="recalculateScrollPosition" '
+            + '        ref="logContent"'
+            + '        v-on:mousedown="mouseDown = true"'
+            + '        v-on:mouseup="mouseDown = false"></code>'
+            + '    <div class="log-panel-shadow" v-bind:class="{'
+            + '            \'shadow-top\': !atTop && atBottom,'
+            + '            \'shadow-bottom\': atTop && !atBottom,'
+            + '            \'shadow-top-bottom\': !atTop && !atBottom'
+            + '        }">'
+            + '        '
+            + '    </div>'
+            + '</div>',
 
         props: {
             'autoscrollEnabled': {
@@ -452,8 +456,42 @@ var logPanelComponent;
                 }
             },
 
+            createTextAndAnchorElements: function (text) {
+                var textElements;
+                if (urlRegex.test(text)) {
+                    textElements = [];
+
+                    var match;
+                    var lastEnd = 0;
+                    urlRegex.lastIndex = 0;
+                    while ((match = urlRegex.exec(text)) !== null) {
+                        if (match.index > lastEnd) {
+                            var prevText = text.substring(lastEnd, match.index);
+                            textElements.push(document.createTextNode(prevText));
+                        }
+                        var anchorElement = document.createElement('a');
+                        anchorElement.href = match[0];
+                        anchorElement.innerText = match[0];
+                        textElements.push(anchorElement);
+
+                        lastEnd = urlRegex.lastIndex;
+                    }
+
+                    if (lastEnd < (text.length - 1)) {
+                        var endText = text.substring(lastEnd, text.length);
+                        textElements.push(document.createTextNode(endText));
+                    }
+
+                } else {
+                    textElements = [document.createTextNode(text)];
+                }
+                return textElements;
+            },
+
             createLogElement: function (text, textColor, backgroundColor, textStyles) {
                 var outputElement = null;
+
+                var textElements = this.createTextAndAnchorElements(text);
 
                 if (!isNull(textColor) || !isNull(backgroundColor) || !isNull(textStyles)) {
                     outputElement = document.createElement('span');
@@ -470,9 +508,15 @@ var logPanelComponent;
                         }
                     }
 
-                    outputElement.appendChild(document.createTextNode(text));
+                    textElements.forEach(outputElement.appendChild.bind(outputElement));
+
                 } else {
-                    outputElement = document.createTextNode(text);
+                    if (textElements.length === 1) {
+                        outputElement = textElements[0];
+                    } else {
+                        outputElement = document.createElement('span');
+                        textElements.forEach(outputElement.appendChild.bind(outputElement));
+                    }
                 }
 
                 return outputElement;
