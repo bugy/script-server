@@ -39,6 +39,12 @@ describe('Test logPanel', function () {
         assert.equal(text, getTextNodeText(element));
     }
 
+    function assertAnchor(element, href) {
+        assert.equal('A', element.tagName);
+        assert.equal(href, element.href.replace(/\/+$/, ''));
+        assert.equal(href, element.innerText);
+    }
+
     function assertComplexNode(element, text, className) {
         assert.equal(1, element.nodeType);
         assert.equal(text, getComplexNodeText(element));
@@ -70,6 +76,62 @@ describe('Test logPanel', function () {
             this.logPanel.appendLog('|another text');
             assert.equal(2, this.logContent.childNodes.length);
             assertTextNode(this.logContent.childNodes[1], '|another text');
+        });
+
+        it('Append URL', function () {
+            this.logPanel.setLog('some text');
+
+            this.logPanel.appendLog('https://google.com');
+            assert.equal(2, this.logContent.childNodes.length);
+            assertAnchor(this.logContent.childNodes[1], 'https://google.com');
+        });
+
+        it('Append URL inside text', function () {
+            this.logPanel.setLog('some text');
+
+            this.logPanel.appendLog('begin http://wiki.org end');
+            assert.equal(2, this.logContent.childNodes.length);
+
+            let textContainer = this.logContent.childNodes[1];
+            assertTextNode(textContainer.childNodes[0], 'begin ');
+            assertAnchor(textContainer.childNodes[1], 'http://wiki.org');
+            assertTextNode(textContainer.childNodes[2], ' end');
+        });
+
+        it('Append multiple separated URLs', function () {
+            this.logPanel.setLog('some text');
+
+            this.logPanel.appendLog('http://wiki.org, https://google.com,http://localhost:5000');
+            assert.equal(2, this.logContent.childNodes.length);
+
+            let textContainer = this.logContent.childNodes[1];
+            assertAnchor(textContainer.childNodes[0], 'http://wiki.org');
+            assertTextNode(textContainer.childNodes[1], ', ');
+            assertAnchor(textContainer.childNodes[2], 'https://google.com');
+            assertTextNode(textContainer.childNodes[3], ',');
+            assertAnchor(textContainer.childNodes[4], 'http://localhost:5000');
+        });
+
+        it('Append complex URL', function () {
+            this.logPanel.setLog('some text');
+
+            this.logPanel.appendLog('http://api.plos.org/search'
+                + '?q=title:%22Drosophila%22%20and%20body:%22RNA%22&fl=id');
+            assert.equal(2, this.logContent.childNodes.length);
+            assertAnchor(this.logContent.childNodes[1],
+                'http://api.plos.org/search?q=title:%22Drosophila%22%20and%20body:%22RNA%22&fl=id');
+        });
+
+        it('Append colored URL', function () {
+            this.logPanel.setLog('some text');
+
+            this.logPanel.appendLog('https://google.com', 'red');
+            assert.equal(2, this.logContent.childNodes.length);
+
+            let formattedContainer = this.logContent.childNodes[1];
+            assert.equal(1, formattedContainer.nodeType);
+            assertAnchor(formattedContainer.childNodes[0], 'https://google.com');
+            assert.equal('text_color_red', formattedContainer.className);
         });
 
         it('Append colored log', function () {
