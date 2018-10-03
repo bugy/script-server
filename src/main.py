@@ -27,7 +27,10 @@ args = vars(parser.parse_args())
 TEMP_FOLDER = 'temp'
 
 CONFIG_FOLDER = args['config_dir']
-SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, args['config_file'])
+if os.path.isabs(args['config_file']):
+    SERVER_CONF_PATH = args['config_file']
+else:
+    SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, args['config_file'])
 LOGGER = logging.getLogger('main')
 
 
