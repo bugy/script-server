@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import logging.config
@@ -18,10 +19,18 @@ from model import server_conf
 from utils import tool_utils, file_utils
 from web import server
 
+parser = argparse.ArgumentParser(description='Launch script-server.')
+parser.add_argument('-d', '--config-dir', default='conf')
+parser.add_argument('-f', '--config-file', default='conf.json')
+args = vars(parser.parse_args())
+
 TEMP_FOLDER = 'temp'
 
-CONFIG_FOLDER = 'conf'
-SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, 'conf.json')
+CONFIG_FOLDER = args['config_dir']
+if os.path.isabs(args['config_file']):
+    SERVER_CONF_PATH = args['config_file']
+else:
+    SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, args['config_file'])
 LOGGER = logging.getLogger('main')
 
 
