@@ -16,6 +16,8 @@ __migrations_registry = OrderedDict()
 
 _MigrationDescriptor = namedtuple('_MigrationDescriptor', ['id', 'callable', 'name', 'requires'])
 
+_Context = namedtuple('_Context', ['temp_folder', 'conf_folder', 'conf_file', 'log_folder'])
+
 LOGGER = logging.getLogger('migrations')
 
 
@@ -85,8 +87,8 @@ def _validate_requirements():
 
 
 @_migration('add_execution_info_to_log_files')
-def __migrate_old_files():
-    output_folder = os.path.join('logs', 'processes')
+def __migrate_old_files(context):
+    output_folder = os.path.join(context.log_folder, 'processes')
     if not os.path.exists(output_folder):
         return
 
@@ -158,8 +160,8 @@ def __migrate_old_files():
 
 
 @_migration('add_user_id_to_log_files', requires=['add_execution_info_to_log_files'])
-def __migrate_user_id():
-    output_folder = os.path.join('logs', 'processes')
+def __migrate_user_id(context):
+    output_folder = os.path.join(context.log_folder, 'processes')
     if not os.path.exists(output_folder):
         return
 
@@ -197,14 +199,14 @@ def __migrate_user_id():
 
 
 @_migration('introduce_access_config')
-def __introduce_access_config():
-    file_path = os.path.join('conf', 'conf.json')
+def __introduce_access_config(context):
+    file_path = context.conf_file
 
     if not os.path.exists(file_path):
         return
 
     content = file_utils.read_file(file_path)
-    json_object = json.loads(content)
+    json_object = json.loads(content, object_pairs_hook=OrderedDict)
 
     def move_to_access(field, parent_object):
         if 'access' not in json_object:
@@ -232,8 +234,8 @@ def __introduce_access_config():
 
 
 @_migration('migrate_output_files_parameters_substitution')
-def __introduce_access_config():
-    conf_folder = os.path.join('conf', 'runners')
+def __introduce_access_config(context):
+    conf_folder = os.path.join(context.conf_folder, 'runners')
 
     if not os.path.exists(conf_folder):
         return
@@ -279,7 +281,7 @@ def _write_json(file_path, json_object, old_content):
         json.dump(json_object, fp, indent=indent)
 
 
-def migrate(temp_folder, conf_folder):
+def migrate(temp_folder, conf_folder, conf_file, log_folder):
     _validate_requirements()
 
     if _is_new_installation(temp_folder, conf_folder):
@@ -291,6 +293,8 @@ def migrate(temp_folder, conf_folder):
 
         if not to_migrate:
             return
+
+        context = _Context(temp_folder, conf_folder, conf_file, log_folder)
 
         migrated = list(old_migrations)
 
@@ -305,7 +309,7 @@ def migrate(temp_folder, conf_folder):
                     continue
 
                 LOGGER.info('Applying migration ' + str(migration_id))
-                migration_descriptor.callable()
+                migration_descriptor.callable(context)
                 migrated.append(migration_id)
                 to_migrate.remove(migration_id)
                 _write_migrations(temp_folder, migrated)

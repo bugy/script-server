@@ -25,12 +25,14 @@ parser.add_argument('-f', '--config-file', default='conf.json')
 args = vars(parser.parse_args())
 
 TEMP_FOLDER = 'temp'
+LOG_FOLDER = 'logs'
 
 CONFIG_FOLDER = args['config_dir']
 if os.path.isabs(args['config_file']):
     SERVER_CONF_PATH = args['config_file']
 else:
     SERVER_CONF_PATH = os.path.join(CONFIG_FOLDER, args['config_file'])
+
 LOGGER = logging.getLogger('main')
 
 
@@ -52,14 +54,14 @@ def main():
     logging_conf_file = os.path.join(CONFIG_FOLDER, 'logging.json')
     with open(logging_conf_file, 'rt') as f:
         log_config = json.load(f)
-        file_utils.prepare_folder(os.path.join('logs'))
+        file_utils.prepare_folder(LOG_FOLDER)
 
         logging.config.dictConfig(log_config)
 
     file_utils.prepare_folder(CONFIG_FOLDER)
     file_utils.prepare_folder(TEMP_FOLDER)
 
-    migrations.migrate.migrate(TEMP_FOLDER, CONFIG_FOLDER)
+    migrations.migrate.migrate(TEMP_FOLDER, CONFIG_FOLDER, SERVER_CONF_PATH, LOG_FOLDER)
 
     server_config = server_conf.from_json(SERVER_CONF_PATH, TEMP_FOLDER)
 
@@ -75,7 +77,7 @@ def main():
     alerts_service = AlertsService(server_config.get_alerts_config())
     alerts_service = alerts_service
 
-    execution_logs_path = os.path.join('logs', 'processes')
+    execution_logs_path = os.path.join(LOG_FOLDER, 'processes')
     log_name_creator = LogNameCreator(
         server_config.logging_config.filename_pattern,
         server_config.logging_config.date_format)
