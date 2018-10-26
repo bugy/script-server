@@ -1,24 +1,117 @@
 'use strict';
 
-function ScriptController(scriptConfig, executionStartCallback) {
-    this.scriptConfig = scriptConfig;
-    this.scriptName = scriptConfig.name;
+function ScriptController(scriptName, parent, executionStartCallback, loadErrorCallback) {
+    this.scriptName = scriptName;
     this.executionStartCallback = executionStartCallback;
     this.scriptView = null;
+    this.parentPanel = parent;
 
     this.logPublisher = null;
     this.logLastIndex = 0;
     this.executor = null;
     this.executorListener = null;
 
-    this._initParameters(this.scriptName, this.scriptConfig.parameters);
+    this._reconnectionAttempt = 0;
+
+    this._initParametersModel();
+
+    this._reconnect(loadErrorCallback);
 }
 
-ScriptController.prototype.fillView = function (parent) {
+ScriptController.prototype._reconnect = function (loadErrorCallback) {
+    var controller = this;
+
+    if (!isNull(this.websocket) && !isWebsocketClosed(this.websocket)) {
+        this.websocket.close();
+        this.websocket = null;
+    }
+
+    var dataReceived = false;
+
+    var socket = new ReactiveWebSocket('scripts/info/' + this.scriptName, {
+        onNext: function (rawMessage) {
+            dataReceived = true;
+            controller._reconnectionAttempt = 0;
+
+            var event = JSON.parse(rawMessage.data);
+
+            var eventType = event.event;
+            var data = event.data;
+
+            if (isNull(controller.scriptConfig) && (eventType !== 'initialConfig')) {
+                loadErrorCallback('Unexpected error occurred', new Error('invalid message from the server'));
+                socket.close();
+                return;
+            }
+
+            if (eventType === 'initialConfig') {
+                controller._updateScriptConfig(data);
+                return;
+            }
+
+            if (eventType === 'parameterChanged') {
+                controller._updateParameter(data);
+                return;
+            }
+
+            if (eventType === 'parameterAdded') {
+                controller._addParameter(data);
+                return;
+            }
+
+            if (eventType === 'parameterRemoved') {
+                controller._removeParameter(data);
+                return;
+            }
+        },
+
+        onError: function (error) {
+            if (error instanceof SocketClosedError) {
+                console.log('Socket closed. code=' + error.code + ', reason=' + error.reason);
+                logError(error);
+
+                if (isNull(controller.scriptConfig)) {
+                    loadErrorCallback('Failed to connect to the server', new Error('Failed to connect to the server'));
+                    return;
+                }
+
+                controller._reconnectionAttempt++;
+
+                if (controller._reconnectionAttempt > 5) {
+                    loadErrorCallback('Failed to reconnect', new Error('Failed to reconnect'));
+                    return;
+                }
+
+                setTimeout(function () {
+                    console.log('Trying to reconnect. Attempt ' + controller._reconnectionAttempt);
+                    controller._reconnect(loadErrorCallback);
+                }, (controller._reconnectionAttempt - 1) * 500);
+
+                return;
+            }
+
+            if (error instanceof HttpUnauthorizedError) {
+                loadErrorCallback(error.message, error);
+                return;
+            }
+
+            loadErrorCallback('Unexpected error occurred', error);
+        },
+
+        onComplete: function () {
+            console.log('Websocket completed. This should not be possible for a config socket');
+            loadErrorCallback('Connection to server closed', new Error('Connection to server closed: ' + event.reason));
+        }
+    });
+
+    this.websocket = socket;
+};
+
+ScriptController.prototype._fillView = function (parent, scriptConfig) {
     var scriptView = new ScriptView(parent, this.parametersModel);
     this.scriptView = scriptView;
 
-    scriptView.setScriptDescription(this.scriptConfig.description);
+    scriptView.setScriptDescription(scriptConfig.description);
 
     scriptView.setExecutionCallback(function () {
         var parameterValues = $.extend({}, this.parametersModel.state.parameterValues);
@@ -27,7 +120,7 @@ ScriptController.prototype.fillView = function (parent) {
         scriptView.setLog('Calling the script...');
 
         try {
-            this.executor = new ScriptExecutor(this.scriptConfig);
+            this.executor = new ScriptExecutor(scriptConfig.name);
             this.executor.start(parameterValues);
             this.executionStartCallback(this.executor);
 
@@ -54,12 +147,53 @@ ScriptController.prototype.fillView = function (parent) {
 
     return scriptView.scriptPanel;
 };
+ScriptController.prototype._updateScriptConfig = function (scriptConfig) {
+    var oldConfig = this.scriptConfig;
+    this.scriptConfig = scriptConfig;
+
+    if (isNull(oldConfig)) {
+        this._fillView(this.parentPanel, scriptConfig);
+        this._setParameters(this.scriptConfig.parameters);
+    } else {
+        var oldParameters = toDict(oldConfig.parameters, 'name');
+        var newParameters = toDict(scriptConfig.parameters, 'name');
+
+        var controller = this;
+
+        forEachKeyValue(oldParameters, function (name, parameter) {
+            if (name in newParameters) {
+                return;
+            }
+
+            controller._removeParameter(name);
+        });
+
+        forEachKeyValue(newParameters, function (name, parameter) {
+            if (name in oldParameters) {
+                controller._updateParameter(parameter);
+            } else {
+                controller._addParameter(parameter);
+            }
+        });
+
+        this.parametersModel.$nextTick(function () {
+            var parameterValues = controller.parametersModel.state.parameterValues;
+            forEachKeyValue(parameterValues, function (key, value) {
+                controller._sendCurrentValue(key, value);
+            });
+        });
+    }
+};
 
 ScriptController.prototype.destroy = function () {
     if (!isNull(this.scriptView)) {
         this.scriptView.destroy();
     }
     this.scriptView = null;
+
+    if (!isNull(this.websocket)) {
+        this.websocket.close();
+    }
 
     this._stopLogPublisher();
 
@@ -150,100 +284,132 @@ ScriptController.prototype._publishLogs = function () {
     }
 };
 
-ScriptController.prototype._initParameters = function (scriptName, parameters) {
-    var parameterValues = {};
+ScriptController.prototype._initParametersModel = function () {
+    var controller = this;
 
-    var dependantParameters = new Map();
-
-    for (var i = 0; i < parameters.length; i++) {
-        var parameter = parameters[i];
-
-        parameter.multiselect = (parameter.type === 'multiselect');
-        if (parameter.type === 'file_upload') {
-            parameter.default = null;
-        }
-
-        if (!isNull(parameter.default)) {
-            parameterValues[parameter.name] = parameter.default;
-        } else {
-            parameterValues[parameter.name] = null;
-        }
-
-        if (!isNull(parameter.values_dependencies) && (parameter.values_dependencies.length > 0)) {
-            dependantParameters.set(parameter, new Map());
-            for (var j = 0; j < parameter.values_dependencies.length; j++) {
-                var dependency = parameter.values_dependencies[j];
-                dependantParameters.get(parameter).set(dependency, undefined);
-            }
-        }
-    }
+    var sentValues = {};
 
     this.parametersModel = new Vue({
         data: function () {
             return {
                 state:
                     {
-                        parameters: parameters,
-                        parameterValues: parameterValues
+                        parameters: [],
+                        parameterValues: {}
                     }
             };
         },
         watch: {
             'state.parameterValues': {
-                immediate: true,
                 deep: true,
                 handler(newValues, oldValues) {
-                    dependantParameters.forEach(function (dependencies, parameter) {
-                        var hasChanges = false;
-                        var everythingFilled = true;
+                    var parameterErrors = controller.scriptView.getParameterErrors();
 
-                        dependencies.forEach(function (oldValue, dependency) {
-                            var newValue = newValues[dependency];
-
-                            if ((typeof oldValue === 'undefined') || (newValue !== oldValue)) {
-                                dependencies.set(dependency, newValue);
-                                hasChanges = true;
-                            }
-
-                            if (isEmptyValue(newValue)) {
-                                everythingFilled = false;
-                            }
-                        });
-
-                        if (!everythingFilled) {
-                            if (parameter.values.length > 0) {
-                                parameter.values = [];
-                            }
-                        } else if (hasChanges) {
-                            var currentValues = $.extend({}, this.state.parameterValues);
-
-                            var queryParameters = encodeURIComponent(JSON.stringify({
-                                'script_name': scriptName,
-                                'parameter_name': parameter.name,
-                                'current_values': currentValues
-                            }));
-                            callHttp('scripts/config/parameter-values?query_parameters=' + queryParameters,
-                                null,
-                                'GET',
-                                function (values) {
-                                    var dependenciesObsolete = false;
-                                    dependencies.forEach(function (oldValue, dependency) {
-                                        var currentValue = this.state.parameterValues[dependency];
-                                        if (currentValue !== currentValues[dependency]) {
-                                            dependenciesObsolete = true;
-                                        }
-                                    }.bind(this));
-
-                                    if (!dependenciesObsolete) {
-                                        parameter.values = JSON.parse(values);
-                                    }
-                                }.bind(this));
+                    forEachKeyValue(newValues, function (key, value) {
+                        if (!isEmptyString(parameterErrors[key])) {
+                            return;
                         }
-                    }.bind(this));
+
+                        if (sentValues[key] !== value) {
+                            controller._sendCurrentValue(key, value);
+                            sentValues[key] = value;
+                        }
+                    });
                 }
             }
         }
     });
+};
+
+ScriptController.prototype._sendCurrentValue = function (parameter, value) {
+    if ((isNull(this.websocket))) {
+        return;
+    }
+
+    var data = {};
+    data['parameter'] = parameter;
+    data['value'] = value;
+    this.websocket.send(JSON.stringify({
+        'event': 'parameterValue',
+        'data': data
+    }));
+};
+
+
+ScriptController.prototype._preprocessParameter = function (parameter) {
+    parameter.multiselect = (parameter.type === 'multiselect');
+    if (parameter.type === 'file_upload') {
+        parameter.default = null;
+    }
+};
+
+ScriptController.prototype._setParameters = function (parameters) {
+    var parameterValues = {};
+
+    for (var i = 0; i < parameters.length; i++) {
+        var parameter = parameters[i];
+
+        this._preprocessParameter(parameter);
+
+        if (!isNull(parameter.default)) {
+            parameterValues[parameter.name] = parameter.default;
+        } else {
+            parameterValues[parameter.name] = null;
+        }
+    }
+
+    this.parametersModel.state.parameters = parameters;
+    this.parametersModel.state.parameterValues = parameterValues;
+};
+
+ScriptController.prototype._updateParameter = function (parameter) {
+    var foundIndex = -1;
+
+    var parameters = this.parametersModel.state.parameters;
+
+    for (var i = 0; i < parameters.length; i++) {
+        var anotherParam = parameters[i];
+        if (anotherParam['name'] === parameter['name']) {
+            foundIndex = i;
+            break;
+        }
+    }
+
+    if (foundIndex < 0) {
+        console.log('Failed to find parameter ' + parameter['name']);
+        return;
+    }
+
+    this._preprocessParameter(parameter);
+    Vue.set(parameters, foundIndex, parameter);
+};
+
+ScriptController.prototype._addParameter = function (parameter) {
+    this._preprocessParameter(parameter);
+
+    this.parametersModel.state.parameters.push(parameter);
+};
+
+ScriptController.prototype._removeParameter = function (parameterName) {
+    var foundIndex = -1;
+
+    var parameters = this.parametersModel.state.parameters;
+
+    for (var i = 0; i < parameters.length; i++) {
+        var parameter = parameters[i];
+
+        if (parameter['name'] === parameterName) {
+            foundIndex = i;
+            break;
+        }
+    }
+
+    if (foundIndex < 0) {
+        console.log('Failed to find parameter ' + parameter['name']);
+        return;
+    }
+
+    parameters.splice(foundIndex, 1);
 };
 
 ScriptController.prototype.setParameterValues = function (values) {

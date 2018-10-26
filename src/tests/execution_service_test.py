@@ -3,7 +3,7 @@ import unittest
 
 from execution import executor
 from execution.execution_service import ExecutionService
-from model.script_configs import Config
+from model.script_configs import ConfigModel
 from tests.test_utils import mock_object, create_audit_names, _MockProcessWrapper
 
 DEFAULT_USER = 'test_user'
@@ -174,8 +174,9 @@ class ExecutionServiceTest(unittest.TestCase):
         return execution_id
 
     def _create_script_config(self):
-        config = Config()
-        config.script_command = 'ls'
+        config = ConfigModel(
+            {'name': 'script_x', 'script_path': 'ls'},
+            'script_x.json', 'user1', 'localhost')
         return config
 
     def create_execution_service(self):

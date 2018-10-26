@@ -97,7 +97,7 @@ class ExecutionService:
 
         return result
 
-    def get_config(self, execution_id) -> Optional[script_configs.Config]:
+    def get_config(self, execution_id) -> Optional[script_configs.ConfigModel]:
         return self._get_for_execution_info(execution_id,
                                             lambda i: i.config)
 

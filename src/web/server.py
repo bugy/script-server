@@ -20,16 +20,16 @@ from alerts.alerts_service import AlertsService
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from auth.user import User
-from config.config_service import ConfigService, ConfigNotFoundException, ParameterNotFoundException, \
-    InvalidValueException, ConfigNotAllowedException
+from config.config_service import ConfigService, ConfigNotAllowedException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
 from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
 from model import external_model
 from model import model_helper
-from model.external_model import to_short_execution_log, to_long_execution_log
+from model.external_model import to_short_execution_log, to_long_execution_log, parameter_to_external
 from model.model_helper import is_empty
+from model.script_configs import InvalidValueException
 from model.server_conf import ServerConfig
 from utils import file_utils as file_utils
 from utils import tornado_utils, audit_utils
@@ -92,7 +92,12 @@ def check_authorization(func):
         if authenticated and (not access_allowed):
             user = _identify_user(self)
             LOGGER.warning('User ' + user + ' is not allowed')
-            raise tornado.web.HTTPError(403, 'Access denied. Please contact system administrator')
+            code = 403
+            message = 'Access denied. Please contact system administrator'
+            if isinstance(self, tornado.websocket.WebSocketHandler):
+                self.close(code=code, reason=message)
+            else:
+                raise tornado.web.HTTPError(code, message)
 
         login_url = self.get_login_url()
         request_path = self.request.path
@@ -190,7 +195,7 @@ class GetScriptInfo(BaseRequestHandler):
             return
 
         try:
-            config = self.application.config_service.load_config(name, user)
+            config = self.application.config_service.load_config_model(name, user)
         except ConfigNotAllowedException:
             raise tornado.web.HTTPError(403, reason='Access to the script is denied')
 
@@ -198,32 +203,82 @@ class GetScriptInfo(BaseRequestHandler):
             respond_error(self, 400, "Couldn't find a script by name")
             return
 
-        self.write(external_model.config_to_json(config))
+        self.write(external_model.config_to_external(config))
 
 
-class GetConfigParameterValues(BaseRequestHandler):
+class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
+
+    def __init__(self, application, request, **kwargs):
+        super().__init__(application, request, **kwargs)
+
+        self.config_model = None  # ConfigModel
+
     @check_authorization
     @inject_user
-    def get(self, user):
-        query_parameters = json.loads(self.get_query_argument('query_parameters'))
-
-        script_name = query_parameters['script_name']
-        parameter_name = query_parameters['parameter_name']
-        current_values = query_parameters['current_values']
-
+    def open(self, user, config_name):
         try:
-            values = self.application.config_service.get_parameter_values(
-                script_name, parameter_name, current_values, user)
-            self.write(json.dumps(values))
+            self.config_model = self.application.config_service.load_config_model(config_name, user)
+        except ConfigNotAllowedException:
+            self.close(code=403, reason='Access to the script is denied')
+            return
 
-        except ConfigNotFoundException as e:
-            raise tornado.web.HTTPError(400, reason='Failed to find config ' + e.script_name)
-        except ParameterNotFoundException as e:
-            raise tornado.web.HTTPError(400, reason='Failed to find parameter ' + e.param_name
-                                                    + ' in config ' + e.script_name)
-        except InvalidValueException as e:
-            raise tornado.web.HTTPError(400,
-                                        reason='Invalid parameter "%s" value: %s' % (e.param_name, e.validation_error))
+        if not self.config_model:
+            self.close(code=404, reason='Could not find a script by name')
+            return
+
+        self.ioloop = tornado.ioloop.IOLoop.current()
+
+        initial_config = external_model.config_to_external(self.config_model)
+        self.safe_write(wrap_to_server_event('initialConfig', initial_config))
+
+        socket = self
+
+        class ParameterListener:
+            def on_add(self, parameter, index):
+                socket.safe_write(wrap_to_server_event('parameterAdded', parameter_to_external(parameter)))
+                socket._subscribe_on_parameter(parameter)
+
+            def on_remove(self, parameter):
+                socket.safe_write(wrap_to_server_event('parameterRemoved', parameter.name))
+
+        self.config_model.parameters.subscribe(ParameterListener())
+        for parameter in self.config_model.parameters:
+            self._subscribe_on_parameter(parameter)
+
+    def on_message(self, text):
+        try:
+            message = json.loads(text)
+
+            type = message.get('event')
+            data = message.get('data')
+
+            if type == 'parameterValue':
+                self._set_parameter_value(data.get('parameter'), data.get('value'))
+                return
+
+            LOGGER.warning('Unknown message received in ScriptConfigSocket: ' + text)
+        except:
+            LOGGER.exception('Failed to process message ' + text)
+
+    def _set_parameter_value(self, parameter, value):
+        self.config_model.set_param_value(parameter, value)
+
+    def on_close(self):
+        pass
+
+    def safe_write(self, message):
+        if self.ws_connection is not None:
+            self.ioloop.add_callback(self.write_message, message)
+
+    def _send_parameter_changed(self, parameter):
+        external_param = parameter_to_external(parameter)
+        if external_param is None:
+            return
+
+        self.safe_write(wrap_to_server_event('parameterChanged', external_param))
+
+    def _subscribe_on_parameter(self, parameter):
+        parameter.subscribe(lambda prop, old, new: self._send_parameter_changed(parameter))
 
 
 class ScriptStop(BaseRequestHandler):
@@ -259,8 +314,8 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         user_id = _identify_user(self)
 
         output_stream = execution_service.get_raw_output_stream(execution_id, user_id)
-        bash_formatting = config.is_bash_formatting()
-        pipe_output_to_http(output_stream, bash_formatting, self.safe_write)
+        ansi_enabled = config.ansi_enabled
+        pipe_output_to_http(output_stream, ansi_enabled, self.safe_write)
 
         def finished(web_socket, downloads_folder, file_download_feature):
             try:
@@ -317,26 +372,29 @@ class ScriptExecute(BaseRequestHandler):
 
             script_name = execution_info.script
 
-            config = self.application.config_service.load_config(script_name, user)
+            config_model = self.application.config_service.load_config_model(script_name, user)
 
-            if not config:
+            if not config_model:
                 message = 'Script with name "' + str(script_name) + '" not found'
                 LOGGER.error(message)
                 respond_error(self, 400, message)
                 return
 
-            file_upload_feature = self.application.file_upload_feature
+            parameter_values = execution_info.param_values
+
             if self.request.files:
+                file_upload_feature = self.application.file_upload_feature
                 for key, value in self.request.files.items():
                     file_info = value[0]
                     file_path = file_upload_feature.save_file(file_info.filename, file_info.body, audit_name)
-                    execution_info.param_values[key] = file_path
+                    parameter_values[key] = file_path
 
-            model_helper.prepare_multiselect_values(execution_info.param_values, config.parameters)
+            model_helper.prepare_multiselect_values(parameter_values, config_model.parameters)
 
-            valid_parameters = model_helper.validate_parameters(execution_info.param_values, config)
-            if not valid_parameters:
-                message = 'Received invalid parameters'
+            try:
+                config_model.set_all_param_values(parameter_values)
+            except InvalidValueException as e:
+                message = 'Invalid parameter %s value: %s' % (e.param_name, e.validation_error)
                 LOGGER.error(message)
                 respond_error(self, 400, message)
                 return
@@ -346,8 +404,8 @@ class ScriptExecute(BaseRequestHandler):
             LOGGER.info('Calling script ' + script_name + '. User ' + str(all_audit_names))
 
             execution_id = self.application.execution_service.start_script(
-                config,
-                execution_info.param_values,
+                config_model,
+                parameter_values,
                 user_id,
                 all_audit_names)
 
@@ -401,7 +459,7 @@ class GetExecutingScriptConfig(BaseRequestHandler):
 
         config = self.application.execution_service.get_config(execution_id)
 
-        self.write(external_model.config_to_json(config))
+        self.write(external_model.config_to_external(config))
 
 
 class GetExecutingScriptValues(BaseRequestHandler):
@@ -633,9 +691,8 @@ def wrap_to_server_event(event_type, data):
     })
 
 
-def pipe_output_to_http(output_stream, bash_formatting, write_callback):
-    if bash_formatting:
-
+def pipe_output_to_http(output_stream, ansi_enabled, write_callback):
+    if ansi_enabled:
         terminal_output_stream = TerminalOutputTransformer(output_stream)
 
         class OutputToHttpListener:
@@ -731,8 +788,7 @@ def init(server_config: ServerConfig,
 
     handlers = [(r"/conf/title", GetServerTitle),
                 (r"/scripts/list", GetScripts),
-                (r"/scripts/info", GetScriptInfo),
-                (r"/scripts/config/parameter-values", GetConfigParameterValues),
+                (r"/scripts/info/(.*)", ScriptConfigSocket),
                 (r"/scripts/execution", ScriptExecute),
                 (r"/scripts/execution/stop/(.*)", ScriptStop),
                 (r"/scripts/execution/io/(.*)", ScriptStreamSocket),

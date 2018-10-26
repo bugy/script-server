@@ -98,6 +98,7 @@
 
         methods: {
             emitValueChange(value) {
+                this._validate(asArray(value));
                 this.$emit('input', value);
             },
 
@@ -139,13 +140,7 @@
             },
 
             _selectValue(value) {
-                var selectedValues = value;
-
-                if (isEmptyString(selectedValues)) {
-                    selectedValues = [];
-                } else if (!Array.isArray(selectedValues)) {
-                    selectedValues = [selectedValues];
-                }
+                var selectedValues = asArray(value);
 
                 this.anythingSelected = false;
 
@@ -161,12 +156,7 @@
                     }
                 }
 
-                if (this.config.required && (selectedValues.length === 0)) {
-                    this.error = 'required';
-                } else {
-                    this.error = '';
-                }
-                this.$emit('error', this.error);
+                this._validate(selectedValues);
 
                 var requiresReRender = true;
 
@@ -181,6 +171,15 @@
                         this.rerenderCombobox();
                     }.bind(this));
                 }
+            },
+
+            _validate(selectedValues) {
+                if (this.config.required && (selectedValues.length === 0)) {
+                    this.error = 'required';
+                } else {
+                    this.error = '';
+                }
+                this.$emit('error', this.error);
             },
 
             rerenderCombobox() {
@@ -202,4 +201,15 @@
             }
         }
     });
+
+    function asArray(value) {
+        var valuesArray = value;
+
+        if (isEmptyString(valuesArray)) {
+            valuesArray = [];
+        } else if (!Array.isArray(valuesArray)) {
+            valuesArray = [valuesArray];
+        }
+        return valuesArray;
+    }
 }());

@@ -165,6 +165,11 @@ var HttpRequestError = _createErrorType('HttpRequestError', function (code, mess
     this.message = message || '';
 });
 
+var SocketClosedError = _createErrorType('SocketClosedError', function (code, reason) {
+    this.code = code || -1;
+    this.reason = reason || '';
+});
+
 var HttpUnauthorizedError = _createErrorType('HttpUnauthorizedError', function (code, message) {
     this.code = code || -1;
     this.message = message || '';
@@ -306,6 +311,33 @@ function getUrlDir() {
     return path.substring(0, path.lastIndexOf('/'));
 }
 
+function getWebsocketUrl(relativePath) {
+    var location = window.location;
+
+    var https = location.protocol.toLowerCase() === 'https:';
+    var wsProtocol = https ? 'wss' : 'ws';
+    var hostUrl = wsProtocol + '://' + location.host;
+
+    var dir = getUrlDir();
+    if (dir) {
+        hostUrl += '/' + dir;
+    }
+
+    if (isEmptyString(relativePath)) {
+        return hostUrl;
+    }
+
+    if (!hostUrl.endsWith('/')) {
+        hostUrl += '/';
+    }
+
+    return hostUrl + relativePath;
+}
+
+function isWebsocketClosed(websocket) {
+    return ((websocket.readyState === 2) || (websocket.readyState === 3));
+}
+
 function getUnparameterizedUrl() {
     return [location.protocol, '//', location.host, location.pathname].join('');
 }
@@ -379,4 +411,22 @@ function setInputValue(inputField, value, triggerEvent) {
         event.initEvent('input', true, true);
         inputField.dispatchEvent(event);
     }
+}
+
+if (!String.prototype.endsWith) {
+    String.prototype.endsWith = function (search, this_len) {
+        if (this_len === undefined || this_len > this.length) {
+            this_len = this.length;
+        }
+        return this.substring(this_len - search.length, this_len) === search;
+    };
+}
+
+function toDict(array, fieldName) {
+    var result = {};
+    for (var i = 0; i < array.length; i++) {
+        var element = array[i];
+        result[element[fieldName]] = element;
+    }
+    return result;
 }

@@ -3,242 +3,152 @@ import unittest
 
 from execution import executor
 from execution.executor import ScriptExecutor
-from model import script_configs
 from react.observable import _StoringObserver, read_until_closed
-from tests.test_utils import _MockProcessWrapper
+from tests.test_utils import _MockProcessWrapper, create_config_model, create_script_param_config
 
 BUFFER_FLUSH_WAIT_TIME = (executor.TIME_BUFFER_MS * 1.5) / 1000.0
 
 
 class TestBuildCommandArgs(unittest.TestCase):
     def test_no_parameters_no_values(self):
-        config = script_configs.Config()
+        config = create_config_model('config_x')
 
         args_string = executor.build_command_args({}, config)
 
         self.assertEqual(args_string, [])
 
     def test_no_parameters_some_values(self):
-        config = script_configs.Config()
+        config = create_config_model('config_x')
 
         args_string = executor.build_command_args({'p1': 'value', 'p2': 'value'}, config)
 
         self.assertEqual(args_string, [])
 
     def test_one_parameter_no_values(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        config.add_parameter(parameter)
+        config = create_config_model('config_x', parameters=[create_script_param_config('param1')])
 
         args_string = executor.build_command_args({}, config)
 
         self.assertEqual(args_string, [])
 
     def test_one_parameter_one_value(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        config.add_parameter(parameter)
+        config = create_config_model('config_x', parameters=[create_script_param_config('p1')])
 
         args_string = executor.build_command_args({'p1': 'value'}, config)
 
         self.assertEqual(args_string, ['value'])
 
     def test_one_parameter_with_param(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_string = executor.build_command_args({'p1': 'value'}, config)
 
         self.assertEqual(args_string, ['-p1', 'value'])
 
     def test_one_parameter_flag_no_value(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '--flag'
-        parameter.no_value = True
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='--flag', no_value=True)
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_string = executor.build_command_args({}, config)
 
         self.assertEqual(args_string, [])
 
     def test_one_parameter_flag_false(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '--flag'
-        parameter.no_value = True
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='--flag', no_value=True)
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_string = executor.build_command_args({'p1': False}, config)
 
         self.assertEqual(args_string, [])
 
     def test_one_parameter_flag_true(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '--flag'
-        parameter.no_value = True
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='--flag', no_value=True)
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_string = executor.build_command_args({'p1': True}, config)
 
         self.assertEqual(args_string, ['--flag'])
 
     def test_parameter_constant(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.constant = True
-        parameter.default = 'const'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', constant=True, default='const')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_string = executor.build_command_args({'p1': 'value'}, config)
 
         self.assertEqual(args_string, ['const'])
 
     def test_parameter_int(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.type = 'int'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1', type='int')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_string = executor.build_command_args({'p1': 5}, config)
 
         self.assertEqual(args_string, ['-p1', 5])
 
     def test_parameter_multiselect_when_empty_string(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.type = 'multiselect'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1', type='multiselect')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_list = executor.build_command_args({'p1': ''}, config)
 
         self.assertEqual(args_list, [])
 
     def test_parameter_multiselect_when_empty_list(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.type = 'multiselect'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1', type='multiselect')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_list = executor.build_command_args({'p1': []}, config)
 
         self.assertEqual(args_list, [])
 
     def test_parameter_multiselect_when_single_list(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.type = 'multiselect'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1', type='multiselect')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_list = executor.build_command_args({'p1': ['val1']}, config)
 
         self.assertEqual(args_list, ['-p1', 'val1'])
 
     def test_parameter_multiselect_when_single_list_as_multiarg(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.type = 'multiselect'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1', type='multiselect')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_list = executor.build_command_args({'p1': ['val1']}, config)
 
         self.assertEqual(args_list, ['-p1', 'val1'])
 
     def test_parameter_multiselect_when_multiple_list(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.type = 'multiselect'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', type='multiselect')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_list = executor.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
 
         self.assertEqual(args_list, ['val1,val2,hello world'])
 
     def test_parameter_multiselect_when_multiple_list_and_custom_separator(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.type = 'multiselect'
-        parameter.separator = '; '
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', type='multiselect', multiselect_separator='; ')
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_list = executor.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
 
         self.assertEqual(args_list, ['val1; val2; hello world'])
 
     def test_parameter_multiselect_when_multiple_list_as_multiarg(self):
-        config = script_configs.Config()
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.type = 'multiselect'
-        parameter.multiple_arguments = True
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', type='multiselect', multiple_arguments=True)
+        config = create_config_model('config_x', parameters=[parameter])
 
         args_list = executor.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
 
         self.assertEqual(args_list, ['val1', 'val2', 'hello world'])
 
     def test_multiple_parameters_sequence(self):
-        config = script_configs.Config()
-
-        p1 = script_configs.Parameter()
-        p1.name = 'p1'
-        p1.param = '-p1'
-        config.add_parameter(p1)
-
-        p2 = script_configs.Parameter()
-        p2.name = 'p2'
-        config.add_parameter(p2)
-
-        p3 = script_configs.Parameter()
-        p3.name = 'p3'
-        p3.param = '--p3'
-        p3.no_value = True
-        config.add_parameter(p3)
-
-        p4 = script_configs.Parameter()
-        p4.name = 'p4'
-        p4.param = '-p4'
-        config.add_parameter(p4)
-
-        p5 = script_configs.Parameter()
-        p5.name = 'p5'
-        config.add_parameter(p5)
+        p1 = create_script_param_config('p1', param='-p1')
+        p2 = create_script_param_config('p2')
+        p3 = create_script_param_config('p3', param='--p3', no_value=True)
+        p4 = create_script_param_config('p4', param='-p4')
+        p5 = create_script_param_config('p5')
+        config = create_config_model('config_x', parameters=[p1, p2, p3, p4, p5])
 
         args_string = executor.build_command_args({
             'p1': 'val1',
@@ -250,14 +160,8 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(args_string, ['-p1', 'val1', 'val2', '--p3', 'val5'])
 
     def test_parameter_secure_no_value(self):
-        config = script_configs.Config()
-        config.script_command = 'ls'
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.secure = True
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1', secure=True)
+        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
 
         executor = ScriptExecutor(config, {})
         secure_command = executor.get_secure_command()
@@ -265,14 +169,8 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual('ls', secure_command)
 
     def test_parameter_secure_some_value(self):
-        config = script_configs.Config()
-        config.script_command = 'ls'
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.secure = True
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1', secure=True)
+        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
 
         executor = ScriptExecutor(config, {'p1': 'value'})
         secure_command = executor.get_secure_command()
@@ -280,19 +178,9 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual('ls -p1 ******', secure_command)
 
     def test_parameter_secure_value_and_same_unsecure(self):
-        config = script_configs.Config()
-        config.script_command = 'ls'
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.secure = True
-        config.add_parameter(parameter)
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p2'
-        parameter.param = '-p2'
-        config.add_parameter(parameter)
+        p1 = create_script_param_config('p1', param='-p1', secure=True)
+        p2 = create_script_param_config('p2', param='-p2')
+        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[p1, p2])
 
         executor = ScriptExecutor(config, {'p1': 'value', 'p2': 'value'})
         secure_command = executor.get_secure_command()
@@ -300,15 +188,8 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual('ls -p1 ****** -p2 value', secure_command)
 
     def test_parameter_secure_multiselect(self):
-        config = script_configs.Config()
-        config.script_command = 'ls'
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.secure = True
-        parameter.type = 'multiselect'
-        config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', param='-p1', secure=True, type='multiselect')
+        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
 
         executor = ScriptExecutor(config, {'p1': ['one', 'two', 'three']})
         secure_command = executor.get_secure_command()
@@ -316,16 +197,9 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual('ls -p1 ******,******,******', secure_command)
 
     def test_parameter_secure_multiselect_as_multiarg(self):
-        config = script_configs.Config()
-        config.script_command = 'ls'
-
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.param = '-p1'
-        parameter.secure = True
-        parameter.type = 'multiselect'
-        parameter.multiple_arguments = True
-        config.add_parameter(parameter)
+        parameter = create_script_param_config(
+            'p1', param='-p1', secure=True, type='multiselect', multiple_arguments=True)
+        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
 
         executor = ScriptExecutor(config, {'p1': ['one', 'two', 'three']})
         secure_command = executor.get_secure_command()
@@ -335,7 +209,8 @@ class TestBuildCommandArgs(unittest.TestCase):
 
 class TestProcessOutput(unittest.TestCase):
     def test_log_raw_single_line(self):
-        self.create_and_start_executor()
+        config = self._create_config()
+        self.create_and_start_executor(config)
 
         observer = _StoringObserver()
         self.executor.get_raw_output_stream().subscribe(observer)
@@ -347,7 +222,8 @@ class TestProcessOutput(unittest.TestCase):
         self.assertEqual(['some text'], observer.data)
 
     def test_log_raw_single_buffer(self):
-        self.create_and_start_executor()
+        config = self._create_config()
+        self.create_and_start_executor(config)
 
         observer = _StoringObserver()
         self.executor.get_raw_output_stream().subscribe(observer)
@@ -360,7 +236,8 @@ class TestProcessOutput(unittest.TestCase):
         self.assertEqual(['some text and continuation'], observer.data)
 
     def test_log_raw_multiple_buffers(self):
-        self.create_and_start_executor()
+        config = self._create_config()
+        self.create_and_start_executor(config)
 
         observer = _StoringObserver()
         self.executor.get_raw_output_stream().subscribe(observer)
@@ -376,12 +253,10 @@ class TestProcessOutput(unittest.TestCase):
         self.assertEqual(['some text', ' and continuation'], observer.data)
 
     def test_log_with_secure(self):
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.secure = True
-        self.config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', secure=True)
+        config = self._create_config(parameters=[parameter])
 
-        self.create_and_start_executor({'p1': 'a'})
+        self.create_and_start_executor(config, {'p1': 'a'})
 
         self.write_process_output('a| some text')
         self.write_process_output('\nand a new line')
@@ -393,12 +268,10 @@ class TestProcessOutput(unittest.TestCase):
         self.assertEqual(output, '******| some text\nand ****** new line with some long long text |******')
 
     def test_log_with_secure_ignore_whitespaces(self):
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.secure = True
-        self.config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', secure=True)
+        config = self._create_config(parameters=[parameter])
 
-        self.create_and_start_executor({'p1': ' '})
+        self.create_and_start_executor(config, {'p1': ' '})
 
         self.write_process_output('some text')
         self.write_process_output('\nand a new line')
@@ -410,13 +283,10 @@ class TestProcessOutput(unittest.TestCase):
         self.assertEqual(output, 'some text\nand a new line with some long long text')
 
     def test_log_with_secure_when_multiselect(self):
-        parameter = script_configs.Parameter()
-        parameter.name = 'p1'
-        parameter.secure = True
-        parameter.type = 'multiselect'
-        self.config.add_parameter(parameter)
+        parameter = create_script_param_config('p1', secure=True, type='multiselect')
+        config = self._create_config(parameters=[parameter])
 
-        self.create_and_start_executor({'p1': ['123', 'password']})
+        self.create_and_start_executor(config, {'p1': ['123', 'password']})
 
         self.write_process_output('some text(123)')
         self.write_process_output('\nand a new line')
@@ -427,8 +297,12 @@ class TestProcessOutput(unittest.TestCase):
         output = self.get_finish_output()
         self.assertEqual(output, 'some text(******)\nand a new line with my ******')
 
+    @staticmethod
+    def _create_config(parameters=None):
+        return create_config_model('config_x', config={'script_path': 'ls'}, parameters=parameters)
+
     def setUp(self):
-        self.config = script_configs.Config()
+        self.config = create_config_model('config_x')
         self.config.script_command = 'ls'
         executor._process_creator = _MockProcessWrapper
 
@@ -453,11 +327,11 @@ class TestProcessOutput(unittest.TestCase):
         output = ''.join(data)
         return output
 
-    def create_and_start_executor(self, parameter_values=None):
+    def create_and_start_executor(self, config, parameter_values=None):
         if parameter_values is None:
             parameter_values = {}
 
-        self.executor = ScriptExecutor(self.config, parameter_values)
+        self.executor = ScriptExecutor(config, parameter_values)
         self.executor.start()
         return self.executor
 

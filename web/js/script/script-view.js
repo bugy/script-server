@@ -163,6 +163,10 @@ ScriptView.prototype.setScriptDescription = function (description) {
     this.vueModel.scriptDescription = description;
 };
 
+ScriptView.prototype.getParameterErrors = function () {
+    return this.vueModel.$refs.parametersView.getErrors();
+};
+
 ScriptView.prototype.destroy = function () {
     this.vueModel.$destroy();
 };

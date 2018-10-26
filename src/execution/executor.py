@@ -15,7 +15,7 @@ mock_process = False
 
 
 def create_process_wrapper(executor, command, working_directory):
-    run_pty = executor.config.is_requires_terminal()
+    run_pty = executor.config.requires_terminal
     if run_pty and not os_utils.is_pty_supported():
         LOGGER.warning(
             "Requested PTY mode, but it's not supported for this OS (" + sys.platform + '). Falling back to POpen')
@@ -49,7 +49,7 @@ class ScriptExecutor:
         self.protected_output_stream = None
 
     def _get_working_directory(self):
-        working_directory = self.config.get_working_directory()
+        working_directory = self.config.working_directory
         if working_directory is not None:
             working_directory = file_utils.normalize_path(working_directory)
         return working_directory
@@ -116,7 +116,7 @@ class ScriptExecutor:
         audit_script_args = build_command_args(
             self.parameter_values,
             self.config,
-            model_helper.value_to_str)
+            lambda value, param: param.value_to_str(value))
 
         command = self.script_base_command + audit_script_args
         return ' '.join(command)
@@ -160,22 +160,22 @@ class ScriptExecutor:
 def build_command_args(param_values, config, stringify=lambda value, param: value):
     result = []
 
-    for parameter in config.get_parameters():
-        name = parameter.get_name()
+    for parameter in config.parameters:
+        name = parameter.name
 
-        if parameter.is_constant():
+        if parameter.constant:
             param_values[parameter.name] = parameter.default
 
         if name in param_values:
             value = param_values[name]
 
-            if parameter.is_no_value():
+            if parameter.no_value:
                 # do not replace == True, since REST service can start accepting boolean as string
                 if (value is True) or (value == 'true'):
-                    result.append(parameter.get_param())
+                    result.append(parameter.param)
             elif value:
-                if parameter.get_param():
-                    result.append(parameter.get_param())
+                if parameter.param:
+                    result.append(parameter.param)
 
                 if parameter.type == 'multiselect':
                     strings = [stringify(element, parameter) for element in value]

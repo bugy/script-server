@@ -6,6 +6,7 @@ loadScript('js/components/textfield.js');
 loadScript('js/components/combobox.js');
 loadScript('js/components/file_upload.js');
 loadScript('js/components/log_panel.js');
+loadScript('js/connections/rxWebsocket.js');
 loadScript('js/script/script-controller.js');
 loadScript('js/script/script-parameters-view.js');
 loadScript('js/script/script-view.js');
@@ -348,38 +349,25 @@ function showScript(selectedScript, parameterValues) {
 
     var scriptExecutor = findRunningExecutor(selectedScript);
 
-    var scriptConfig;
-    if (isNull(scriptExecutor)) {
-        try {
-            var rawConfig = authorizedCallHttp('scripts/info?name=' + selectedScript);
-            scriptConfig = JSON.parse(rawConfig);
-        } catch (error) {
-            if (!(error instanceof HttpUnauthorizedError)) {
-                logError(error);
+    scriptHeader.innerText = selectedScript;
 
-                //noinspection JSDuplicatedDeclaration
-                var errorPanel = showErrorPanel('Failed to load script info. Try to reload the page.'
-                    + ' Error message:');
-                errorPanel.appendChild(document.createElement('br'));
-                errorPanel.appendChild(document.createTextNode(error.message));
+    var scriptController = new ScriptController(
+        selectedScript,
+        scriptPanelContainer,
+        function (scriptExecutor) {
+            addRunningExecutor(scriptExecutor);
+        },
+        function (message, error) {
+            logError(error);
 
-                scriptHeader.innerText = selectedScript;
-            }
-
-            return;
-        }
-    } else {
-        scriptConfig = scriptExecutor.scriptConfig;
-    }
-
-    scriptHeader.innerText = scriptConfig.name;
-
-    var scriptController = new ScriptController(scriptConfig, function (scriptExecutor) {
-        addRunningExecutor(scriptExecutor);
-    });
+            //noinspection JSDuplicatedDeclaration
+            var errorPanel = showErrorPanel('Failed to load script info. Try to reload the page.'
+                + ' Error message:');
+            errorPanel.appendChild(document.createElement('br'));
+            errorPanel.appendChild(document.createTextNode(message));
+        });
 
     activeScriptController = scriptController;
-    scriptController.fillView(scriptPanelContainer);
 
     if (!isNull(scriptExecutor)) {
         scriptController.setExecutor(scriptExecutor);

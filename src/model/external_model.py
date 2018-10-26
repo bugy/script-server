@@ -1,8 +1,6 @@
 import json
 from datetime import timezone
 
-import model.script_configs
-from model import model_helper
 from utils import date_utils
 
 
@@ -12,31 +10,39 @@ class ExecutionInfo(object):
         self.script = None
 
 
-def config_to_json(config):
+def config_to_external(config):
     parameters = []
-    for parameter in config.get_parameters():
-        if parameter.is_constant():
+    for parameter in config.parameters:
+        external_param = parameter_to_external(parameter)
+
+        if external_param is None:
             continue
 
-        parameters.append({
-            "name": parameter.get_name(),
-            "description": parameter.get_description(),
-            "withoutValue": parameter.is_no_value(),
-            "required": parameter.is_required(),
-            "default": parameter.default,
-            "type": parameter.type,
-            "min": parameter.get_min(),
-            "max": parameter.get_max(),
-            "values": parameter.get_values({}),
-            "values_dependencies": parameter.get_required_parameters(),
-            "secure": parameter.secure
-        })
+        parameters.append(external_param)
 
-    return json.dumps({
+    return {
         "name": config.name,
-        "description": config.get_description(),
+        "description": config.description,
         "parameters": parameters
-    })
+    }
+
+
+def parameter_to_external(parameter):
+    if parameter.constant:
+        return None
+
+    return {
+        "name": parameter.name,
+        "description": parameter.description,
+        "withoutValue": parameter.no_value,
+        "required": parameter.required,
+        "default": parameter.default,
+        "type": parameter.type,
+        "min": parameter.min,
+        "max": parameter.max,
+        "values": parameter.values,
+        "secure": parameter.secure
+    }
 
 
 def to_short_execution_log(history_entries, running_script_ids=None):
@@ -78,6 +84,7 @@ def _translate_history_entry(entry, running):
 
 def running_flag_to_status(running):
     return 'running' if running else 'finished'
+
 
 def to_execution_info(request_parameters):
     NAME_KEY = '__script_name'

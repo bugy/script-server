@@ -1,13 +1,15 @@
+import json
 import os
 import shutil
 import stat
 import threading
-import time
 import uuid
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
 from execution.process_base import ProcessWrapper
+from model.script_configs import ConfigModel, ParameterModel
+from react.properties import ObservableDict
 from utils import audit_utils
 
 temp_folder = 'tests_temp'
@@ -60,6 +62,158 @@ def set_win():
 
 def mock_object():
     return type('', (), {})()
+
+
+def write_script_config(conf_object, filename, config_folder=None):
+    if config_folder is None:
+        config_folder = os.path.join(temp_folder, 'runners')
+    file_path = os.path.join(config_folder, filename + '.json')
+
+    config_json = json.dumps(conf_object)
+    file_utils.write_file(file_path, config_json)
+    return file_path
+
+
+def create_script_param_config(
+        param_name,
+        *,
+        type=None,
+        default=None,
+        required=None,
+        secure=None,
+        param=None,
+        no_value=None,
+        constant=None,
+        multiselect_separator=None,
+        multiple_arguments=None,
+        min=None,
+        max=None,
+        allowed_values=None,
+        values_script=None):
+    conf = {'name': param_name}
+
+    if type is not None:
+        conf['type'] = type
+
+    if values_script is not None:
+        conf['values'] = {'script': values_script}
+
+    if default is not None:
+        conf['default'] = default
+
+    if required is not None:
+        conf['required'] = required
+
+    if secure is not None:
+        conf['secure'] = secure
+
+    if param is not None:
+        conf['param'] = param
+
+    if no_value is not None:
+        conf['no_value'] = no_value
+
+    if constant is not None:
+        conf['constant'] = constant
+
+    if multiselect_separator is not None:
+        conf['separator'] = multiselect_separator
+
+    if multiple_arguments is not None:
+        conf['multiple_arguments'] = multiple_arguments
+
+    if min is not None:
+        conf['min'] = min
+
+    if max is not None:
+        conf['max'] = max
+
+    if allowed_values is not None:
+        conf['values'] = list(allowed_values)
+
+    return conf
+
+
+def create_config_model(name, *,
+                        config=None,
+                        username='user1',
+                        audit_name='127.0.0.1',
+                        path=None,
+                        parameters=None,
+                        parameter_values=None):
+    result_config = {}
+
+    if config:
+        result_config.update(config)
+
+    result_config['name'] = name
+
+    if parameters is not None:
+        result_config['parameters'] = parameters
+
+    if path is None:
+        path = name
+
+    return ConfigModel(result_config, path, username, audit_name, parameter_values=parameter_values)
+
+
+def create_parameter_model(name=None,
+                           *,
+                           type=None,
+                           values_script=None,
+                           default=None,
+                           required=None,
+                           secure=None,
+                           param=None,
+                           no_value=None,
+                           constant=None,
+                           multiselect_separator=None,
+                           multiple_arguments=None,
+                           min=None,
+                           max=None,
+                           allowed_values=None,
+                           username='user1',
+                           audit_name='127.0.0.1',
+                           all_parameters=None,
+                           other_param_values: ObservableDict = None):
+    config = create_script_param_config(
+        name,
+        type=type,
+        values_script=values_script,
+        default=default,
+        required=required,
+        secure=secure,
+        param=param,
+        no_value=no_value,
+        constant=constant,
+        multiselect_separator=multiselect_separator,
+        multiple_arguments=multiple_arguments,
+        min=min,
+        max=max,
+        allowed_values=allowed_values)
+
+    if all_parameters is None:
+        all_parameters = []
+
+    return ParameterModel(config,
+                          username,
+                          audit_name,
+                          lambda: all_parameters,
+                          other_param_values=other_param_values)
+
+
+def create_parameter_model_from_config(config,
+                                       *,
+                                       username='user1',
+                                       audit_name='127.0.0.1',
+                                       all_parameters=None):
+    if all_parameters is None:
+        all_parameters = []
+
+    if config is None:
+        config = {}
+
+    return ParameterModel(config, username, audit_name, all_parameters)
 
 
 def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostname=None):

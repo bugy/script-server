@@ -1,0 +1,11 @@
+{
+  "hidden": true,
+  "parameters": [
+    {
+      "name": "inc_param1"
+    },
+    {
+      "name": "inc_param2"
+    }
+  ]
+}

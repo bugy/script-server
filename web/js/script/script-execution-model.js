@@ -1,8 +1,7 @@
 "use strict";
 
-function ScriptExecutor(scriptConfig) {
-    this.scriptConfig = scriptConfig;
-    this.scriptName = scriptConfig.name;
+function ScriptExecutor(scriptName) {
+    this.scriptName = scriptName;
     this.parameterValues = null;
     this.websocket = null;
     this.executionId = null;
@@ -16,7 +15,7 @@ ScriptExecutor.prototype.start = function (parameterValues) {
     this.parameterValues = parameterValues;
 
     var formData = new FormData();
-    formData.append('__script_name', this.scriptConfig.name);
+    formData.append('__script_name', this.scriptName);
 
     forEachKeyValue(parameterValues, function (parameter, value) {
         if (Array.isArray(value)) {
@@ -34,18 +33,7 @@ ScriptExecutor.prototype.start = function (parameterValues) {
 };
 
 ScriptExecutor.prototype._startExecution = function (executionId) {
-    var location = window.location;
-
-    var https = location.protocol.toLowerCase() === 'https:';
-    var wsProtocol = https ? 'wss' : 'ws';
-    var hostUrl = wsProtocol + '://' + location.host;
-
-    var dir = getUrlDir();
-    if (dir) {
-        hostUrl += '/' + dir;
-    }
-
-    this.websocket = new WebSocket(hostUrl + '/scripts/execution/io/' + executionId);
+    this.websocket = new WebSocket(getWebsocketUrl('scripts/execution/io/' + executionId));
 
     this.websocket.addEventListener('message', function (message) {
         var event = JSON.parse(message.data);
@@ -145,7 +133,7 @@ ScriptExecutor.prototype.isFinished = function () {
         return true;
     }
 
-    return ((this.websocket.readyState === 2) || (this.websocket.readyState === 3));
+    return isWebsocketClosed(this.websocket);
 };
 
 ScriptExecutor.prototype.stop = function () {

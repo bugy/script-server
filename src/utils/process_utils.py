@@ -26,14 +26,7 @@ def invoke(command, work_dir='.'):
 
     result_code = p.returncode
     if result_code != 0:
-        message = "Execution failed with exit code " + str(result_code)
-        print(message)
-        print(output)
-
-        if error:
-            print(" --- ERRORS ---:")
-            print(error)
-        raise Exception(message)
+        raise ExecutionException(result_code, error, output)
 
     if error:
         print("WARN! Error output wasn't empty, although the command finished with code 0!")
@@ -77,3 +70,19 @@ def _is_file_path(script_command_with_whitespaces, working_directory):
         return True
 
     return False
+
+
+class ExecutionException(Exception):
+    def __init__(self, exit_code, stderr, stdout):
+        message = 'Execution failed. Code ' + str(exit_code)
+        if stderr:
+            message += ': ' + stderr
+        elif stdout:
+            last_line_start = stdout.rfind('\n')
+            message += ': ' + stdout[last_line_start:]
+
+        super().__init__(message)
+
+        self._stdout = stdout
+        self._stderr = stderr
+        self._exit_code = exit_code

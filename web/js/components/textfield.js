@@ -61,10 +61,10 @@
                     var textField = this.$refs.textField;
 
                     if (!isNull(textField) && (textField.value === newValue)) {
-                        this._doValidation();
+                        this._doValidation(this.value);
                     } else {
                         this.$nextTick(function () {
-                            this._doValidation();
+                            this._doValidation(this.value);
                         }.bind(this));
                     }
                 }
@@ -76,6 +76,7 @@
                 var textField = this.$refs.textField;
                 var value = textField.value;
 
+                this._doValidation(value);
                 this.$emit('input', value);
             },
 
@@ -100,9 +101,9 @@
                 return '';
             },
 
-            _doValidation() {
+            _doValidation(value) {
                 var textField = this.$refs.textField;
-                this.error = this.getValidationError(this.value, textField);
+                this.error = this.getValidationError(value, textField);
                 textField.setCustomValidity(this.error);
 
                 this.$emit('error', this.error);

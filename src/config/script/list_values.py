@@ -24,6 +24,12 @@ class EmptyValuesProvider(ValuesProvider):
         return []
 
 
+class NoneValuesProvider(ValuesProvider):
+
+    def get_values(self, parameter_values):
+        return None
+
+
 class ConstValuesProvider(ValuesProvider):
 
     def __init__(self, values) -> None:
@@ -46,7 +52,7 @@ class ScriptValuesProvider(ValuesProvider):
 
 class DependantScriptValuesProvider(ValuesProvider):
 
-    def __init__(self, script, parameters) -> None:
+    def __init__(self, script, parameters_supplier) -> None:
         pattern = re.compile('\${([^}]+)\}')
 
         search_start = 0
@@ -67,30 +73,9 @@ class DependantScriptValuesProvider(ValuesProvider):
 
             search_start = match.end() + 1
 
-        parameters_dict = {}
-        for parameter in parameters:
-            parameters_dict[parameter.name] = parameter
-
-        for param_name in required_parameters:
-            if param_name not in parameters_dict:
-                raise Exception('Missing parameter "' + param_name + '" for the script')
-            parameter = parameters_dict[param_name]
-            unsupported_type = None
-
-            if parameter.constant:
-                unsupported_type = 'constant'
-            elif parameter.secure:
-                unsupported_type = 'secure'
-            elif parameter.no_value:
-                unsupported_type = 'no_value'
-
-            if unsupported_type:
-                raise Exception(
-                    'Unsupported parameter "' + param_name + '" of type "' + unsupported_type + '" in values.script! ')
-
         self._required_parameters = tuple(required_parameters)
         self._script_template = script
-        self._parameter_configs = parameters
+        self._parameters_supplier = parameters_supplier
 
     def get_required_parameters(self):
         return self._required_parameters
@@ -101,12 +86,13 @@ class DependantScriptValuesProvider(ValuesProvider):
             if is_empty(value):
                 return []
 
-        script = fill_parameter_values(self._parameter_configs, self._script_template, parameter_values)
+        parameters = self._parameters_supplier()
+        script = fill_parameter_values(parameters, self._script_template, parameter_values)
 
         try:
             script_output = process_utils.invoke(script)
-        except:
-            LOGGER.exception('Failed to execute script')
+        except Exception as e:
+            LOGGER.warn('Failed to execute script. ' + str(e))
             return []
 
         script_output = script_output.rstrip('\n')
