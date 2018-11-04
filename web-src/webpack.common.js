@@ -5,7 +5,6 @@ const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const devMode = process.env.NODE_ENV !== 'production';
 
 module.exports = {
     entry: {
@@ -17,19 +16,9 @@ module.exports = {
         filename: '[name].js',
         path: path.resolve(__dirname + '/../web')
     },
-    devServer: {
-        contentBase: path.resolve(__dirname + '/../web'),
-        hot: true,
-        proxy: [{
-            context: ['/scripts', '/conf', '/auth', '/result_files', '/admin', '/login', '/logout'],
-            target: 'http://localhost:5000',
-            ws: true
-        }]
-    },
-    devtool:
-        'inline-source-map',
     resolve: {
         alias: {
+            // TODO this can be removed after migration to .vue
             vue: 'vue/dist/vue.js'
         }
     },
@@ -66,8 +55,7 @@ module.exports = {
             ]),
             new MiniCssExtractPlugin({
                 filename: "[name]-deps.css"
-            }),
-            new webpack.HotModuleReplacementPlugin()
+            })
         ],
     module:
         {
@@ -104,5 +92,4 @@ module.exports = {
                 }
             ]
         }
-}
-;
+};
