@@ -51,7 +51,8 @@ module.exports = {
             }),
             new CopyWebpackPlugin([
                 {from: 'images', to: 'images'},
-                {from: 'css', to: 'css'}
+                {from: 'css', to: 'css'},
+                {from: 'favicon.ico', to: 'favicon.ico'}
             ]),
             new MiniCssExtractPlugin({
                 filename: "[name]-deps.css"
