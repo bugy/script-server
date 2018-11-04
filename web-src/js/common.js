@@ -1,11 +1,4 @@
-function loadScript(url) {
-    var script = document.createElement('script');
-    script.src = url;
-    script.async = false;
-    document.head.appendChild(script);
-}
-
-function findNeighbour(element, tag) {
+export function findNeighbour(element, tag) {
     var tagLower = tag.toLowerCase();
 
     var previous = element.previousSibling;
@@ -29,11 +22,11 @@ function findNeighbour(element, tag) {
     return null;
 }
 
-function isEmptyString(value) {
+export function isEmptyString(value) {
     return isNull(value) || value.length === 0;
 }
 
-function isEmptyArray(value) {
+export function isEmptyArray(value) {
     return isNull(value) || value.length === 0;
 }
 
@@ -51,7 +44,7 @@ function isEmptyValue(value) {
     }
 }
 
-function isEmptyObject(obj) {
+export function isEmptyObject(obj) {
     if (isNull(obj)) {
         return true;
     }
@@ -65,21 +58,21 @@ function isEmptyObject(obj) {
     return true;
 }
 
-function addClass(element, clazz) {
+export function addClass(element, clazz) {
     if (!hasClass(element, clazz)) {
         element.classList.add(clazz);
     }
 }
 
-function hasClass(element, clazz) {
+export function hasClass(element, clazz) {
     return element.classList.contains(clazz);
 }
 
-function removeClass(element, clazz) {
+export function removeClass(element, clazz) {
     element.classList.remove(clazz);
 }
 
-function callHttp(url, object, method, asyncHandler, onError) {
+export function callHttp(url, object, method, asyncHandler, onError) {
     method = method || "GET";
 
     var xhttp = new XMLHttpRequest();
@@ -160,32 +153,32 @@ function _createErrorType(name, init) {
     return NewErrorType;
 }
 
-var HttpRequestError = _createErrorType('HttpRequestError', function (code, message) {
+export const HttpRequestError = _createErrorType('HttpRequestError', function (code, message) {
     this.code = code || -1;
     this.message = message || '';
 });
 
-var SocketClosedError = _createErrorType('SocketClosedError', function (code, reason) {
+export const SocketClosedError = _createErrorType('SocketClosedError', function (code, reason) {
     this.code = code || -1;
     this.reason = reason || '';
 });
 
-var HttpUnauthorizedError = _createErrorType('HttpUnauthorizedError', function (code, message) {
+export const HttpUnauthorizedError = _createErrorType('HttpUnauthorizedError', function (code, message) {
     this.code = code || -1;
     this.message = message || '';
 });
 
-function isNull(object) {
+export function isNull(object) {
     return ((typeof object) === 'undefined' || (object === null));
 }
 
-function destroyChildren(element) {
+export function destroyChildren(element) {
     while (element.firstChild) {
         element.removeChild(element.firstChild);
     }
 }
 
-function hide(element) {
+export function hide(element) {
     var currentDisplay = window.getComputedStyle(element).display;
     if (currentDisplay === 'none') {
         return;
@@ -195,7 +188,7 @@ function hide(element) {
     element.style.display = 'none';
 }
 
-function show(element, displayStyle) {
+export function show(element, displayStyle) {
     if (isNull(displayStyle) && (isNull(element.oldDisplay))) {
         if (element.style.display === 'none') {
             element.style.display = '';
@@ -211,7 +204,7 @@ function show(element, displayStyle) {
     element.style.display = displayStyle;
 }
 
-function removeElement(array, element) {
+export function removeElement(array, element) {
     var index = array.indexOf(element);
     if (index >= 0) {
         array.splice(index, 1);
@@ -220,18 +213,18 @@ function removeElement(array, element) {
     return array;
 }
 
-function removeElements(array, elements) {
+export function removeElements(array, elements) {
     for (var i = 0; i < elements.length; i++) {
         var element = elements[i];
         removeElement(array, element);
     }
 }
 
-function clearArray(array) {
+export function clearArray(array) {
     array.splice(0, array.length);
 }
 
-function guid(length) {
+export function guid(length) {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
             .toString(16)
@@ -257,11 +250,11 @@ function guid(length) {
     return guid;
 }
 
-function logError(error) {
+export function logError(error) {
     (console.error || console.log).call(console, error.stack || error);
 }
 
-function createTemplateElement(templateName) {
+export function createTemplateElement(templateName) {
     var template = $('#' + templateName).html().trim();
     var element = $.parseHTML(template)[0];
 
@@ -276,7 +269,7 @@ function bindTemplatedFieldLabel(field, label) {
     label.for = field.id;
 }
 
-function readQueryParameters() {
+export function readQueryParameters() {
     var argString = window.location.search;
     if (!argString || argString.length <= 1) {
         return {};
@@ -301,7 +294,7 @@ function readQueryParameters() {
     return result;
 }
 
-function getQueryParameter(parameter, url) {
+export function getQueryParameter(parameter, url) {
     var parameters = readQueryParameters(url);
     return parameters[parameter];
 }
@@ -311,7 +304,7 @@ function getUrlDir() {
     return path.substring(0, path.lastIndexOf('/'));
 }
 
-function getWebsocketUrl(relativePath) {
+export function getWebsocketUrl(relativePath) {
     var location = window.location;
 
     var https = location.protocol.toLowerCase() === 'https:';
@@ -334,19 +327,19 @@ function getWebsocketUrl(relativePath) {
     return hostUrl + relativePath;
 }
 
-function isWebsocketClosed(websocket) {
+export function isWebsocketClosed(websocket) {
     return ((websocket.readyState === 2) || (websocket.readyState === 3));
 }
 
-function getUnparameterizedUrl() {
+export function getUnparameterizedUrl() {
     return [location.protocol, '//', location.host, location.pathname].join('');
 }
 
-function contains(array, element) {
+export function contains(array, element) {
     return array.indexOf(element) !== -1
 }
 
-function forEachKeyValue(array, callback) {
+export function forEachKeyValue(array, callback) {
     for (var key in array) {
         if (array.hasOwnProperty(key)) {
             var value = array[key];
@@ -355,7 +348,7 @@ function forEachKeyValue(array, callback) {
     }
 }
 
-function toBoolean(value) {
+export function toBoolean(value) {
     if (typeof(value) === 'boolean') {
         return value;
 
@@ -367,12 +360,12 @@ function toBoolean(value) {
     }
 }
 
-function getLinesCount(text) {
+export function getLinesCount(text) {
     var linesMatch = text.match(/\n/g);
     return isNull(linesMatch) ? 0 : linesMatch.length;
 }
 
-function arraysEqual(arr1, arr2) {
+export function arraysEqual(arr1, arr2) {
     if (arr1 === arr2) {
         return true;
     }
@@ -422,11 +415,20 @@ if (!String.prototype.endsWith) {
     };
 }
 
-function toDict(array, fieldName) {
+export function toDict(array, fieldName) {
     var result = {};
     for (var i = 0; i < array.length; i++) {
         var element = array[i];
         result[element[fieldName]] = element;
     }
     return result;
+}
+
+export function setButtonEnabled(button, enabled) {
+    button.disabled = !enabled;
+    if (!enabled) {
+        addClass(button, "disabled");
+    } else {
+        removeClass(button, "disabled");
+    }
 }

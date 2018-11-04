@@ -1,4 +1,10 @@
-'use strict';
+import '../style_imports';
+
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+import {executionsLogPage} from './executions-log';
+
+Vue.use(VueRouter);
 
 document.addEventListener('DOMContentLoaded', function () {
     var router = new VueRouter({

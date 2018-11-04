@@ -1,4 +1,6 @@
-'use strict';
+import * as M from 'materialize-css';
+import Vue from 'vue';
+import {arraysEqual, contains, findNeighbour, isEmptyString, isNull} from '../common';
 
 (function () {
     Vue.component('combobox', {
@@ -92,8 +94,9 @@
             })
         },
 
-        destroyed: function () {
-            $(this.$refs.selectField).material_select('destroy');
+        beforeDestroy: function () {
+            const instance = M.FormSelect.getInstance(this.$refs.selectField);
+            instance.destroy();
         },
 
         methods: {
@@ -183,7 +186,7 @@
             },
 
             rerenderCombobox() {
-                $(this.$refs.selectField).material_select();
+                $(this.$refs.selectField).formSelect();
 
                 var inputField = findNeighbour(this.$refs.selectField, 'input');
 

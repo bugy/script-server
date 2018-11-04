@@ -1,6 +1,8 @@
-'use strict';
+import marked from 'marked';
+import Vue from 'vue';
+import {forEachKeyValue, guid, isEmptyObject, isEmptyString, isNull} from '../common';
 
-function ScriptView(parent, parametersState) {
+export function ScriptView(parent, parametersState) {
     var idSuffix = guid(8);
 
     var vueApp = document.createElement('div');
@@ -12,48 +14,48 @@ function ScriptView(parent, parametersState) {
         el: "#" + vueApp.id,
 
         template:
-        '<div class="script-panel" :id="id">\n'
-        + ' <p class="script-description" v-show="scriptDescription" v-html="formattedDescription"></p>\n'
+            '<div class="script-panel" :id="id">\n'
+            + ' <p class="script-description" v-show="scriptDescription" v-html="formattedDescription"></p>\n'
             + ' <script-parameters-view :parametersState="parametersState" ref="parametersView" />\n'
-        + ' <div>\n'
-        + '     <button class="button-execute btn"'
-        + '         :disabled="!executeEnabled"'
-        + '         v-bind:class="{ disabled: !executeEnabled}"'
-        + '         @click="executeButtonHandler()">'
-        + '         Execute'
-        + '     </button>\n'
-        + '     <button class="button-stop btn red lighten-1" '
-        + '         :disabled="!stopEnabled"'
-        + '         v-bind:class="{ disabled: !stopEnabled}"'
-        + '         @click="stopButtonHandler()">'
-        + '         Stop'
-        + '     </button>\n'
-        + ' </div>\n'
-        + ' <log-panel ref="logPanel" v-show="everStarted && !hasErrors"/>\n'
-        + ' <div class="validation-panel" v-if="hasErrors">\n'
-        + '     <h6 class="header">Validation failed. Errors list:</h6>\n'
-        + '     <ul class="validation-errors-list">'
-        + '         <li v-for="error in errors">{{ error }}</li>'
-        + '     </ul>\n'
-        + ' </div>\n'
-        + ' <div class="files-download-panel" v-if="downloadableFiles && (downloadableFiles.length > 0)">'
-        + '     <a v-for="file in downloadableFiles"'
-        + '         class="waves-effect waves-teal btn-flat"'
-        + '         :download="file.filename"'
-        + '         :href="file.url"'
-        + '         target="_blank">'
-        + '         {{ file.filename }}'
-        + '         <img src="images/file_download.png">'
-        + '     </a>'
-        + ' </div>\n'
-        + ' <div class="script-input-panel input-field" v-if="inputPrompt">\n'
-        + '    <label class="script-input-label" for="inputField-' + idSuffix + '">{{ inputPrompt.text }}</label>\n'
-        + '    <input class="script-input-field" type="text" '
-        + '         id="inputField-' + idSuffix + '"'
-        + '         ref="inputField"'
-        + '         v-on:keyup="inputKeyUpHandler">\n'
-        + ' </div>\n' +
-        '</div>',
+            + ' <div>\n'
+            + '     <button class="button-execute btn"'
+            + '         :disabled="!executeEnabled"'
+            + '         v-bind:class="{ disabled: !executeEnabled}"'
+            + '         @click="executeButtonHandler()">'
+            + '         Execute'
+            + '     </button>\n'
+            + '     <button class="button-stop btn red lighten-1" '
+            + '         :disabled="!stopEnabled"'
+            + '         v-bind:class="{ disabled: !stopEnabled}"'
+            + '         @click="stopButtonHandler()">'
+            + '         Stop'
+            + '     </button>\n'
+            + ' </div>\n'
+            + ' <log-panel ref="logPanel" v-show="everStarted && !hasErrors"/>\n'
+            + ' <div class="validation-panel" v-if="hasErrors">\n'
+            + '     <h6 class="header">Validation failed. Errors list:</h6>\n'
+            + '     <ul class="validation-errors-list">'
+            + '         <li v-for="error in errors">{{ error }}</li>'
+            + '     </ul>\n'
+            + ' </div>\n'
+            + ' <div class="files-download-panel" v-if="downloadableFiles && (downloadableFiles.length > 0)">'
+            + '     <a v-for="file in downloadableFiles"'
+            + '         class="waves-effect waves-teal btn-flat"'
+            + '         :download="file.filename"'
+            + '         :href="file.url"'
+            + '         target="_blank">'
+            + '         {{ file.filename }}'
+            + '         <img src="images/file_download.png">'
+            + '     </a>'
+            + ' </div>\n'
+            + ' <div class="script-input-panel input-field" v-if="inputPrompt">\n'
+            + '    <label class="script-input-label" for="inputField-' + idSuffix + '">{{ inputPrompt.text }}</label>\n'
+            + '    <input class="script-input-field" type="text" '
+            + '         id="inputField-' + idSuffix + '"'
+            + '         ref="inputField"'
+            + '         v-on:keyup="inputKeyUpHandler">\n'
+            + ' </div>\n' +
+            '</div>',
 
         data: function () {
             return {

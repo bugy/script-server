@@ -1,6 +1,7 @@
-"use strict";
+import {forEachKeyValue, getWebsocketUrl, isNull, isWebsocketClosed, removeElement} from '../common';
+import {authorizedCallHttp} from '../index';
 
-function ScriptExecutor(scriptName) {
+export function ScriptExecutor(scriptName) {
     this.scriptName = scriptName;
     this.parameterValues = null;
     this.websocket = null;
@@ -149,7 +150,7 @@ ScriptExecutor.prototype.abort = function () {
     }
 };
 
-function restoreExecutor(executionId, callback) {
+export function restoreExecutor(executionId, callback) {
     var dataContainer = {rawConfig: null, rawValues: null};
     var loadHandler = function () {
         if (isNull(dataContainer.rawValues) || isNull(dataContainer.rawConfig)) {

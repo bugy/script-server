@@ -1,4 +1,5 @@
-'use strict';
+import Vue from 'vue';
+import {isEmptyString} from '../common';
 
 (function () {
 

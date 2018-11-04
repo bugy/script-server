@@ -1,4 +1,5 @@
-'use strict';
+import Vue from 'vue';
+import {isNull} from '../common';
 
 (function () {
     Vue.component('file-upload-field', {

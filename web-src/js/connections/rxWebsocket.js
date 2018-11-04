@@ -1,8 +1,8 @@
-'use strict';
+import {getWebsocketUrl, HttpUnauthorizedError, isWebsocketClosed, SocketClosedError} from '../common';
 
 var i = 0;
 
-function ReactiveWebSocket(path, observer) {
+export function ReactiveWebSocket(path, observer) {
     if (/^((https?)|(wss?)):\/\//.test(path)) {
         this.url = path;
     } else {

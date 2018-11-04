@@ -2,13 +2,31 @@
   "name": "script-server",
   "version": "1.12.0",
   "dependencies": {
-    "materializecss": "^1.0.11",
+    "hashtablejs": "^0.0.1",
+    "jquery": "^3.3.1",
+    "marked": "^0.5.1",
+    "materialize-css": "^1.0.0",
+    "typeface-roboto": "0.0.54",
     "vue": "^2.5.17",
     "vue-router": "^3.0.1",
-    "marked": "^0.5.1",
-    "hashtablejs": "^0.0.1"
+    "material-design-icons": "^3.0.1"
   },
   "devDependencies": {
-    "webpack": "^4.23.1"
+    "@babel/core": "^7.1.2",
+    "@babel/preset-env": "^7.1.0",
+    "babel-loader": "^8.0.4",
+    "copy-webpack-plugin": "^4.6.0",
+    "css-loader": "^1.0.1",
+    "file-loader": "^2.0.0",
+    "html-webpack-plugin": "^3.2.0",
+    "mini-css-extract-plugin": "^0.4.4",
+    "style-loader": "^0.23.1",
+    "webpack": "^4.23.1",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": "^3.1.10"
+  },
+  "scripts": {
+    "start:dev": "webpack-dev-server -d --devtool inline-source-map",
+    "build:prod": "webpack --mode production"
   }
 }

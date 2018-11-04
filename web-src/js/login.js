@@ -1,8 +1,21 @@
+import {
+    addClass,
+    callHttp,
+    contains,
+    createTemplateElement,
+    getQueryParameter,
+    getUnparameterizedUrl,
+    guid
+} from './common';
+import './style_imports.js';
+
 var NEXT_URL_KEY = 'next';
 var OAUTH_RESPONSE_KEY = 'code';
 
 var loginMethod = 'POST';
 var loginUrl = 'login';
+
+window.onload = onLoad;
 
 function onLoad() {
     callHttp('auth/config', null, 'GET', function (configResponse) {
@@ -57,14 +70,14 @@ function setupGoogleOAuth(loginContainer, authConfig) {
 
         saveState(localState);
 
-        var arguments = {
+        var queryArgs = {
             'redirect_uri': getUnparameterizedUrl(),
             'state': token,
             'client_id': authConfig['client_id'],
             'scope': authConfig['oauth_scope'],
             'response_type': OAUTH_RESPONSE_KEY
         };
-        var query = $.param(arguments);
+        var query = $.param(queryArgs);
         window.location = authConfig['oauth_url'] + '?' + query;
     };
 

@@ -1,4 +1,6 @@
-'use strict';
+import Hashtable from 'hashtablejs';
+import Vue from 'vue';
+import {addClass, contains, destroyChildren, getLinesCount, isNull} from '../common';
 
 var logPanelComponent;
 
@@ -238,7 +240,7 @@ var logPanelComponent;
             }
         }
 
-        var elementReplacements = new Hashtable();
+        const elementReplacements = new Hashtable();
 
         for (var i = lines.length - 1; i >= 0; i--) {
             var line = lines[i];
@@ -254,7 +256,7 @@ var logPanelComponent;
                         currentText = chunk.text + currentText;
                         setLogElementText(currentElement, currentText);
                     } else {
-                        var newElement = newElementCreator(chunk.text);
+                        const newElement = newElementCreator(chunk.text);
                         appendNewElement(newElement);
                         currentElement = newElement;
                     }
@@ -267,7 +269,7 @@ var logPanelComponent;
 
                     prevElementNew = false;
 
-                    if (elementReplacements.containsKey(chunkElement)) {
+                    if (elementReplacements.has(chunkElement)) {
                         chunkElement = elementReplacements.get(chunkElement);
                     }
 

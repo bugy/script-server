@@ -1,4 +1,5 @@
-'use strict';
+import Vue from 'vue';
+import {isEmptyString, isNull} from '../common';
 
 (function () {
     Vue.component('textfield', {

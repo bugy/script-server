@@ -67,6 +67,7 @@ conf/conf.json
 logs
 .idea
 temp
+web
 web-src/css/libs
 web-src/css/fonts/libs
 web-src/js/libs

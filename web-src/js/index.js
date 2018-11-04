@@ -1,23 +1,46 @@
-'use strict';
+import Hashtable from 'hashtablejs';
+import {
+    addClass,
+    callHttp,
+    clearArray,
+    createTemplateElement,
+    destroyChildren,
+    getUnparameterizedUrl,
+    hasClass,
+    hide,
+    HttpRequestError,
+    HttpUnauthorizedError,
+    isEmptyObject,
+    isNull,
+    logError,
+    readQueryParameters,
+    removeClass,
+    removeElements,
+    show
+} from './common';
+import './components/checkbox.js';
+import './components/combobox.js';
 
-loadScript('js/components/component.js');
-loadScript('js/components/checkbox.js');
-loadScript('js/components/textfield.js');
-loadScript('js/components/combobox.js');
-loadScript('js/components/file_upload.js');
-loadScript('js/components/log_panel.js');
-loadScript('js/connections/rxWebsocket.js');
-loadScript('js/script/script-controller.js');
-loadScript('js/script/script-parameters-view.js');
-loadScript('js/script/script-view.js');
-loadScript('js/script/script-execution-model.js');
+import './components/component.js';
+import './components/file_upload.js';
+import './components/log_panel.js';
+import './components/textfield.js';
+import './connections/rxWebsocket.js';
+import {ScriptController} from './script/script-controller';
+import './script/script-controller.js';
+import {restoreExecutor} from './script/script-execution-model';
+import './script/script-execution-model.js';
+import './script/script-parameters-view.js';
+import './script/script-view.js';
+import './style_imports.js';
 
+let selectedScript = null;
+const scriptSelectionListeners = [];
+const scriptMenuItems = new Hashtable();
+const runningScriptExecutors = [];
+let activeScriptController = null;
 
-var selectedScript = null;
-var scriptSelectionListeners = [];
-var scriptMenuItems = new Hashtable();
-var runningScriptExecutors = [];
-var activeScriptController = null;
+window.onload = onLoad;
 
 function onLoad() {
     authorizedCallHttp('conf/title', null, 'GET', function (result) {
@@ -126,7 +149,6 @@ function onLoad() {
 
     initAuthBasedElements();
 }
-
 
 function loadActiveExecutions() {
     authorizedCallHttp('scripts/execution/active', null, null, function (response) {
@@ -244,6 +266,7 @@ function stopRunningScripts() {
 }
 
 function initAuthBasedElements() {
+    const logoutPanel = document.getElementById("logoutPanel");
     hide(logoutPanel);
 
     authorizedCallHttp('auth/info', null, 'GET', function (response) {
@@ -406,15 +429,6 @@ function getHash() {
     return decodeURIComponent(location.hash.substr(1));
 }
 
-function setButtonEnabled(button, enabled) {
-    button.disabled = !enabled;
-    if (!enabled) {
-        addClass(button, "disabled");
-    } else {
-        removeClass(button, "disabled");
-    }
-}
-
 function updateMenuItemState(scriptName) {
     var executing = false;
     var finished = false;
@@ -449,7 +463,7 @@ function updateMenuItemState(scriptName) {
     }
 }
 
-function authorizedCallHttp(url, object, method, asyncHandler) {
+export function authorizedCallHttp(url, object, method, asyncHandler) {
     try {
         return callHttp(url, object, method, asyncHandler);
     } catch (error) {

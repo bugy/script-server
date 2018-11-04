@@ -1,6 +1,9 @@
-'use strict';
+import Vue from 'vue';
+import {callHttp, isNull} from '../common';
+import '../components/common-components'
+import '../components/log_panel'
 
-var executionsLogPage;
+export var executionsLogPage;
 
 (function () {
     var pageState = {selectedExecution: null};

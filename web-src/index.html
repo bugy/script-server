@@ -5,21 +5,19 @@
     <title>Script server</title>
     <meta charset="utf-8">
 
-    <link rel="stylesheet" href="css/libs/materialize.min.css">
-    <link rel="stylesheet" href="css/font_styles.css">
-    <script src="js/libs/jquery.min.js"></script>
-    <script src="js/libs/materialize.js"></script>
-    <script src="js/libs/hashtable.js"></script>
-    <script src="js/libs/vue.js"></script>
-    <script src="js/libs/marked.js"></script>
-    <script src="js/common.js"></script>
-    <script src="js/index.js"></script>
+    <% for (var css in htmlWebpackPlugin.files.css) { %>
+    <link href="<%= htmlWebpackPlugin.files.css[css] %>" rel="stylesheet">
+    <% } %>
 
     <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="css/bash_styles.css">
+
+    <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+    <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+    <% } %>
 </head>
 
-<body onload="onLoad()">
+<body>
 <div class="container-fluid" id="mainPanel">
     <div id="scriptsPanel">
         <div id="scriptsList">

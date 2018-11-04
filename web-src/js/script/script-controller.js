@@ -1,6 +1,20 @@
-'use strict';
+import Vue from 'vue';
+import {
+    forEachKeyValue,
+    HttpUnauthorizedError,
+    isEmptyString,
+    isNull,
+    isWebsocketClosed,
+    logError,
+    SocketClosedError,
+    toBoolean,
+    toDict
+} from '../common';
+import {ReactiveWebSocket} from '../connections/rxWebsocket';
+import {ScriptExecutor} from './script-execution-model';
+import {ScriptView} from './script-view';
 
-function ScriptController(scriptName, parent, executionStartCallback, loadErrorCallback) {
+export function ScriptController(scriptName, parent, executionStartCallback, loadErrorCallback) {
     this.scriptName = scriptName;
     this.executionStartCallback = executionStartCallback;
     this.scriptView = null;

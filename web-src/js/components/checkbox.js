@@ -1,4 +1,5 @@
-'use strict';
+import Vue from 'vue'
+import {toBoolean} from '../common';
 
 (function () {
     Vue.component('checkbox', {
