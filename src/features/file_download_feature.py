@@ -80,7 +80,7 @@ class FileDownloadFeature:
 
             if files:
                 for file in files:
-                    file_path = file_utils.normalize_path(file, config.get_working_directory())
+                    file_path = file_utils.normalize_path(file, config.working_directory)
                     if not os.path.exists(file_path):
                         LOGGER.warning('file ' + file + ' (full path = ' + file_path + ') not found')
                     elif os.path.isdir(file_path):
