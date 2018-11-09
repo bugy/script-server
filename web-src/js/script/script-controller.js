@@ -14,7 +14,7 @@ import {ReactiveWebSocket} from '../connections/rxWebsocket';
 import {ScriptExecutor} from './script-execution-model';
 import {ScriptView} from './script-view';
 
-export function ScriptController(scriptName, parent, executionStartCallback, loadErrorCallback) {
+export function ScriptController(scriptName, parent, executionStartCallback, loadFinishedCallback, loadErrorCallback) {
     this.scriptName = scriptName;
     this.executionStartCallback = executionStartCallback;
     this.scriptView = null;
@@ -29,10 +29,10 @@ export function ScriptController(scriptName, parent, executionStartCallback, loa
 
     this._initParametersModel();
 
-    this._reconnect(loadErrorCallback);
+    this._reconnect(loadFinishedCallback, loadErrorCallback);
 }
 
-ScriptController.prototype._reconnect = function (loadErrorCallback) {
+ScriptController.prototype._reconnect = function (loadFinishedCallback, loadErrorCallback) {
     var controller = this;
 
     if (!isNull(this.websocket) && !isWebsocketClosed(this.websocket)) {
@@ -60,6 +60,9 @@ ScriptController.prototype._reconnect = function (loadErrorCallback) {
 
             if (eventType === 'initialConfig') {
                 controller._updateScriptConfig(data);
+                if (loadFinishedCallback) {
+                    loadFinishedCallback(data);
+                }
                 return;
             }
 
@@ -98,7 +101,7 @@ ScriptController.prototype._reconnect = function (loadErrorCallback) {
 
                 setTimeout(function () {
                     console.log('Trying to reconnect. Attempt ' + controller._reconnectionAttempt);
-                    controller._reconnect(loadErrorCallback);
+                    controller._reconnect(loadFinishedCallback, loadErrorCallback);
                 }, (controller._reconnectionAttempt - 1) * 500);
 
                 return;
@@ -219,10 +222,12 @@ ScriptController.prototype.destroy = function () {
 ScriptController.prototype.setExecutor = function (executor) {
     this.executor = executor;
 
-    this._setParameterValues(executor.parameterValues);
+    if (this.scriptConfig != null) {
+        this._setParameterValues(executor.parameterValues);
 
-    this.scriptView.setExecuting();
-    this._updateViewWithExecutor(executor);
+        this.scriptView.setExecuting();
+        this._updateViewWithExecutor(executor);
+    }
 };
 
 ScriptController.prototype._updateViewWithExecutor = function (executor) {

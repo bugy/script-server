@@ -160,7 +160,7 @@ export function restoreExecutor(executionId, callback) {
         var scriptConfig = JSON.parse(dataContainer.rawConfig);
         var parameterValues = JSON.parse(dataContainer.rawValues);
 
-        var executor = new ScriptExecutor(scriptConfig);
+        var executor = new ScriptExecutor(scriptConfig.name);
         executor.executionId = executionId;
         executor.parameterValues = parameterValues;
         executor._startExecution(executionId);

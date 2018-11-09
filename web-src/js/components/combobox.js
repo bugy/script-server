@@ -1,6 +1,6 @@
 import * as M from 'materialize-css';
 import Vue from 'vue';
-import {arraysEqual, contains, findNeighbour, isEmptyString, isNull} from '../common';
+import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, removeClass} from '../common';
 
 (function () {
     Vue.component('combobox', {
@@ -14,7 +14,9 @@ import {arraysEqual, contains, findNeighbour, isEmptyString, isNull} from '../co
             + '     :multiple="config.multiselect"'
             + '     :disabled="options.length === 0">\n'
             + '    <option :selected="!anythingSelected" value="" disabled>Choose your option</option>\n'
-            + '    <option v-for="option in options" :value="option.value" :selected="option.selected">{{ option.value }}</option>\n'
+            + '    <option v-for="option in options" '
+            + '     :value="option.value" '
+            + '     :selected="option.selected">{{ option.value }}</option>\n'
             + '  </select>'
             + '  <label :for="config.name">{{ config.name }}</label>\n'
             + '</div>',
@@ -188,10 +190,9 @@ import {arraysEqual, contains, findNeighbour, isEmptyString, isNull} from '../co
             rerenderCombobox() {
                 $(this.$refs.selectField).formSelect();
 
-                var inputField = findNeighbour(this.$refs.selectField, 'input');
-
-                inputField.removeAttribute('readonly'); // otherwise the field will ignore "setCustomValidity"
-                inputField.setAttribute('data-constrainwidth', false);
+                $(this.$el).find('.dropdown-trigger').dropdown({
+                    constrainWidth: false
+                });
 
                 $(this.$refs.selectField).siblings('ul').children('li').each(function () {
                     var text = $(this).children('span:first-child').text();
@@ -200,7 +201,14 @@ import {arraysEqual, contains, findNeighbour, isEmptyString, isNull} from '../co
                     }
                 });
 
-                inputField.setCustomValidity(this.error);
+                var inputField = findNeighbour(this.$refs.selectField, 'input');
+
+                // setCustomValidity doesn't work since input is readonly
+                if (this.error) {
+                    addClass(inputField, 'invalid');
+                } else {
+                    removeClass(inputField, 'invalid');
+                }
             }
         }
     });

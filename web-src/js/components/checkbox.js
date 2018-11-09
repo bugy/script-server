@@ -4,14 +4,14 @@ import {toBoolean} from '../common';
 (function () {
     Vue.component('checkbox', {
         template:
-            '<div class="input-field" :title="config.description">\n'
+            '<label class="input-field" :title="config.description">\n'
             + '  <input :id="config.name" '
             + '     type="checkbox" '
             + '     :checked="boolValue" '
             + '     @input="emitValueChange"'
             + '     ref="checkbox"/>\n'
-            + '  <label :for="config.name">{{ config.name }}</label>\n'
-            + '</div>',
+            + '  <span>{{ config.name }}</span>\n'
+            + '</label>',
 
         props: {
             'value': [Boolean, String, Number],

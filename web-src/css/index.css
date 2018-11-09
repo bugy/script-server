@@ -50,8 +50,9 @@ body {
 }
 
 #searchField {
-    width: calc(100% - 8px);
+    width: 100%;
     height: 1.5rem;
+    font-size: 1rem;
     float: right;
     padding: 0;
     margin: 0;
@@ -59,17 +60,16 @@ body {
 
 #searchPanel {
     padding: 16px 10px;
-    width: auto;
-    display: flex;
-    flex-direction: row;
+    width: calc(100% - 80px - 10px);
     vertical-align: middle;
     position: absolute;
     top: 0;
-    right: 54px;
+    right: 80px;
     background: white;
+    transition: width 0.3s;
 }
 
-#searchField.collapsed {
+#searchPanel.collapsed {
     width: 0;
 }
 
@@ -241,7 +241,22 @@ body {
 
 #content-panel .script-parameters-panel .parameter input {
     margin: 0;
-    width: 100%;
+
+    font-size: 1rem;
+    height: 1.5em;
+}
+
+#content-panel .script-parameters-panel .parameter > label {
+    transform: none;
+    font-size: 1rem;
+}
+
+#content-panel .script-parameters-panel .parameter > label.active {
+    transform: translateY(-70%) scale(0.8);
+}
+
+.script-parameters-panel .input-field input[type=checkbox] + span {
+    padding-left: 28px;
 }
 
 #content-panel .script-parameters-panel .parameter.file-upload-field > input {
@@ -372,22 +387,8 @@ body {
     -moz-box-shadow: 0 -7px 8px -4px #888888 inset;
 }
 
-#content-panel input {
-    height: 1.5em;
-    width: auto;
-}
-
 #content-panel .input-field label {
     top: 0;
-}
-
-#content-panel .input-field [type="checkbox"] + label {
-    left: 0;
-    padding-left: 28px;
-}
-
-#content-panel .input-field label.active {
-    transform: translateY(-90%);
 }
 
 #content-panel .button-execute {
@@ -414,6 +415,18 @@ body {
 #content-panel .script-input-panel input {
     margin: 0;
     width: 100%;
+    height: 1.5em;
+    font-size: 1rem;
+}
+
+#content-panel .script-input-panel > label {
+    transform: translateY(-30%);
+    margin-left: 2px;
+}
+
+#content-panel .script-input-panel > label.active {
+    color: #26a69a;
+    transform: translateY(-70%) scale(0.8);
 }
 
 #content-panel .validation-panel {
@@ -476,6 +489,36 @@ h6.header {
     padding: 0.5rem;
 }
 
+input:not([type]),
+input[type=text]:not(.browser-default),
+input[type=password]:not(.browser-default),
+input[type=email]:not(.browser-default),
+input[type=url]:not(.browser-default),
+input[type=time]:not(.browser-default),
+input[type=date]:not(.browser-default),
+input[type=datetime]:not(.browsertele-default),
+input[type=datetime-local]:not(.browser-default),
+input[type=tel]:not(.browser-default),
+input[type=number]:not(.browser-default),
+input[type=search]:not(.browser-default),
+textarea.materialize-textarea {
+    color: rgba(0, 0, 0, 0.87);
+}
+
+input[type=checkbox]:not(.browser-default) + span {
+    color: #9e9e9e;
+}
+
+.btn-flat:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+#content-panel .select-dropdown li.disabled,
+#content-panel .select-dropdown li.disabled > span,
+#content-panel .select-dropdown li.optgroup {
+    background-color: transparent;
+}
+
 #content-panel .script-parameters-panel input[type="text"]:invalid,
 #content-panel .script-parameters-panel input[type="number"]:invalid {
     border-bottom: 1px solid #e51c23;
@@ -492,17 +535,17 @@ h6.header {
     left: 0.75rem;
 }
 
-#content-panel .script-parameters-panel .select-wrapper span.caret {
-    top: 2px;
-}
-
 #content-panel .script-parameters-panel .select-wrapper + label {
-    top: -14px;
+    transform: scale(0.8);
+    top: -18px;
 }
 
 #content-panel .script-parameters-panel .dropdown-content {
     max-width: 50vw;
     min-width: 100%;
+    white-space: nowrap;
+
+    margin-bottom: 0;
 }
 
 #content-panel .script-parameters-panel .dropdown-content > li > span {
@@ -543,17 +586,24 @@ h6.header {
     border-image: url("../images/titleBackground.jpg") 300;
 }
 
+#login-panel .login-form .input-field {
+    margin-bottom: 0;
+    width: 96%;
+    margin-left: 2%;
+}
+
 #login-panel .login-form input[type="text"],
 #login-panel .login-form input[type="password"] {
     height: 2em;
+    margin-bottom: 1em;
 }
 
 #login-panel .login-form .input-field label {
-    top: 0;
+    transform: translateY(4px);
 }
 
 #login-panel .login-form .input-field label.active {
-    transform: translateY(-90%);
+    transform: translateY(-70%) scale(0.8);
 }
 
 #credentials-login-button {

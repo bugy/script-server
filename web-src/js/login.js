@@ -1,3 +1,4 @@
+import * as M from 'materialize-css';
 import {
     addClass,
     callHttp,
@@ -34,13 +35,7 @@ function setupCredentials(loginContainer) {
     var credentialsTemplate = createTemplateElement('login-credentials-template');
     loginContainer.appendChild(credentialsTemplate);
 
-    var labels = document.getElementsByTagName("label");
-    for (var i = 0; i < labels.length; i++) {
-        var label = labels[i];
-
-        //workaround for browser autofill - it's not updating label position and label overlap with value
-        addClass(label, "active");
-    }
+    M.updateTextFields();
 
     var form = $(loginContainer).find('.login-form').get(0);
     form.action = loginUrl;

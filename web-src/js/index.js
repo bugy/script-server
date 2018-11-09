@@ -178,8 +178,8 @@ function initSearchPanel() {
 
     searchField.disabled = true;
 
-    searchField.addEventListener("transitionend", function (e) {
-        if ((e.propertyName === "width") && hasClass(searchField, "collapsed")) {
+    searchPanel.addEventListener("transitionend", function (e) {
+        if ((e.propertyName === "width") && hasClass(searchPanel, "collapsed")) {
             searchField.disabled = true;
         }
     });
@@ -198,13 +198,13 @@ function initSearchPanel() {
 
     searchButton.addEventListener("click", function () {
         if (openSearchOnTheNextClick) {
-            removeClass(searchField, "collapsed");
+            removeClass(searchPanel, "collapsed");
             searchField.disabled = false;
             searchField.focus();
             searchButton.src = "images/clear.png";
 
         } else {
-            addClass(searchField, "collapsed");
+            addClass(searchPanel, "collapsed");
             searchButton.src = originalSrc;
             searchField.value = "";
             for (var i = 0; i < scriptsListElement.childElementCount; ++i) {
@@ -215,13 +215,13 @@ function initSearchPanel() {
     });
 
     searchButton.addEventListener("mousedown", function () {
-        openSearchOnTheNextClick = hasClass(searchField, "collapsed");
+        openSearchOnTheNextClick = hasClass(searchPanel, "collapsed");
     });
 
     searchField.addEventListener("blur", function () {
         var searchValue = searchField.value;
         if (searchValue === "") {
-            addClass(searchField, "collapsed");
+            addClass(searchPanel, "collapsed");
             searchButton.src = originalSrc;
         }
     });
@@ -374,11 +374,18 @@ function showScript(selectedScript, parameterValues) {
 
     scriptHeader.innerText = selectedScript;
 
-    var scriptController = new ScriptController(
+    const scriptController = new ScriptController(
         selectedScript,
         scriptPanelContainer,
         function (scriptExecutor) {
             addRunningExecutor(scriptExecutor);
+        },
+        function () {
+            if (!isNull(scriptExecutor)) {
+                scriptController.setExecutor(scriptExecutor);
+            } else if (!isNull(parameterValues)) {
+                scriptController.setParameterValues(parameterValues);
+            }
         },
         function (message, error) {
             logError(error);
@@ -391,12 +398,6 @@ function showScript(selectedScript, parameterValues) {
         });
 
     activeScriptController = scriptController;
-
-    if (!isNull(scriptExecutor)) {
-        scriptController.setExecutor(scriptExecutor);
-    } else if (!isNull(parameterValues)) {
-        scriptController.setParameterValues(parameterValues);
-    }
 }
 
 function findRunningExecutor(selectedScript) {

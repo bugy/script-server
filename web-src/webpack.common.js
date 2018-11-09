@@ -1,5 +1,3 @@
-//TODO fix materializecss styles on index and login forms
-
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
