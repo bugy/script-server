@@ -68,8 +68,5 @@ logs
 .idea
 temp
 web
-web-src/css/libs
-web-src/css/fonts/libs
-web-src/js/libs
 web-src/node_modules
 web-src/package-lock.json

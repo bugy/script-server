@@ -28,6 +28,7 @@
   },
   "scripts": {
     "start:dev": "webpack-dev-server --config webpack.dev.js",
-    "build:prod": "webpack --mode production --config webpack.prod.js"
+    "build:prod": "webpack --mode production --config webpack.prod.js",
+    "build:dev": "webpack --mode development --config webpack.prod.js"
   }
 }
