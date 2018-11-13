@@ -22,7 +22,6 @@ import './components/checkbox.js';
 import './components/combobox.js';
 
 import './components/component.js';
-import './components/file_upload.js';
 import './components/log_panel.js';
 import './components/textfield.js';
 import './connections/rxWebsocket.js';

@@ -3,6 +3,7 @@ const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const VueLoaderPlugin = require('vue-loader/lib/plugin');
 
 module.exports = {
     entry: {
@@ -18,10 +19,12 @@ module.exports = {
         alias: {
             // TODO this can be removed after migration to .vue
             vue: 'vue/dist/vue.js'
-        }
+        },
+        extensions: ['*', '.js', '.vue', '.json']
     },
     plugins:
         [
+            new VueLoaderPlugin(),
             new webpack.ProvidePlugin({
                 '$': 'jquery',
                 jQuery: 'jquery',
@@ -60,6 +63,10 @@ module.exports = {
         {
             rules: [
                 {
+                    test: /\.vue$/,
+                    loaders: ['vue-loader']
+                },
+                {
                     test: /\.js$/,
                     exclude: /node_modules/,
                     use: {
@@ -71,7 +78,6 @@ module.exports = {
                 },
                 {
                     test: /\.css$/,
-                    include: /node_modules/,
                     loaders: [
                         MiniCssExtractPlugin.loader,
                         'css-loader']

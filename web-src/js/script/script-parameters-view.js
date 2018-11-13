@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import {isEmptyString} from '../common';
+import FileUpload from '../components/file_upload'
 
 (function () {
 
@@ -26,6 +27,10 @@ import {isEmptyString} from '../common';
             return {
                 errors: {}
             }
+        },
+
+        components: {
+            'file-upload-field': FileUpload
         },
 
         methods: {
