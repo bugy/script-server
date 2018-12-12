@@ -1,10 +1,219 @@
-import Hashtable from 'hashtablejs';
-import Vue from 'vue';
-import {addClass, contains, destroyChildren, getLinesCount, isNull} from '../common';
+<template>
+    <div class="log-panel">
+        <code class="log-content"
+              v-on:scroll="recalculateScrollPosition"
+              ref="logContent"
+              v-on:mousedown="mouseDown = true"
+              v-on:mouseup="mouseDown = false"></code>
+        <div class="log-panel-shadow"
+             v-bind:class="{
+             'shadow-top': !atTop && atBottom,
+             'shadow-bottom': atTop && !atBottom,
+             'shadow-top-bottom': !atTop && !atBottom}">
+        </div>
+    </div>
+</template>
 
-var logPanelComponent;
+<script>
+    import {addClass, contains, destroyChildren, getLinesCount, isNull} from '../common';
+    import Hashtable from 'hashtablejs';
 
-(function () {
+    export default {
+        props: {
+            'autoscrollEnabled': {
+                type: Boolean,
+                default: true
+            }
+        },
+        data: function () {
+            return {
+                atBottom: false,
+                atTop: false,
+                mouseDown: false,
+                scrollUpdater: null,
+                needScrollUpdate: false,
+                linesCount: 0
+            }
+        },
+
+        mounted: function () {
+            this.recalculateScrollPosition();
+            window.addEventListener('resize', this.revalidateScroll);
+
+            this.scrollUpdater = window.setInterval(function () {
+                if (!this.needScrollUpdate) {
+                    return;
+                }
+                this.needScrollUpdate = false;
+
+                var autoscrolled = false;
+                if (this.autoscrollEnabled) {
+                    autoscrolled = this.autoscroll();
+                }
+
+                if (!autoscrolled) {
+                    this.recalculateScrollPosition();
+                }
+            }.bind(this), 40);
+        },
+
+        methods: {
+            recalculateScrollPosition: function () {
+                var logContent = this.$refs.logContent;
+
+                var scrollTop = logContent.scrollTop;
+                var newAtBottom = (scrollTop + logContent.clientHeight + 5) > (logContent.scrollHeight);
+                var newAtTop = scrollTop === 0;
+
+                // sometimes we can get scroll update (from incoming text) between autoscroll and this method
+                if (!this.needScrollUpdate) {
+                    this.atBottom = newAtBottom;
+                    this.atTop = newAtTop;
+                }
+            },
+
+            autoscroll: function () {
+                var logContent = this.$refs.logContent;
+                if ((this.atBottom) && (!this.mouseDown)) {
+                    logContent.scrollTop = logContent.scrollHeight;
+                    return true;
+                }
+                return false;
+            },
+
+            revalidateScroll: function () {
+                this.needScrollUpdate = true;
+            },
+
+            setLog: function (text) {
+                destroyChildren(this.$refs.logContent);
+
+                this.appendLog(text);
+            },
+
+            appendLog: function (text, textColor, backgroundColor, textStyles) {
+                if (isNull(text) || (text === '')) {
+                    return;
+                }
+
+                var logElement = this.createLogElement(text, textColor, backgroundColor, textStyles);
+                this.$refs.logContent.appendChild(logElement);
+
+                this.revalidateScroll();
+            },
+
+            replaceLog: function (text, textColor, backgroundColor, textStyles, x, y) {
+                this._updateLinesCache();
+
+                var logContent = this.$refs.logContent;
+                var firstMatchingElement = _findFirstElementAtLine(logContent, y);
+
+                if (isNull(firstMatchingElement)) {
+                    console.log('WARN! Could not find element for line ' + y);
+                    this.appendLog(text, textColor, backgroundColor, textStyles);
+                    return;
+                }
+
+                var replaceLinesCount = getLinesCount(text);
+
+                var currentLines = _createLinesFromElements(y, replaceLinesCount, firstMatchingElement);
+                _replaceInLines(x, text, currentLines);
+                _appendNewLineCharacter(currentLines);
+                _updateElementsFromLines(currentLines, logContent, function (text) {
+                    return this.createLogElement(text, textColor, backgroundColor, textStyles);
+                }.bind(this));
+
+                this.revalidateScroll();
+            },
+
+            _updateLinesCache: function () {
+                var logContent = this.$refs.logContent;
+
+                var linesCount = 0;
+                for (var i = 0; i < logContent.childNodes.length; i++) {
+                    var child = logContent.childNodes[i];
+
+                    if (isNull(child.linesCount)) {
+                        child.linesCount = getLinesCount(getLogElementText(child));
+                    }
+
+                    child.firstLine = linesCount;
+                    linesCount += child.linesCount;
+                    child.lastLine = linesCount;
+                }
+            },
+
+            createTextAndAnchorElements: function (text) {
+                var textElements;
+                if (urlRegex.test(text)) {
+                    textElements = [];
+
+                    var match;
+                    var lastEnd = 0;
+                    urlRegex.lastIndex = 0;
+                    while ((match = urlRegex.exec(text)) !== null) {
+                        if (match.index > lastEnd) {
+                            var prevText = text.substring(lastEnd, match.index);
+                            textElements.push(document.createTextNode(prevText));
+                        }
+                        var anchorElement = document.createElement('a');
+                        anchorElement.href = match[0];
+                        anchorElement.innerText = match[0];
+                        textElements.push(anchorElement);
+
+                        lastEnd = urlRegex.lastIndex;
+                    }
+
+                    if (lastEnd < (text.length - 1)) {
+                        var endText = text.substring(lastEnd, text.length);
+                        textElements.push(document.createTextNode(endText));
+                    }
+
+                } else {
+                    textElements = [document.createTextNode(text)];
+                }
+                return textElements;
+            },
+
+            createLogElement: function (text, textColor, backgroundColor, textStyles) {
+                var outputElement = null;
+
+                var textElements = this.createTextAndAnchorElements(text);
+
+                if (!isNull(textColor) || !isNull(backgroundColor) || !isNull(textStyles)) {
+                    outputElement = document.createElement('span');
+                    if (!isNull(textColor)) {
+                        addClass(outputElement, 'text_color_' + textColor);
+                    }
+                    if (!isNull(backgroundColor)) {
+                        addClass(outputElement, 'background_' + backgroundColor);
+                    }
+
+                    if (!isNull(textStyles)) {
+                        for (var styleIndex = 0; styleIndex < textStyles.length; styleIndex++) {
+                            addClass(outputElement, 'text_style_' + textStyles[styleIndex]);
+                        }
+                    }
+
+                    textElements.forEach(outputElement.appendChild.bind(outputElement));
+
+                } else {
+                    if (textElements.length === 1) {
+                        outputElement = textElements[0];
+                    } else {
+                        outputElement = document.createElement('span');
+                        textElements.forEach(outputElement.appendChild.bind(outputElement));
+                    }
+                }
+
+                return outputElement;
+            }
+        },
+        beforeDestroy: function () {
+            window.removeEventListener('resize', this.revalidateScroll);
+            window.clearInterval(this.scrollUpdater);
+        }
+    }
 
     var urlRegex = new RegExp('https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}(\\.[a-z]{2,6})?(:\\d{2,6})?' +
         '(\\.*([-a-zA-Z0-9@:%_\\+~#?//=])+&?)*',
@@ -315,218 +524,78 @@ var logPanelComponent;
             }
         }
     }
+</script>
 
-    //noinspection JSAnnotator
-    logPanelComponent = Vue.component('log-panel', {
-        template: ''
-            + '<div class="log-panel">'
-            + '    <code class="log-content" '
-            + '        v-on:scroll="recalculateScrollPosition" '
-            + '        ref="logContent"'
-            + '        v-on:mousedown="mouseDown = true"'
-            + '        v-on:mouseup="mouseDown = false"></code>'
-            + '    <div class="log-panel-shadow" v-bind:class="{'
-            + '            \'shadow-top\': !atTop && atBottom,'
-            + '            \'shadow-bottom\': atTop && !atBottom,'
-            + '            \'shadow-top-bottom\': !atTop && !atBottom'
-            + '        }">'
-            + '        '
-            + '    </div>'
-            + '</div>',
+<style scoped>
+    .log-panel {
+        flex: 1;
 
-        props: {
-            'autoscrollEnabled': {
-                type: Boolean,
-                default: true
-            }
-        },
-        data: function () {
-            return {
-                atBottom: false,
-                atTop: false,
-                mouseDown: false,
-                scrollUpdater: null,
-                needScrollUpdate: false,
-                linesCount: 0
-            }
-        },
+        position: relative;
+        min-height: 0;
 
-        mounted: function () {
-            this.recalculateScrollPosition();
-            window.addEventListener('resize', this.revalidateScroll);
+        background: #f4f2f0;
 
-            this.scrollUpdater = window.setInterval(function () {
-                if (!this.needScrollUpdate) {
-                    return;
-                }
-                this.needScrollUpdate = false;
+        width: 100%;
 
-                var autoscrolled = false;
-                if (this.autoscrollEnabled) {
-                    autoscrolled = this.autoscroll();
-                }
+        border: solid 1px rgba(51, 51, 51, 0.12);
+        border-radius: 2px;
+    }
 
-                if (!autoscrolled) {
-                    this.recalculateScrollPosition();
-                }
-            }.bind(this), 40);
-        },
+    /*noinspection CssInvalidPropertyValue,CssOverwrittenProperties*/
+    .log-content {
+        display: block;
+        overflow-y: auto;
+        height: 100%;
 
-        methods: {
-            recalculateScrollPosition: function () {
-                var logContent = this.$refs.logContent;
+        font-size: .875em;
 
-                var scrollTop = logContent.scrollTop;
-                var newAtBottom = (scrollTop + logContent.clientHeight + 5) > (logContent.scrollHeight);
-                var newAtTop = scrollTop === 0;
+        padding: 1.5em;
 
-                // sometimes we can get scroll update (from incoming text) between autoscroll and this method
-                if (!this.needScrollUpdate) {
-                    this.atBottom = newAtBottom;
-                    this.atTop = newAtTop;
-                }
-            },
+        white-space: pre-wrap; /* CSS 3 */
+        white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+        white-space: -o-pre-wrap; /* Opera 7 */
+        overflow-wrap: break-word;
 
-            autoscroll: function () {
-                var logContent = this.$refs.logContent;
-                if ((this.atBottom) && (!this.mouseDown)) {
-                    logContent.scrollTop = logContent.scrollHeight;
-                    return true;
-                }
-                return false;
-            },
+        -ms-word-break: break-all;
+        /* This is the dangerous one in WebKit, as it breaks things wherever */
+        word-break: break-all;
+        /* Instead use this non-standard one: */
+        word-break: break-word;
 
-            revalidateScroll: function () {
-                this.needScrollUpdate = true;
-            },
+        /* Adds a hyphen where the word breaks, if supported (No Blink) */
+        -ms-hyphens: auto;
+        -moz-hyphens: auto;
+        -webkit-hyphens: auto;
+        hyphens: auto;
+    }
 
-            setLog: function (text) {
-                destroyChildren(this.$refs.logContent);
+    .log-panel-shadow {
+        position: absolute;
 
-                this.appendLog(text);
-            },
+        width: 100%;
+        min-height: 100%;
+        top: 0;
+        z-index: 5;
 
-            appendLog: function (text, textColor, backgroundColor, textStyles) {
-                if (isNull(text) || (text === '')) {
-                    return;
-                }
+        pointer-events: none;
+    }
 
-                var logElement = this.createLogElement(text, textColor, backgroundColor, textStyles);
-                this.$refs.logContent.appendChild(logElement);
+    .shadow-top-bottom {
+        box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
+        -webkit-box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
+        -moz-box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
+    }
 
-                this.revalidateScroll();
-            },
+    .shadow-top {
+        box-shadow: 0 7px 8px -4px #888888 inset;
+        -webkit-box-shadow: 0 7px 8px -4px #888888 inset;
+        -moz-box-shadow: 0 7px 8px -4px #888888 inset;
+    }
 
-            replaceLog: function (text, textColor, backgroundColor, textStyles, x, y) {
-                this._updateLinesCache();
+    .shadow-bottom {
+        box-shadow: 0 -7px 8px -4px #888888 inset;
+        -webkit-box-shadow: 0 -7px 8px -4px #888888 inset;
+        -moz-box-shadow: 0 -7px 8px -4px #888888 inset;
+    }
 
-                var logContent = this.$refs.logContent;
-                var firstMatchingElement = _findFirstElementAtLine(logContent, y);
-
-                if (isNull(firstMatchingElement)) {
-                    console.log('WARN! Could not find element for line ' + y);
-                    this.appendLog(text, textColor, backgroundColor, textStyles);
-                    return;
-                }
-
-                var replaceLinesCount = getLinesCount(text);
-
-                var currentLines = _createLinesFromElements(y, replaceLinesCount, firstMatchingElement);
-                _replaceInLines(x, text, currentLines);
-                _appendNewLineCharacter(currentLines);
-                _updateElementsFromLines(currentLines, logContent, function (text) {
-                    return this.createLogElement(text, textColor, backgroundColor, textStyles);
-                }.bind(this));
-
-                this.revalidateScroll();
-            },
-
-            _updateLinesCache: function () {
-                var logContent = this.$refs.logContent;
-
-                var linesCount = 0;
-                for (var i = 0; i < logContent.childNodes.length; i++) {
-                    var child = logContent.childNodes[i];
-
-                    if (isNull(child.linesCount)) {
-                        child.linesCount = getLinesCount(getLogElementText(child));
-                    }
-
-                    child.firstLine = linesCount;
-                    linesCount += child.linesCount;
-                    child.lastLine = linesCount;
-                }
-            },
-
-            createTextAndAnchorElements: function (text) {
-                var textElements;
-                if (urlRegex.test(text)) {
-                    textElements = [];
-
-                    var match;
-                    var lastEnd = 0;
-                    urlRegex.lastIndex = 0;
-                    while ((match = urlRegex.exec(text)) !== null) {
-                        if (match.index > lastEnd) {
-                            var prevText = text.substring(lastEnd, match.index);
-                            textElements.push(document.createTextNode(prevText));
-                        }
-                        var anchorElement = document.createElement('a');
-                        anchorElement.href = match[0];
-                        anchorElement.innerText = match[0];
-                        textElements.push(anchorElement);
-
-                        lastEnd = urlRegex.lastIndex;
-                    }
-
-                    if (lastEnd < (text.length - 1)) {
-                        var endText = text.substring(lastEnd, text.length);
-                        textElements.push(document.createTextNode(endText));
-                    }
-
-                } else {
-                    textElements = [document.createTextNode(text)];
-                }
-                return textElements;
-            },
-
-            createLogElement: function (text, textColor, backgroundColor, textStyles) {
-                var outputElement = null;
-
-                var textElements = this.createTextAndAnchorElements(text);
-
-                if (!isNull(textColor) || !isNull(backgroundColor) || !isNull(textStyles)) {
-                    outputElement = document.createElement('span');
-                    if (!isNull(textColor)) {
-                        addClass(outputElement, 'text_color_' + textColor);
-                    }
-                    if (!isNull(backgroundColor)) {
-                        addClass(outputElement, 'background_' + backgroundColor);
-                    }
-
-                    if (!isNull(textStyles)) {
-                        for (var styleIndex = 0; styleIndex < textStyles.length; styleIndex++) {
-                            addClass(outputElement, 'text_style_' + textStyles[styleIndex]);
-                        }
-                    }
-
-                    textElements.forEach(outputElement.appendChild.bind(outputElement));
-
-                } else {
-                    if (textElements.length === 1) {
-                        outputElement = textElements[0];
-                    } else {
-                        outputElement = document.createElement('span');
-                        textElements.forEach(outputElement.appendChild.bind(outputElement));
-                    }
-                }
-
-                return outputElement;
-            }
-        },
-        beforeDestroy: function () {
-            window.removeEventListener('resize', this.revalidateScroll);
-            window.clearInterval(this.scrollUpdater);
-        }
-    });
-}());
+</style>

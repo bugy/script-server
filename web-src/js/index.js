@@ -18,19 +18,10 @@ import {
     removeElements,
     show
 } from './common';
-import './components/checkbox.js';
-import './components/combobox.js';
 
-import './components/component.js';
-import './components/log_panel.js';
-import './components/textfield.js';
 import './connections/rxWebsocket.js';
 import {ScriptController} from './script/script-controller';
-import './script/script-controller.js';
 import {restoreExecutor} from './script/script-execution-model';
-import './script/script-execution-model.js';
-import './script/script-parameters-view.js';
-import './script/script-view.js';
 import './style_imports.js';
 
 let selectedScript = null;

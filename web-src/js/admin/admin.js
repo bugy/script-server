@@ -1,8 +1,9 @@
-import '../style_imports';
-
 import Vue from 'vue';
 import VueRouter from 'vue-router';
-import {executionsLogPage} from './executions-log';
+import '../style_imports';
+import ExecutionsLogPage from './executions-log-page';
+import ExecutionsLog from './executions-log';
+import ExecutionDetails from './execution-details';
 
 Vue.use(VueRouter);
 
@@ -12,8 +13,11 @@ document.addEventListener('DOMContentLoaded', function () {
         routes: [
             {
                 path: '/executions',
-                component: executionsLogPage,
-                children: executionsLogPage.childRoutes
+                component: ExecutionsLogPage,
+                children: [
+                    {path: '', component: ExecutionsLog},
+                    {path: ':executionId', component: ExecutionDetails}
+                ]
             },
             {path: '*', redirect: '/executions'}
         ]
@@ -23,10 +27,9 @@ document.addEventListener('DOMContentLoaded', function () {
     new Vue({
         router,
         el: '#admin-page',
-        template: `
-            <div>
-                <router-view></router-view>
-            </div>`
+        render(createElement) {
+            return createElement('div', {}, [createElement('router-view')]);
+        }
     });
 
 }, false);

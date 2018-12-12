@@ -35,3 +35,5 @@ else
     echo '--file_upload content:'
     cat "$my_file"
 fi
+
+sleep 5

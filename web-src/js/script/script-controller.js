@@ -1,18 +1,43 @@
 import Vue from 'vue';
+import Vuex from 'vuex';
 import {
+    contains,
     forEachKeyValue,
     HttpUnauthorizedError,
+    isEmptyArray,
     isEmptyString,
     isNull,
     isWebsocketClosed,
     logError,
+    removeElement,
     SocketClosedError,
-    toBoolean,
     toDict
 } from '../common';
 import {ReactiveWebSocket} from '../connections/rxWebsocket';
 import {ScriptExecutor} from './script-execution-model';
-import {ScriptView} from './script-view';
+import ScriptView from './script-view';
+import {
+    ADD_DOWNLOADABLE_FILE,
+    ADD_PARAMETER,
+    APPEND_LOG_CHUNK,
+    REMOVE_PARAMETER,
+    RESET_DOWNLOADABLE_FILES,
+    SEND_USER_INPUT,
+    SEND_VALUE_TO_SERVER,
+    SET_ALL_PARAMETER_VALUES,
+    SET_EXECUTING,
+    SET_INPUT_PROMPT,
+    SET_LOG,
+    SET_PARAMETER_VALUE,
+    SET_PARAMETERS,
+    SET_SCRIPT_CONFIG,
+    START_EXECUTION,
+    STOP_EXECUTION,
+    UPDATE_PARAMETER,
+    UPDATE_PARAMETERS
+} from './vuex_constants';
+
+Vue.use(Vuex);
 
 export function ScriptController(scriptName, parent, executionStartCallback, loadFinishedCallback, loadErrorCallback) {
     this.scriptName = scriptName;
@@ -27,7 +52,7 @@ export function ScriptController(scriptName, parent, executionStartCallback, loa
 
     this._reconnectionAttempt = 0;
 
-    this._initParametersModel();
+    this._store = this._initStore();
 
     this._reconnect(loadFinishedCallback, loadErrorCallback);
 }
@@ -59,25 +84,28 @@ ScriptController.prototype._reconnect = function (loadFinishedCallback, loadErro
             }
 
             if (eventType === 'initialConfig') {
+                const firstLoad = isNull(controller.scriptConfig);
+
                 controller._updateScriptConfig(data);
-                if (loadFinishedCallback) {
+                if (firstLoad && loadFinishedCallback) {
                     loadFinishedCallback(data);
                 }
+
                 return;
             }
 
             if (eventType === 'parameterChanged') {
-                controller._updateParameter(data);
+                controller._store.commit(UPDATE_PARAMETER, data);
                 return;
             }
 
             if (eventType === 'parameterAdded') {
-                controller._addParameter(data);
+                controller._store.commit(ADD_PARAMETER, data);
                 return;
             }
 
             if (eventType === 'parameterRemoved') {
-                controller._removeParameter(data);
+                controller._store.commit(REMOVE_PARAMETER, data);
                 return;
             }
         },
@@ -124,95 +152,45 @@ ScriptController.prototype._reconnect = function (loadFinishedCallback, loadErro
     this.websocket = socket;
 };
 
-ScriptController.prototype._fillView = function (parent, scriptConfig) {
-    var scriptView = new ScriptView(parent, this.parametersModel);
-    this.scriptView = scriptView;
+ScriptController.prototype._fillView = function (parent) {
+    const store = this._store;
 
-    scriptView.setScriptDescription(scriptConfig.description);
-
-    scriptView.setExecutionCallback(function () {
-        var parameterValues = $.extend({}, this.parametersModel.state.parameterValues);
-
-        this.scriptView.setExecuting();
-        scriptView.setLog('Calling the script...');
-
-        try {
-            this.executor = new ScriptExecutor(scriptConfig.name);
-            this.executor.start(parameterValues);
-            this.executionStartCallback(this.executor);
-
-            this._updateViewWithExecutor(this.executor);
-
-        } catch (error) {
-            this.scriptView.setStopEnabled(false);
-            this.scriptView.setExecutionEnabled(true);
-
-            if (!(error instanceof HttpUnauthorizedError)) {
-                logError(error);
-
-                var errorLogElement = '\n\n' + error.message;
-                scriptView.appendLog(errorLogElement);
-            }
+    this.scriptView = new Vue({
+        store,
+        render(createElement) {
+            return createElement(ScriptView)
         }
-    }.bind(this));
+    });
 
-    scriptView.setStopCallback(function () {
-        if (!isNull(this.executor)) {
-            this.executor.stop();
-        }
-    }.bind(this));
+    var container = document.createElement('div');
+    container.id = this.scriptView.id;
+    container.className = 'script-panel';
+    parent.appendChild(container);
 
-    return scriptView.scriptPanel;
+    this.scriptView.$mount(container)
 };
+
 ScriptController.prototype._updateScriptConfig = function (scriptConfig) {
     var oldConfig = this.scriptConfig;
     this.scriptConfig = scriptConfig;
+    this._store.commit(SET_SCRIPT_CONFIG, scriptConfig);
 
     if (isNull(oldConfig)) {
-        this._fillView(this.parentPanel, scriptConfig);
-        this._setParameters(this.scriptConfig.parameters);
+        this._fillView(this.parentPanel);
+        this._store.commit(SET_PARAMETERS, this.scriptConfig.parameters);
     } else {
-        var oldParameters = toDict(oldConfig.parameters, 'name');
-        var newParameters = toDict(scriptConfig.parameters, 'name');
-
-        var controller = this;
-
-        forEachKeyValue(oldParameters, function (name, parameter) {
-            if (name in newParameters) {
-                return;
-            }
-
-            controller._removeParameter(name);
-        });
-
-        forEachKeyValue(newParameters, function (name, parameter) {
-            if (name in oldParameters) {
-                controller._updateParameter(parameter);
-            } else {
-                controller._addParameter(parameter);
-            }
-        });
-
-        this.parametersModel.$nextTick(function () {
-            var parameterValues = controller.parametersModel.state.parameterValues;
-            forEachKeyValue(parameterValues, function (key, value) {
-                controller._sendCurrentValue(key, value);
-            });
-        });
+        this._store.commit(UPDATE_PARAMETERS, this.scriptConfig.parameters);
     }
 };
 
 ScriptController.prototype.destroy = function () {
-    if (!isNull(this.scriptView)) {
-        this.scriptView.destroy();
-    }
-    this.scriptView = null;
-
     if (!isNull(this.websocket)) {
         this.websocket.close();
     }
 
     this._stopLogPublisher();
+
+    this.scriptView.$destroy();
 
     if (!isNull(this.executor)) {
         this.executor.removeListener(this.executorListener);
@@ -225,7 +203,7 @@ ScriptController.prototype.setExecutor = function (executor) {
     if (this.scriptConfig != null) {
         this._setParameterValues(executor.parameterValues);
 
-        this.scriptView.setExecuting();
+        this._store.commit(SET_EXECUTING, true);
         this._updateViewWithExecutor(executor);
     }
 };
@@ -238,20 +216,16 @@ ScriptController.prototype._updateViewWithExecutor = function (executor) {
             this._publishLogs();
             this._stopLogPublisher();
 
-            this.scriptView.setStopEnabled(false);
-            this.scriptView.setExecutionEnabled(true);
-
-            this.scriptView.hideInputField();
+            this._store.commit(SET_EXECUTING, false);
+            this._store.commit(SET_INPUT_PROMPT, null);
         }.bind(this),
 
-        'onInputPrompt': function (promptText) {
-            this.scriptView.showInputField(promptText, function (inputText) {
-                executor.sendUserInput(inputText);
-            });
-        }.bind(this),
+        'onInputPrompt': promptText => {
+            this._store.commit(SET_INPUT_PROMPT, promptText);
+        },
 
         'onFileCreated': function (url, filename) {
-            this.scriptView.addFileLink(url, filename);
+            this._store.commit(ADD_DOWNLOADABLE_FILE, [url, filename]);
         }.bind(this)
     };
 
@@ -282,7 +256,7 @@ ScriptController.prototype._publishLogs = function () {
     var logChunks = this.executor.logChunks;
 
     if ((this.logLastIndex === 0) && (logChunks.length > 0)) {
-        this.scriptView.setLog('');
+        this._store.commit(SET_LOG, '');
     }
 
     for (; this.logLastIndex < logChunks.length; this.logLastIndex++) {
@@ -290,50 +264,256 @@ ScriptController.prototype._publishLogs = function () {
 
         var logChunk = logChunks[logIndex];
 
-        var text = logChunk.text;
-        var textColor = logChunk.text_color;
-        var backgroundColor = logChunk.background_color;
-        var textStyles = logChunk.text_styles;
-
-        if (toBoolean(logChunk.replace)) {
-            this.scriptView.replaceLog(text, textColor, backgroundColor, textStyles, logChunk.custom_position.x, logChunk.custom_position.y);
-        } else {
-            this.scriptView.appendLog(text, textColor, backgroundColor, textStyles);
-        }
+        this._store.commit(APPEND_LOG_CHUNK, logChunk);
     }
 };
 
-ScriptController.prototype._initParametersModel = function () {
+ScriptController.prototype._initStore = function () {
     var controller = this;
 
-    var sentValues = {};
-
-    this.parametersModel = new Vue({
-        data: function () {
-            return {
-                state:
-                    {
-                        parameters: [],
-                        parameterValues: {}
+    function ensureListValueExists(value, parameter) {
+        if (Array.isArray(value)) {
+            if (isEmptyArray(parameter.values)) {
+                parameter.values = value.splice();
+            } else {
+                for (let j = 0; j < value.length; j++) {
+                    const valueElement = value[j];
+                    if (!contains(parameter.values, valueElement)) {
+                        parameter.values.push(valueElement);
                     }
-            };
+                }
+            }
+        } else {
+            if (isEmptyArray(parameter.values)) {
+                parameter.values = [value];
+            } else if (!contains(parameter.values, value)) {
+                parameter.values.push(value);
+            }
+        }
+    }
+
+    return new Vuex.Store({
+        strict: true,
+
+        state: {
+            scriptConfig: null,
+            parameters: [],
+            parameterValues: {},
+            parameterErrors: {},
+            executing: false,
+            downloadableFiles: [],
+            inputPromptText: null,
+            sentValues: {},
+            logChunks: []
         },
-        watch: {
-            'state.parameterValues': {
-                deep: true,
-                handler(newValues, oldValues) {
-                    var parameterErrors = controller.scriptView.getParameterErrors();
 
-                    forEachKeyValue(newValues, function (key, value) {
-                        if (!isEmptyString(parameterErrors[key])) {
-                            return;
-                        }
+        mutations: {
+            [SET_SCRIPT_CONFIG](state, scriptConfig) {
+                state.scriptConfig = scriptConfig;
+            },
 
-                        if (sentValues[key] !== value) {
-                            controller._sendCurrentValue(key, value);
-                            sentValues[key] = value;
-                        }
+            [SET_PARAMETERS](state, parameters) {
+                var parameterValues = {};
+
+                for (var i = 0; i < parameters.length; i++) {
+                    var parameter = parameters[i];
+
+                    controller._preprocessParameter(parameter);
+
+                    if (!isNull(parameter.default)) {
+                        parameterValues[parameter.name] = parameter.default;
+                    } else {
+                        parameterValues[parameter.name] = null;
+                    }
+                }
+
+                state.parameters = parameters;
+                state.parameterValues = parameterValues;
+            },
+
+            [UPDATE_PARAMETERS](state, newParameters) {
+                const oldParametersDict = toDict(state.parameters, 'name');
+                const newParametersDict = toDict(newParameters, 'name');
+
+                forEachKeyValue(oldParametersDict, function (name, parameter) {
+                    if (name in newParametersDict) {
+                        return;
+                    }
+
+                    removeElement(state.parameters, parameter);
+                });
+
+                forEachKeyValue(newParametersDict, function (name, parameter) {
+                    controller._preprocessParameter(parameter);
+
+                    if (name in oldParametersDict) {
+                        const index = state.parameters.indexOf(oldParametersDict[name]);
+                        Vue.set(state.parameters, index, parameter);
+                    } else {
+                        state.parameters.push(parameter);
+                    }
+                });
+
+                controller.scriptView.$nextTick(function () {
+                    var parameterValues = state.parameterValues;
+                    forEachKeyValue(parameterValues, function (key, value) {
+                        controller._sendCurrentValue(key, value);
                     });
+                });
+            },
+
+            [ADD_PARAMETER](state, parameter) {
+                controller._preprocessParameter(parameter);
+                state.parameters.push(parameter);
+            },
+
+            [UPDATE_PARAMETER](state, parameter) {
+                let foundIndex = -1;
+
+                const parameters = state.parameters;
+
+                for (let i = 0; i < parameters.length; i++) {
+                    const anotherParam = parameters[i];
+                    if (anotherParam['name'] === parameter['name']) {
+                        foundIndex = i;
+                        break;
+                    }
+                }
+
+                if (foundIndex < 0) {
+                    console.log('Failed to find parameter ' + parameter['name']);
+                    return;
+                }
+
+                controller._preprocessParameter(parameter);
+                Vue.set(parameters, foundIndex, parameter);
+            },
+
+            [REMOVE_PARAMETER](state, parameterName) {
+                let foundIndex = -1;
+
+                const parameters = state.parameters;
+
+                for (let i = 0; i < parameters.length; i++) {
+                    const parameter = parameters[i];
+
+                    if (parameter['name'] === parameterName) {
+                        foundIndex = i;
+                        break;
+                    }
+                }
+
+                if (foundIndex < 0) {
+                    console.log('Failed to find parameter ' + parameterName);
+                    return;
+                }
+
+                parameters.splice(foundIndex, 1);
+            },
+
+            [SET_PARAMETER_VALUE](state, {parameterName, value, errorMessage}) {
+                state.parameterErrors[parameterName] = errorMessage;
+                state.parameterValues[parameterName] = value;
+
+                const valueToSend = isEmptyString(errorMessage) ? value : null;
+
+                if (state.sentValues[parameterName] !== valueToSend) {
+                    this.dispatch(SEND_VALUE_TO_SERVER, {parameterName, valueToSend});
+                }
+            },
+
+            [SET_ALL_PARAMETER_VALUES](state, values) {
+                for (var i = 0; i < state.parameters.length; i++) {
+                    var parameter = state.parameters[i];
+                    var parameterName = parameter.name;
+
+                    var value = values[parameterName];
+
+                    let valueToSet;
+                    if (!isNull(value)) {
+                        if ((parameter.type === 'list') || (parameter.type === 'multiselect')) {
+                            ensureListValueExists(value, parameter);
+                        }
+
+                        valueToSet = value;
+                    } else {
+                        valueToSet = null;
+                    }
+
+                    state.parameterValues[parameterName] = valueToSet;
+                    this.dispatch(SEND_VALUE_TO_SERVER, {parameterName, valueToSend: valueToSet});
+                }
+            },
+
+            [SET_EXECUTING](state, executing) {
+                state.executing = executing;
+            },
+
+            [SET_INPUT_PROMPT](state, promptText) {
+                state.inputPromptText = promptText;
+            },
+
+            [RESET_DOWNLOADABLE_FILES](state) {
+                state.downloadableFiles = []
+            },
+
+            [ADD_DOWNLOADABLE_FILE](state, [url, filename]) {
+                state.downloadableFiles.push({url, filename});
+            },
+
+            _setSentValue(state, [parameterName, value]) {
+                state.sentValues[parameterName] = value;
+            },
+
+            [SET_LOG](state, log) {
+                state.logChunks = [{text: log}]
+            },
+
+            [APPEND_LOG_CHUNK](state, logChunk) {
+                state.logChunks.push(logChunk);
+            }
+        },
+
+        actions: {
+            [SEND_USER_INPUT]({state}, inputText) {
+                if (!isEmptyString(state.inputPromptText)) {
+                    controller.executor.sendUserInput(inputText);
+                }
+            },
+
+            [SEND_VALUE_TO_SERVER]({commit}, {parameterName, valueToSend}) {
+                controller._sendCurrentValue(parameterName, valueToSend);
+                commit('_setSentValue', [parameterName, valueToSend]);
+            },
+
+            [START_EXECUTION]({state, commit}) {
+                var parameterValues = $.extend({}, state.parameterValues);
+
+                commit(SET_EXECUTING, true);
+                commit(SET_LOG, 'Calling the script...');
+
+                try {
+                    controller.executor = new ScriptExecutor(state.scriptConfig.name);
+                    controller.executor.start(parameterValues);
+                    controller.executionStartCallback(controller.executor);
+
+                    controller._updateViewWithExecutor(controller.executor);
+
+                } catch (error) {
+                    commit(SET_EXECUTING, false);
+
+                    if (!(error instanceof HttpUnauthorizedError)) {
+                        logError(error);
+
+                        commit.commit(APPEND_LOG_CHUNK, {text: '\n\n' + error.message});
+                    }
+                }
+
+            },
+
+            [STOP_EXECUTION]() {
+                if (!isNull(controller.executor)) {
+                    controller.executor.stop();
                 }
             }
         }
@@ -362,96 +542,10 @@ ScriptController.prototype._preprocessParameter = function (parameter) {
     }
 };
 
-ScriptController.prototype._setParameters = function (parameters) {
-    var parameterValues = {};
-
-    for (var i = 0; i < parameters.length; i++) {
-        var parameter = parameters[i];
-
-        this._preprocessParameter(parameter);
-
-        if (!isNull(parameter.default)) {
-            parameterValues[parameter.name] = parameter.default;
-        } else {
-            parameterValues[parameter.name] = null;
-        }
-    }
-
-    this.parametersModel.state.parameters = parameters;
-    this.parametersModel.state.parameterValues = parameterValues;
-};
-
-ScriptController.prototype._updateParameter = function (parameter) {
-    var foundIndex = -1;
-
-    var parameters = this.parametersModel.state.parameters;
-
-    for (var i = 0; i < parameters.length; i++) {
-        var anotherParam = parameters[i];
-        if (anotherParam['name'] === parameter['name']) {
-            foundIndex = i;
-            break;
-        }
-    }
-
-    if (foundIndex < 0) {
-        console.log('Failed to find parameter ' + parameter['name']);
-        return;
-    }
-
-    this._preprocessParameter(parameter);
-    Vue.set(parameters, foundIndex, parameter);
-};
-
-ScriptController.prototype._addParameter = function (parameter) {
-    this._preprocessParameter(parameter);
-
-    this.parametersModel.state.parameters.push(parameter);
-};
-
-ScriptController.prototype._removeParameter = function (parameterName) {
-    var foundIndex = -1;
-
-    var parameters = this.parametersModel.state.parameters;
-
-    for (var i = 0; i < parameters.length; i++) {
-        var parameter = parameters[i];
-
-        if (parameter['name'] === parameterName) {
-            foundIndex = i;
-            break;
-        }
-    }
-
-    if (foundIndex < 0) {
-        console.log('Failed to find parameter ' + parameter['name']);
-        return;
-    }
-
-    parameters.splice(foundIndex, 1);
-};
-
 ScriptController.prototype.setParameterValues = function (values) {
     this._setParameterValues(values);
 };
 
 ScriptController.prototype._setParameterValues = function (values) {
-    for (var i = 0; i < this.parametersModel.state.parameters.length; i++) {
-        var parameter = this.parametersModel.state.parameters[i];
-        var parameterName = parameter.name;
-
-        var value = values[parameterName];
-
-        if (!isNull(value)) {
-            if (!isNull(parameter.values_dependencies)
-                && (parameter.values_dependencies.length > 0)
-                && (!contains(parameter.values, value))) {
-                parameter.values = [value];
-            }
-
-            this.parametersModel.state.parameterValues[parameterName] = value;
-        } else {
-            this.parametersModel.state.parameterValues[parameterName] = null;
-        }
-    }
+    this._store.commit(SET_ALL_PARAMETER_VALUES, values);
 };

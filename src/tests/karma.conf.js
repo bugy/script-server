@@ -18,10 +18,10 @@ module.exports = function (config) {
         files: [
             '../../web/js/libs/*.js',
             '../../web/js/common.js',
-            '../../web/js/components/log_panel.js',
-            '../../web/js/components/combobox.js',
-            '../../web/js/components/textfield.js',
-            '../../web/js/script/script-view.js',
+            '../../web/js/components/log_panel.vue',
+            '../../web/js/components/combobox.vue',
+            '../../web/js/components/textfield.vue',
+            '../../web/js/script/script-view.vue',
             '*.js'
         ],
 

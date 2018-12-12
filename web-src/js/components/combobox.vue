@@ -1,26 +1,26 @@
-import * as M from 'materialize-css';
-import Vue from 'vue';
-import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, removeClass} from '../common';
+<template>
+    <div class="input-field" :title="config.description" :data-error="error">
+        <select
+                :id="config.name"
+                ref="selectField"
+                class="validate"
+                :required="config.required"
+                :multiple="config.multiselect"
+                :disabled="options.length === 0">
+            <option :selected="!anythingSelected" value="" disabled>Choose your option</option>
+            <option v-for="option in options"
+                    :value="option.value"
+                    :selected="option.selected">{{ option.value }}</option>
+        </select>
+        <label :for="config.name">{{ config.name }}</label>
+    </div>
+</template>
 
-(function () {
-    Vue.component('combobox', {
-        template:
-            '<div class="input-field" :title="config.description" :data-error="error">\n'
-            + '  <select '
-            + '     :id="config.name" '
-            + '     ref="selectField" '
-            + '     class="validate" '
-            + '     :required="config.required"'
-            + '     :multiple="config.multiselect"'
-            + '     :disabled="options.length === 0">\n'
-            + '    <option :selected="!anythingSelected" value="" disabled>Choose your option</option>\n'
-            + '    <option v-for="option in options" '
-            + '     :value="option.value" '
-            + '     :selected="option.selected">{{ option.value }}</option>\n'
-            + '  </select>'
-            + '  <label :for="config.name">{{ config.name }}</label>\n'
-            + '</div>',
+<script>
+    import * as M from 'materialize-css';
+    import {addClass, contains, findNeighbour, isEmptyString, isNull, removeClass} from '../common';
 
+    export default {
         props: {
             'config': Object,
             'value': [String, Array]
@@ -30,7 +30,8 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
             return {
                 options: [],
                 anythingSelected: false,
-                error: ''
+                error: '',
+                comboboxWrapper: null
             }
         },
 
@@ -52,13 +53,14 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
                     }
 
                     this.options = newOptions;
+
                     if (!this._fixValueByAllowedValues(this.config.values)) {
                         this._selectValue(this.value);
-
-                        this.$nextTick(function () {
-                            this.rerenderCombobox();
-                        }.bind(this));
                     }
+
+                    this.$nextTick(function () {
+                        this.rebuildCombobox();
+                    }.bind(this));
                 }
             },
 
@@ -84,7 +86,7 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
                 this.emitValueChange(value);
             }.bind(this));
 
-            this.rerenderCombobox();
+            this.rebuildCombobox();
 
             this.$watch('error', function (errorValue) {
                 var inputField = findNeighbour(this.$refs.selectField, 'input');
@@ -103,7 +105,7 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
 
         methods: {
             emitValueChange(value) {
-                this._validate(asArray(value));
+                this._validate(this.asArray(value));
                 this.$emit('input', value);
             },
 
@@ -145,7 +147,7 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
             },
 
             _selectValue(value) {
-                var selectedValues = asArray(value);
+                var selectedValues = this.asArray(value);
 
                 this.anythingSelected = false;
 
@@ -163,19 +165,9 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
 
                 this._validate(selectedValues);
 
-                var requiresReRender = true;
-
-                if (this.config.multiselect) {
-                    var comboboxValues = $(this.$refs.selectField).val();
-                    // rerendering combobox during selection closes popup, so we need to avoid it
-                    requiresReRender = !arraysEqual(comboboxValues, selectedValues);
-                }
-
-                if (requiresReRender) {
-                    this.$nextTick(function () {
-                        this.rerenderCombobox();
-                    }.bind(this));
-                }
+                this.$nextTick(function () {
+                    this.updateComboboxValue();
+                }.bind(this));
             },
 
             _validate(selectedValues) {
@@ -187,12 +179,9 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
                 this.$emit('error', this.error);
             },
 
-            rerenderCombobox() {
-                $(this.$refs.selectField).formSelect();
-
-                $(this.$el).find('.dropdown-trigger').dropdown({
-                    constrainWidth: false
-                });
+            rebuildCombobox() {
+                this.comboboxWrapper = M.FormSelect.init($(this.$refs.selectField),
+                    {dropdownOptions: {constrainWidth: false}})[0];
 
                 $(this.$refs.selectField).siblings('ul').children('li').each(function () {
                     var text = $(this).children('span:first-child').text();
@@ -201,7 +190,16 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
                     }
                 });
 
-                var inputField = findNeighbour(this.$refs.selectField, 'input');
+                $(this.$refs.selectField).siblings('ul').children('li.disabled')
+                    .each(function () {
+                        $(this).attr('tabindex', -1)
+                    });
+
+                this.updateComboboxValue();
+            },
+
+            updateComboboxValue() {
+                const inputField = findNeighbour(this.$refs.selectField, 'input');
 
                 // setCustomValidity doesn't work since input is readonly
                 if (this.error) {
@@ -209,18 +207,25 @@ import {addClass, arraysEqual, contains, findNeighbour, isEmptyString, isNull, r
                 } else {
                     removeClass(inputField, 'invalid');
                 }
+
+                if (!isNull(this.comboboxWrapper)) {
+                    this.comboboxWrapper._setValueToInput();
+                    this.comboboxWrapper._setSelectedStates();
+                }
+            },
+
+            asArray(value) {
+                var valuesArray = value;
+
+                if (isEmptyString(valuesArray)) {
+                    valuesArray = [];
+                } else if (!Array.isArray(valuesArray)) {
+                    valuesArray = [valuesArray];
+                }
+                return valuesArray;
             }
         }
-    });
-
-    function asArray(value) {
-        var valuesArray = value;
-
-        if (isEmptyString(valuesArray)) {
-            valuesArray = [];
-        } else if (!Array.isArray(valuesArray)) {
-            valuesArray = [valuesArray];
-        }
-        return valuesArray;
     }
-}());
+</script>
+
+

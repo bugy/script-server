@@ -1,20 +1,20 @@
-import Vue from 'vue';
-import {isEmptyString, isNull} from '../common';
+<template>
+    <div class="input-field" :title="config.description" :data-error="error">
+        <input :id="config.name"
+               :type="fieldType"
+               :value="value"
+               :required="config.required"
+               class="validate"
+               @input="inputFieldChanged"
+               ref="textField"/>
+        <label :for="config.name" v-bind:class="{ active: labelActive }">{{ config.name }}</label>
+    </div>
+</template>
 
-(function () {
-    Vue.component('textfield', {
-        template:
-            '<div class="input-field" :title="config.description" :data-error="error">\n'
-            + '  <input :id="config.name" '
-            + '     :type="fieldType" '
-            + '     :value="value" '
-            + '     :required="config.required" '
-            + '     class="validate" '
-            + '     @input="inputFieldChanged"'
-            + '     ref="textField"/>\n'
-            + '  <label :for="config.name" v-bind:class="{ active: labelActive }">{{ config.name }}</label>\n'
-            + '</div>',
+<script>
+    import {isEmptyString, isNull} from '../common';
 
+    export default {
         props: {
             'value': [String, Number],
             'config': Object
@@ -110,7 +110,7 @@ import {isEmptyString, isNull} from '../common';
                 this.$emit('error', this.error);
             }
         }
-    });
+    }
 
     function getValidByTypeError(value, type, min, max) {
         if (type === 'int') {
@@ -160,4 +160,4 @@ import {isEmptyString, isNull} from '../common';
 
         return type + " expected";
     }
-}());
+</script>

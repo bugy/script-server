@@ -16,10 +16,6 @@ module.exports = {
         path: path.resolve(__dirname + '/../web')
     },
     resolve: {
-        alias: {
-            // TODO this can be removed after migration to .vue
-            vue: 'vue/dist/vue.js'
-        },
         extensions: ['*', '.js', '.vue', '.json']
     },
     plugins:

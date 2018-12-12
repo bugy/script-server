@@ -5,11 +5,12 @@
     "hashtablejs": "^0.0.1",
     "jquery": "^3.3.1",
     "marked": "^0.5.1",
+    "material-design-icons": "^3.0.1",
     "materialize-css": "^1.0.0",
     "typeface-roboto": "0.0.54",
     "vue": "^2.5.17",
     "vue-router": "^3.0.1",
-    "material-design-icons": "^3.0.1"
+    "vuex": "^3.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.1.2",

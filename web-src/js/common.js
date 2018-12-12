@@ -213,6 +213,16 @@ export function removeElement(array, element) {
     return array;
 }
 
+// removes elements from the array, for which predicate is true
+export function removeElementIf(array, predicate) {
+    for (let i = array.length; i >= 0; i--) {
+        const arrayElement = array[i];
+        if (predicate(arrayElement)) {
+            array.splice(i, 1);
+        }
+    }
+}
+
 export function removeElements(array, elements) {
     for (var i = 0; i < elements.length; i++) {
         var element = elements[i];
