@@ -1,2 +1,2 @@
 typing
-tornado<=5
+tornado<6
