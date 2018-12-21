@@ -1,12 +1,34 @@
 "use strict";
-// Karma configuration
-// Generated on Mon Jun 18 2018 00:31:12 GMT+0200 (Central European Summer Time)
+
+var webpackConfig = require('../webpack.dev.js');
+
+// we need to explicitly override entries to avoid full files compilation
+// and empty entries are not allowed
+webpackConfig.entry = {'some_entry': './tests/test_utils.js'};
+webpackConfig.devtool = 'inline-source-map';
+webpackConfig.mode = 'development';
+webpackConfig.watch = true;
+
+// karma-webpack cannot handle MiniCssExtractPlugin, so just remove it
+for (const rule of webpackConfig.module.rules) {
+    if (rule.test && /\.css/.test(rule.test)) {
+        for (let i = 0; i < rule.loaders.length; i++) {
+            const loader = rule.loaders[i];
+
+            if (/mini-css-extract-plugin/.test(loader)) {
+                rule.loaders.splice(i, 1);
+                i--;
+            }
+        }
+    }
+}
+
 
 module.exports = function (config) {
     config.set({
 
         // base path that will be used to resolve all patterns (eg. files, exclude)
-        basePath: '',
+        basePath: '..',
 
 
         // frameworks to use
@@ -16,32 +38,25 @@ module.exports = function (config) {
 
         // list of files / patterns to load in the browser
         files: [
-            '../../web/js/libs/*.js',
-            '../../web/js/common.js',
-            '../../web/js/components/log_panel.vue',
-            '../../web/js/components/combobox.vue',
-            '../../web/js/components/textfield.vue',
-            '../../web/js/script/script-view.vue',
-            '*.js'
+            'tests/index.js'
         ],
 
 
-        // list of files / patterns to exclude
-        exclude: [
-            'index.js',
-            'admin.js'
-        ],
+        exclude: [],
 
 
         // preprocess matching files before serving them to the browser
         // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
-        preprocessors: {},
+        preprocessors: {
+            '**/*.js': ['webpack', 'sourcemap']
+        },
 
+        webpack: webpackConfig,
 
         // test results reporter to use
         // possible values: 'dots', 'progress'
         // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-        reporters: ['progress'],
+        reporters: ['spec'],
 
 
         // web server port

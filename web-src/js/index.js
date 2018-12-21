@@ -1,4 +1,3 @@
-import Hashtable from 'hashtablejs';
 import {
     addClass,
     callHttp,
@@ -26,7 +25,7 @@ import './style_imports.js';
 
 let selectedScript = null;
 const scriptSelectionListeners = [];
-const scriptMenuItems = new Hashtable();
+const scriptMenuItems = new Map();
 const runningScriptExecutors = [];
 let activeScriptController = null;
 
@@ -49,13 +48,13 @@ function onLoad() {
         return name1.toLowerCase().localeCompare(name2.toLowerCase());
     });
 
-    var scriptHashes = new Hashtable();
+    var scriptHashes = new Map();
 
     scripts.forEach(function (script) {
         var scriptElement = document.createElement("a");
 
         var scriptHash = script.replace(/\s/g, "_");
-        scriptHashes.put(scriptHash, script);
+        scriptHashes.set(scriptHash, script);
 
         addClass(scriptElement, "collection-item");
         addClass(scriptElement, "waves-effect");
@@ -77,7 +76,7 @@ function onLoad() {
         scriptsListElement.appendChild(scriptElement);
 
         scriptElement.stateElement = stateElement;
-        scriptMenuItems.put(script, scriptElement);
+        scriptMenuItems.set(script, scriptElement);
 
         updateMenuItemState(script);
     });

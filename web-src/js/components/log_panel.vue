@@ -16,7 +16,6 @@
 
 <script>
     import {addClass, contains, destroyChildren, getLinesCount, isNull} from '../common';
-    import Hashtable from 'hashtablejs';
 
     export default {
         props: {
@@ -449,7 +448,7 @@
             }
         }
 
-        const elementReplacements = new Hashtable();
+        const elementReplacements = new Map();
 
         for (var i = lines.length - 1; i >= 0; i--) {
             var line = lines[i];
@@ -493,7 +492,7 @@
 
                             var newElement = chunkElement.cloneNode(true);
                             appendNewElement(newElement);
-                            elementReplacements.put(chunk.element, newElement);
+                            elementReplacements.set(chunk.element, newElement);
                             chunkElement = newElement;
                         }
 

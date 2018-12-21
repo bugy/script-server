@@ -1,42 +1,57 @@
-"use strict";
+'use strict';
+import {createLocalVue, mount} from 'vue-test-utils';
+import Vuex from 'vuex';
+import ScriptView from '../js/script/script-view';
 
 var assert = chai.assert;
 chai.config.truncateThreshold = 0;
 
+const localVue = createLocalVue();
+localVue.use(Vuex);
+
 describe('Test Configuration of ScriptView', function () {
 
     beforeEach(function () {
-        this.viewContainer = document.createElement('div');
-        document.children[0].appendChild(this.viewContainer);
+        const store = new Vuex.Store({
+            state: {
+                scriptConfig: {
+                    description: ''
+                }
+            }
+        });
+        this.store = store;
 
-        this.scriptView = new ScriptView(this.viewContainer);
-        this.vueModel = this.scriptView.vueModel;
+        this.scriptView = mount(ScriptView, {
+            attachToDocument: true,
+            store,
+            localVue
+        });
     });
 
     afterEach(function () {
-        this.viewContainer.remove();
+        this.scriptView.destroy();
     });
 
     describe('Test descript section', function () {
 
-        it('test simple text', function () {
-            this.scriptView.setScriptDescription('some text');
-            assert.equal('some text', this.vueModel.formattedDescription)
+        it('test simple text', async function () {
+            this.store.state.scriptConfig.description = 'some text';
+            assert.equal('some text', this.scriptView.vm.formattedDescription)
         });
 
         it('test bold', function () {
-            this.scriptView.setScriptDescription('some **bold** text');
-            assert.equal('some <strong>bold</strong> text', this.vueModel.formattedDescription)
+            this.store.state.scriptConfig.description = 'some **bold** text';
+            assert.equal('some <strong>bold</strong> text', this.scriptView.vm.formattedDescription)
         });
 
         it('test explicit link', function () {
-            this.scriptView.setScriptDescription('some [link_text](https://google.com)');
-            assert.equal('some <a href="https://google.com">link_text</a>', this.vueModel.formattedDescription)
+            this.store.state.scriptConfig.description = 'some [link_text](https://google.com)';
+            assert.equal('some <a href="https://google.com">link_text</a>', this.scriptView.vm.formattedDescription)
         });
 
         it('test new line', function () {
-            this.scriptView.setScriptDescription('line1\nline2');
-            assert.equal('line1<br>line2', this.vueModel.formattedDescription)
+            this.store.state.scriptConfig.description = 'line1\nline2';
+            assert.equal('line1<br>line2', this.scriptView.vm.formattedDescription)
         });
     })
 });

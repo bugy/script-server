@@ -398,7 +398,7 @@ export function arraysEqual(arr1, arr2) {
     return true;
 }
 
-function setInputValue(inputField, value, triggerEvent) {
+export function setInputValue(inputField, value, triggerEvent) {
     if (isNull(triggerEvent)) {
         triggerEvent = false;
     }

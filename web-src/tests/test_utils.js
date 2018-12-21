@@ -1,4 +1,7 @@
-async function vueTicks(count) {
+import Vue from 'vue';
+import {isNull} from '../js/common';
+
+export async function vueTicks(count) {
     if (isNull(count)) {
         count = 3;
     } else if (count === 0) {
@@ -14,19 +17,9 @@ async function vueTicks(count) {
     return promise;
 }
 
-function createVue(componentName, properties) {
-    document.body.insertAdjacentHTML('afterbegin', '<div id="top-level-element"></div>');
-    const topLevelElement = document.getElementById('top-level-element');
-
-    let componentConstructor = Vue.options.components[componentName];
-
-    const vm = new componentConstructor({
-        propsData: properties
-    }).$mount(topLevelElement);
-
-    vm.$on('input', function (value) {
-        vm.value = value
+export function wrapVModel(inputComponent) {
+    inputComponent.vm.$on('input', function (value) {
+        inputComponent.vm.value = value;
     });
-
-    return vm;
+    inputComponent.vm.$on('error', error => inputComponent.currentError = error);
 }
