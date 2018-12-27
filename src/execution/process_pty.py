@@ -72,6 +72,8 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
                     while True:
                         try:
                             chunk = os.read(self.pty_master, max_read_bytes)
+                            if not chunk:
+                                break
                             data += chunk
 
                         except BlockingIOError:
