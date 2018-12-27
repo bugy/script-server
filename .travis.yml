@@ -1,10 +1,8 @@
 sudo: required
-dist: trusty
+dist: xenial
 language: node_js
 node_js:
 - '6'
-python:
-- '3.4.8'
 cache:
   directories:
   - web-src/node_modules
