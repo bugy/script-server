@@ -2,7 +2,7 @@ sudo: required
 dist: trusty
 language: node_js
 node_js:
-- "6"
+- '6'
 cache:
   directories:
   - web-src/node_modules
@@ -18,7 +18,7 @@ install:
 - cd ..
 before_script:
 - cd src
-  python3 -m unittest discover -s tests -p "*.py"
+- python3 -m unittest discover -s tests -p "*.py"
 - cd ../web-src
 - npm run test
 - cd ..
@@ -30,6 +30,8 @@ before_deploy:
 - git tag 'dev'
 deploy:
   provider: releases
+  api_key:
+    secure: pIAd9X4p5OiFR82TXnZj2JqRJmKdvzfcNArW/oZ8FMnTtEFrOan5f5fL2rud9+lxPXb2hw9sbE/Zx8RY9M3KFximyfn5IvanfVGbxWUwutJNvErhLXatgzTuSljPsRsaQ0cYaWYugZVqxCcAisz6Swhwbwkix+Tz5TlZ3mOBVLqfoPZAnesWNb4ocPNC9JVOz5og8lxwuUBmXK34qg++93AF7di5mmJ81IiqtCbFHIclPvswm3Aj29vXOnRH2D/3lcqO0GVly5EsH86C6d4mnXYpmR72/JQyVVg55Br+llx37Ls5P18aKhIAk5WzyhvCh11b3AfcZpaDikC6778tKGkDGCGOgqXJl7alKiTffaPgP2tKZjBY9ABq8tqW9mvIvFU1J79Zxe17RyLPvyTBsaC82HtnSsjMnkRLo9nbRxHRmz5b+EXklOOeUCW+aYymArjGdrnejDlXNwZM+rOUDbxTwngYyxoCTLa3T3LVwE0uiTTatgtwf74l6GJlAfm+XHxQbkTlreK8dZuH7dXOTo0PsOrv817bmQm9nSOVNU6GgBPyU2W+MGxzMMa+WSK+ZLLRnwtNyiRiiHcUU5F5fCU57kIi3HtFwZa8GrJtk6AZaXAVo0z4Z43jMoXz82CmI+ltU68nrh+VSL3mdgqGq3o0qTQFbgEyfAboXIGYK+o=
   file: build/script-server.zip
   draft: true
   overwrite: true
