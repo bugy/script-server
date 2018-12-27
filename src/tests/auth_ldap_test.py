@@ -28,7 +28,7 @@ class _LdapAuthenticatorMockWrapper:
             )
 
             for dn, attrs in self._entries.items():
-                dn = safe_dn(dn)
+                dn = safe_dn(dn).lower()
 
                 entry_added = connection.strategy.add_entry(dn, attrs)
                 if not entry_added:
