@@ -45,6 +45,8 @@ Internet connection is not needed. All the files are loaded from the server.
 1. Download script-server.zip file from [Latest release](https://github.com/bugy/script-server/releases/latest)
 2. Create script-server folder anywhere on your PC and extract zip content to this folder
 
+(For detailed steps on linux with virtualenv, please see [Installation guide](https://github.com/bugy/script-server/wiki/Installing-on-virtualenv-(linux))
+
 ### Developer mode
 1. Clone/download the repository
 2. Run 'tools/init.py --dev' script (this will download javascript libraries)
