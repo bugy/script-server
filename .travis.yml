@@ -24,3 +24,15 @@ before_script:
 - cd ..
 script:
 - python3 tools/build.py
+before_deploy:
+- git config --local user.name 'bugy'
+- git config --local user.email 'buggygm@gmail.com'
+- git tag 'dev'
+deploy:
+  provider: releases
+  file: build/script-server.zip
+  draft: true
+  overwrite: true
+  skip_cleanup: true
+#  on:
+#    branch: master
