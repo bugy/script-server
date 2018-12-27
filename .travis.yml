@@ -1,3 +1,4 @@
+if: tag IS blank
 sudo: required
 dist: xenial
 language: node_js
@@ -8,6 +9,10 @@ cache:
   - web-src/node_modules
 addons:
   chrome: stable
+env:
+  global:
+  - OWNER=${TRAVIS_REPO_SLUG%/*}
+  - secure: "GtWCiMPNz3MDDTvXqaVsgZBvlxYRZuTY6sUEhWTL37zJZHgRLlxTCTD27hHZp2P4B6G6KGV/0iEvMYxqzo6jMrzcEnt7TlGetteqI18dhV1dIQGH6uy8Y/PktkK2g2FuJeGV3FRK4+a21v6zzSuUaFa26k97mPapa4LS83XXj7rc13ll23HhhtObVF/a1n3U0Xwe4FkdoxbKlecJUnNujESxFk4xQl4N1tFv15fldDlFq0XWs26eEp3LU/n7wkMzbg9WEqPvDeaYlvir9VpvcYWpVvf8Uz+wpvW1jnE2R6bK1TDv5BNzQwbf2JtN284yZ8I1nwZtOJkc1RUr5wUFxCD0p8tc30sAlKemI385v2t1ccoBYMwH8LHFIUoSXoolHZBsnZeADqpo3a0d8hVFWv4AcxC27Q6SfMCltl0+ogAoQ7wVfkRT++044p415Ar4raEqIkqTm64FaRNMS0v2y5mS2634PMSGMRnK+NBrWz1yFKxsiuPKypIWygtrJ4pyiL2yPBZupnCluEgqva3q6AmMDlNuSUmcTEnCRGB01U2if6/oSEgISH1VK2lsRSxuoG5dFFuezwv90YENh/7pw0/hgge7EOse6OzDsU3uNRWcTuXF7eEBhjM1wBHWHlaAwV9vfHMZX4sHWP4R4CZhPjVEPRz6HPEg1tFCs2EvkuI="
 before_install:
 - sudo apt-get -y install python3-pip python3-setuptools
 install:
@@ -28,15 +33,17 @@ script:
 before_deploy:
 - git config --local user.name 'bugy'
 - git config --local user.email 'buggygm@gmail.com'
-- git tag 'dev'
+- git tag -f 'dev'
+- git remote add gh https://${OWNER}:${GITHUB_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git
+- git push -f gh dev
+- git remote remove gh
 deploy:
   provider: releases
-  api_key:
-    secure: pIAd9X4p5OiFR82TXnZj2JqRJmKdvzfcNArW/oZ8FMnTtEFrOan5f5fL2rud9+lxPXb2hw9sbE/Zx8RY9M3KFximyfn5IvanfVGbxWUwutJNvErhLXatgzTuSljPsRsaQ0cYaWYugZVqxCcAisz6Swhwbwkix+Tz5TlZ3mOBVLqfoPZAnesWNb4ocPNC9JVOz5og8lxwuUBmXK34qg++93AF7di5mmJ81IiqtCbFHIclPvswm3Aj29vXOnRH2D/3lcqO0GVly5EsH86C6d4mnXYpmR72/JQyVVg55Br+llx37Ls5P18aKhIAk5WzyhvCh11b3AfcZpaDikC6778tKGkDGCGOgqXJl7alKiTffaPgP2tKZjBY9ABq8tqW9mvIvFU1J79Zxe17RyLPvyTBsaC82HtnSsjMnkRLo9nbRxHRmz5b+EXklOOeUCW+aYymArjGdrnejDlXNwZM+rOUDbxTwngYyxoCTLa3T3LVwE0uiTTatgtwf74l6GJlAfm+XHxQbkTlreK8dZuH7dXOTo0PsOrv817bmQm9nSOVNU6GgBPyU2W+MGxzMMa+WSK+ZLLRnwtNyiRiiHcUU5F5fCU57kIi3HtFwZa8GrJtk6AZaXAVo0z4Z43jMoXz82CmI+ltU68nrh+VSL3mdgqGq3o0qTQFbgEyfAboXIGYK+o=
+  name: dev
+  api_key: $GITHUB_TOKEN
   file: build/script-server.zip
-  draft: true
+  prerelease: true
   overwrite: true
   skip_cleanup: true
   on:
-    all_branches: true
-#    branch: master
+    branch: master
