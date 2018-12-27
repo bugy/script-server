@@ -1,12 +1,12 @@
 'use strict';
 
-import {mount} from 'vue-test-utils';
+import {mount} from '@vue/test-utils';
 import {hasClass, isEmptyString} from '../js/common';
 import Combobox from '../js/components/combobox'
-import {vueTicks, wrapVModel} from './test_utils';
+import {setDeepProp, vueTicks, wrapVModel} from './test_utils';
+import {assert, config as chaiConfig} from 'chai';
 
-var assert = chai.assert;
-chai.config.truncateThreshold = 0;
+chaiConfig.truncateThreshold = 0;
 
 describe('Test ComboBox', function () {
 
@@ -46,7 +46,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test change name', async function () {
-            this.comboBox.vm.config.name = 'testName1';
+            setDeepProp(this.comboBox, 'config.name', 'testName1');
 
             await vueTicks();
 
@@ -59,7 +59,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test change required', async function () {
-            this.comboBox.vm.config.required = true;
+            setDeepProp(this.comboBox, 'config.required', true);
 
             await vueTicks();
 
@@ -71,7 +71,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test change description', async function () {
-            this.comboBox.vm.config.description = 'My new desc';
+            setDeepProp(this.comboBox, 'config.description', 'My new desc');
 
             await vueTicks();
 
@@ -79,7 +79,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test initial multiselect', function () {
-            assert.notExists(this.comboBox.find('select').attributes().multiple);
+            assert.notExists(this.comboBox.find('select').attributes('multiple'));
 
             const listElement = $(this.comboBox.element).find('ul').get(0);
             assert.equal(false, hasClass(listElement, 'multiple-select-dropdown'));
@@ -103,7 +103,7 @@ describe('Test ComboBox', function () {
 
         it('Test change allowed values', async function () {
             const values = ['val1', 'val2', 'hello', 'another option'];
-            this.comboBox.vm.config.values = values;
+            setDeepProp(this.comboBox, 'config.values', values);
 
             await vueTicks();
 
@@ -131,7 +131,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test external value change', async function () {
-            this.comboBox.vm.value = 'Value C';
+            this.comboBox.setProps({value: 'Value C'});
 
             await vueTicks();
 
@@ -155,7 +155,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test set unknown value', async function () {
-            this.comboBox.vm.value = 'Xyz';
+            this.comboBox.setProps({value: 'Xyz'});
 
             await vueTicks();
 
@@ -164,7 +164,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test set unknown value', async function () {
-            this.comboBox.vm.value = 'Xyz';
+            this.comboBox.setProps({value: 'Xyz'});
 
             await vueTicks();
 
@@ -173,10 +173,10 @@ describe('Test ComboBox', function () {
         });
 
         it('Test set multiselect single value', async function () {
-            this.comboBox.vm.config.multiselect = true;
+            setDeepProp(this.comboBox, 'config.multiselect', true);
             await vueTicks();
 
-            this.comboBox.vm.value = 'Value A';
+            this.comboBox.setProps({value: 'Value A'});
 
             await vueTicks();
             assert.equal(['Value A'], this.comboBox.vm.value);
@@ -184,10 +184,10 @@ describe('Test ComboBox', function () {
         });
 
         it('Test set multiselect multiple values', async function () {
-            this.comboBox.vm.config.multiselect = true;
+            setDeepProp(this.comboBox, 'config.multiselect', true);
             await vueTicks();
 
-            this.comboBox.vm.value = ['Value A', 'Value C'];
+            this.comboBox.setProps({value: ['Value A', 'Value C']});
 
             await vueTicks();
             assert.deepEqual(['Value A', 'Value C'], this.comboBox.vm.value);
@@ -198,10 +198,10 @@ describe('Test ComboBox', function () {
         });
 
         it('Test set multiselect single unknown value', async function () {
-            this.comboBox.vm.config.multiselect = true;
+            setDeepProp(this.comboBox, 'config.multiselect', true);
             await vueTicks();
 
-            this.comboBox.vm.value = ['Value X'];
+            this.comboBox.setProps({value: ['Value X']});
 
             await vueTicks();
             assert.deepEqual([], this.comboBox.vm.value);
@@ -209,10 +209,10 @@ describe('Test ComboBox', function () {
         });
 
         it('Test set multiselect unknown value from multiple', async function () {
-            this.comboBox.vm.config.multiselect = true;
+            setDeepProp(this.comboBox, 'config.multiselect', true);
             await vueTicks();
 
-            this.comboBox.vm.value = ['Value A', 'Value X'];
+            this.comboBox.setProps({value: ['Value A', 'Value X']});
 
             await vueTicks();
             assert.deepEqual(['Value A'], this.comboBox.vm.value);
@@ -220,7 +220,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test select multiple values in multiselect', async function () {
-            this.comboBox.vm.config.multiselect = true;
+            setDeepProp(this.comboBox, 'config.multiselect', true);
             await vueTicks();
 
             const values = ['Value A', 'Value C'];
@@ -238,7 +238,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test change allowed values with matching value', async function () {
-            this.comboBox.vm.config.values = ['val1', 'val2', 'hello', 'Value B', 'another option'];
+            setDeepProp(this.comboBox, 'config.values', ['val1', 'val2', 'hello', 'Value B', 'another option']);
 
             await vueTicks();
 
@@ -247,7 +247,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test change allowed values with unmatching value', async function () {
-            this.comboBox.vm.config.values = ['val1', 'val2', 'hello', 'another option'];
+            setDeepProp(this.comboBox, 'config.values', ['val1', 'val2', 'hello', 'another option']);
 
             await vueTicks();
 
@@ -256,8 +256,8 @@ describe('Test ComboBox', function () {
         });
 
         it('Test change allowed values and then a value', async function () {
-            this.comboBox.vm.config.values = ['val1', 'val2', 'hello', 'another option'];
-            this.comboBox.vm.value = 'val2';
+            setDeepProp(this.comboBox, 'config.values', ['val1', 'val2', 'hello', 'another option']);
+            this.comboBox.setProps({value: 'val2'});
 
             await vueTicks();
 
@@ -268,10 +268,10 @@ describe('Test ComboBox', function () {
 
     describe('Test errors', function () {
         it('Test set external empty value when required', async function () {
-            this.comboBox.vm.config.required = true;
+            setDeepProp(this.comboBox, 'config.required', true);
             await vueTicks();
 
-            this.comboBox.vm.value = '';
+            this.comboBox.setProps({value: ''});
 
             await vueTicks();
 
@@ -279,7 +279,7 @@ describe('Test ComboBox', function () {
         });
 
         it('Test unselect combobox when required', async function () {
-            this.comboBox.vm.config.required = true;
+            setDeepProp(this.comboBox, 'config.required', true);
             await vueTicks();
 
             const selectElement = $(this.comboBox.element).find('select');
@@ -292,11 +292,11 @@ describe('Test ComboBox', function () {
         });
 
         it('Test set external value after empty', async function () {
-            this.comboBox.vm.config.required = true;
-            this.comboBox.vm.value = '';
+            setDeepProp(this.comboBox, 'config.required', true);
+            this.comboBox.setProps({value: ''});
             await vueTicks();
 
-            this.comboBox.vm.value = 'Value A';
+            this.comboBox.setProps({value: 'Value A'});
             await vueTicks();
 
             assert.equal('', this.comboBox.currentError);

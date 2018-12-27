@@ -1,12 +1,10 @@
 'use strict';
 
-import {mount} from 'vue-test-utils';
-import {hasClass, isEmptyString} from '../js/common';
+import {mount} from '@vue/test-utils';
+import {assert, config as chaiConfig} from 'chai';
 import LogPanel from '../js/components/log_panel'
-import {vueTicks, wrapVModel} from './test_utils';
 
-var assert = chai.assert;
-chai.config.truncateThreshold = 0;
+chaiConfig.truncateThreshold = 0;
 
 describe('Test logPanel', function () {
 

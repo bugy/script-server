@@ -1,13 +1,12 @@
 'use strict';
 
-import Vue from 'vue';
-import {mount} from 'vue-test-utils';
+import {mount} from '@vue/test-utils';
+import {assert, config as chaiConfig} from 'chai';
 import {setInputValue} from '../js/common';
 import Textfield from '../js/components/textfield'
-import {setProp, vueTicks, wrapVModel} from './test_utils';
+import {mergeDeepProps, setDeepProp, vueTicks, wrapVModel} from './test_utils';
 
-var assert = chai.assert;
-chai.config.truncateThreshold = 0;
+chaiConfig.truncateThreshold = 0;
 
 describe('Test TextField', function () {
 
@@ -47,7 +46,7 @@ describe('Test TextField', function () {
         });
 
         it('Test change name', async function () {
-            this.textfield.vm.config.name = 'testName1';
+            setDeepProp(this.textfield, 'config.name', 'testName1');
 
             await vueTicks();
 
@@ -59,7 +58,7 @@ describe('Test TextField', function () {
         });
 
         it('Test change required', async function () {
-            this.textfield.vm.config.required = true;
+            setDeepProp(this.textfield, 'config.required', true);
 
             await vueTicks();
 
@@ -71,7 +70,7 @@ describe('Test TextField', function () {
         });
 
         it('Test change field type to number', async function () {
-            Vue.set(this.textfield.vm.config, 'type', 'int');
+            setDeepProp(this.textfield, 'config.type', 'int');
 
             await vueTicks();
 
@@ -79,7 +78,7 @@ describe('Test TextField', function () {
         });
 
         it('Test change field type to password', async function () {
-            Vue.set(this.textfield.vm.config, 'secure', true);
+            setDeepProp(this.textfield, 'config.secure', true);
 
             await vueTicks();
 
@@ -97,7 +96,7 @@ describe('Test TextField', function () {
         });
 
         it('Test external value change', async function () {
-            this.textfield.vm.value = 'XYZ';
+            this.textfield.setProps({value: 'XYZ'});
 
             await vueTicks();
 
@@ -138,8 +137,8 @@ describe('Test TextField', function () {
 
     describe('Test validaton', function () {
         it('Test set external empty value when required', async function () {
-            this.textfield.vm.config.required = true;
-            this.textfield.vm.value = '';
+            setDeepProp(this.textfield, 'config.required', true);
+            this.textfield.setProps({value: ''});
 
             await vueTicks();
 
@@ -147,7 +146,7 @@ describe('Test TextField', function () {
         });
 
         it('Test user set empty value when required', async function () {
-            this.textfield.vm.config.required = true;
+            setDeepProp(this.textfield, 'config.required', true);
             await vueTicks();
 
             const inputField = this.textfield.find('input').element;
@@ -159,11 +158,11 @@ describe('Test TextField', function () {
         });
 
         it('Test set external value after empty when required', async function () {
-            this.textfield.vm.config.required = true;
-            this.textfield.vm.value = '';
+            setDeepProp(this.textfield, 'config.required', true);
+            this.textfield.setProps({value: ''});
             await vueTicks();
 
-            this.textfield.vm.value = 'A';
+            this.textfield.setProps({value: 'A'});
 
             await vueTicks();
 
@@ -171,8 +170,8 @@ describe('Test TextField', function () {
         });
 
         it('Test user set value after empty when required', async function () {
-            this.textfield.vm.config.required = true;
-            this.textfield.vm.value = '';
+            setDeepProp(this.textfield, 'config.required', true);
+            this.textfield.setProps({value: ''});
             await vueTicks();
             const inputField = this.textfield.find('input').element;
 
@@ -185,8 +184,8 @@ describe('Test TextField', function () {
         });
 
         it('Test set invalid external value when integer', async function () {
-            this.textfield.vm.config.type = 'int';
-            this.textfield.vm.value = '1.5';
+            setDeepProp(this.textfield, 'config.type', 'int');
+            this.textfield.setProps({value: '1.5'});
             await vueTicks();
 
             assert.equal('integer expected', this.textfield.currentError);

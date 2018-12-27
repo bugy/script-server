@@ -19,7 +19,29 @@ export async function vueTicks(count) {
 
 export function wrapVModel(inputComponent) {
     inputComponent.vm.$on('input', function (value) {
-        inputComponent.vm.value = value;
+        inputComponent.setProps({value});
     });
     inputComponent.vm.$on('error', error => inputComponent.currentError = error);
+}
+
+export function setDeepProp(wrapper, key, value) {
+    const keys = key.split('.');
+
+    if (keys.length === 1) {
+        wrapper.setProps({[key]: value})
+    }
+
+    const rootKey = keys[0];
+    const newRootElement = $.extend(true, {}, wrapper.props(rootKey));
+
+    let currentElement = newRootElement;
+    for (let i = 1; i < keys.length - 1; i++) {
+        const key = keys[i];
+        currentElement = currentElement[key];
+    }
+
+    if (currentElement[keys[keys.length - 1]] !== value) {
+        currentElement[keys[keys.length - 1]] = value;
+        wrapper.setProps({[rootKey]: newRootElement})
+    }
 }

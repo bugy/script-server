@@ -1,10 +1,10 @@
 'use strict';
-import {createLocalVue, mount} from 'vue-test-utils';
+import {createLocalVue, mount} from '@vue/test-utils';
 import Vuex from 'vuex';
 import ScriptView from '../js/script/script-view';
+import {assert, config as chaiConfig} from 'chai';
 
-var assert = chai.assert;
-chai.config.truncateThreshold = 0;
+chaiConfig.truncateThreshold = 0;
 
 const localVue = createLocalVue();
 localVue.use(Vuex);
