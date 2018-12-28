@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bugy/script-server.svg?branch=master)](https://travis-ci.org/bugy/script-server)
+
 # script-server
 Script-server is a Web GUI and a web server for scripts.  
 
@@ -41,16 +43,19 @@ Any more or less up to date browser with enabled JS
 Internet connection is not needed. All the files are loaded from the server.
 
 ## Installation
-### Non-developer mode
-1. Download script-server.zip file from [Latest release](https://github.com/bugy/script-server/releases/latest)
+### For production
+1. Download script-server.zip file from [Latest release](https://github.com/bugy/script-server/releases/latest) or [Dev release](https://github.com/bugy/script-server/releases/tag/dev)
 2. Create script-server folder anywhere on your PC and extract zip content to this folder
 
-(For detailed steps on linux with virtualenv, please see [Installation guide](https://github.com/bugy/script-server/wiki/Installing-on-virtualenv-(linux))
+(For detailed steps on linux with virtualenv, please see [Installation guide](https://github.com/bugy/script-server/wiki/Installing-on-virtualenv-(linux)))
 
-### Developer mode
+### For development
 1. Clone/download the repository
-2. Run 'tools/init.py --dev' script (this will download javascript libraries)
+2. Run 'tools/init.py --dev --no-npm' script
 
+`init.py` script should be run after pulling any new changes
+
+If you are making changes to web files, use `npm run build:dev` or `npm run start:dev`
 
 ## Setup and run
 1. Create configurations for your scripts in *conf/runners/* folder (see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details)

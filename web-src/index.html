@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Script server</title>
+    <meta charset="utf-8">
+
+    <% for (var css in htmlWebpackPlugin.files.css) { %>
+    <link href="<%= htmlWebpackPlugin.files.css[css] %>" rel="stylesheet">
+    <% } %>
+
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/bash_styles.css">
+
+    <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+    <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+    <% } %>
+</head>
+
+<body>
+<div class="container-fluid" id="mainPanel">
+    <div id="scriptsPanel">
+        <div id="scriptsList">
+            <div id="listHeader">
+                <h2 class="header" id="serverHeader">Script server</h2>
+
+                <div id="searchPanel" class="collapsed">
+                    <input type="search" id="searchField" name="searchField" autocomplete="off"
+                           placeholder="Search script">
+                </div>
+                <input id="searchButton" type="image" src="images/search.png">
+
+                <div id="header-link">
+                    <a class="teal-text" href="admin.html" id="adminLink" style="display: none">
+                        <i class="material-icons">settings</i>
+                    </a>
+                    <a href="https://github.com/bugy/script-server" target="_blank" id="githubLink">
+                        <img src="images/github.png">
+                    </a>
+                </div>
+            </div>
+
+            <div id="scripts" class="collection"></div>
+
+            <div id="logoutPanel" style="display: none">
+                <span id="usernameField"></span>
+                <input id="logoutButton" type="image" src="images/logout.png">
+            </div>
+        </div>
+
+        <div id="content-panel">
+            <h2 id="script-header" class="header"></h2>
+            <div id="script-panel-container"></div>
+            <div id="error-panel"></div>
+        </div>
+
+        <div id="welcome-panel">
+            <img src="images/console.png" id="welcome-icon">
+            <div id="welcome-text">
+                Welcome to the Script Server. <br> To start, select one of the scripts
+            </div>
+            <div id="welcome-cookie-text">
+                or just take a cookie and enjoy!
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+<script type="text/template" id="menu-item-state-template">
+    <div class="menu-item-state">
+        <i class="material-icons check-icon">check</i>
+        <div class="preloader-wrapper active">
+            <div class="spinner-layer">
+                <div class="circle-clipper left">
+                    <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                    <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                    <div class="circle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+</html>

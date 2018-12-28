@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Script server</title>
+    <meta charset="utf-8">
+
+    <% for (var css in htmlWebpackPlugin.files.css) { %>
+    <link href="<%= htmlWebpackPlugin.files.css[css] %>" rel="stylesheet">
+    <% } %>
+
+    <link rel="stylesheet" href="css/index.css">
+
+    <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+    <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+    <% } %>
+</head>
+
+<body id="login-body" class="valign-wrapper">
+<div id="login-panel" class="card">
+    <div class="card-content" id="login-content-container">
+    </div>
+</div>
+</body>
+
+<script type="text/template" id="login-credentials-template">
+    <form class="login-form">
+        <div class="input-field">
+            <input id="username" name="username" type="text" class="validate" autofocus>
+            <label for="username">Username</label>
+        </div>
+
+        <div class="input-field">
+            <input id="password" name="password" type="password" class="validate">
+            <label for="password">Password</label>
+        </div>
+
+        <div class="login-error-label"></div>
+
+        <input type="submit" id="credentials-login-button" class="btn" value="Log in">
+    </form>
+</script>
+
+<script type="text/template" id="login-google_oauth-template">
+    <div>
+        <input type="submit" id="login-google_oauth-button" value="Sign in with Google">
+        <div class="login-error-label"></div>
+    </div>
+</script>
+
+</html>

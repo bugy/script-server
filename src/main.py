@@ -3,6 +3,7 @@ import json
 import logging
 import logging.config
 import os
+import sys
 
 import migrations.migrate
 from alerts.alerts_service import AlertsService
@@ -17,6 +18,7 @@ from features.file_upload_feature import FileUploadFeature
 from files.user_file_storage import UserFileStorage
 from model import server_conf
 from utils import tool_utils, file_utils
+from utils.tool_utils import InvalidWebBuildException
 from web import server
 
 parser = argparse.ArgumentParser(description='Launch script-server.')
@@ -49,7 +51,11 @@ def get_secret(temp_folder):
 
 
 def main():
-    tool_utils.validate_web_imports_exist(os.getcwd())
+    try:
+        tool_utils.validate_web_build_exists(os.getcwd())
+    except InvalidWebBuildException as e:
+        print(str(e))
+        sys.exit(-1)
 
     logging_conf_file = os.path.join(CONFIG_FOLDER, 'logging.json')
     with open(logging_conf_file, 'rt') as f:

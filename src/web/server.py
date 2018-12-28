@@ -51,15 +51,15 @@ def is_allowed_during_login(request_path, login_url, request_handler):
     if request_path == login_url:
         return True
 
-    login_resources = ['/js/login.js',
-                       '/js/common.js',
-                       '/js/libs/jquery.min.js',
-                       '/js/libs/materialize.js',
-                       '/css/libs/materialize.min.css',
+    login_resources = ['/login.js',
+                       '/login.js.map',
                        '/css/index.css',
-                       '/css/fonts/roboto/Roboto-Regular.woff2',
-                       '/css/fonts/roboto/Roboto-Regular.woff',
-                       '/css/fonts/roboto/Roboto-Regular.ttf',
+                       '/login-deps.css',
+                       '/login-deps.css.map',
+                       '/fonts/roboto-latin-700.woff2',
+                       '/fonts/roboto-latin-700.woff',
+                       '/fonts/roboto-latin-400.woff2',
+                       '/fonts/roboto-latin-400.woff',
                        '/images/titleBackground.jpg',
                        '/images/g-logo-plain.png',
                        '/images/g-logo-plain-pressed.png']
@@ -73,7 +73,7 @@ def is_allowed_during_login(request_path, login_url, request_handler):
     else:
         return False
 
-    allowed_referrers = [login_url, '/css/libs/materialize.min.css', '/css/index.css']
+    allowed_referrers = [login_url, '/login-deps.css', '/css/index.css']
     for allowed_referrer in allowed_referrers:
         if referer.endswith(allowed_referrer):
             return True
@@ -467,7 +467,13 @@ class GetExecutingScriptValues(BaseRequestHandler):
     def get(self, execution_id):
         validate_execution_id(execution_id, self)
 
-        values = self.application.execution_service.get_parameter_values(execution_id)
+        values = dict(self.application.execution_service.get_parameter_values(execution_id))
+
+        config = self.application.execution_service.get_config(execution_id)
+        for parameter in config.parameters:
+            parameter_name = parameter.name
+            if (parameter_name in values) and (parameter.type == 'file_upload'):
+                del values[parameter_name]
 
         self.write(external_model.to_external_parameter_values(values))
 

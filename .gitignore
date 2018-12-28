@@ -67,6 +67,6 @@ conf/conf.json
 logs
 .idea
 temp
-web/css/libs
-web/css/fonts/libs
-web/js/libs
+web
+web-src/node_modules
+web-src/package-lock.json
