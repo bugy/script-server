@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bugy/script-server.svg?branch=master)](https://travis-ci.org/bugy/script-server)
+
 # script-server
 Script-server is a Web GUI and a web server for scripts.  
 
