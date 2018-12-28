@@ -7,7 +7,7 @@ def validate_web_build_exists(project_path):
     how_to_fix_build_message = \
         'How to fix: ' \
         '\n - PROD: please use stable releases from https://github.com/bugy/script-server/releases/latest' \
-        '\n - DEV: please run tools/init.py'
+        '\n - DEV: please run tools/init.py --dev --no-npm'
 
     if not os.path.exists(web_folder):
         raise InvalidWebBuildException(web_folder + ' does not exist. \n' + how_to_fix_build_message)
