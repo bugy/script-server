@@ -24,7 +24,7 @@ def download_web_files(project_path):
     print('Done')
 
 
-def build_web_files(prod):
+def build_web_files(prod, project_path):
     print('Building web...')
     npm_mode = 'prod' if prod else 'dev'
     process_utils.invoke('npm run build:' + npm_mode, os.path.join(project_path, 'web-src'))
@@ -35,7 +35,7 @@ def prepare_project(project_path, *, prod, download_web=False):
     if download_web:
         download_web_files(project_path)
     else:
-        build_web_files(prod)
+        build_web_files(prod, project_path)
 
     runners_conf = os.path.join(project_path, 'conf', 'runners')
     if not os.path.exists(runners_conf):
