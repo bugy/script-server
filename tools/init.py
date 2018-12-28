@@ -31,7 +31,7 @@ def build_web_files(prod):
     print('Done')
 
 
-def prepare_project(project_path, *, prod, download_web):
+def prepare_project(project_path, *, prod, download_web=False):
     if download_web:
         download_web_files(project_path)
     else:
