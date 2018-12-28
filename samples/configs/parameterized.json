@@ -183,6 +183,22 @@
       "constant": true,
       "param": "--audit_name",
       "default": "${auth.audit_name}"
+    },
+    {
+      "name": "Any IP",
+      "param": "--any_ip",
+      "type": "ip"
+    },
+    {
+      "name": "IP v4",
+      "param": "--ip4",
+      "type": "ip4",
+      "default": "127.0.0.1"
+    },
+    {
+      "name": "IP v6",
+      "param": "--ip6",
+      "type": "ip6"
     }
   ]
 }

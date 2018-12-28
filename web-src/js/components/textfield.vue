@@ -85,7 +85,7 @@
                 var empty = isEmptyString(value) || isEmptyString(value.trim());
 
                 if ((textField.validity.badInput)) {
-                    return getInvalidTypeError(this.type);
+                    return getInvalidTypeError(this.config.type);
                 }
 
                 if (this.config.required && empty) {
@@ -114,7 +114,7 @@
 
     function getValidByTypeError(value, type, min, max) {
         if (type === 'int') {
-            var isInteger = /^(((\-?[1-9])(\d*))|0)$/.test(value);
+            const isInteger = /^(((-?[1-9])(\d*))|0)$/.test(value);
             if (!isInteger) {
                 return getInvalidTypeError(type);
             }
@@ -122,9 +122,9 @@
             var intValue = parseInt(value);
 
             var minMaxValid = true;
-            var minMaxError = "";
+            var minMaxError = '';
             if (!isNull(min)) {
-                minMaxError += "min: " + min;
+                minMaxError += 'min: ' + min;
 
                 if (intValue < parseInt(min)) {
                     minMaxValid = false;
@@ -137,27 +137,112 @@
                 }
 
                 if (!isEmptyString(minMaxError)) {
-                    minMaxError += ", ";
+                    minMaxError += ', ';
                 }
 
-                minMaxError += "max: " + max;
+                minMaxError += 'max: ' + max;
             }
 
             if (!minMaxValid) {
                 return minMaxError;
             }
 
-            return "";
+            return '';
+
+        } else if (type === 'ip') {
+            if (isEmptyString(validateIp4(value)) || isEmptyString(validateIp6(value))) {
+                return ''
+            }
+
+            return 'IPv4 or IPv6 expected';
+
+        } else if (type === 'ip4') {
+            return validateIp4(value);
+
+        } else if (type === 'ip6') {
+            return validateIp6(value);
         }
 
-        return "";
+        return '';
+    }
+
+    function validateIp4(value) {
+        const ipElements = value.trim().split('.');
+        if (ipElements.length !== 4) {
+            return 'IPv4 expected'
+        }
+
+        for (const element of ipElements) {
+            if (isEmptyString(element)) {
+                return 'Empty IP block'
+            }
+
+            if (!/^[12]?[0-9]{1,2}$/.test(element)) {
+                return 'Invalid block ' + element;
+            }
+
+            const elementNumeric = parseInt(element, 10);
+            if (elementNumeric > 255) {
+                return 'Out of range ' + elementNumeric;
+            }
+        }
+
+        return '';
+    }
+
+    function validateIp6(value) {
+        const chunks = value.trim().split('::');
+        if (chunks.length > 2) {
+            return ':: allowed only once';
+        }
+
+        const elements = [];
+
+        elements.push(...chunks[0].split(':'));
+        if (chunks.length === 2) {
+            elements.push('::');
+            elements.push(...chunks[1].split(':'))
+        }
+
+        const hasCompressZeroes = chunks.length === 2;
+        let afterDoubleColon = false;
+        let hasIp4 = false;
+        let count = 0;
+
+        for (const element of elements) {
+            if (hasIp4) {
+                return 'IPv4 should be the last';
+            }
+
+            if (element === '::') {
+                afterDoubleColon = true;
+
+            } else if (element.includes('.') && ((afterDoubleColon || count >= 6))) {
+                if (!isEmptyString(validateIp4(element))) {
+                    return 'Invalid IPv4 block ' + element;
+                }
+                hasIp4 = true;
+                count++;
+
+            } else if (!/^[A-F0-9]{0,4}$/.test(element.toUpperCase())) {
+                return 'Invalid block ' + element;
+            }
+
+            count++;
+        }
+
+        if (((count < 8) && (!hasCompressZeroes)) || (count > 8)) {
+            return 'Should be 8 blocks';
+        }
+
+        return '';
     }
 
     function getInvalidTypeError(type) {
         if (type === 'int') {
-            return "integer expected";
+            return 'integer expected';
         }
 
-        return type + " expected";
+        return type + ' expected';
     }
 </script>

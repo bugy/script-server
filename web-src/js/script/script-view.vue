@@ -16,7 +16,7 @@
                 Stop
             </button>
         </div>
-        <LogPanel ref="logPanel" v-show="everStarted && !hasErrors"/>
+        <LogPanel ref="logPanel" v-show="showLog && !hasErrors"/>
         <div class="validation-panel" v-if="hasErrors">
             <h6 class="header">Validation failed. Errors list:</h6>
             <ul class="validation-errors-list">
@@ -74,6 +74,7 @@
             ...mapState({
                 scriptDescription: state => state.scriptConfig ? state.scriptConfig.description : '',
                 executing: 'executing',
+                showLog: 'showLog',
                 downloadableFiles: 'downloadableFiles',
                 inputPromptText: 'inputPromptText',
                 logChunks: 'logChunks'
@@ -173,18 +174,6 @@
                     fieldUpdater();
                 } else {
                     this.$nextTick(fieldUpdater);
-                }
-            },
-
-            executing: function (value) {
-                const newExecuting = toBoolean(value);
-
-                if (newExecuting) {
-                    this.errors = [];
-
-                    if (!this.everStarted) {
-                        this.everStarted = true;
-                    }
                 }
             },
 

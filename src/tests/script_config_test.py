@@ -262,6 +262,18 @@ class ParameterModelInitTest(unittest.TestCase):
             'values': {'script': 'echo "123\n" "456"'}})
         self.assertEqual(None, parameter_model.values)
 
+    def test_ip_uppercase(self):
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'IP'})
+        self.assertEqual('ip', parameter_model.type)
+
+    def test_ip_with_v(self):
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'Ipv6'})
+        self.assertEqual('ip6', parameter_model.type)
+
 
 class ParameterModelDependantValuesTest(unittest.TestCase):
     def test_get_parameter_values_simple(self):
@@ -866,9 +878,9 @@ class TestSingleParameterValidation(unittest.TestCase):
         self.assert_error(error)
 
     def test_list_with_script_when_matches(self):
-        parameter = create_parameter_model('param', type=list, values_script="echo '123\n' 'abc'")
+        parameter = create_parameter_model('param', type='list', values_script="echo '123\n' 'abc'")
 
-        error = parameter.validate_value('abc')
+        error = parameter.validate_value('123')
         self.assertIsNone(error)
 
     def test_list_with_dependency_when_matches(self):
@@ -884,6 +896,46 @@ class TestSingleParameterValidation(unittest.TestCase):
 
         values['dep_param'] = 'abc'
         error = parameter.validate_value(' _abc_')
+        self.assertIsNone(error)
+
+    def test_any_ip_when_ip4(self):
+        parameter = create_parameter_model('param', type='ip')
+        error = parameter.validate_value('127.0.0.1')
+        self.assertIsNone(error)
+
+    def test_any_ip_when_ip6(self):
+        parameter = create_parameter_model('param', type='ip')
+        error = parameter.validate_value('ABCD::6789')
+        self.assertIsNone(error)
+
+    def test_any_ip_when_wrong(self):
+        parameter = create_parameter_model('param', type='ip')
+        error = parameter.validate_value('127.abcd.1')
+        self.assert_error(error)
+
+    def test_ip4_when_valid(self):
+        parameter = create_parameter_model('param', type='ip4')
+        error = parameter.validate_value('192.168.0.13')
+        self.assertIsNone(error)
+
+    def test_ip4_when_ip6(self):
+        parameter = create_parameter_model('param', type='ip4')
+        error = parameter.validate_value('ABCD::1234')
+        self.assert_error(error)
+
+    def test_ip6_when_valid(self):
+        parameter = create_parameter_model('param', type='ip6')
+        error = parameter.validate_value('1:2:3:4:5:6:7:8')
+        self.assertIsNone(error)
+
+    def test_ip6_when_ip4(self):
+        parameter = create_parameter_model('param', type='ip6')
+        error = parameter.validate_value('172.13.0.15')
+        self.assert_error(error)
+
+    def test_ip6_when_complex_valid(self):
+        parameter = create_parameter_model('param', type='ip6')
+        error = parameter.validate_value('AbC:0::13:127.0.0.1')
         self.assertIsNone(error)
 
     def assert_error(self, error):

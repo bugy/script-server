@@ -301,6 +301,7 @@ ScriptController.prototype._initStore = function () {
             parameterValues: {},
             parameterErrors: {},
             executing: false,
+            showLog: false,
             downloadableFiles: [],
             inputPromptText: null,
             sentValues: {},
@@ -355,9 +356,14 @@ ScriptController.prototype._initStore = function () {
                 });
 
                 controller.scriptView.$nextTick(function () {
-                    var parameterValues = state.parameterValues;
+                    const parameterValues = state.parameterValues;
+                    const parameterErrors = state.parameterErrors;
+
                     forEachKeyValue(parameterValues, function (key, value) {
-                        controller._sendCurrentValue(key, value);
+                        const errorMessage = parameterErrors[key];
+                        const valueToSend = isEmptyString(errorMessage) ? value : null;
+
+                        controller._sendCurrentValue(key, valueToSend);
                     });
                 });
             },
@@ -447,6 +453,10 @@ ScriptController.prototype._initStore = function () {
 
             [SET_EXECUTING](state, executing) {
                 state.executing = executing;
+
+                if (executing) {
+                    state.showLog = true;
+                }
             },
 
             [SET_INPUT_PROMPT](state, promptText) {
@@ -505,7 +515,7 @@ ScriptController.prototype._initStore = function () {
                     if (!(error instanceof HttpUnauthorizedError)) {
                         logError(error);
 
-                        commit.commit(APPEND_LOG_CHUNK, {text: '\n\n' + error.message});
+                        commit(APPEND_LOG_CHUNK, {text: '\n\n' + error.message});
                     }
                 }
 

@@ -42,16 +42,6 @@
 
                 return this.value.name;
             },
-
-            fieldType() {
-                if (this.config.type === 'int') {
-                    return 'number';
-                } else if (this.config.secure) {
-                    return 'password';
-                }
-
-                return 'text';
-            }
         },
 
         mounted: function () {

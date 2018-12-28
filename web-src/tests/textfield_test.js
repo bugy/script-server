@@ -2,7 +2,7 @@
 
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import {setInputValue} from '../js/common';
+import {isEmptyString, setInputValue} from '../js/common';
 import Textfield from '../js/components/textfield'
 import {mergeDeepProps, setDeepProp, vueTicks, wrapVModel} from './test_utils';
 
@@ -189,6 +189,137 @@ describe('Test TextField', function () {
             await vueTicks();
 
             assert.equal('integer expected', this.textfield.currentError);
+        });
+    });
+
+    describe('Test IP validaton', function () {
+
+        async function testValidation(textfield, type, value, expectedError) {
+            setDeepProp(textfield, 'config.type', type);
+            textfield.setProps({value: value});
+            await vueTicks();
+
+            if (isEmptyString(expectedError)) {
+                assert.equal(expectedError, textfield.currentError);
+            } else {
+                assert.include(textfield.currentError, expectedError);
+            }
+        }
+
+        it('Test IPv4 127.0.0.1', async function () {
+            await testValidation(this.textfield, 'ip4', '127.0.0.1', '')
+        });
+
+        it('Test IPv4 255.255.255.255', async function () {
+            await testValidation(this.textfield, 'ip4', '255.255.255.255', '')
+        });
+
+        it('Test IPv4 valid with trim', async function () {
+            await testValidation(this.textfield, 'ip4', '  192.168.0.1\n', '')
+        });
+
+        it('Test IPv4 invalid block count', async function () {
+            await testValidation(this.textfield, 'ip4', '127.0.1', 'IPv4 expected')
+        });
+
+        it('Test IPv4 empty block', async function () {
+            await testValidation(this.textfield, 'ip4', '127..0.1', 'Empty IP block')
+        });
+
+        it('Test IPv4 invalid block', async function () {
+            await testValidation(this.textfield, 'ip4', '127.wrong.0.1', 'Invalid block wrong')
+        });
+
+        it('Test IPv4 large number', async function () {
+            await testValidation(this.textfield, 'ip4', '192.168.256.0', 'Out of range')
+        });
+
+        it('Test IPv6 ::', async function () {
+            await testValidation(this.textfield, 'ip6', '::', '')
+        });
+
+        it('Test IPv6 ::0', async function () {
+            await testValidation(this.textfield, 'ip6', '::0', '')
+        });
+
+        it('Test IPv6 ABCD::0', async function () {
+            await testValidation(this.textfield, 'ip6', 'ABCD::0', '')
+        });
+
+        it('Test IPv6 ABCD::192.168.2.12', async function () {
+            await testValidation(this.textfield, 'ip6', 'ABCD::192.168.2.12', '')
+        });
+
+        it('Test IPv6 ABCD:0123::4567:192.168.2.12', async function () {
+            await testValidation(this.textfield, 'ip6', 'ABCD:0123::4567:192.168.2.12', '')
+        });
+
+        it('Test IPv6 valid with trim', async function () {
+            await testValidation(this.textfield, 'ip6', '  ABCD::0123  ', '')
+        });
+
+        it('Test IPv6 valid with different cases', async function () {
+            await testValidation(this.textfield, 'ip6', 'AbCd::123:dEf', '')
+        });
+
+        it('Test IPv6 valid blocks count', async function () {
+            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:6:7:8', '')
+        });
+
+        it('Test IPv6 valid blocks count with ip4', async function () {
+            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:6:127.0.0.1', '')
+        });
+
+        it('Test IPv6 too much blocks', async function () {
+            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:6:7:8:9', 'Should be 8 blocks')
+        });
+
+        it('Test IPv6 too much blocks with zero compression', async function () {
+            await testValidation(this.textfield, 'ip6', '1:2:3::4:5:6:7:8:9', 'Should be 8 blocks')
+        });
+
+        it('Test IPv6 too little blocks', async function () {
+            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:6:7', 'Should be 8 blocks')
+        });
+
+        it('Test IPv6 double ::', async function () {
+            await testValidation(this.textfield, 'ip6', '1::2::3', 'allowed only once')
+        });
+
+        it('Test IPv6 invalid long block', async function () {
+            await testValidation(this.textfield, 'ip6', '1::ABCDE:3', 'Invalid block ABCDE')
+        });
+
+        it('Test IPv6 invalid character', async function () {
+            await testValidation(this.textfield, 'ip6', '1::ABCG:3', 'Invalid block ABCG')
+        });
+
+        it('Test IPv6 when ip4 not last', async function () {
+            await testValidation(this.textfield, 'ip6', '1::127.0.0.1:AB', 'should be the last')
+        });
+
+        it('Test IPv6 when ip4 wrong', async function () {
+            await testValidation(this.textfield, 'ip6', '1::127..1', 'Invalid IPv4 block 127..1')
+        });
+
+        it('Test IPv6 when ip4 too early', async function () {
+            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:127.0.0.1', 'Invalid block 127.0.0.1')
+        });
+
+        it('Test Any IP when correct ip4', async function () {
+            await testValidation(this.textfield, 'ip', '127.0.0.1', '')
+        });
+
+        it('Test Any IP when wrong ip4', async function () {
+            await testValidation(this.textfield, 'ip', '127.0..1', 'IPv4 or IPv6 expected')
+        });
+
+        it('Test Any IP when correct ip6', async function () {
+            await testValidation(this.textfield, 'ip', 'ABCD::0', '')
+        });
+
+        it('Test Any IP when wrong ip6', async function () {
+            await testValidation(this.textfield, 'ip', 'ABCX::0', 'IPv4 or IPv6 expected')
         });
     });
 });

@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from auth.authorization import ANY_USER
 from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
@@ -270,7 +271,7 @@ class ParameterModel(object):
         self.separator = config.get('separator', ',')
         self.multiple_arguments = read_boolean('multiple_arguments', config, default=False)
         self.default = _resolve_default(config.get('default'), self._username, self._audit_name)
-        self.type = config.get('type', 'text')
+        self.type = self._read_type(config)
 
         constant = read_boolean('constant', config, False)
         if constant and not self.default:
@@ -287,6 +288,14 @@ class ParameterModel(object):
                 self.constant)
             self._values_provider = values_provider
             self._reload_values()
+
+    def _read_type(self, config):
+        type = config.get('type', 'text')
+
+        if type.lower() in ('ip', 'ip4', 'ip6', 'ipv4', 'ipv6'):
+            type = type.lower().replace('v', '')
+
+        return type
 
     def _param_values_observer(self, key, old_value, new_value):
         values_provider = self._values_provider
@@ -379,6 +388,18 @@ class ParameterModel(object):
                 return 'is lower than allowed value (' \
                        + value_string + ' < ' + str(self.min) + ')'
             return None
+
+        if self.type in ('ip', 'ip4', 'ip6'):
+            try:
+                address = ip_address(value.strip())
+                if self.type == 'ip4':
+                    if not isinstance(address, IPv4Address):
+                        return value_string + ' is not an IPv4 address'
+                elif self.type == 'ip6':
+                    if not isinstance(address, IPv6Address):
+                        return value_string + ' is not an IPv6 address'
+            except ValueError:
+                return 'wrong IP address ' + value_string
 
         allowed_values = self.values
 
