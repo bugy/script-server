@@ -15,7 +15,7 @@ from utils import audit_utils
 temp_folder = 'tests_temp'
 
 
-def create_file(filepath):
+def create_file(filepath, overwrite=False):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
@@ -25,10 +25,23 @@ def create_file(filepath):
         os.makedirs(folder)
 
     file_path = os.path.join(folder, filename)
+    if os.path.exists(file_path) and not overwrite:
+        raise Exception('File ' + file_path + ' already exists')
+
     file_utils.write_file(file_path, 'test text')
 
     return file_path
 
+
+def create_dir(dir_path):
+    if not os.path.exists(temp_folder):
+        os.makedirs(temp_folder)
+
+    full_path = os.path.join(temp_folder, dir_path)
+    if not os.path.exists(full_path):
+        os.makedirs(full_path)
+
+    return full_path
 
 def setup():
     if os.path.exists(temp_folder):
@@ -89,7 +102,8 @@ def create_script_param_config(
         min=None,
         max=None,
         allowed_values=None,
-        values_script=None):
+        values_script=None,
+        file_dir=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -131,6 +145,9 @@ def create_script_param_config(
     if allowed_values is not None:
         conf['values'] = list(allowed_values)
 
+    if file_dir is not None:
+        conf['file_dir'] = file_dir
+
     return conf
 
 
@@ -140,7 +157,8 @@ def create_config_model(name, *,
                         audit_name='127.0.0.1',
                         path=None,
                         parameters=None,
-                        parameter_values=None):
+                        parameter_values=None,
+                        script_command='ls'):
     result_config = {}
 
     if config:
@@ -153,6 +171,8 @@ def create_config_model(name, *,
 
     if path is None:
         path = name
+
+    result_config['script_path'] = script_command
 
     return ConfigModel(result_config, path, username, audit_name, parameter_values=parameter_values)
 
@@ -175,6 +195,7 @@ def create_parameter_model(name=None,
                            username='user1',
                            audit_name='127.0.0.1',
                            all_parameters=None,
+                           file_dir=None,
                            other_param_values: ObservableDict = None):
     config = create_script_param_config(
         name,
@@ -190,7 +211,8 @@ def create_parameter_model(name=None,
         multiple_arguments=multiple_arguments,
         min=min,
         max=max,
-        allowed_values=allowed_values)
+        allowed_values=allowed_values,
+        file_dir=file_dir)
 
     if all_parameters is None:
         all_parameters = []
@@ -200,6 +222,10 @@ def create_parameter_model(name=None,
                           audit_name,
                           lambda: all_parameters,
                           other_param_values=other_param_values)
+
+
+def create_simple_parameter_configs(names):
+    return {name: {'name': name} for name in names}
 
 
 def create_parameter_model_from_config(config,

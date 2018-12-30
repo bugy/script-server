@@ -467,7 +467,7 @@ class GetExecutingScriptValues(BaseRequestHandler):
     def get(self, execution_id):
         validate_execution_id(execution_id, self)
 
-        values = dict(self.application.execution_service.get_parameter_values(execution_id))
+        values = dict(self.application.execution_service.get_user_parameter_values(execution_id))
 
         config = self.application.execution_service.get_config(execution_id)
         for parameter in config.parameters:

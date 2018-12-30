@@ -1,8 +1,8 @@
+import collections
 import logging
 import re
 import sys
 
-import model.script_configs
 from execution import process_popen, process_base
 from model import model_helper
 from utils import file_utils, process_utils, os_utils
@@ -33,35 +33,63 @@ def create_process_wrapper(executor, command, working_directory):
 _process_creator = create_process_wrapper
 
 
+def _normalize_working_dir(working_directory):
+    if working_directory is None:
+        return None
+    return file_utils.normalize_path(working_directory)
+
+
+def _wrap_values(user_values, parameters):
+    result = {}
+    for parameter in parameters:
+        name = parameter.name
+
+        if parameter.constant:
+            value = parameter.default
+            result[name] = _Value(None, value, value, parameter.value_to_str(value))
+            continue
+
+        if name in user_values:
+            user_value = user_values[name]
+
+            if parameter.no_value:
+                bool_value = model_helper.read_bool(user_value)
+                result[name] = _Value(user_value, bool_value, bool_value, parameter.value_to_str(bool_value))
+                continue
+
+            elif user_value:
+                mapped_value = parameter.map_to_script(user_value)
+                script_arg = parameter.to_script_args(mapped_value)
+                result[name] = _Value(user_value, mapped_value, script_arg, parameter.value_to_str(script_arg))
+        else:
+            result[name] = _Value(None, None, None, '')
+
+    return result
+
+
 class ScriptExecutor:
     def __init__(self, config, parameter_values):
         self.config = config
-        self.parameter_values = parameter_values
+        self._parameter_values = _wrap_values(parameter_values, config.parameters)
+        self._working_directory = _normalize_working_dir(config.working_directory)
 
-        self.working_directory = self._get_working_directory()
         self.script_base_command = process_utils.split_command(
             self.config.script_command,
-            self.working_directory)
+            self._working_directory)
         self.secure_replacements = self.__init_secure_replacements()
 
         self.process_wrapper = None  # type: process_base.ProcessWrapper
         self.raw_output_stream = None
         self.protected_output_stream = None
 
-    def _get_working_directory(self):
-        working_directory = self.config.working_directory
-        if working_directory is not None:
-            working_directory = file_utils.normalize_path(working_directory)
-        return working_directory
-
     def start(self):
         if self.process_wrapper is not None:
             raise Exception('Executor already started')
 
-        script_args = build_command_args(self.parameter_values, self.config)
+        script_args = build_command_args(self.get_script_parameter_values(), self.config)
         command = self.script_base_command + script_args
 
-        process_wrapper = _process_creator(self, command, self.working_directory)
+        process_wrapper = _process_creator(self, command, self._working_directory)
         process_wrapper.start()
 
         self.process_wrapper = process_wrapper
@@ -82,21 +110,25 @@ class ScriptExecutor:
             if not parameter.secure:
                 continue
 
-            value = self.parameter_values.get(parameter.name)
-            if model_helper.is_empty(value):
+            value = self._parameter_values.get(parameter.name)
+            if value is None:
                 continue
 
-            if isinstance(value, list):
-                elements = value
+            mapped_value = value.mapped_script_value
+            if model_helper.is_empty(mapped_value):
+                continue
+
+            if isinstance(mapped_value, list):
+                elements = mapped_value
             else:
-                elements = [value]
+                elements = [mapped_value]
 
             for value_element in elements:
                 element_string = str(value_element)
                 if not element_string.strip():
                     continue
 
-                value_pattern = '\\b' + re.escape(element_string) + '\\b'
+                value_pattern = '((?<!\w)|^)' + re.escape(element_string) + '((?!\w)|$)'
                 word_replacements[value_pattern] = model_helper.SECURE_MASK
 
         return word_replacements
@@ -114,9 +146,8 @@ class ScriptExecutor:
 
     def get_secure_command(self):
         audit_script_args = build_command_args(
-            self.parameter_values,
-            self.config,
-            lambda value, param: param.value_to_str(value))
+            {name: str(v) for name, v in self._parameter_values.items()},
+            self.config)
 
         command = self.script_base_command + audit_script_args
         return ' '.join(command)
@@ -143,6 +174,14 @@ class ScriptExecutor:
 
         self.process_wrapper.write_to_input(text)
 
+    def get_user_parameter_values(self):
+        return {name: value.user_value
+                for name, value in self._parameter_values.items()
+                if value.user_value is not None}
+
+    def get_script_parameter_values(self):
+        return {name: value.script_arg for name, value in self._parameter_values.items()}
+
     def kill(self):
         if not self.process_wrapper.is_finished():
             self.process_wrapper.kill()
@@ -157,35 +196,27 @@ class ScriptExecutor:
         self.process_wrapper.cleanup()
 
 
-def build_command_args(param_values, config, stringify=lambda value, param: value):
+def build_command_args(param_values, config):
     result = []
 
     for parameter in config.parameters:
         name = parameter.name
 
-        if parameter.constant:
-            param_values[parameter.name] = parameter.default
-
         if name in param_values:
             value = param_values[name]
 
             if parameter.no_value:
-                # do not replace == True, since REST service can start accepting boolean as string
-                if (value is True) or (value == 'true'):
+                if value == True:
                     result.append(parameter.param)
+
             elif value:
                 if parameter.param:
                     result.append(parameter.param)
 
-                if parameter.type == 'multiselect':
-                    strings = [stringify(element, parameter) for element in value]
-                    if parameter.multiple_arguments:
-                        result.extend(strings)
-                    else:
-                        result.append(parameter.separator.join(strings))
+                if isinstance(value, list):
+                    result.extend(value)
                 else:
-                    value_string = stringify(value, parameter)
-                    result.append(value_string)
+                    result.append(value)
 
     return result
 
@@ -195,3 +226,17 @@ def _concat_output(output_chunks):
         return output_chunks
 
     return [''.join(output_chunks)]
+
+
+class _Value:
+    def __init__(self, user_value, mapped_script_value, script_arg, print_value=None):
+        self.user_value = user_value
+        self.mapped_script_value = mapped_script_value
+        self.script_arg = script_arg
+        self.print_value = print_value
+
+    def __str__(self) -> str:
+        if self.print_value is not None:
+            return self.print_value
+
+        return str(self.script_arg)

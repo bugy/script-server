@@ -22,6 +22,8 @@
     import Textfield from '../components/textfield'
     import {SET_PARAMETER_VALUE} from './vuex_constants';
 
+    export const comboboxTypes = ['list', 'multiselect', 'server_file'];
+
     export default {
         name: 'script-parameters-view',
 
@@ -42,7 +44,7 @@
             getComponentType(parameter) {
                 if (parameter.withoutValue) {
                     return Checkbox;
-                } else if ((parameter.type === 'list') || (parameter.type === 'multiselect')) {
+                } else if (comboboxTypes.includes(parameter.type)) {
                     return Combobox;
                 } else if (parameter.type === 'file_upload') {
                     return FileUpload;

@@ -16,6 +16,7 @@ import {
 import {ReactiveWebSocket} from '../connections/rxWebsocket';
 import {ScriptExecutor} from './script-execution-model';
 import ScriptView from './script-view';
+import {comboboxTypes} from './script-parameters-view'
 import {
     ADD_DOWNLOADABLE_FILE,
     ADD_PARAMETER,
@@ -437,7 +438,7 @@ ScriptController.prototype._initStore = function () {
 
                     let valueToSet;
                     if (!isNull(value)) {
-                        if ((parameter.type === 'list') || (parameter.type === 'multiselect')) {
+                        if ((comboboxTypes.includes(parameter.type))) {
                             ensureListValueExists(value, parameter);
                         }
 

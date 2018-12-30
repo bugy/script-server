@@ -38,7 +38,7 @@ class FileDownloadFeature:
                 output_stream_data = read_until_closed(output_stream)
                 script_output = ''.join(output_stream_data)
 
-                parameter_values = execution_service.get_parameter_values(execution_id)
+                parameter_values = execution_service.get_user_parameter_values(execution_id)
                 owner = execution_service.get_owner(execution_id)
 
                 downloadable_files = download_feature._prepare_downloadable_files(

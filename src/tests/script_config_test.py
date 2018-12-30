@@ -1,6 +1,9 @@
 import os
 import unittest
 
+import config.constants
+from config.constants import PARAM_TYPE_SERVER_FILE
+from model import script_configs
 from model.script_configs import ConfigModel, InvalidValueException, _TemplateProperty
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
@@ -938,8 +941,32 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value('AbC:0::13:127.0.0.1')
         self.assertIsNone(error)
 
+    def test_server_file_when_valid(self):
+        filename = 'file1.txt'
+
+        test_utils.create_file(filename)
+        parameter = create_parameter_model('param', type=PARAM_TYPE_SERVER_FILE, file_dir=test_utils.temp_folder)
+
+        error = parameter.validate_value(filename)
+        self.assertIsNone(error)
+
+    def test_server_file_when_wrong(self):
+        test_utils.create_file('file1.txt')
+        parameter = create_parameter_model('param', type=PARAM_TYPE_SERVER_FILE, file_dir=test_utils.temp_folder)
+
+        error = parameter.validate_value('my.dat')
+        self.assert_error(error)
+
     def assert_error(self, error):
         self.assertFalse(is_blank(error), 'Expected validation error, but validation passed')
+
+    def setUp(self):
+        super().setUp()
+        test_utils.setup()
+
+    def tearDown(self):
+        super().tearDown()
+        test_utils.cleanup()
 
 
 class TestTemplateProperty(unittest.TestCase):
@@ -1063,6 +1090,42 @@ class TestTemplateProperty(unittest.TestCase):
 
     def set_value(self, name, value):
         self.values[name] = value
+
+
+class ParameterModelMapValueTest(unittest.TestCase):
+    def test_map_to_script_simple_value(self):
+        parameter_model = create_parameter_model('param1')
+        self.assertEqual('abc', parameter_model.map_to_script('abc'))
+
+    def test_map_to_script_file_value(self):
+        file_dir = os.path.expanduser('~')
+        parameter_model = create_parameter_model('param1', type=config.constants.PARAM_TYPE_SERVER_FILE,
+                                                 file_dir=file_dir)
+
+        mapped_value = parameter_model.map_to_script('abc')
+        self.assertEqual(os.path.join(file_dir, 'abc'), mapped_value)
+
+    def test_map_to_script_multiselect(self):
+        parameter_model = create_parameter_model('param1', type='multiselect', allowed_values=['abc', 'def', '456'])
+        self.assertEqual(['456', 'def'], parameter_model.map_to_script(['456', 'def']))
+
+    def test_map_to_script_args_single(self):
+        parameter_model = create_parameter_model('param1')
+        self.assertEqual('hello', parameter_model.to_script_args('hello'))
+
+    def test_map_to_script_args_multiselect_list(self):
+        parameter_model = create_parameter_model('param1',
+                                                 type='multiselect',
+                                                 allowed_values=['abc', 'def', '456'],
+                                                 multiple_arguments=True)
+        self.assertEqual(['abc', '456'], parameter_model.to_script_args(['abc', '456']))
+
+    def test_map_to_script_args_multiselect_single_arg(self):
+        parameter_model = create_parameter_model('param1',
+                                                 type='multiselect',
+                                                 allowed_values=['abc', 'def', '456'],
+                                                 multiselect_separator='_')
+        self.assertEqual('abc_456_def', parameter_model.to_script_args(['abc', '456', 'def']))
 
 
 def _create_parameter_model(config, *, username=DEF_USERNAME, audit_name=DEF_AUDIT_NAME, all_parameters=None):

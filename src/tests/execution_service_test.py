@@ -4,6 +4,7 @@ import unittest
 from execution import executor
 from execution.execution_service import ExecutionService
 from model.script_configs import ConfigModel
+from tests import test_utils
 from tests.test_utils import mock_object, create_audit_names, _MockProcessWrapper
 
 DEFAULT_USER = 'test_user'
@@ -126,13 +127,40 @@ class ExecutionServiceTest(unittest.TestCase):
 
         self.assertEqual(DEFAULT_USER, execution_service.get_audit_name(execution_id))
 
-    def test_get_parameter_values(self):
-        parameter_values = {'x': 1, 'y': '2', 'z': True}
+    def test_get_user_parameter_values(self):
+        parameter_values = {'x': 1, 'y': '2', 'z': 'True'}
 
         execution_service = self.create_execution_service()
-        execution_id = self._start(execution_service, parameter_values)
+        parameters = test_utils.create_simple_parameter_configs(list(parameter_values.keys()) + ['const'])
+        parameters['const']['constant'] = True
+        parameters['const']['default'] = 'abc'
+        parameters['z']['no_value'] = True
 
-        self.assertEqual(parameter_values, execution_service.get_parameter_values(execution_id))
+        config_model = test_utils.create_config_model(
+            'test_get_user_parameter_values',
+            username=DEFAULT_USER,
+            parameters=parameters.values())
+        execution_id = self._start_with_config(execution_service, config_model, parameter_values)
+
+        self.assertEqual(parameter_values, execution_service.get_user_parameter_values(execution_id))
+
+    def test_get_script_parameter_values(self):
+        parameter_values = {'x': 1, 'y': '2', 'z': 'True'}
+
+        execution_service = self.create_execution_service()
+        parameters = test_utils.create_simple_parameter_configs(list(parameter_values.keys()) + ['const'])
+        parameters['const']['constant'] = True
+        parameters['const']['default'] = 'abc'
+        parameters['z']['no_value'] = True
+
+        config_model = test_utils.create_config_model(
+            'test_get_user_parameter_values',
+            username=DEFAULT_USER,
+            parameters=parameters.values())
+        execution_id = self._start_with_config(execution_service, config_model, parameter_values)
+
+        self.assertEqual({'x': 1, 'y': '2', 'z': True, 'const': 'abc'},
+                         execution_service.get_script_parameter_values(execution_id))
 
     def test_start_listener(self):
         started_ids = []
@@ -162,20 +190,30 @@ class ExecutionServiceTest(unittest.TestCase):
         self.get_process(id1).stop()
         self.assertCountEqual([id1, id2], finished_ids)
 
-    def _start(self, execution_service, parameter_values=None, user_id=DEFAULT_USER):
+    def _start(self, execution_service, user_id=DEFAULT_USER):
+        execution_id = execution_service.start_script(
+            self._create_script_config([]),
+            {},
+            user_id,
+            DEFAULT_AUDIT_NAMES)
+        return execution_id
+
+    def _start_with_config(self, execution_service, config, parameter_values=None, user_id=DEFAULT_USER):
         if parameter_values is None:
             parameter_values = {}
 
         execution_id = execution_service.start_script(
-            self._create_script_config(),
+            config,
             parameter_values,
             user_id,
             DEFAULT_AUDIT_NAMES)
         return execution_id
 
-    def _create_script_config(self):
+    def _create_script_config(self, parameter_configs):
         config = ConfigModel(
-            {'name': 'script_x', 'script_path': 'ls'},
+            {'name': 'script_x',
+             'script_path': 'ls',
+             'parameters': parameter_configs},
             'script_x.json', 'user1', 'localhost')
         return config
 

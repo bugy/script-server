@@ -5,12 +5,15 @@ import re
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from auth.authorization import ANY_USER
+from config.constants import PARAM_TYPE_SERVER_FILE
 from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
-    DependantScriptValuesProvider, NoneValuesProvider
+    DependantScriptValuesProvider, NoneValuesProvider, FilesProvider
+from model import model_helper
 from model.model_helper import resolve_env_var, replace_auth_vars, is_empty, fill_parameter_values, SECURE_MASK
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
 from utils import file_utils, string_utils
 from utils.object_utils import merge_dicts
+from utils.string_utils import strip
 
 LOGGER = logging.getLogger('script_server.script_configs')
 
@@ -238,7 +241,10 @@ class ConfigModel:
     'values',
     'secure',
     'separator',
-    'multiple_arguments')
+    'multiple_arguments',
+    'file_dir',
+    'file_type',
+    'file_extensions')
 class ParameterModel(object):
     def __init__(self, parameter_config, username, audit_name, other_params_supplier,
                  other_param_values: ObservableDict = None):
@@ -249,14 +255,14 @@ class ParameterModel(object):
         self.name = parameter_config.get('name')
 
         self._original_config = parameter_config
-
-        self._raw_values = None
-
         self._parameter_values = other_param_values
-        if other_param_values is not None:
-            other_param_values.subscribe(self._param_values_observer)
 
         self._reload()
+
+        if (other_param_values is not None) \
+                and (self._values_provider is not None) \
+                and self._values_provider.get_required_parameters():
+            other_param_values.subscribe(self._param_values_observer)
 
     def _reload(self):
         config = self._original_config
@@ -271,23 +277,31 @@ class ParameterModel(object):
         self.separator = config.get('separator', ',')
         self.multiple_arguments = read_boolean('multiple_arguments', config, default=False)
         self.default = _resolve_default(config.get('default'), self._username, self._audit_name)
+        self.file_dir = config.get('file_dir')
+        self.file_type = config.get('file_type', '').strip().lower()
+        self.file_extensions = strip(model_helper.read_list(config, 'file_extensions'))
+
         self.type = self._read_type(config)
 
-        constant = read_boolean('constant', config, False)
-        if constant and not self.default:
+        self.constant = read_boolean('constant', config, False)
+
+        self._validate_config()
+
+        values_provider = self._create_values_provider(
+            config.get('values'),
+            self.type,
+            self.constant)
+        self._values_provider = values_provider
+        self._reload_values()
+
+    def _validate_config(self):
+        if self.constant and not self.default:
             message = 'Constant should have default value specified'
             raise Exception('Failed to set parameter ' + self.name + ' to constant: ' + message)
-        self.constant = constant
 
-        raw_values = config.get('values')
-        if self._raw_values != raw_values:
-            self._raw_values = raw_values
-            values_provider = self._create_values_provider(
-                raw_values,
-                self.type,
-                self.constant)
-            self._values_provider = values_provider
-            self._reload_values()
+        if self.type == PARAM_TYPE_SERVER_FILE:
+            if not self.file_dir:
+                raise Exception('Parameter ' + self.name + ' has missing config file_dir')
 
     def _read_type(self, config):
         type = config.get('type', 'text')
@@ -317,7 +331,13 @@ class ParameterModel(object):
         self.values = values
 
     def _create_values_provider(self, values_config, type, constant):
-        if constant or ((type != 'list') and (type != 'multiselect')):
+        if constant:
+            return NoneValuesProvider()
+
+        if type == PARAM_TYPE_SERVER_FILE:
+            return FilesProvider(self.file_dir, self.file_type, self.file_extensions)
+
+        if (type != 'list') and (type != 'multiselect'):
             return NoneValuesProvider()
 
         if is_empty(values_config):
@@ -349,6 +369,26 @@ class ParameterModel(object):
             return SECURE_MASK
 
         return str(value)
+
+    def map_to_script(self, user_value):
+        def map_single_value(user_value):
+            if self._values_provider:
+                return self._values_provider.map_value(user_value)
+            return user_value
+
+        if self.type == 'multiselect':
+            return [map_single_value(v) for v in user_value]
+
+        return map_single_value(user_value)
+
+    def to_script_args(self, script_value):
+        if self.type == 'multiselect':
+            if self.multiple_arguments:
+                return script_value
+            else:
+                return self.separator.join(script_value)
+
+        return script_value
 
     def validate_value(self, value, *, ignore_required=False):
         if self.constant:
@@ -403,7 +443,7 @@ class ParameterModel(object):
 
         allowed_values = self.values
 
-        if self.type == 'list':
+        if (self.type == 'list') or (self.type == PARAM_TYPE_SERVER_FILE):
             if value not in allowed_values:
                 return 'has value ' + value_string \
                        + ', but should be in [' + ','.join(allowed_values) + ']'

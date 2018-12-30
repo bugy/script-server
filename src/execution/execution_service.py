@@ -12,6 +12,7 @@ LOGGER = logging.getLogger('script_server.execution_service')
 _ExecutionInfo = namedtuple('_ExecutionInfo',
                             ['execution_id', 'owner', 'audit_name', 'config', 'audit_command', 'all_audit_names'])
 
+
 class ExecutionService:
     def __init__(self,
                  id_generator):
@@ -112,9 +113,13 @@ class ExecutionService:
     def _can_access_execution(execution_info: _ExecutionInfo, user_id):
         return (execution_info is not None) and (execution_info.owner == user_id)
 
-    def get_parameter_values(self, execution_id):
+    def get_user_parameter_values(self, execution_id):
         return self._get_for_executor(execution_id,
-                                      lambda e: e.parameter_values)
+                                      lambda e: e.get_user_parameter_values())
+
+    def get_script_parameter_values(self, execution_id):
+        return self._get_for_executor(execution_id,
+                                      lambda e: e.get_script_parameter_values())
 
     def get_owner(self, execution_id):
         return self._get_for_execution_info(execution_id,

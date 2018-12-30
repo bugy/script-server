@@ -199,6 +199,16 @@
       "name": "IP v6",
       "param": "--ip6",
       "type": "ip6"
+    },
+    {
+      "name": "Server file",
+      "param": "--server_file",
+      "type": "server_file",
+      "file_dir": "/home/shepilov/temp/test_folder",
+      "file_extensions": [
+        "txt"
+      ],
+      "secure": true
     }
   ]
 }
