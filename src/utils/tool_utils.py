@@ -12,7 +12,7 @@ def validate_web_build_exists(project_path):
     if not os.path.exists(web_folder):
         raise InvalidWebBuildException(web_folder + ' does not exist. \n' + how_to_fix_build_message)
 
-    required_files = ['index.js', 'index.html', 'index-deps.css', 'admin.html', os.path.join('admin', 'admin.js')]
+    required_files = ['index.js', 'index.html', 'index-deps.css', 'admin.html', 'admin.js']
     for file in required_files:
         file_path = os.path.join(web_folder, file)
         if not os.path.exists(file_path):

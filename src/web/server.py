@@ -490,7 +490,7 @@ def validate_execution_id(execution_id, request_handler, only_active=True):
 
 
 class AuthorizedStaticFileHandler(BaseStaticHandler):
-    admin_files = ['css/admin.css', 'js/admin/*', 'admin.html']
+    admin_files = ['admin.html', 'css/admin.css', 'admin.js', 'admin-deps.css']
 
     @check_authorization
     def validate_absolute_path(self, root, absolute_path):

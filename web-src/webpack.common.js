@@ -8,7 +8,7 @@ const VueLoaderPlugin = require('vue-loader/lib/plugin');
 module.exports = {
     entry: {
         'index': './js/index.js',
-        'admin/admin': './js/admin/admin.js',
+        'admin': './js/admin.js',
         'login': './js/login.js'
     },
     output: {
@@ -36,7 +36,7 @@ module.exports = {
             }),
             new HtmlWebpackPlugin({
                 template: 'admin.html',
-                chunks: ['admin/admin'],
+                chunks: ['admin'],
                 filename: 'admin.html',
                 inject: false
             }),
