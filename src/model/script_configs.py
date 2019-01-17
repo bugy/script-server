@@ -5,11 +5,12 @@ import re
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from auth.authorization import ANY_USER
-from config.constants import PARAM_TYPE_SERVER_FILE
+from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR
 from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
     DependantScriptValuesProvider, NoneValuesProvider, FilesProvider
 from model import model_helper
-from model.model_helper import resolve_env_var, replace_auth_vars, is_empty, fill_parameter_values, SECURE_MASK
+from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, fill_parameter_values, SECURE_MASK, \
+    normalize_extension
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
 from utils import file_utils, string_utils
 from utils.object_utils import merge_dicts
@@ -62,6 +63,8 @@ class ConfigModel:
                                                        values=self.parameter_values)
         self._included_config_prop.bind(self._included_config_path, self._path_to_json)
 
+        self._reload_config()
+
         self._init_parameters(username, audit_name)
 
         if parameter_values is not None:
@@ -70,8 +73,9 @@ class ConfigModel:
             for parameter in self.parameters:
                 self.parameter_values[parameter.name] = parameter.default
 
+        self._reload_parameters({})
+
         self._included_config_prop.subscribe(lambda old, new: self._reload(old))
-        self._reload(None)
 
     def set_param_value(self, param_name, value):
         parameter = self.find_parameter(param_name)
@@ -82,7 +86,7 @@ class ConfigModel:
 
         if validation_error is not None:
             self.parameter_values[param_name] = None
-            raise InvalidValueException(param_name, validation_error, self.name)
+            raise InvalidValueException(param_name, validation_error)
 
         self.parameter_values[param_name] = value
 
@@ -110,7 +114,7 @@ class ConfigModel:
                 validation_error = parameter.validate_value(value)
                 if validation_error:
                     self.parameter_values.set(original_values)
-                    raise InvalidValueException(parameter.name, validation_error, self.name)
+                    raise InvalidValueException(parameter.name, validation_error)
 
                 self.parameter_values[parameter.name] = value
                 processed[parameter.name] = parameter
@@ -121,17 +125,29 @@ class ConfigModel:
                 self.parameter_values.set(original_values)
                 raise Exception('Could not resolve order for dependencies. Remaining: ' + str(remaining))
 
+    def list_files_for_param(self, parameter_name, path):
+        parameter = self.find_parameter(parameter_name)
+        if not parameter:
+            raise ParameterNotFoundException(parameter_name)
+
+        return parameter.list_files(path)
+
     def _init_parameters(self, username, audit_name):
         original_parameter_configs = self._original_config.get('parameters', [])
         for parameter_config in original_parameter_configs:
             parameter = ParameterModel(parameter_config, username, audit_name,
                                        lambda: self.parameters,
-                                       self.parameter_values)
+                                       self.parameter_values,
+                                       self.working_directory)
             self.parameters.append(parameter)
 
         self._validate_parameter_configs()
 
     def _reload(self, old_included_config):
+        self._reload_config()
+        self._reload_parameters(old_included_config)
+
+    def _reload_config(self):
         if self._included_config is None:
             config = self._original_config
         else:
@@ -149,6 +165,7 @@ class ConfigModel:
 
         self.output_files = config.get('output_files', [])
 
+    def _reload_parameters(self, old_included_config):
         original_parameters_names = {p.get('name') for p in self._original_config.get('parameters', [])}
 
         if old_included_config and old_included_config.get('parameters'):
@@ -168,7 +185,8 @@ class ConfigModel:
                 if parameter is None:
                     parameter = ParameterModel(parameter_config, self._username, self._audit_name,
                                                lambda: self.parameters,
-                                               self.parameter_values)
+                                               self.parameter_values,
+                                               self.working_directory)
                     self.parameters.append(parameter)
                     continue
                 else:
@@ -242,15 +260,19 @@ class ConfigModel:
     'secure',
     'separator',
     'multiple_arguments',
-    'file_dir',
+    'file_dir',  # path relative to working dir (for execution)
+    '_list_files_dir',  # file_dir, relative to the server path (for listing files)
     'file_type',
-    'file_extensions')
+    'file_extensions',
+    'file_recursive')
 class ParameterModel(object):
     def __init__(self, parameter_config, username, audit_name, other_params_supplier,
-                 other_param_values: ObservableDict = None):
+                 other_param_values: ObservableDict = None,
+                 working_dir=None):
         self._username = username
         self._audit_name = audit_name
         self._parameters_supplier = other_params_supplier
+        self._working_dir = working_dir
 
         self.name = parameter_config.get('name')
 
@@ -277,9 +299,11 @@ class ParameterModel(object):
         self.separator = config.get('separator', ',')
         self.multiple_arguments = read_boolean('multiple_arguments', config, default=False)
         self.default = _resolve_default(config.get('default'), self._username, self._audit_name)
-        self.file_dir = config.get('file_dir')
-        self.file_type = config.get('file_type', '').strip().lower()
-        self.file_extensions = strip(model_helper.read_list(config, 'file_extensions'))
+        self.file_dir = _resolve_file_dir(config, 'file_dir')
+        self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
+        self.file_extensions = _resolve_file_extensions(config, 'file_extensions')
+        self.file_type = _resolve_parameter_file_type(config, 'file_type', self.file_extensions)
+        self.file_recursive = read_boolean('file_recursive', config, False)
 
         self.type = self._read_type(config)
 
@@ -334,10 +358,10 @@ class ParameterModel(object):
         if constant:
             return NoneValuesProvider()
 
-        if type == PARAM_TYPE_SERVER_FILE:
-            return FilesProvider(self.file_dir, self.file_type, self.file_extensions)
+        if self._is_plain_server_file():
+            return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions)
 
-        if (type != 'list') and (type != 'multiselect'):
+        if (type != 'list') and (type != PARAM_TYPE_MULTISELECT):
             return NoneValuesProvider()
 
         if is_empty(values_config):
@@ -364,6 +388,17 @@ class ParameterModel(object):
 
         return self._values_provider.get_required_parameters()
 
+    def normalize_user_value(self, value):
+        if self.type == PARAM_TYPE_MULTISELECT or self._is_recursive_server_file():
+            if isinstance(value, list):
+                return value
+            if not is_empty(value):
+                return [value]
+            else:
+                return []
+
+        return value
+
     def value_to_str(self, value):
         if self.secure:
             return SECURE_MASK
@@ -376,13 +411,24 @@ class ParameterModel(object):
                 return self._values_provider.map_value(user_value)
             return user_value
 
-        if self.type == 'multiselect':
+        if self.type == PARAM_TYPE_MULTISELECT:
             return [map_single_value(v) for v in user_value]
+
+        elif self._is_recursive_server_file():
+            if user_value:
+                return os.path.join(self.file_dir, *user_value)
+            else:
+                return None
+        elif self._is_plain_server_file():
+            if not is_empty(user_value):
+                return os.path.join(self.file_dir, user_value)
+            else:
+                return None
 
         return map_single_value(user_value)
 
     def to_script_args(self, script_value):
-        if self.type == 'multiselect':
+        if self.type == PARAM_TYPE_MULTISELECT:
             if self.multiple_arguments:
                 return script_value
             else:
@@ -443,13 +489,13 @@ class ParameterModel(object):
 
         allowed_values = self.values
 
-        if (self.type == 'list') or (self.type == PARAM_TYPE_SERVER_FILE):
+        if (self.type == 'list') or (self._is_plain_server_file()):
             if value not in allowed_values:
                 return 'has value ' + value_string \
                        + ', but should be in [' + ','.join(allowed_values) + ']'
             return None
 
-        if self.type == 'multiselect':
+        if self.type == PARAM_TYPE_MULTISELECT:
             if not isinstance(value, list):
                 return 'should be a list, but was: ' + value_string + '(' + str(type(value)) + ')'
             for value_element in value:
@@ -459,8 +505,75 @@ class ParameterModel(object):
                            + ', but should be in [' + ','.join(allowed_values) + ']'
             return None
 
+        if self._is_recursive_server_file():
+            return self._validate_recursive_path(value, intermediate=False)
+
         return None
 
+    def list_files(self, path):
+        if not self._is_recursive_server_file():
+            raise WrongParameterUsageException(self.name, 'Can list files only for recursive file parameters')
+
+        validation_error = self._validate_recursive_path(path, intermediate=True)
+        if validation_error:
+            raise InvalidValueException(self.name, validation_error)
+
+        full_path = self._build_list_file_path(path)
+
+        result = []
+
+        if is_empty(self.file_type) or self.file_type == FILE_TYPE_FILE:
+            files = model_helper.list_files(full_path, FILE_TYPE_FILE, self.file_extensions)
+            for file in files:
+                result.append({'name': file, 'type': FILE_TYPE_FILE, 'readable': True})
+
+        dirs = model_helper.list_files(full_path, FILE_TYPE_DIR)
+        for dir in dirs:
+            dir_path = os.path.join(full_path, dir)
+
+            readable = os.access(dir_path, os.R_OK)
+            result.append({'name': dir, 'type': FILE_TYPE_DIR, 'readable': readable})
+
+        return result
+
+    def _is_plain_server_file(self):
+        return self.type == PARAM_TYPE_SERVER_FILE and not self.file_recursive
+
+    def _is_recursive_server_file(self):
+        return self.type == PARAM_TYPE_SERVER_FILE and self.file_recursive
+
+    def _validate_recursive_path(self, path, intermediate):
+        value_string = self.value_to_str(path)
+
+        if not isinstance(path, list):
+            return 'should be a list, but was: ' + value_string + '(' + str(type(path)) + ')'
+
+        if ('.' in path) or ('..' in path):
+            return 'Relative path references are not allowed'
+
+        full_path = self._build_list_file_path(path)
+
+        if not os.path.exists(full_path):
+            return 'Path ' + value_string + ' does not exist'
+
+        if intermediate:
+            if not os.access(full_path, os.R_OK):
+                return 'Path ' + value_string + ' not accessible'
+
+            if not os.path.isdir(full_path):
+                return 'Path ' + value_string + ' is not a directory'
+
+        else:
+            dir = path[:-1]
+            file = path[-1]
+
+            dir_path = self._build_list_file_path(dir)
+            allowed_files = model_helper.list_files(dir_path, self.file_type, self.file_extensions)
+            if file not in allowed_files:
+                return 'Path ' + value_string + ' is not allowed'
+
+    def _build_list_file_path(self, child_path):
+        return os.path.normpath(os.path.join(self._list_files_dir, *child_path))
 
 def _read_name(file_path, json_object):
     name = json_object.get('name')
@@ -510,18 +623,63 @@ def _resolve_default(default, username, audit_name):
     if not isinstance(default, str):
         return default
 
-    resolved_env_default = resolve_env_var(default)
+    resolved_env_default = resolve_env_vars(default, full_match=True)
     if resolved_env_default != default:
         return resolved_env_default
 
     return replace_auth_vars(default, username, audit_name)
 
 
+def _resolve_file_dir(config, key):
+    raw_value = config.get(key)
+    if not raw_value:
+        return raw_value
+
+    return resolve_env_vars(raw_value)
+
+
+def _resolve_list_files_dir(file_dir, working_dir):
+    if not file_dir or not working_dir:
+        return file_dir
+
+    return file_utils.normalize_path(file_dir, working_dir)
+
+
+def _resolve_file_extensions(config, key):
+    result = model_helper.read_list(config, key)
+    if result is None:
+        return []
+
+    return [normalize_extension(e) for e in strip(result)]
+
+
+def _resolve_parameter_file_type(config, key, file_extensions):
+    if file_extensions:
+        return FILE_TYPE_FILE
+
+    value = config.get(key)
+
+    if is_empty(value):
+        return value
+
+    return value.strip().lower()
+
+
 class InvalidValueException(Exception):
-    def __init__(self, param_name, validation_error, script_name) -> None:
+    def __init__(self, param_name, validation_error) -> None:
+        super().__init__(validation_error)
         self.param_name = param_name
-        self.validation_error = validation_error
-        self.script_name = script_name
+
+
+class WrongParameterUsageException(Exception):
+    def __init__(self, param_name, error_message) -> None:
+        super().__init__(error_message)
+        self.param_name = param_name
+
+
+class ParameterNotFoundException(Exception):
+    def __init__(self, param_name) -> None:
+        self.param_name = param_name
 
 
 class _TemplateProperty:

@@ -1,6 +1,9 @@
 import logging
+import os
+import re
 
 import utils.env_utils as env_utils
+from config.constants import FILE_TYPE_DIR, FILE_TYPE_FILE
 
 ENV_VAR_PREFIX = '$$'
 SECURE_MASK = '*' * 6
@@ -8,11 +11,25 @@ SECURE_MASK = '*' * 6
 LOGGER = logging.getLogger('script_server.model_helper')
 
 
-def resolve_env_var(value):
-    if isinstance(value, str) and value.startswith(ENV_VAR_PREFIX):
-        return env_utils.read_variable(value[2:])
+def resolve_env_vars(value, *, full_match=False):
+    if not isinstance(value, str) or is_empty(value):
+        return value
 
-    return value
+    if full_match:
+        if value.startswith(ENV_VAR_PREFIX):
+            return env_utils.read_variable(value[2:])
+        return value
+
+    def resolve_var(match):
+        var_match = match.group()
+        var_name = var_match[2:]
+        resolved = env_utils.read_variable(var_name, fail_on_missing=False)
+        if resolved is not None:
+            return resolved
+        return var_match
+
+    pattern = re.escape(ENV_VAR_PREFIX) + '\w+'
+    return re.sub(pattern, resolve_var, value)
 
 
 def read_obligatory(values_dict, key, error_suffix=''):
@@ -88,17 +105,15 @@ def is_empty(value):
     return (not value) and (value != 0) and (value is not False)
 
 
-def prepare_multiselect_values(param_values, parameters):
-    for param in parameters:
-        if (param.type == 'multiselect') and (param.name in param_values):
-            value = param_values[param.name]
-            if isinstance(value, list):
-                continue
-            if not is_empty(value):
-                param_values[param.name] = [value]
-            else:
-                param_values[param.name] = []
+def normalize_incoming_values(param_values, parameters):
+    normalized_values = {}
 
+    for param in parameters:
+        if param.name in param_values:
+            normalized_value = param.normalize_user_value(param_values[param.name])
+            normalized_values[param.name] = normalized_value
+
+    return normalized_values
 
 def fill_parameter_values(parameter_configs, template, values):
     result = template
@@ -133,3 +148,42 @@ def replace_auth_vars(text, username, audit_name):
     result = result.replace('${auth.audit_name}', str(audit_name))
 
     return result
+
+
+def normalize_extension(extension):
+    return re.sub('^\.', '', extension).lower()
+
+
+def list_files(dir, file_type=None, file_extensions=None):
+    if not os.path.exists(dir) or not os.path.isdir(dir):
+        raise InvalidFileException(dir, 'Directory not found')
+
+    result = []
+
+    if not is_empty(file_extensions):
+        file_type = FILE_TYPE_FILE
+
+    sorted_files = sorted(os.listdir(dir), key=lambda s: s.casefold())
+    for file in sorted_files:
+        file_path = os.path.join(dir, file)
+
+        if file_type:
+            if file_type == FILE_TYPE_DIR and not os.path.isdir(file_path):
+                continue
+            elif file_type == FILE_TYPE_FILE and not os.path.isfile(file_path):
+                continue
+
+        if file_extensions and not os.path.isdir(file_path):
+            _, extension = os.path.splitext(file_path)
+            if normalize_extension(extension) not in file_extensions:
+                continue
+
+        result.append(file)
+
+    return result
+
+
+class InvalidFileException(Exception):
+    def __init__(self, path, message) -> None:
+        super().__init__(message)
+        self.path = path

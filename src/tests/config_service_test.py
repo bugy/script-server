@@ -50,20 +50,20 @@ class ConfigServiceTest(unittest.TestCase):
     def test_load_config(self):
         _create_script_config('conf_x')
 
-        config = self.config_service.load_config_model('conf_x', self.user)
+        config = self.config_service.create_config_model('conf_x', self.user)
         self.assertIsNotNone(config)
         self.assertEqual('conf_x', config.name)
 
     def test_load_config_when_not_exists(self):
         _create_script_config('conf_x')
 
-        config = self.config_service.load_config_model('ABC', self.user)
+        config = self.config_service.create_config_model('ABC', self.user)
         self.assertIsNone(config)
 
     def test_load_hidden_config(self):
         _create_script_config('conf_x', hidden=True)
 
-        config = self.config_service.load_config_model('conf_x', self.user)
+        config = self.config_service.create_config_model('conf_x', self.user)
         self.assertIsNone(config)
 
     def tearDown(self):
@@ -107,14 +107,14 @@ class ConfigServiceAuthTest(unittest.TestCase):
     def test_load_config_when_user_allowed(self):
         _create_script_config('my_script', allowed_users=['ABC', 'user1', 'qwerty'])
 
-        config = self.config_service.load_config_model('my_script', self.user1)
+        config = self.config_service.create_config_model('my_script', self.user1)
         self.assertIsNotNone(config)
         self.assertEqual('my_script', config.name)
 
     def test_load_config_when_user_not_allowed(self):
         _create_script_config('my_script', allowed_users=['ABC', 'qwerty'])
 
-        self.assertRaises(ConfigNotAllowedException, self.config_service.load_config_model, 'my_script', self.user1)
+        self.assertRaises(ConfigNotAllowedException, self.config_service.create_config_model, 'my_script', self.user1)
 
     def assert_list_configs(self, user, expected_names):
         configs = self.config_service.list_configs(user)

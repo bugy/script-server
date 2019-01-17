@@ -45,3 +45,18 @@ export function setDeepProp(wrapper, key, value) {
         wrapper.setProps({[rootKey]: newRootElement})
     }
 }
+
+export function triggerDoubleClick(element) {
+    const event = new MouseEvent('dblclick', {'relatedTarget': element});
+    element.dispatchEvent(event);
+}
+
+export function triggerSingleClick(element) {
+    const event = new MouseEvent('click', {'relatedTarget': element});
+    element.dispatchEvent(event);
+}
+
+export function triggerKeyEvent(element, type, code) {
+    const event = new KeyboardEvent(type, {key: code, keyCode: code, which: code});
+    element.dispatchEvent(event);
+}

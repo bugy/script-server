@@ -2,12 +2,12 @@ import os
 import sys
 
 
-def read_variable(variable_name):
-    result = os.environ[variable_name]
-    if result is None:
+def read_variable(variable_name, *, fail_on_missing=True):
+    value = os.environ.get(variable_name)
+    if fail_on_missing and (value == '' or value is None):
         raise Exception('Environment variable ' + variable_name + ' is not set')
 
-    return result
+    return value
 
 
 def is_min_version(version, system_version=sys.version_info):

@@ -38,7 +38,7 @@ function onLoad() {
         }
     });
 
-    var response = authorizedCallHttp("scripts/list");
+    var response = authorizedCallHttp('scripts');
 
     var scripts = JSON.parse(response);
 
@@ -140,7 +140,7 @@ function onLoad() {
 }
 
 function loadActiveExecutions() {
-    authorizedCallHttp('scripts/execution/active', null, null, function (response) {
+    authorizedCallHttp('executions/active', null, null, function (response) {
         var activeExecutionIds = JSON.parse(response);
         for (var i = 0; i < activeExecutionIds.length; i++) {
             var executionId = activeExecutionIds[i];

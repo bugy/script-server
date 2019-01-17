@@ -34,20 +34,19 @@ def is_root(path):
 
 def normalize_path(path_string, current_folder=None):
     path_string = os.path.expanduser(path_string)
+    path_string = os.path.normpath(path_string)
 
     if os.path.isabs(path_string):
         return path_string
 
     if current_folder:
-        path = pathlib.Path(normalize_path(current_folder))
-        path = path.joinpath(path_string)
-    else:
-        path = pathlib.Path(path_string)
+        normalized_folder = normalize_path(current_folder)
+        return os.path.join(normalized_folder, path_string)
 
-    if path.exists():
-        return str(path.resolve())
+    if not os.path.exists(path_string):
+        return path_string
 
-    return path_string
+    return str(pathlib.Path(path_string).resolve())
 
 
 def read_file(filename, byte_content=False, keep_newlines=False):

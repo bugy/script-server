@@ -181,17 +181,6 @@ class TestFileMatching(unittest.TestCase):
 
         self.assertEqual(files, [os.path.join(test_utils.temp_folder, 'some_folder', 'file.txt')])
 
-    def create_file(self, filepath):
-        if not os.path.exists(test_utils.temp_folder):
-            os.makedirs(test_utils.temp_folder)
-
-        filename = os.path.basename(filepath)
-        folder = os.path.join(test_utils.temp_folder, os.path.dirname(filepath))
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-
-        file_utils.write_file(os.path.join(folder, filename), 'test text')
-
     def setUp(self):
         test_utils.setup()
 
@@ -269,6 +258,3 @@ class TestParametersSubstitute(unittest.TestCase):
 
         self.assertEqual(files, ['/home/user/${param1}.txt'])
 
-
-if __name__ == '__main__':
-    unittest.main()

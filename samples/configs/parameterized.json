@@ -1,12 +1,13 @@
 {
   "name": "Very parameterized",
-  "script_path": "samples/scripts/parameterized.sh",
+  "script_path": "scripts/parameterized.sh",
   "description": "This script does nothing except accepting a lot of parameters and printing them",
   "requires_terminal": false,
   "allowed_users": [
     "*"
   ],
   "include": "${Simple Text}.json",
+  "working_directory": "./samples",
   "parameters": [
     {
       "name": "Simple Int",
@@ -204,11 +205,30 @@
       "name": "Server file",
       "param": "--server_file",
       "type": "server_file",
-      "file_dir": "/home/shepilov/temp/test_folder",
+      "file_dir": "/home/$$USER/Documents",
       "file_extensions": [
-        "txt"
+        "txt",
+        "jpg"
       ],
       "secure": true
+    },
+    {
+      "name": "Recursive file",
+      "param": "--recurs_file",
+      "type": "server_file",
+      "file_dir": "..",
+      "file_recursive": true,
+      "file_extensions": [
+        "json",
+        ".log",
+        "TXT"
+      ],
+      "secure": true,
+      "default": [
+        "samples",
+        "configs",
+        "parameterized.json"
+      ]
     }
   ]
 }

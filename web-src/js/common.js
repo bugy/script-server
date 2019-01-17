@@ -274,11 +274,6 @@ export function createTemplateElement(templateName) {
     return element;
 }
 
-function bindTemplatedFieldLabel(field, label) {
-    field.id = 'script-input-field-' + guid(8);
-    label.for = field.id;
-}
-
 export function readQueryParameters() {
     var argString = window.location.search;
     if (!argString || argString.length <= 1) {
@@ -441,4 +436,117 @@ export function setButtonEnabled(button, enabled) {
     } else {
         removeClass(button, "disabled");
     }
+}
+
+function compareNulls(value1, value2) {
+    if (isNull(value1) && isNull(value2)) {
+        return 0;
+    }
+
+    if (isNull(value1)) {
+        return -1;
+    } else if (isNull(value2)) {
+        return 1;
+    }
+
+    return null;
+}
+
+export function stringComparator(field) {
+    const comparator = function (a, b) {
+        const objectNullComparison = compareNulls(a, b);
+        if (!isNull(objectNullComparison)) {
+            return objectNullComparison;
+        }
+
+        const value1 = a[field];
+        const value2 = b[field];
+
+        const valueNullComparison = compareNulls(a, b);
+        if (!isNull(valueNullComparison)) {
+            return valueNullComparison;
+        }
+
+        return value1.toLowerCase().localeCompare(value2.toLowerCase());
+    };
+
+    comparator.andThen = function (anotherComparator) {
+        return function (a, b) {
+            const result = comparator(a, b);
+            if (result !== 0) {
+                return result;
+            }
+
+            return anotherComparator(a, b);
+        }
+    };
+
+    return comparator
+}
+
+export function scrollToElement(element, onlyWhenOutside = false) {
+    if (onlyWhenOutside && isVisibleOnScroll(element, false)) {
+        return;
+    }
+
+    const scrollableParent = findScrollableParent(element);
+    let alignToTop;
+    if (isNull(scrollableParent)) {
+        alignToTop = true;
+    } else {
+        alignToTop = element.offsetTop < scrollableParent.scrollTop;
+    }
+
+    element.scrollIntoView(alignToTop);
+}
+
+function findScrollableParent(elem) {
+    let scrollableParent = elem.parentNode;
+    while (!isNull(scrollableParent)) {
+        if (scrollableParent.scrollHeight > scrollableParent.clientHeight) {
+            return scrollableParent;
+        }
+
+        scrollableParent = scrollableParent.parentNode;
+    }
+
+    return scrollableParent;
+}
+
+function isVisibleOnScroll(elem, partially = true) {
+    let scrollableParent = findScrollableParent(elem);
+
+    if (!scrollableParent) {
+        return false;
+    }
+
+    const scrollTop = scrollableParent.scrollTop;
+    const scrollBottom = scrollTop + scrollableParent.clientHeight;
+
+    const elemTop = elem.offsetTop;
+    const elemBottom = elemTop + elem.clientHeight;
+
+    if (partially) {
+        return (elemBottom > scrollTop) && (elemTop < scrollBottom);
+    } else {
+        return (elemTop >= scrollTop) && (elemBottom <= scrollBottom);
+    }
+}
+
+export function getTextWidth(text, element) {
+    // re-use canvas object for better performance
+    const canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement('canvas'));
+
+    const context = canvas.getContext('2d');
+    context.font = window.getComputedStyle(element, null).getPropertyValue('font');
+    const metrics = context.measureText(text);
+    return metrics.width;
+}
+
+export function toMap(elements, keyExtractor, valueExtractor) {
+    return elements.reduce(
+        (obj, element) =>
+            Object.assign(obj, {[keyExtractor(element)]: valueExtractor(element)})
+        , {}
+    );
 }

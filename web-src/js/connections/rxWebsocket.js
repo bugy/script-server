@@ -18,7 +18,9 @@ export function ReactiveWebSocket(path, observer) {
     try {
         this._websocket = new WebSocket(this.url);
     } catch (e) {
-        this._observer.onError(e);
+        if (this._observer.onError) {
+            this._observer.onError(e);
+        }
         return;
     }
 
@@ -40,7 +42,9 @@ export function ReactiveWebSocket(path, observer) {
             return;
         }
 
-        self._observer.onError(new SocketClosedError(event.code, event.reason));
+        if (self._observer.onError) {
+            self._observer.onError(new SocketClosedError(event.code, event.reason));
+        }
     });
 
     this._websocket.addEventListener('message', function (rawMessage) {
@@ -55,7 +59,7 @@ export function ReactiveWebSocket(path, observer) {
     this.send = function (data) {
         if (isWebsocketClosed(self._websocket) || self._finished) {
             console.log('Attempt to write to closed socket. Data: ' + data);
-            return;
+            return false;
         }
 
         self._websocket.send(data);

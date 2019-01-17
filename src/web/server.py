@@ -5,6 +5,7 @@ import os
 import signal
 import ssl
 import time
+import uuid
 from itertools import chain
 from urllib.parse import urlencode
 from urllib.parse import urlparse
@@ -29,7 +30,7 @@ from model import external_model
 from model import model_helper
 from model.external_model import to_short_execution_log, to_long_execution_log, parameter_to_external
 from model.model_helper import is_empty
-from model.script_configs import InvalidValueException
+from model.script_configs import InvalidValueException, ParameterNotFoundException, WrongParameterUsageException
 from model.server_conf import ServerConfig
 from utils import file_utils as file_utils
 from utils import tornado_utils, audit_utils
@@ -39,6 +40,8 @@ from utils.terminal_formatter import TerminalOutputTransformer, TerminalOutputCh
 from utils.tornado_utils import respond_error, redirect_relative
 
 LOGGER = logging.getLogger('web_server')
+
+active_config_models = {}
 
 
 def is_allowed_during_login(request_path, login_url, request_handler):
@@ -184,40 +187,20 @@ class GetScripts(BaseRequestHandler):
         self.write(json.dumps(names))
 
 
-class GetScriptInfo(BaseRequestHandler):
-    @check_authorization
-    @inject_user
-    def get(self, user):
-        try:
-            name = self.get_query_argument("name")
-        except tornado.web.MissingArgumentError:
-            respond_error(self, 400, "Script name is not specified")
-            return
-
-        try:
-            config = self.application.config_service.load_config_model(name, user)
-        except ConfigNotAllowedException:
-            raise tornado.web.HTTPError(403, reason='Access to the script is denied')
-
-        if not config:
-            respond_error(self, 400, "Couldn't find a script by name")
-            return
-
-        self.write(external_model.config_to_external(config))
-
-
 class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
 
     def __init__(self, application, request, **kwargs):
         super().__init__(application, request, **kwargs)
 
         self.config_model = None  # ConfigModel
+        self.config_id = str(uuid.uuid4())
 
     @check_authorization
     @inject_user
     def open(self, user, config_name):
         try:
-            self.config_model = self.application.config_service.load_config_model(config_name, user)
+            self.config_model = self.application.config_service.create_config_model(config_name, user)
+            active_config_models[self.config_id] = {'model': self.config_model, 'user_id': user.user_id}
         except ConfigNotAllowedException:
             self.close(code=403, reason='Access to the script is denied')
             return
@@ -228,7 +211,7 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
 
         self.ioloop = tornado.ioloop.IOLoop.current()
 
-        initial_config = external_model.config_to_external(self.config_model)
+        initial_config = external_model.config_to_external(self.config_model, self.config_id)
         self.safe_write(wrap_to_server_event('initialConfig', initial_config))
 
         socket = self
@@ -264,7 +247,8 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
         self.config_model.set_param_value(parameter, value)
 
     def on_close(self):
-        pass
+        if self.config_id in active_config_models:
+            del active_config_models[self.config_id]
 
     def safe_write(self, message):
         if self.ws_connection is not None:
@@ -372,7 +356,7 @@ class ScriptExecute(BaseRequestHandler):
 
             script_name = execution_info.script
 
-            config_model = self.application.config_service.load_config_model(script_name, user)
+            config_model = self.application.config_service.create_config_model(script_name, user)
 
             if not config_model:
                 message = 'Script with name "' + str(script_name) + '" not found'
@@ -389,12 +373,12 @@ class ScriptExecute(BaseRequestHandler):
                     file_path = file_upload_feature.save_file(file_info.filename, file_info.body, audit_name)
                     parameter_values[key] = file_path
 
-            model_helper.prepare_multiselect_values(parameter_values, config_model.parameters)
+            parameter_values = model_helper.normalize_incoming_values(parameter_values, config_model.parameters)
 
             try:
                 config_model.set_all_param_values(parameter_values)
             except InvalidValueException as e:
-                message = 'Invalid parameter %s value: %s' % (e.param_name, e.validation_error)
+                message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
                 LOGGER.error(message)
                 respond_error(self, 400, message)
                 return
@@ -459,23 +443,17 @@ class GetExecutingScriptConfig(BaseRequestHandler):
 
         config = self.application.execution_service.get_config(execution_id)
 
-        self.write(external_model.config_to_external(config))
-
-
-class GetExecutingScriptValues(BaseRequestHandler):
-    @check_authorization
-    def get(self, execution_id):
-        validate_execution_id(execution_id, self)
-
         values = dict(self.application.execution_service.get_user_parameter_values(execution_id))
 
-        config = self.application.execution_service.get_config(execution_id)
         for parameter in config.parameters:
             parameter_name = parameter.name
             if (parameter_name in values) and (parameter.type == 'file_upload'):
                 del values[parameter_name]
 
-        self.write(external_model.to_external_parameter_values(values))
+        self.write({
+            'scriptName': config.name,
+            'parameterValues': values
+        })
 
 
 class CleanupExecutingScript(BaseRequestHandler):
@@ -543,6 +521,51 @@ class AuthorizedStaticFileHandler(BaseStaticHandler):
                 return True
 
         return False
+
+
+class ScriptParameterListFiles(BaseRequestHandler):
+
+    @check_authorization
+    @inject_user
+    def get(self, user, script_name, parameter_name):
+        id = self.get_query_argument('id')
+
+        if not id:
+            respond_error(self, 400, 'Model id is not specified')
+            return
+
+        if id not in active_config_models:
+            respond_error(self, 400, 'Model with id=' + str(id) + ' does not exist')
+            return
+
+        active_model = active_config_models[id]
+        config_user_id = active_model['user_id']
+
+        if config_user_id != user.user_id:
+            LOGGER.warning('User ' + str(user) + ' tried to access config '
+                           + script_name + ' of user #' + config_user_id)
+            respond_error(self, 400, 'Model with id=' + str(id) + ' does not exist')
+            return
+
+        config_model = active_model['model']
+
+        if config_model.name != script_name:
+            LOGGER.warning(
+                'Config name differences for #' + str(id) + '. Expected ' + config_model.name + ', got ' + script_name)
+            respond_error(self, 500, 'Failed to load script by name')
+            return
+
+        path = self.get_query_arguments('path')
+        try:
+            files = config_model.list_files_for_param(parameter_name, path)
+            self.write(json.dumps(files))
+
+        except ParameterNotFoundException as e:
+            respond_error(self, 404, 'Parameter ' + e.param_name + ' does not exist')
+            return
+        except (InvalidValueException, WrongParameterUsageException) as e:
+            respond_error(self, 400, str(e))
+            return
 
 
 class LoginHandler(BaseRequestHandler):
@@ -792,17 +815,17 @@ def init(server_config: ServerConfig,
 
     downloads_folder = file_download_feature.get_result_files_folder()
 
-    handlers = [(r"/conf/title", GetServerTitle),
-                (r"/scripts/list", GetScripts),
-                (r"/scripts/info/(.*)", ScriptConfigSocket),
-                (r"/scripts/execution", ScriptExecute),
-                (r"/scripts/execution/stop/(.*)", ScriptStop),
-                (r"/scripts/execution/io/(.*)", ScriptStreamSocket),
-                (r"/scripts/execution/active", GetActiveExecutionIds),
-                (r"/scripts/execution/config/(.*)", GetExecutingScriptConfig),
-                (r"/scripts/execution/values/(.*)", GetExecutingScriptValues),
-                (r"/scripts/execution/cleanup/(.*)", CleanupExecutingScript),
-                (r"/scripts/execution/status/(.*)", GetExecutionStatus),
+    handlers = [(r'/conf/title', GetServerTitle),
+                (r'/scripts', GetScripts),
+                (r'/scripts/([^/]*)', ScriptConfigSocket),
+                (r'/scripts/([^/]*)/([^/]*)/list-files', ScriptParameterListFiles),
+                (r'/executions/start', ScriptExecute),
+                (r'/executions/stop/(.*)', ScriptStop),
+                (r'/executions/io/(.*)', ScriptStreamSocket),
+                (r'/executions/active', GetActiveExecutionIds),
+                (r'/executions/config/(.*)', GetExecutingScriptConfig),
+                (r'/executions/cleanup/(.*)', CleanupExecutingScript),
+                (r'/executions/status/(.*)', GetExecutionStatus),
                 (r'/admin/execution_log/short', GetShortHistoryEntriesHandler),
                 (r'/admin/execution_log/long/(.*)', GetLongHistoryEntryHandler),
                 (r'/auth/info', AuthInfoHandler),

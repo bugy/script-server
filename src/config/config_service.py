@@ -35,7 +35,7 @@ class ConfigService:
 
         return self._visit_script_configs(load_script)
 
-    def load_config_model(self, name, user, parameter_values=None):
+    def create_config_model(self, name, user, parameter_values=None):
         def find_and_load(path, content):
             try:
                 json_object = json.loads(content)

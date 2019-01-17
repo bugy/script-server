@@ -2,12 +2,12 @@ import os
 import unittest
 
 import config.constants
-from config.constants import PARAM_TYPE_SERVER_FILE
-from model import script_configs
-from model.script_configs import ConfigModel, InvalidValueException, _TemplateProperty
+from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
+from model.script_configs import ConfigModel, InvalidValueException, _TemplateProperty, ParameterNotFoundException
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
-from tests.test_utils import create_script_param_config, create_parameter_model, create_parameter_model_from_config
+from tests.test_utils import create_script_param_config, create_parameter_model, create_parameter_model_from_config, \
+    create_files
 from utils import file_utils
 from utils.string_utils import is_blank
 
@@ -131,6 +131,43 @@ class ConfigModelValuesTest(unittest.TestCase):
 
         values = {'p1': 'XabcX', 'p2': 'abc'}
         self.assertRaisesRegex(Exception, 'Could not resolve order', config_model.set_all_param_values, values)
+
+
+class ConfigModelListFilesTest(unittest.TestCase):
+    def test_list_files_for_valid_param(self):
+        param = create_script_param_config('recurs_file',
+                                           type=PARAM_TYPE_SERVER_FILE,
+                                           file_recursive=True,
+                                           file_dir=test_utils.temp_folder)
+        config_model = _create_config_model('my_conf', parameters=[param])
+
+        create_files(['file1', 'file2'])
+        file_names = [f['name'] for f in (config_model.list_files_for_param('recurs_file', []))]
+        self.assertCountEqual(['file1', 'file2'], file_names)
+
+    def test_list_files_when_working_dir(self):
+        param = create_script_param_config('recurs_file',
+                                           type=PARAM_TYPE_SERVER_FILE,
+                                           file_recursive=True,
+                                           file_dir='.')
+        config_model = _create_config_model('my_conf', parameters=[param], working_dir=test_utils.temp_folder)
+
+        create_files(['file1', 'file2'])
+        file_names = [f['name'] for f in (config_model.list_files_for_param('recurs_file', []))]
+        self.assertCountEqual(['file1', 'file2'], file_names)
+
+    def test_list_files_when_unknown_param(self):
+        config_model = _create_config_model('my_conf', parameters=[], working_dir=test_utils.temp_folder)
+
+        self.assertRaises(ParameterNotFoundException, config_model.list_files_for_param, 'recurs_file', [])
+
+    def setUp(self):
+        super().setUp()
+        test_utils.setup()
+
+    def tearDown(self):
+        super().tearDown()
+        test_utils.cleanup()
 
 
 class ConfigModelObserverTest(unittest.TestCase):
@@ -833,49 +870,49 @@ class TestSingleParameterValidation(unittest.TestCase):
 
     def test_multiselect_when_empty_string(self):
         parameter = create_parameter_model(
-            'param', type='multiselect', allowed_values=['val1', 'val2', 'val3'])
+            'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
         error = parameter.validate_value('')
         self.assertIsNone(error)
 
     def test_multiselect_when_empty_list(self):
         parameter = create_parameter_model(
-            'param', type='multiselect', allowed_values=['val1', 'val2', 'val3'])
+            'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
         error = parameter.validate_value([])
         self.assertIsNone(error)
 
     def test_multiselect_when_single_matching_element(self):
         parameter = create_parameter_model(
-            'param', type='multiselect', allowed_values=['val1', 'val2', 'val3'])
+            'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
         error = parameter.validate_value(['val2'])
         self.assertIsNone(error)
 
     def test_multiselect_when_multiple_matching_elements(self):
         parameter = create_parameter_model(
-            'param', type='multiselect', allowed_values=['val1', 'val2', 'val3'])
+            'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
         error = parameter.validate_value(['val2', 'val1'])
         self.assertIsNone(error)
 
     def test_multiselect_when_multiple_elements_one_not_matching(self):
         parameter = create_parameter_model(
-            'param', type='multiselect', allowed_values=['val1', 'val2', 'val3'])
+            'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
         error = parameter.validate_value(['val2', 'val1', 'X'])
         self.assert_error(error)
 
     def test_multiselect_when_not_list_value(self):
         parameter = create_parameter_model(
-            'param', type='multiselect', allowed_values=['val1', 'val2', 'val3'])
+            'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
         error = parameter.validate_value('val1')
         self.assert_error(error)
 
     def test_multiselect_when_single_not_matching_element(self):
         parameter = create_parameter_model(
-            'param', type='multiselect', allowed_values=['val1', 'val2', 'val3'])
+            'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
         error = parameter.validate_value(['X'])
         self.assert_error(error)
@@ -1092,6 +1129,44 @@ class TestTemplateProperty(unittest.TestCase):
         self.values[name] = value
 
 
+class ParameterValueNormalizationTest(unittest.TestCase):
+
+    def test_normalize_simple_when_none(self):
+        parameter = create_parameter_model('param')
+
+        self.assertIsNone(parameter.normalize_user_value(None))
+
+    def test_normalize_simple_when_string(self):
+        parameter = create_parameter_model('param')
+
+        self.assertEqual('abc', parameter.normalize_user_value('abc'))
+
+    def test_normalize_simple_when_number(self):
+        parameter = create_parameter_model('param')
+
+        self.assertEqual(123, parameter.normalize_user_value(123))
+
+    def test_normalize_simple_when_list(self):
+        parameter = create_parameter_model('param')
+
+        self.assertEqual(['Hello', 'world'], parameter.normalize_user_value(['Hello', 'world']))
+
+    def test_normalize_multiselect_when_list(self):
+        parameter = create_parameter_model('param', type=PARAM_TYPE_MULTISELECT, allowed_values=['Hello', 'world'])
+
+        self.assertEqual(['Hello', 'world'], parameter.normalize_user_value(['Hello', 'world']))
+
+    def test_normalize_multiselect_when_string(self):
+        parameter = create_parameter_model('param', type=PARAM_TYPE_MULTISELECT, allowed_values=['Hello', 'world'])
+
+        self.assertEqual(['world'], parameter.normalize_user_value('world'))
+
+    def test_normalize_multiselect_when_none(self):
+        parameter = create_parameter_model('param', type=PARAM_TYPE_MULTISELECT, allowed_values=['Hello', 'world'])
+
+        self.assertEqual([], parameter.normalize_user_value(None))
+
+
 class ParameterModelMapValueTest(unittest.TestCase):
     def test_map_to_script_simple_value(self):
         parameter_model = create_parameter_model('param1')
@@ -1106,7 +1181,8 @@ class ParameterModelMapValueTest(unittest.TestCase):
         self.assertEqual(os.path.join(file_dir, 'abc'), mapped_value)
 
     def test_map_to_script_multiselect(self):
-        parameter_model = create_parameter_model('param1', type='multiselect', allowed_values=['abc', 'def', '456'])
+        parameter_model = create_parameter_model('param1', type=PARAM_TYPE_MULTISELECT,
+                                                 allowed_values=['abc', 'def', '456'])
         self.assertEqual(['456', 'def'], parameter_model.map_to_script(['456', 'def']))
 
     def test_map_to_script_args_single(self):
@@ -1115,14 +1191,14 @@ class ParameterModelMapValueTest(unittest.TestCase):
 
     def test_map_to_script_args_multiselect_list(self):
         parameter_model = create_parameter_model('param1',
-                                                 type='multiselect',
+                                                 type=PARAM_TYPE_MULTISELECT,
                                                  allowed_values=['abc', 'def', '456'],
                                                  multiple_arguments=True)
         self.assertEqual(['abc', '456'], parameter_model.to_script_args(['abc', '456']))
 
     def test_map_to_script_args_multiselect_single_arg(self):
         parameter_model = create_parameter_model('param1',
-                                                 type='multiselect',
+                                                 type=PARAM_TYPE_MULTISELECT,
                                                  allowed_values=['abc', 'def', '456'],
                                                  multiselect_separator='_')
         self.assertEqual('abc_456_def', parameter_model.to_script_args(['abc', '456', 'def']))
@@ -1141,7 +1217,8 @@ def _create_config_model(name, *,
                          audit_name=DEF_AUDIT_NAME,
                          path=None,
                          parameters=None,
-                         parameter_values=None):
+                         parameter_values=None,
+                         working_dir=None):
     result_config = {}
 
     if config:
@@ -1154,5 +1231,8 @@ def _create_config_model(name, *,
 
     if path is None:
         path = name
+
+    if working_dir is not None:
+        result_config['working_directory'] = working_dir
 
     return ConfigModel(result_config, path, username, audit_name, parameter_values=parameter_values)

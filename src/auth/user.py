@@ -12,3 +12,9 @@ class User:
 
     def get_username(self):
         return self.audit_names.get(AUTH_USERNAME)
+
+    def __str__(self) -> str:
+        if AUTH_USERNAME in self.audit_names:
+            return self.audit_names.get(AUTH_USERNAME)
+
+        return str(self.audit_names)

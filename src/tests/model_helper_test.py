@@ -1,8 +1,11 @@
 import os
 import unittest
 
-from model import script_configs
-from model.model_helper import read_list, read_dict, prepare_multiselect_values, fill_parameter_values
+from config.constants import PARAM_TYPE_MULTISELECT, FILE_TYPE_FILE, FILE_TYPE_DIR
+from model import script_configs, model_helper
+from model.model_helper import read_list, read_dict, normalize_incoming_values, fill_parameter_values, resolve_env_vars, \
+    InvalidFileException
+from tests import test_utils
 from tests.test_utils import create_parameter_model
 
 
@@ -147,53 +150,30 @@ class TestReadDict(unittest.TestCase):
         self.assertEqual(dict_value, {'key2': 'value2'})
 
 
-class TestPrepareMultiselectValues(unittest.TestCase):
+class TestNormalizeIncomingValues(unittest.TestCase):
 
-    def test_prepare_single_value(self):
-        parameter = create_parameter_model('param', type='multiselect')
+    def test_no_values(self):
+        normalized = normalize_incoming_values({}, [])
 
-        values = self.prepare({parameter: 'val1'})
-        self.assertEqual(['val1'], values['param'])
+        self.assertEqual({}, normalized)
 
-    def test_prepare_empty_string(self):
-        parameter = create_parameter_model('param', type='multiselect')
+    def test_normalize_simple_parameters(self):
+        p1 = create_parameter_model('p1')
+        p2 = create_parameter_model('p2')
+        p3 = create_parameter_model('p3')
 
-        values = self.prepare({parameter: ''})
-        self.assertEqual([], values['param'])
+        normalized = normalize_incoming_values({'p1': 1, 'p3': None}, [p1, p2, p3])
 
-    def test_prepare_empty_list(self):
-        parameter = create_parameter_model('param', type='multiselect')
+        self.assertEqual({'p1': 1, 'p3': None}, normalized)
 
-        values = self.prepare({parameter: []})
-        self.assertEqual([], values['param'])
+    def test_normalize_one_multiselect(self):
+        p1 = create_parameter_model('p1')
+        p2 = create_parameter_model('p2', type=PARAM_TYPE_MULTISELECT, allowed_values=['abc'])
+        p3 = create_parameter_model('p3')
 
-    def test_prepare_some_list(self):
-        parameter = create_parameter_model('param', type='multiselect')
+        normalized = normalize_incoming_values({'p2': 'abc', 'p3': True}, [p1, p2, p3])
 
-        values = self.prepare({parameter: ['v1', 'v2']})
-        self.assertEqual(['v1', 'v2'], values['param'])
-
-    def test_prepare_only_multiselect(self):
-        parameters = []
-        param1 = create_parameter_model('param1', type='text', all_parameters=parameters)
-        multi_param = create_parameter_model('multi_param', type='multiselect', all_parameters=parameters)
-        param2 = create_parameter_model('param2', type='list', all_parameters=parameters)
-
-        parameters.extend([param1, multi_param, param2])
-
-        values = self.prepare({
-            param1: 'xyz',
-            multi_param: 'xyz',
-            param2: 'xyz'})
-        self.assertEqual('xyz', values['param1'])
-        self.assertEqual(['xyz'], values['multi_param'])
-        self.assertEqual('xyz', values['param2'])
-
-    def prepare(self, parameter_values):
-        values = {param.name: value for param, value in parameter_values.items()}
-        parameters = list(parameter_values.keys())
-        prepare_multiselect_values(values, parameters)
-        return values
+        self.assertEqual({'p2': ['abc'], 'p3': True}, normalized)
 
 
 class TestFillParameterValues(unittest.TestCase):
@@ -240,3 +220,143 @@ class TestFillParameterValues(unittest.TestCase):
             result.append(parameter)
 
         return result
+
+
+class TestResolveEnvVars(unittest.TestCase):
+
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.original_env = {}
+
+    def test_replace_full_match(self):
+        self.set_env_value('my_key', 'my_password')
+        resolved_val = resolve_env_vars('$$my_key', full_match=True)
+        self.assertEqual('my_password', resolved_val)
+
+    def test_missing_env_full_match(self):
+        self.assertRaises(Exception, resolve_env_vars, '$$my_key', True)
+
+    def test_no_replace_full_match(self):
+        value = 'abc!@#$%^&*,?$xyz'
+        resolved_val = resolve_env_vars(value, full_match=True)
+        self.assertEqual(value, resolved_val)
+
+    def test_no_replace_in_middle_full_match(self):
+        value = 'abc$$HOME.123'
+        resolved_val = resolve_env_vars(value, full_match=True)
+        self.assertEqual(value, resolved_val)
+
+    def test_replace_any_when_exact(self):
+        self.set_env_value('my_key', 'my_password')
+        resolved_val = resolve_env_vars('$$my_key')
+        self.assertEqual('my_password', resolved_val)
+
+    def test_replace_any_when_single_in_middle(self):
+        self.set_env_value('my_key', 'my_password')
+        resolved_val = resolve_env_vars('start/$$my_key/end')
+        self.assertEqual('start/my_password/end', resolved_val)
+
+    def test_replace_any_when_repeating(self):
+        self.set_env_value('my_key', 'abc')
+        resolved_val = resolve_env_vars('$$my_key,$$my_key.$$my_key')
+        self.assertEqual('abc,abc.abc', resolved_val)
+
+    def test_replace_any_when_multiple(self):
+        self.set_env_value('key1', 'Hello')
+        self.set_env_value('key2', 'world')
+        self.set_env_value('key3', '!')
+        resolved_val = resolve_env_vars('$$key1 $$key2!$$key3')
+        self.assertEqual('Hello world!!', resolved_val)
+
+    def test_replace_any_when_no_env(self):
+        resolved_val = resolve_env_vars('Hello $$key1!')
+        self.assertEqual('Hello $$key1!', resolved_val)
+
+    def test_resolve_when_empty(self):
+        resolved_val = resolve_env_vars('')
+        self.assertEqual('', resolved_val)
+
+    def test_resolve_when_int(self):
+        resolved_val = resolve_env_vars(123)
+        self.assertEqual(123, resolved_val)
+
+    def set_env_value(self, key, value):
+        if key not in self.original_env:
+            if key in os.environ:
+                self.original_env[key] = value
+            else:
+                self.original_env[key] = None
+
+        os.environ[key] = value
+
+    def tearDown(self):
+        super().tearDown()
+
+        for key, value in self.original_env.items():
+            if value is None:
+                del os.environ[key]
+            else:
+                os.environ[key] = value
+
+
+class ListFilesTest(unittest.TestCase):
+    def test_single_file(self):
+        test_utils.create_file('my.txt')
+
+        files = model_helper.list_files(test_utils.temp_folder)
+        self.assertEqual(['my.txt'], files)
+
+    def test_multiple_files(self):
+        test_utils.create_files(['My.txt', 'file.dat', 'test.sh'])
+        test_utils.create_dir('documents')
+
+        files = model_helper.list_files(test_utils.temp_folder)
+        self.assertEqual(['documents', 'file.dat', 'My.txt', 'test.sh'], files)
+
+    def test_multiple_files_non_recursive(self):
+        for dir in [None, 'documents', 'smth']:
+            for file in ['my.txt', 'file.dat']:
+                if dir:
+                    test_utils.create_file(os.path.join(dir, dir + '_' + file))
+                else:
+                    test_utils.create_file(file)
+
+        files = model_helper.list_files(test_utils.temp_folder)
+        self.assertEqual(['documents', 'file.dat', 'my.txt', 'smth'], files)
+
+    def test_file_type_file(self):
+        files = ['file1', 'file2']
+        test_utils.create_files(files)
+        test_utils.create_dir('my_dir')
+
+        actual_files = model_helper.list_files(test_utils.temp_folder, file_type=FILE_TYPE_FILE)
+        self.assertEqual(files, actual_files)
+
+    def test_file_type_dir(self):
+        files = ['file1', 'file2']
+        test_utils.create_files(files)
+        test_utils.create_dir('my_dir')
+
+        actual_files = model_helper.list_files(test_utils.temp_folder, file_type=FILE_TYPE_DIR)
+        self.assertEqual(['my_dir'], actual_files)
+
+    def test_file_extensions(self):
+        for extension in ['exe', 'dat', 'txt', 'sh', 'pdf', 'docx']:
+            for file in ['file1', 'file2']:
+                test_utils.create_file(file + '.' + extension)
+
+            test_utils.create_dir('my_dir' + '.' + extension)
+
+        files = model_helper.list_files(test_utils.temp_folder, file_extensions=['exe', 'pdf'])
+        self.assertEqual(['file1.exe', 'file1.pdf', 'file2.exe', 'file2.pdf'], files)
+
+    def test_dir_not_exists(self):
+        dir = os.path.join(test_utils.temp_folder, 'dir2')
+        self.assertRaises(InvalidFileException, model_helper.list_files, dir)
+
+    def setUp(self):
+        test_utils.setup()
+
+    def tearDown(self):
+        test_utils.cleanup()

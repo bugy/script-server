@@ -2,7 +2,6 @@ import os
 import unittest
 
 from config.script.list_values import DependantScriptValuesProvider, FilesProvider
-from config.constants import FILE_TYPE_FILE, FILE_TYPE_DIR
 from tests import test_utils
 from tests.test_utils import create_parameter_model
 from utils import file_utils
@@ -90,62 +89,21 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
 
 
 class FilesProviderTest(unittest.TestCase):
-    def test_single_file(self):
-        test_utils.create_file('my.txt')
-
-        self.assertEqual(['my.txt'], self.read_provider_values())
+    def test_no_files(self):
+        provider = FilesProvider(test_utils.temp_folder)
+        self.assertEqual([], provider.get_values({}))
 
     def test_multiple_files(self):
-        self.create_files(['My.txt', 'file.dat', 'test.sh'])
+        test_utils.create_files(['My.txt', 'file.dat', 'test.sh', 'file2.txt'])
         test_utils.create_dir('documents')
+        test_utils.create_files(['another.txt'], 'documents')
 
-        self.assertEqual(['documents', 'file.dat', 'My.txt', 'test.sh'], self.read_provider_values())
+        provider = FilesProvider(test_utils.temp_folder, file_extensions=['txt'])
+        self.assertEqual(['file2.txt', 'My.txt'], provider.get_values({}))
 
-    def test_multiple_files_non_recursive(self):
-        for dir in [None, 'documents', 'smth']:
-            for file in ['my.txt', 'file.dat']:
-                if dir:
-                    test_utils.create_file(os.path.join(dir, dir + '_' + file))
-                else:
-                    test_utils.create_file(file)
-
-        self.assertEqual(['documents', 'file.dat', 'my.txt', 'smth'], self.read_provider_values())
-
-    def test_file_type_file(self):
-        files = ['file1', 'file2']
-        self.create_files(files)
-        test_utils.create_dir('my_dir')
-
-        self.assertEqual(files, self.read_provider_values(file_type=FILE_TYPE_FILE))
-
-    def test_file_type_dir(self):
-        files = ['file1', 'file2']
-        self.create_files(files)
-        test_utils.create_dir('my_dir')
-
-        self.assertEqual(['my_dir'], self.read_provider_values(file_type=FILE_TYPE_DIR))
-
-    def test_file_extensions(self):
-        for extension in ['exe', 'dat', 'txt', 'sh', 'pdf', 'docx']:
-            for file in ['file1', 'file2']:
-                test_utils.create_file(file + '.' + extension)
-
-            test_utils.create_dir('my_dir' + '.' + extension)
-
-        self.assertEqual(['file1.exe', 'file1.pdf', 'file2.exe', 'file2.pdf'],
-                         self.read_provider_values(file_extensions=['exe', '.pdf']))
-
-    def create_files(self, names, dir=None):
-        for name in names:
-            if dir is not None:
-                test_utils.create_file(os.path.join(dir, name))
-            else:
-                test_utils.create_file(name)
-
-    def read_provider_values(self, file_type=None, file_extensions=None):
-        provider = FilesProvider(test_utils.temp_folder, file_type=file_type, file_extensions=file_extensions)
-        values = provider.get_values({})
-        return values
+    def test_invalid_file_dir(self):
+        provider = FilesProvider('some_missing_folder')
+        self.assertEqual([], provider.get_values({}))
 
     def setUp(self):
         test_utils.setup()

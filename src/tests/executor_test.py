@@ -1,6 +1,7 @@
 import time
 import unittest
 
+from config.constants import PARAM_TYPE_MULTISELECT
 from execution import executor
 from execution.executor import ScriptExecutor
 from react.observable import _StoringObserver, read_until_closed
@@ -88,7 +89,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1', 5], args_string)
 
     def test_parameter_multiselect_when_empty_string(self):
-        parameter = create_script_param_config('p1', param='-p1', type='multiselect')
+        parameter = create_script_param_config('p1', param='-p1', type=PARAM_TYPE_MULTISELECT)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ''}, config)
@@ -96,7 +97,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual([], args_list)
 
     def test_parameter_multiselect_when_empty_list(self):
-        parameter = create_script_param_config('p1', param='-p1', type='multiselect')
+        parameter = create_script_param_config('p1', param='-p1', type=PARAM_TYPE_MULTISELECT)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': []}, config)
@@ -104,7 +105,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual([], args_list)
 
     def test_parameter_multiselect_when_single_list(self):
-        parameter = create_script_param_config('p1', param='-p1', type='multiselect')
+        parameter = create_script_param_config('p1', param='-p1', type=PARAM_TYPE_MULTISELECT)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1']}, config)
@@ -112,7 +113,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1', 'val1'], args_list)
 
     def test_parameter_multiselect_when_single_list_as_multiarg(self):
-        parameter = create_script_param_config('p1', param='-p1', type='multiselect')
+        parameter = create_script_param_config('p1', param='-p1', type=PARAM_TYPE_MULTISELECT)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1']}, config)
@@ -120,7 +121,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1', 'val1'], args_list)
 
     def test_parameter_multiselect_when_multiple_list(self):
-        parameter = create_script_param_config('p1', type='multiselect')
+        parameter = create_script_param_config('p1', type=PARAM_TYPE_MULTISELECT)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -128,7 +129,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['val1,val2,hello world'], args_list)
 
     def test_parameter_multiselect_when_multiple_list_and_custom_separator(self):
-        parameter = create_script_param_config('p1', type='multiselect', multiselect_separator='; ')
+        parameter = create_script_param_config('p1', type=PARAM_TYPE_MULTISELECT, multiselect_separator='; ')
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -136,7 +137,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['val1; val2; hello world'], args_list)
 
     def test_parameter_multiselect_when_multiple_list_as_multiarg(self):
-        parameter = create_script_param_config('p1', type='multiselect', multiple_arguments=True)
+        parameter = create_script_param_config('p1', type=PARAM_TYPE_MULTISELECT, multiple_arguments=True)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -189,7 +190,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual('ls -p1 ****** -p2 value', secure_command)
 
     def test_parameter_secure_multiselect(self):
-        parameter = create_script_param_config('p1', param='-p1', secure=True, type='multiselect')
+        parameter = create_script_param_config('p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT)
         config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
 
         executor = ScriptExecutor(config, {'p1': ['one', 'two', 'three']})
@@ -199,7 +200,7 @@ class TestBuildCommandArgs(unittest.TestCase):
 
     def test_parameter_secure_multiselect_as_multiarg(self):
         parameter = create_script_param_config(
-            'p1', param='-p1', secure=True, type='multiselect', multiple_arguments=True)
+            'p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT, multiple_arguments=True)
         config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
 
         executor = ScriptExecutor(config, {'p1': ['one', 'two', 'three']})
@@ -305,7 +306,7 @@ class TestProcessOutput(unittest.TestCase):
         self.assertEqual(output, '******\n-******-\nbobcat\ncatty\n1cat\nmy ****** is cute')
 
     def test_log_with_secure_when_multiselect(self):
-        parameter = create_script_param_config('p1', secure=True, type='multiselect')
+        parameter = create_script_param_config('p1', secure=True, type=PARAM_TYPE_MULTISELECT)
         config = self._create_config(parameters=[parameter])
 
         self.create_and_start_executor(config, {'p1': ['123', 'password']})

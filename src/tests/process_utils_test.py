@@ -79,12 +79,31 @@ class TestSplitCommand(unittest.TestCase):
 
         self.assertEqual(command_split, ['my', 'script.py'])
 
+    def test_path_when_exists_and_working_dir(self):
+        file = test_utils.create_file('./scriptX.sh')
+        command_split = process_utils.split_command('./scriptX.sh 123', test_utils.temp_folder)
+
+        self.assertEqual([os.path.abspath(file), '123'], command_split)
+
+    def test_path_when_not_exists_and_working_dir(self):
+        command_split = process_utils.split_command('./scriptX.sh 123', test_utils.temp_folder)
+
+        self.assertEqual(['./scriptX.sh', '123'], command_split)
+
+    def test_path_when_working_dir_not_exists(self):
+        command_split = process_utils.split_command('./scriptX.sh 123', 'my_dir')
+
+        self.assertEqual(['./scriptX.sh', '123'], command_split)
+
+    def test_path_when_working_dir_and_abs_path(self):
+        file = test_utils.create_file('scriptX.sh')
+        abs_file = os.path.abspath(file)
+        command_split = process_utils.split_command(abs_file + ' 123', 'my_dir')
+
+        self.assertEqual([abs_file, '123'], command_split)
+
     def setUp(self):
         test_utils.setup()
 
     def tearDown(self):
         test_utils.cleanup()
-
-
-if __name__ == '__main__':
-    unittest.main()

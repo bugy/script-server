@@ -3,8 +3,7 @@ import logging
 import os
 import re
 
-from model.model_helper import is_empty, fill_parameter_values
-from config.constants import FILE_TYPE_FILE, FILE_TYPE_DIR
+from model.model_helper import is_empty, fill_parameter_values, InvalidFileException, list_files
 from utils import process_utils
 
 LOGGER = logging.getLogger('list_values')
@@ -107,38 +106,13 @@ class DependantScriptValuesProvider(ValuesProvider):
 class FilesProvider(ValuesProvider):
 
     def __init__(self, file_dir, file_type=None, file_extensions=None) -> None:
-        self._values = []
         self._file_dir = file_dir
 
-        if not os.path.exists(file_dir) or not os.path.isdir(file_dir):
-            return
-
-        def normalize_extension(extension):
-            return re.sub('^\.', '', extension).lower()
-
-        if file_extensions:
-            file_extensions = [normalize_extension(ext) for ext in file_extensions]
-            file_type = FILE_TYPE_FILE
-
-        sorted_files = sorted(os.listdir(file_dir), key=lambda s: s.casefold())
-        for file in sorted_files:
-            file_path = os.path.join(file_dir, file)
-
-            if file_type:
-                if file_type == FILE_TYPE_DIR and not os.path.isdir(file_path):
-                    continue
-                elif file_type == FILE_TYPE_FILE and not os.path.isfile(file_path):
-                    continue
-
-            if file_extensions:
-                _, extension = os.path.splitext(file_path)
-                if normalize_extension(extension) not in file_extensions:
-                    continue
-
-            self._values.append(file)
+        try:
+            self._values = list_files(file_dir, file_type, file_extensions)
+        except InvalidFileException as e:
+            LOGGER.warning('Failed to list files for ' + file_dir + ': ' + str(e))
+            self._values = []
 
     def get_values(self, parameter_values):
         return self._values
-
-    def map_value(self, user_value):
-        return os.path.join(self._file_dir, user_value)

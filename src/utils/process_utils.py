@@ -48,6 +48,9 @@ def split_command(script_command, working_directory=None):
         args = [script_command]
 
     script_path = file_utils.normalize_path(args[0], working_directory)
+    if (not os.path.isabs(script_path)) or (not os.path.exists(script_path)):
+        script_path = args[0]
+
     script_args = args[1:]
     for i, body_arg in enumerate(script_args):
         expanded = os.path.expanduser(body_arg)

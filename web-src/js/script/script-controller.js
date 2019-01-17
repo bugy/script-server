@@ -1,8 +1,10 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
 import {
+    callHttp,
     contains,
     forEachKeyValue,
+    HttpRequestError,
     HttpUnauthorizedError,
     isEmptyArray,
     isEmptyString,
@@ -14,9 +16,9 @@ import {
     toDict
 } from '../common';
 import {ReactiveWebSocket} from '../connections/rxWebsocket';
+import {comboboxTypes, preprocessParameter} from './model_helper'
 import {ScriptExecutor} from './script-execution-model';
 import ScriptView from './script-view';
-import {comboboxTypes} from './script-parameters-view'
 import {
     ADD_DOWNLOADABLE_FILE,
     ADD_PARAMETER,
@@ -68,7 +70,7 @@ ScriptController.prototype._reconnect = function (loadFinishedCallback, loadErro
 
     var dataReceived = false;
 
-    var socket = new ReactiveWebSocket('scripts/info/' + this.scriptName, {
+    var socket = new ReactiveWebSocket('scripts/' + this.scriptName, {
         onNext: function (rawMessage) {
             dataReceived = true;
             controller._reconnectionAttempt = 0;
@@ -293,6 +295,12 @@ ScriptController.prototype._initStore = function () {
         }
     }
 
+    function _preprocessParameter(parameter, store) {
+        preprocessParameter(parameter, (path) => {
+            return store.dispatch('loadFiles', {parameterName: parameter.name, path})
+        });
+    }
+
     return new Vuex.Store({
         strict: true,
 
@@ -320,7 +328,7 @@ ScriptController.prototype._initStore = function () {
                 for (var i = 0; i < parameters.length; i++) {
                     var parameter = parameters[i];
 
-                    controller._preprocessParameter(parameter);
+                    _preprocessParameter(parameter, this);
 
                     if (!isNull(parameter.default)) {
                         parameterValues[parameter.name] = parameter.default;
@@ -345,8 +353,8 @@ ScriptController.prototype._initStore = function () {
                     removeElement(state.parameters, parameter);
                 });
 
-                forEachKeyValue(newParametersDict, function (name, parameter) {
-                    controller._preprocessParameter(parameter);
+                forEachKeyValue(newParametersDict, (name, parameter) => {
+                    _preprocessParameter(parameter, this);
 
                     if (name in oldParametersDict) {
                         const index = state.parameters.indexOf(oldParametersDict[name]);
@@ -370,7 +378,7 @@ ScriptController.prototype._initStore = function () {
             },
 
             [ADD_PARAMETER](state, parameter) {
-                controller._preprocessParameter(parameter);
+                _preprocessParameter(parameter, this);
                 state.parameters.push(parameter);
             },
 
@@ -392,7 +400,7 @@ ScriptController.prototype._initStore = function () {
                     return;
                 }
 
-                controller._preprocessParameter(parameter);
+                _preprocessParameter(parameter, this);
                 Vue.set(parameters, foundIndex, parameter);
             },
 
@@ -526,6 +534,24 @@ ScriptController.prototype._initStore = function () {
                 if (!isNull(controller.executor)) {
                     controller.executor.stop();
                 }
+            },
+
+            loadFiles({state, commit}, {parameterName, path}) {
+                const scriptConfig = state.scriptConfig;
+                if (isNull(scriptConfig)) {
+                    throw Error('Config is not available');
+                }
+
+                const url = encodeURI('scripts/' + scriptConfig.name + '/' + parameterName + '/list-files');
+                const param = $.param({'path': path, 'id': scriptConfig.id}, true);
+                const full_url = url + '?' + param;
+
+                return new Promise(((resolve, reject) => {
+                    callHttp(full_url, null, 'GET',
+                        response => resolve(JSON.parse(response)),
+                        (code, message) => reject(new HttpRequestError(code, message))
+                    );
+                }));
             }
         }
     });
@@ -543,14 +569,6 @@ ScriptController.prototype._sendCurrentValue = function (parameter, value) {
         'event': 'parameterValue',
         'data': data
     }));
-};
-
-
-ScriptController.prototype._preprocessParameter = function (parameter) {
-    parameter.multiselect = (parameter.type === 'multiselect');
-    if (parameter.type === 'file_upload') {
-        parameter.default = null;
-    }
 };
 
 ScriptController.prototype.setParameterValues = function (values) {

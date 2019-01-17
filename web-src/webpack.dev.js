@@ -10,7 +10,7 @@ module.exports = merge(common, {
         contentBase: path.resolve(__dirname + '/../web'),
         hot: true,
         proxy: [{
-            context: ['/scripts', '/conf', '/auth', '/result_files', '/admin', '/login', '/logout'],
+            context: ['/scripts', '/executions', '/conf', '/auth', '/result_files', '/admin', '/login', '/logout'],
             target: 'http://localhost:5000',
             ws: true
         }]

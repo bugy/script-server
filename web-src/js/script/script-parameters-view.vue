@@ -19,10 +19,11 @@
     import Checkbox from '../components/checkbox'
     import Combobox from '../components/combobox'
     import FileUpload from '../components/file_upload'
+    import ServerFileField from '../components/server_file_field'
     import Textfield from '../components/textfield'
+    import {comboboxTypes} from './model_helper'
+    import {isRecursiveFileParameter} from './model_helper';
     import {SET_PARAMETER_VALUE} from './vuex_constants';
-
-    export const comboboxTypes = ['list', 'multiselect', 'server_file'];
 
     export default {
         name: 'script-parameters-view',
@@ -44,6 +45,8 @@
             getComponentType(parameter) {
                 if (parameter.withoutValue) {
                     return Checkbox;
+                } else if (isRecursiveFileParameter(parameter)) {
+                    return ServerFileField;
                 } else if (comboboxTypes.includes(parameter.type)) {
                     return Combobox;
                 } else if (parameter.type === 'file_upload') {

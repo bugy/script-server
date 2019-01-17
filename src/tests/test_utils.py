@@ -33,6 +33,14 @@ def create_file(filepath, overwrite=False):
     return file_path
 
 
+def create_files(names, dir=None):
+    for name in names:
+        if dir is not None:
+            create_file(os.path.join(dir, name))
+        else:
+            create_file(name)
+
+
 def create_dir(dir_path):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
@@ -42,6 +50,7 @@ def create_dir(dir_path):
         os.makedirs(full_path)
 
     return full_path
+
 
 def setup():
     if os.path.exists(temp_folder):
@@ -58,11 +67,21 @@ def cleanup():
 
 
 def _rmtree():
+    exception = None
+
     def on_rm_error(func, path, exc_info):
-        os.chmod(path, stat.S_IWRITE)
-        os.remove(path)
+        try:
+            os.chmod(path, stat.S_IWRITE | stat.S_IEXEC | stat.S_IREAD)
+            os.remove(path)
+        except Exception as e:
+            print('Failed to remove path ' + path + ': ' + str(e))
+            nonlocal exception
+            if exception is None:
+                exception = e
 
     shutil.rmtree(temp_folder, onerror=on_rm_error)
+    if exception:
+        raise exception
 
 
 def set_linux():
@@ -103,7 +122,11 @@ def create_script_param_config(
         max=None,
         allowed_values=None,
         values_script=None,
-        file_dir=None):
+        file_dir=None,
+        file_recursive=None,
+        file_type=None,
+        file_extensions=None):
+
     conf = {'name': param_name}
 
     if type is not None:
@@ -147,6 +170,15 @@ def create_script_param_config(
 
     if file_dir is not None:
         conf['file_dir'] = file_dir
+
+    if file_recursive is not None:
+        conf['file_recursive'] = file_recursive
+
+    if file_extensions is not None:
+        conf['file_extensions'] = file_extensions
+
+    if file_type is not None:
+        conf['file_type'] = file_type
 
     return conf
 
@@ -196,6 +228,7 @@ def create_parameter_model(name=None,
                            audit_name='127.0.0.1',
                            all_parameters=None,
                            file_dir=None,
+                           file_recursive=None,
                            other_param_values: ObservableDict = None):
     config = create_script_param_config(
         name,
@@ -212,7 +245,8 @@ def create_parameter_model(name=None,
         min=min,
         max=max,
         allowed_values=allowed_values,
-        file_dir=file_dir)
+        file_dir=file_dir,
+        file_recursive=file_recursive)
 
     if all_parameters is None:
         all_parameters = []
@@ -232,6 +266,7 @@ def create_parameter_model_from_config(config,
                                        *,
                                        username='user1',
                                        audit_name='127.0.0.1',
+                                       working_dir=None,
                                        all_parameters=None):
     if all_parameters is None:
         all_parameters = []
@@ -239,7 +274,7 @@ def create_parameter_model_from_config(config,
     if config is None:
         config = {}
 
-    return ParameterModel(config, username, audit_name, all_parameters)
+    return ParameterModel(config, username, audit_name, all_parameters, working_dir=working_dir)
 
 
 def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostname=None):

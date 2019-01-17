@@ -20,7 +20,7 @@ class GoogleOauthAuthenticator(auth_base.Authenticator):
         self.client_id = model_helper.read_obligatory(params_dict, 'client_id', ' for Google OAuth')
 
         secret_value = model_helper.read_obligatory(params_dict, 'secret', ' for Google OAuth')
-        self.secret = model_helper.resolve_env_var(secret_value)
+        self.secret = model_helper.resolve_env_vars(secret_value, full_match=True)
 
         self.states = {}
 
