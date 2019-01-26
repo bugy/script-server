@@ -579,7 +579,7 @@ class AuthInfoHandler(BaseRequestHandler):
         auth = self.application.auth
 
         username = None
-        if auth.is_enabled:
+        if auth.is_enabled():
             username = auth.get_username(self)
 
         info = {
@@ -606,17 +606,6 @@ class LogoutHandler(BaseRequestHandler):
         auth = self.application.auth
 
         auth.logout(self)
-
-
-class GetUsernameHandler(BaseRequestHandler):
-    @check_authorization
-    def get(self):
-        auth = self.application.auth
-        if not auth.is_enabled():
-            raise tornado.web.HTTPError(404)
-
-        username = auth.get_username(self)
-        self.write(username)
 
 
 class DownloadResultFile(AuthorizedStaticFileHandler):
@@ -838,8 +827,6 @@ def init(server_config: ServerConfig,
         handlers.append((r'/login', LoginHandler))
         handlers.append((r'/auth/config', AuthConfigHandler))
         handlers.append((r'/logout', LogoutHandler))
-
-    handlers.append((r"/username", GetUsernameHandler))
 
     handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 
