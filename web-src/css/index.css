@@ -514,7 +514,6 @@ input[type=checkbox]:not(.browser-default) + span {
     height: 40px;
     width: 188px;
     padding-left: 34px;
-    padding-top: 4px;
     margin: auto;
     margin-top: 34px;
     display: block;
