@@ -91,7 +91,8 @@ export function callHttp(url, object, method, asyncHandler, onError) {
 
         if (onError) {
             xhttp.addEventListener('error', function (event) {
-                console.log('Failed to execute request: ' + event);
+                console.log('Failed to execute request');
+                console.log(event);
                 onError(-1, 'Unknown error occurred');
             });
         }

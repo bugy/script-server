@@ -137,6 +137,8 @@ function sendLoginRequest(formData) {
 
     var onSuccess = function () {
         hideError();
+        hideInfo();
+        $('input.login-button').removeAttr('disabled');
 
         var redirect = request.getResponseHeader('Location');
         if (!redirect) {
@@ -152,6 +154,8 @@ function sendLoginRequest(formData) {
     };
 
     var onError = function (errorCode, errorText) {
+        $('input.login-button').removeAttr('disabled');
+
         if (contains([400, 401, 403, 500], errorCode)) {
             showError(errorText);
 
@@ -160,15 +164,35 @@ function sendLoginRequest(formData) {
         }
     };
 
+    showInfo('Verifying credentials...');
+    $('input.login-button').attr("disabled", "disabled");
     request = callHttp(loginUrl, formData, loginMethod, onSuccess, onError);
 }
 
 function showError(text) {
-    $('.login-error-label').text(text);
+    const label = $('.login-info-label');
+    label.text(text);
+
+    if (text) {
+        label.addClass('error');
+    }
 }
 
 function hideError() {
     showError('');
+}
+
+function showInfo(text) {
+    const label = $('.login-info-label');
+    label.text(text);
+
+    if (text) {
+        label.removeClass('error');
+    }
+}
+
+function hideInfo() {
+    showInfo('');
 }
 
 var LOCAL_STATE_KEY = 'oauth_state';

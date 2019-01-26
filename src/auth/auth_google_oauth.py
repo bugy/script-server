@@ -7,7 +7,6 @@ from tornado import gen, httpclient, escape
 from auth import auth_base
 from auth.auth_base import AuthFailureError, AuthBadRequestException
 from model import model_helper
-from utils.tornado_utils import normalize_url
 
 LOGGER = logging.getLogger('script_server.GoogleOauthAuthorizer')
 

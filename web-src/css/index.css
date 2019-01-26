@@ -494,8 +494,7 @@ input[type=checkbox]:not(.browser-default) + span {
     margin-top: 7px;
 }
 
-#login-panel .login-error-label {
-    color: #F44336;
+#login-panel .login-info-label {
     line-height: 1em;
     font-size: 0.9em;
     height: 2em;
@@ -503,7 +502,11 @@ input[type=checkbox]:not(.browser-default) + span {
     text-align: center;
 }
 
-#login-panel .login-google_oauth .login-error-label {
+#login-panel .login-info-label.error {
+    color: #F44336;
+}
+
+#login-panel .login-google_oauth .login-info-label {
     margin-top: 16px;
 }
 
@@ -517,11 +520,11 @@ input[type=checkbox]:not(.browser-default) + span {
     display: block;
 
     font-size: 14px;
-    font-weight: bold;
+    font-weight: 500;
     color: #757575;
 
     border-radius: 2px;
-    box-shadow: 1px 1px 1px 1px grey;
+    box-shadow: 0 1px 3px -1px #202020;
     border: none;
 
     background-image: url('../images/g-logo-plain.png');
@@ -535,6 +538,10 @@ input[type=checkbox]:not(.browser-default) + span {
 #login-google_oauth-button:active {
     background-color: #EEE;
     background-image: url('../images/g-logo-plain-pressed.png');
+}
+
+#login-google_oauth-button[disabled] {
+    color: #B0B0B0;
 }
 
 #content-panel .files-download-panel {
