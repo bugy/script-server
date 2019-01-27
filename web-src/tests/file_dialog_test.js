@@ -193,6 +193,15 @@ describe('Test FileDialog', function () {
             assert.sameOrderedMembers(this.fileDialog.vm.path, [])
         });
 
+        it('Test navigate breadcrumbs to same, when 1 level', async function () {
+            await navigateTo(['temp'], this.fileDialog);
+
+            const homeElement = findBreadcrumbElement('temp', this.fileDialog);
+            triggerSingleClick(homeElement);
+
+            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp'])
+        });
+
         it('Test navigate breadcrumbs to same', async function () {
             await navigateTo(['temp', 't_logs'], this.fileDialog);
 

@@ -262,6 +262,10 @@
                     return;
                 }
 
+                if (positions <= 0) {
+                    return;
+                }
+
                 if (this.path.length === 1) {
                     this.openPath([]);
                 } else {
@@ -319,7 +323,7 @@
     }
 
     .nav-wrapper {
-        line-height: initial;
+        line-height: normal;
     }
 
     .file-dialog-header .path-breadcrumbs {
@@ -351,7 +355,7 @@
     }
 
     .file-dialog-header .breadcrumb > i {
-        height: min-content;
+        height: 100%;
         line-height: inherit;
     }
 
