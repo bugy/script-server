@@ -14,8 +14,8 @@
                @keypress.space.prevent="openDialog"
                :value="valueText"
                readonly/>
-        <label :for="config.name" v-bind:class="{ active: ((value && value.length > 0) || focused) }">{{ config.name
-            }}</label>
+        <label :for="config.name"
+               v-bind:class="{ active: ((value && value.length > 0) || focused) }">{{ config.name }}</label>
         <div class="modal" ref="modal">
             <FileDialog class="file-dialog" ref="fileDialog"
                         :opened="dialogOpened"
