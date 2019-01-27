@@ -193,7 +193,10 @@ ScriptController.prototype.destroy = function () {
 
     this._stopLogPublisher();
 
-    this.scriptView.$destroy();
+    if (!isNull(this.scriptView)) {
+        this.scriptView.$destroy();
+    }
+    this.scriptView = null;
 
     if (!isNull(this.executor)) {
         this.executor.removeListener(this.executorListener);
