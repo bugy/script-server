@@ -98,6 +98,13 @@ class TestScriptOutputLogging(unittest.TestCase):
         super().tearDown()
 
 
+def _replace_line_separators(files, original, new):
+    for file in files:
+        content = file_utils.read_file(file, byte_content=True)
+        replaced_content = content.decode('utf-8').replace(original, new).encode('utf-8')
+        file_utils.write_file(file, replaced_content, byte_content=True)
+
+
 class TestLoggingService(unittest.TestCase):
     def test_no_history_entries(self):
         entries = self.logging_service.get_history_entries()
@@ -246,6 +253,20 @@ class TestLoggingService(unittest.TestCase):
 
         entry = self.logging_service.find_history_entry('id1')
         self.validate_history_entry(entry, id='id1', user_name='userX', user_id='192.168.2.12')
+
+    def test_find_entry_when_windows_line_seperator(self):
+        self.simulate_logging(execution_id='id1', user_name='userX', user_id='192.168.2.12')
+        _replace_line_separators(self.get_log_files(), '\n', '\r\n')
+
+        entry = self.logging_service.find_history_entry('id1')
+        self.validate_history_entry(entry, id='id1', user_name='userX', user_id='192.168.2.12')
+
+    def test_find_log_when_windows_line_seperator(self):
+        self.simulate_logging(execution_id='id1', log_lines=['hello', 'wonderful', 'world'])
+        _replace_line_separators(self.get_log_files(), '\n', '\r\n')
+
+        log = self.logging_service.find_log('id1')
+        self.assertEqual('hello\r\nwonderful\r\nworld\r\n', log)
 
     def validate_history_entry(self, entry, *,
                                id,

@@ -180,8 +180,8 @@ class ExecutionLoggingService:
 
         file_content = file_utils.read_file(os.path.join(self._output_folder, file),
                                             keep_newlines=True)
-        log = file_content.split(OUTPUT_STARTED_MARKER + '\n', 1)[1]
-        return log
+        log = file_content.split(OUTPUT_STARTED_MARKER, 1)[1]
+        return _lstrip_any_linesep(log)
 
     def _extract_history_entry(self, file):
         file_path = os.path.join(self._output_folder, file)
@@ -197,7 +197,7 @@ class ExecutionLoggingService:
         correct_format = False
         with open(file_path, 'r', encoding=ENCODING) as f:
             for line in f:
-                if line.rstrip('\n') == OUTPUT_STARTED_MARKER:
+                if _rstrip_once(line, '\n') == OUTPUT_STARTED_MARKER:
                     correct_format = True
                     break
                 parameters_text += line
@@ -254,13 +254,13 @@ class ExecutionLoggingService:
                 continue
 
             if current_key is not None:
-                parameters[current_key] = current_value.rstrip('\n')
+                parameters[current_key] = _rstrip_once(current_value, '\n')
 
             current_key = match.group(1)
             current_value = match.group(2)
 
         if current_key is not None:
-            parameters[current_key] = current_value.rstrip('\n')
+            parameters[current_key] = _rstrip_once(current_value, '\n')
 
         return parameters
 
@@ -367,3 +367,20 @@ class ExecutionLoggingInitiator:
                 all_audit_names)
 
         self._execution_service.add_start_listener(started)
+
+
+def _rstrip_once(text, char):
+    if text.endswith(char):
+        text = text[:-1]
+
+    return text
+
+
+def _lstrip_any_linesep(text):
+    if text.startswith('\r\n'):
+        return text[2:]
+
+    if text.startswith(os.linesep):
+        return text[len(os.linesep):]
+
+    return text
