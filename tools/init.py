@@ -27,7 +27,9 @@ def download_web_files(project_path):
 def build_web_files(prod, project_path):
     print('Building web...')
     npm_mode = 'prod' if prod else 'dev'
-    process_utils.invoke('npm run build:' + npm_mode, os.path.join(project_path, 'web-src'))
+    work_dir = os.path.join(project_path, 'web-src')
+    process_utils.invoke('npm install', work_dir)
+    process_utils.invoke('npm run build:' + npm_mode, work_dir)
     print('Done')
 
 
