@@ -12,7 +12,13 @@ addons:
 env:
   global:
   - OWNER=${TRAVIS_REPO_SLUG%/*}
-  - secure: "GtWCiMPNz3MDDTvXqaVsgZBvlxYRZuTY6sUEhWTL37zJZHgRLlxTCTD27hHZp2P4B6G6KGV/0iEvMYxqzo6jMrzcEnt7TlGetteqI18dhV1dIQGH6uy8Y/PktkK2g2FuJeGV3FRK4+a21v6zzSuUaFa26k97mPapa4LS83XXj7rc13ll23HhhtObVF/a1n3U0Xwe4FkdoxbKlecJUnNujESxFk4xQl4N1tFv15fldDlFq0XWs26eEp3LU/n7wkMzbg9WEqPvDeaYlvir9VpvcYWpVvf8Uz+wpvW1jnE2R6bK1TDv5BNzQwbf2JtN284yZ8I1nwZtOJkc1RUr5wUFxCD0p8tc30sAlKemI385v2t1ccoBYMwH8LHFIUoSXoolHZBsnZeADqpo3a0d8hVFWv4AcxC27Q6SfMCltl0+ogAoQ7wVfkRT++044p415Ar4raEqIkqTm64FaRNMS0v2y5mS2634PMSGMRnK+NBrWz1yFKxsiuPKypIWygtrJ4pyiL2yPBZupnCluEgqva3q6AmMDlNuSUmcTEnCRGB01U2if6/oSEgISH1VK2lsRSxuoG5dFFuezwv90YENh/7pw0/hgge7EOse6OzDsU3uNRWcTuXF7eEBhjM1wBHWHlaAwV9vfHMZX4sHWP4R4CZhPjVEPRz6HPEg1tFCs2EvkuI="
+  - COMMIT=${TRAVIS_COMMIT::8}
+  # GITHUB_TOKEN
+  - secure: GtWCiMPNz3MDDTvXqaVsgZBvlxYRZuTY6sUEhWTL37zJZHgRLlxTCTD27hHZp2P4B6G6KGV/0iEvMYxqzo6jMrzcEnt7TlGetteqI18dhV1dIQGH6uy8Y/PktkK2g2FuJeGV3FRK4+a21v6zzSuUaFa26k97mPapa4LS83XXj7rc13ll23HhhtObVF/a1n3U0Xwe4FkdoxbKlecJUnNujESxFk4xQl4N1tFv15fldDlFq0XWs26eEp3LU/n7wkMzbg9WEqPvDeaYlvir9VpvcYWpVvf8Uz+wpvW1jnE2R6bK1TDv5BNzQwbf2JtN284yZ8I1nwZtOJkc1RUr5wUFxCD0p8tc30sAlKemI385v2t1ccoBYMwH8LHFIUoSXoolHZBsnZeADqpo3a0d8hVFWv4AcxC27Q6SfMCltl0+ogAoQ7wVfkRT++044p415Ar4raEqIkqTm64FaRNMS0v2y5mS2634PMSGMRnK+NBrWz1yFKxsiuPKypIWygtrJ4pyiL2yPBZupnCluEgqva3q6AmMDlNuSUmcTEnCRGB01U2if6/oSEgISH1VK2lsRSxuoG5dFFuezwv90YENh/7pw0/hgge7EOse6OzDsU3uNRWcTuXF7eEBhjM1wBHWHlaAwV9vfHMZX4sHWP4R4CZhPjVEPRz6HPEg1tFCs2EvkuI=
+  # DOCKER_USER
+  - secure: 0AUrT+5xg+JGjAeZQfeCyVFHYw04YDSzCpeQILtt7Ca00rNJ4yshvCx+zEsyh0aMEO6+fLmGo4KCWC1tHKqKdO9ByIBBO1vbsQ83kDqC7GR1xorK8abN708NArxLdqylPRrrYK9Gr0VLk8t17DIfQdoP2QryJ2mDdsthzpliZOJ7c58LxIkBlog0uLabrX/d/m8ZEpgpqQalCUBmImc31tKBDprl5CVLk8ONLRVwdQ8WcYQaTNpOiIfx0OWp5iX+P9gMUyBTw8aFMlmwfZpXbDyGlwckDdIkKfWTUPq8FXNPLjyPbJ2zraID/kkNEw6J+x91w/F7VydhOoU/Gc4IAlL6TKN5xQquSclMz05kBHthSzZf7g6KUuQ0TgzK46zArcV4ZEItLU1h2IcLsPLi3+/O6TtUdUSQOIaCQX6YbQsnGDgEMWjtfpNJKpTyd+7SR+BuoQmtihr+Utl8rfq7vFTzkz+AiCvNnGQJzQoZKs83hgC57BRSD+LIkI0BrZ54ijNYoKCqvKHqmamkrXQEdiImBlTg8NpmBNHJgHdL6PRqi3NxLzJzdqKtz5pkI4MVVLYFXsUApD0AWvEOPejLnfVEGber5cA/Hm3HhqB7M9ja2BFml+oYBLc3mnzjKd/FT3VwWMiijfTJVvr6feFrhSQGiRyBLmaoRNmUSjUsfR0=
+  # DOCKER_PASSWORD
+  - secure: S22ffhnZOs1yFdBwJO9+uzy9DB3e7ehLWbj47U1zavsMKMDyDw0lkOIy8PMERFh4roBoM5dG95RIVbfNbrPXQxnY5Og2w7RTTv3eeHGdYzh+34Dppfk8mhEAhn3NL98sOe6is/5sEDvZ2ykPFLvoJmyV15V7Wvtuy1Zx+0lyZ0R0tX6sVJUWDlClHspCuSIKK+iptL5yLu4TtvX9Wks/c3kH6GIXYIJIeC63D+RRhuetbtGKND/RtFkq5IDP9qMZNXUAT/Mb8hrsk9HntFgl79dG2ChvBpDE8/LqjYDBiFTiUAtJfBhC0pVB3WaEwGTU/hWe8WTjl29JIkGcoaeT7+wncJ72lEPJoO60YWSdtWfTlNlUiN27AcxGqk39MDhB5NAbuJpKvcFLMmWFY2uJefrR6XVEXBZ+9yAwzuZmj0GYFOQTuczAqncyj/3BuOEqfIkkQ5BLAS5BUuzSEbHOjwasqbTVcWM1H3cv2ZYATXQQN8KhcZ5c5lxy8eD0NXHKvBFlS3HOXOXn3P6PqGgFHzjL+yyHMvzIXBJY4jEr8FIH16dwbXDqb4gi4lrrCZHDeIhVKsmLSUJjhmiKeP7dWcfUOGMxzLRmqA8r58TXcN3OvBrqNN63nUSG+Wb6XxmzLwE4PrlBy0fTRymG8WXrdE/Z2lglBhc8J3A8ER9c46s=
 before_install:
 - sudo apt-get -y install python3-pip python3-setuptools
 install:
@@ -31,19 +37,30 @@ before_script:
 script:
 - python3 tools/build.py
 before_deploy:
-- git config --local user.name 'bugy'
-- git config --local user.email 'buggygm@gmail.com'
-- git tag -f 'dev'
-- git remote add gh https://${OWNER}:${GITHUB_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git
-- git push -f gh dev
-- git remote remove gh
+- if ! [ "$BEFORE_DEPLOY_RUN" ]; then
+  export BEFORE_DEPLOY_RUN=1;
+
+  git config --local user.name 'bugy'
+  git config --local user.email 'buggygm@gmail.com'
+  git tag -f 'dev'
+  git remote add gh https://${OWNER}:${GITHUB_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git
+  git push -f gh dev
+  git remote remove gh
+
+  fi
 deploy:
-  provider: releases
+- provider: releases
   name: dev
-  api_key: $GITHUB_TOKEN
+  api_key: "$GITHUB_TOKEN"
   file: build/script-server.zip
   prerelease: true
   overwrite: true
   skip_cleanup: true
   on:
     branch: master
+- provider: script
+  script: tools/deploy_docker.sh
+  on:
+    tags: false
+    all_branches: true
+    condition: $TRAVIS_BRANCH =~ ^stable|master$
