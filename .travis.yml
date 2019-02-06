@@ -60,6 +60,7 @@ deploy:
     branch: master
 - provider: script
   script: tools/deploy_docker.sh
+  skip_cleanup: true
   on:
     tags: false
     all_branches: true
