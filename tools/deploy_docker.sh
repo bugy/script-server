@@ -17,6 +17,11 @@ docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
 
 if [ "$TRAVIS_BRANCH" == "stable" ]; then
     docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":latest
+
+    if [ ! -z "$NEW_GIT_TAG" ]; then
+        docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":"$NEW_GIT_TAG"
+    fi
+
 elif [ "$TRAVIS_BRANCH" == "master" ]; then
     docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":dev
 else
