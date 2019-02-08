@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import utils.file_utils as file_utils
@@ -7,6 +8,7 @@ from model import model_helper
 from model.model_helper import read_list
 from utils.string_utils import strip
 
+LOGGER = logging.getLogger('server_conf')
 
 class ServerConfig(object):
     def __init__(self) -> None:
@@ -214,4 +216,9 @@ def parse_logging_config(json_object):
 
 
 def _parse_admin_users(json_object, default_admins=None):
-    return strip(read_list(json_object, 'admin_users', default=default_admins))
+    admins = strip(read_list(json_object, 'admin_users', default=default_admins))
+    if '*' in admins:
+        LOGGER.warning('Any user is allowed to access admin page, be careful!')
+        return [ANY_USER]
+
+    return admins

@@ -1,25 +1,28 @@
 from collections import defaultdict
 
-ANY_USER = 'ANY_USER'
+ANY_USER = '__ANY_USER'
 ADMIN_GROUP = 'admin_users'
 GROUP_PREFIX = '@'
 
 
 class Authorizer:
     def __init__(self, app_allowed_users, admin_users, groups_provider):
-        if ANY_USER in app_allowed_users:
-            self._app_auth_check = AnyUserAuthorizationCheck()
-        else:
-            self._app_auth_check = ListBasedAuthorizationCheck(app_allowed_users)
+        self._app_auth_check = self.init_auth_check(app_allowed_users)
+        self._admin_check = self.init_auth_check(admin_users)
 
-        self._admin_users = admin_users
         self._groups_provider = groups_provider
+
+    def init_auth_check(self, users):
+        if ANY_USER in users:
+            return AnyUserAuthorizationCheck()
+        else:
+            return ListBasedAuthorizationCheck(users)
 
     def is_allowed_in_app(self, user_id):
         return self._app_auth_check.is_allowed(user_id)
 
     def is_admin(self, user_id):
-        return user_id in self._admin_users
+        return self._admin_check.is_allowed(user_id)
 
     def is_allowed(self, user_id, allowed_users):
         if not allowed_users:

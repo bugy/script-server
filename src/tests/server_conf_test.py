@@ -1,7 +1,12 @@
+import json
+import os
 import unittest
 
 from auth.authorization import ANY_USER
+from model import server_conf
 from model.server_conf import _prepare_allowed_users
+from tests import test_utils
+from utils import file_utils
 
 
 class TestPrepareAllowedUsers(unittest.TestCase):
@@ -62,3 +67,46 @@ class TestPrepareAllowedUsers(unittest.TestCase):
             ['user2', 'userX'],
             {'group1': ['userY', 'user3']})
         self.assertCountEqual(['user1', 'user2', 'user3', 'userX', 'userY'], allowed_users)
+
+
+class TestAdminUsersInit(unittest.TestCase):
+    def test_single_list(self):
+        config = _from_json({'access': {'admin_users': ['userX']}})
+        self.assertEqual(['userX'], config.admin_users)
+
+    def test_single_string(self):
+        config = _from_json({'access': {'admin_users': 'abc'}})
+        self.assertEqual(['abc'], config.admin_users)
+
+    def test_missing_when_no_auth(self):
+        config = _from_json({})
+        self.assertEqual(['127.0.0.1', '::1'], config.admin_users)
+
+    def test_missing_when_auth_enabled(self):
+        config = _from_json({'auth': {'type': 'ldap', 'url': 'localhost'}})
+        self.assertEqual([], config.admin_users)
+
+    def test_list_with_multiple_values(self):
+        config = _from_json({'access': {'admin_users': ['user1', 'user2', 'user3']}})
+        self.assertCountEqual(['user1', 'user2', 'user3'], config.admin_users)
+
+    def test_list_with_any_user(self):
+        config = _from_json({'access': {'admin_users': ['user1', '*', 'user3']}})
+        self.assertEqual([ANY_USER], config.admin_users)
+
+    def test_list_any_user_single_string(self):
+        config = _from_json({'access': {'admin_users': '*'}})
+        self.assertCountEqual([ANY_USER], config.admin_users)
+
+    def setUp(self):
+        test_utils.setup()
+
+    def tearDown(self):
+        test_utils.cleanup()
+
+
+def _from_json(content):
+    json_obj = json.dumps(content)
+    conf_path = os.path.join(test_utils.temp_folder, 'conf.json')
+    file_utils.write_file(conf_path, json_obj)
+    return server_conf.from_json(conf_path, test_utils.temp_folder)
