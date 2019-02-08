@@ -13,7 +13,7 @@ from react.properties import ObservableDict
 from utils import audit_utils
 
 temp_folder = 'tests_temp'
-
+_original_env = {}
 
 def create_file(filepath, overwrite=False):
     if not os.path.exists(temp_folder):
@@ -64,6 +64,14 @@ def cleanup():
         _rmtree()
 
     os_utils.reset_os()
+
+    for key, value in _original_env.items():
+        if value is None:
+            del os.environ[key]
+        else:
+            os.environ[key] = value
+
+    _original_env.clear()
 
 
 def _rmtree():
@@ -290,6 +298,16 @@ def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostnam
     return result
 
 
+def set_env_value(key, value):
+    if key not in _original_env:
+        if key in os.environ:
+            _original_env[key] = value
+        else:
+            _original_env[key] = None
+
+    os.environ[key] = value
+
+
 class _MockProcessWrapper(ProcessWrapper):
     def __init__(self, executor, command, working_directory):
         super().__init__(command, working_directory)
@@ -356,3 +374,4 @@ class AnyUserAuthorizer:
 
     def is_admin(self, user_id):
         return True
+

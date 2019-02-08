@@ -6,7 +6,7 @@ from model import script_configs, model_helper
 from model.model_helper import read_list, read_dict, normalize_incoming_values, fill_parameter_values, resolve_env_vars, \
     InvalidFileException
 from tests import test_utils
-from tests.test_utils import create_parameter_model
+from tests.test_utils import create_parameter_model, set_env_value
 
 
 class TestDefaultValue(unittest.TestCase):
@@ -224,13 +224,8 @@ class TestFillParameterValues(unittest.TestCase):
 
 class TestResolveEnvVars(unittest.TestCase):
 
-    def __init__(self, *args):
-        super().__init__(*args)
-
-        self.original_env = {}
-
     def test_replace_full_match(self):
-        self.set_env_value('my_key', 'my_password')
+        set_env_value('my_key', 'my_password')
         resolved_val = resolve_env_vars('$$my_key', full_match=True)
         self.assertEqual('my_password', resolved_val)
 
@@ -248,24 +243,24 @@ class TestResolveEnvVars(unittest.TestCase):
         self.assertEqual(value, resolved_val)
 
     def test_replace_any_when_exact(self):
-        self.set_env_value('my_key', 'my_password')
+        set_env_value('my_key', 'my_password')
         resolved_val = resolve_env_vars('$$my_key')
         self.assertEqual('my_password', resolved_val)
 
     def test_replace_any_when_single_in_middle(self):
-        self.set_env_value('my_key', 'my_password')
+        set_env_value('my_key', 'my_password')
         resolved_val = resolve_env_vars('start/$$my_key/end')
         self.assertEqual('start/my_password/end', resolved_val)
 
     def test_replace_any_when_repeating(self):
-        self.set_env_value('my_key', 'abc')
+        set_env_value('my_key', 'abc')
         resolved_val = resolve_env_vars('$$my_key,$$my_key.$$my_key')
         self.assertEqual('abc,abc.abc', resolved_val)
 
     def test_replace_any_when_multiple(self):
-        self.set_env_value('key1', 'Hello')
-        self.set_env_value('key2', 'world')
-        self.set_env_value('key3', '!')
+        set_env_value('key1', 'Hello')
+        set_env_value('key2', 'world')
+        set_env_value('key3', '!')
         resolved_val = resolve_env_vars('$$key1 $$key2!$$key3')
         self.assertEqual('Hello world!!', resolved_val)
 
@@ -281,23 +276,10 @@ class TestResolveEnvVars(unittest.TestCase):
         resolved_val = resolve_env_vars(123)
         self.assertEqual(123, resolved_val)
 
-    def set_env_value(self, key, value):
-        if key not in self.original_env:
-            if key in os.environ:
-                self.original_env[key] = value
-            else:
-                self.original_env[key] = None
-
-        os.environ[key] = value
-
     def tearDown(self):
         super().tearDown()
 
-        for key, value in self.original_env.items():
-            if value is None:
-                del os.environ[key]
-            else:
-                os.environ[key] = value
+        test_utils.cleanup()
 
 
 class ListFilesTest(unittest.TestCase):

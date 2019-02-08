@@ -280,7 +280,24 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual('text', parameter_model.type)
         self.assertEqual(False, parameter_model.constant)
 
-    def test_resolve_default(self):
+    def test_default_value_from_env(self):
+        test_utils.set_env_value('my_env_var', 'sky')
+
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'default': '$$my_env_var'})
+        self.assertEqual('sky', parameter_model.default)
+
+    def test_default_value_from_env_when_missing(self):
+        test_utils.set_env_value('my_env_var', 'earth')
+
+        self.assertRaisesRegex(
+            Exception,
+            'Environment variable my_env_var2 is not set',
+            _create_parameter_model,
+            {'name': 'def_param', 'default': '$$my_env_var2'})
+
+    def test_default_value_from_auth(self):
         parameter_model = _create_parameter_model({'name': 'def_param', 'default': 'X${auth.username}X'})
         self.assertEqual('X' + DEF_USERNAME + 'X', parameter_model.default)
 
@@ -313,6 +330,11 @@ class ParameterModelInitTest(unittest.TestCase):
             'name': 'def_param',
             'type': 'Ipv6'})
         self.assertEqual('ip6', parameter_model.type)
+
+    def tearDown(self):
+        super().tearDown()
+
+        test_utils.cleanup()
 
 
 class ParameterModelDependantValuesTest(unittest.TestCase):

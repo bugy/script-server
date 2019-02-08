@@ -96,11 +96,6 @@
       "default": true
     },
     {
-      "name": "Default Text from variable",
-      "description": "Parameter Eight",
-      "default": "$$USER"
-    },
-    {
       "name": "Constant Text",
       "description": "Constant value",
       "param": "--const_text",
@@ -205,10 +200,9 @@
       "name": "Server file",
       "param": "--server_file",
       "type": "server_file",
-      "file_dir": "/home/$$USER/Documents",
+      "file_dir": "/var/log",
       "file_extensions": [
-        "txt",
-        "jpg"
+        "log"
       ],
       "secure": true
     },
