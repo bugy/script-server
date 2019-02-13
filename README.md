@@ -22,7 +22,7 @@ Example of the user interface during script execution:
 - Download of script output files
 - Admin page (admin.html) with script execution logs
 
-The features can be configured [per-script](https://github.com/bugy/script-server/wiki/Script-config) or for [the server](https://github.com/bugy/script-server/wiki/Server-config)
+The features can be configured [per-script](https://github.com/bugy/script-server/wiki/Script-config) or for [the server](https://github.com/bugy/script-server/wiki/Server-configuration)
 
 ## Requirements
 ### Server-side
@@ -72,7 +72,7 @@ By default, server will run on http://localhost:5000
 ### Server config
 All the features listed above and some other minor features can be configured in *conf/conf.json* file. 
 It is allowed not to create this file. In this case default values will be used.
-See [server config page](https://github.com/bugy/script-server/wiki/Server-config) for details
+See [server config page](https://github.com/bugy/script-server/wiki/Server-configuration) for details
 
 ### Admin panel
 Admin panel is accessible on admin.html page (e.g. http://localhost:5000/admin.html)
