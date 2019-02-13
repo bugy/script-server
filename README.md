@@ -49,6 +49,10 @@ Internet connection is not needed. All the files are loaded from the server.
 
 (For detailed steps on linux with virtualenv, please see [Installation guide](https://github.com/bugy/script-server/wiki/Installing-on-virtualenv-(linux)))
 
+##### As a docker container
+Please find pre-built images here: https://hub.docker.com/r/bugy/script-server/tags  
+For the usage please check [this ticket](https://github.com/bugy/script-server/issues/171#issuecomment-461620836)
+
 ### For development
 1. Clone/download the repository
 2. Run 'tools/init.py --dev --no-npm' script
