@@ -165,79 +165,109 @@ class ParameterModelMapValueTest(unittest.TestCase):
 
 
 class TestDefaultValue(unittest.TestCase):
-    env_key = 'test_val'
 
     def test_no_value(self):
-        default = parameter_config._resolve_default(None, None, None)
+        default = self.resolve_default(None)
 
         self.assertEqual(default, None)
 
     def test_empty_value(self):
-        default = parameter_config._resolve_default('', None, None)
+        default = self.resolve_default('')
 
         self.assertEqual(default, '')
 
     def test_text_value(self):
-        default = parameter_config._resolve_default('text', None, None)
+        default = self.resolve_default('text')
 
         self.assertEqual(default, 'text')
 
     def test_unicode_value(self):
-        default = parameter_config._resolve_default(u'text', None, None)
+        default = self.resolve_default(u'text')
 
         self.assertEqual(default, u'text')
 
     def test_int_value(self):
-        default = parameter_config._resolve_default(5, None, None)
+        default = self.resolve_default(5)
 
         self.assertEqual(default, 5)
 
     def test_bool_value(self):
-        default = parameter_config._resolve_default(True, None, None)
+        default = self.resolve_default(True)
 
         self.assertEqual(default, True)
 
     def test_env_variable(self):
-        os.environ[self.env_key] = 'text'
+        test_utils.set_env_value('test_val', 'text')
 
-        default = parameter_config._resolve_default('$$test_val', None, None)
+        default = self.resolve_default('$$test_val')
 
         self.assertEqual(default, 'text')
 
     def test_missing_env_variable(self):
-        self.assertRaises(Exception, parameter_config._resolve_default, '$$test_val', None, None)
+        self.assertRaises(Exception, self.resolve_default, '$$test_val')
 
     def test_auth_username(self):
-        default = parameter_config._resolve_default('${auth.username}', 'buggy', None)
+        default = self.resolve_default('${auth.username}', username='buggy')
         self.assertEqual('buggy', default)
 
     def test_auth_username_when_none(self):
-        default = parameter_config._resolve_default('${auth.username}', None, None)
+        default = self.resolve_default('${auth.username}')
         self.assertEqual('', default)
 
     def test_auth_username_when_inside_text(self):
-        default = parameter_config._resolve_default('__${auth.username}__', 'usx', None)
+        default = self.resolve_default('__${auth.username}__', username='usx')
         self.assertEqual('__usx__', default)
 
     def test_auth_audit_name(self):
-        default = parameter_config._resolve_default('${auth.audit_name}', None, '127.0.0.1')
+        default = self.resolve_default('${auth.audit_name}', audit_name='127.0.0.1')
         self.assertEqual('127.0.0.1', default)
 
     def test_auth_audit_name_when_none(self):
-        default = parameter_config._resolve_default('${auth.audit_name}', None, None)
+        default = self.resolve_default('${auth.audit_name}')
         self.assertEqual('', default)
 
     def test_auth_audit_name_when_inside_text(self):
-        default = parameter_config._resolve_default('__${auth.audit_name}__', None, 'usx')
+        default = self.resolve_default('__${auth.audit_name}__', audit_name='usx')
         self.assertEqual('__usx__', default)
 
     def test_auth_username_and_audit_name(self):
-        default = parameter_config._resolve_default('${auth.username}:${auth.audit_name}', 'buggy', 'localhost')
+        default = self.resolve_default('${auth.username}:${auth.audit_name}', username='buggy', audit_name='localhost')
         self.assertEqual('buggy:localhost', default)
 
+    def test_script_value(self):
+        default = self.resolve_default({'script': 'echo 123'})
+        self.assertEqual('123', default)
+
+    def test_script_value_with_working_dir(self):
+        default = self.resolve_default({'script': 'pwd'}, working_dir=test_utils.temp_folder)
+        abs_temp_path = os.path.abspath(test_utils.temp_folder)
+        self.assertEqual(abs_temp_path, default)
+
+    def test_script_value_when_env_var(self):
+        test_utils.set_env_value('my_command', 'echo "Hello world"')
+
+        default = self.resolve_default({'script': '$$my_command'}, working_dir=test_utils.temp_folder)
+        self.assertEqual('Hello world', default)
+
+    def test_script_value_when_username(self):
+        default = self.resolve_default({'script': 'echo "x${auth.username}x"'},
+                                       working_dir=test_utils.temp_folder,
+                                       username='TONY')
+        self.assertEqual('xTONYx', default)
+
+    def test_script_value_with_shell_operators(self):
+        default = self.resolve_default({'script': 'echo 12345 | grep "1"'})
+        self.assertEqual('12345 | grep 1', default)
+
+    @staticmethod
+    def resolve_default(value, *, username=None, audit_name=None, working_dir=None):
+        return parameter_config._resolve_default(value, username, audit_name, working_dir)
+
+    def setUp(self):
+        test_utils.setup()
+
     def tearDown(self):
-        if self.env_key in os.environ:
-            del os.environ[self.env_key]
+        test_utils.cleanup()
 
 
 class TestSingleParameterValidation(unittest.TestCase):

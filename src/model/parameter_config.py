@@ -9,7 +9,7 @@ from model import model_helper
 from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SECURE_MASK, \
     normalize_extension, read_bool_from_config, InvalidValueException
 from react.properties import ObservableDict, observable_fields
-from utils import file_utils, string_utils
+from utils import file_utils, string_utils, process_utils
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('script_server.parameter_config')
@@ -68,7 +68,7 @@ class ParameterModel(object):
         self.secure = read_bool_from_config('secure', config, default=False)
         self.separator = config.get('separator', ',')
         self.multiple_arguments = read_bool_from_config('multiple_arguments', config, default=False)
-        self.default = _resolve_default(config.get('default'), self._username, self._audit_name)
+        self.default = _resolve_default(config.get('default'), self._username, self._audit_name, self._working_dir)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
         self.file_extensions = _resolve_file_extensions(config, 'file_extensions')
@@ -372,18 +372,28 @@ class ParameterModel(object):
         return os.path.normpath(os.path.join(self._list_files_dir, *child_path))
 
 
-def _resolve_default(default, username, audit_name):
+def _resolve_default(default, username, audit_name, working_dir):
     if not default:
         return default
 
-    if not isinstance(default, str):
+    script = False
+    if isinstance(default, dict) and 'script' in default:
+        string_value = default['script']
+        script = True
+    elif isinstance(default, str):
+        string_value = default
+    else:
         return default
 
-    resolved_env_default = resolve_env_vars(default, full_match=True)
-    if resolved_env_default != default:
-        return resolved_env_default
+    resolved_string_value = resolve_env_vars(string_value, full_match=True)
+    if resolved_string_value == string_value:
+        resolved_string_value = replace_auth_vars(string_value, username, audit_name)
 
-    return replace_auth_vars(default, username, audit_name)
+    if not script:
+        return resolved_string_value
+
+    output = process_utils.invoke(resolved_string_value, working_dir)
+    return output.strip()
 
 
 def _resolve_file_dir(config, key):
