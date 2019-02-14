@@ -30,7 +30,8 @@ from model import external_model
 from model import model_helper
 from model.external_model import to_short_execution_log, to_long_execution_log, parameter_to_external
 from model.model_helper import is_empty
-from model.script_config import InvalidValueException, ParameterNotFoundException, WrongParameterUsageException
+from model.parameter_config import WrongParameterUsageException
+from model.script_config import InvalidValueException, ParameterNotFoundException
 from model.server_conf import ServerConfig
 from utils import file_utils as file_utils
 from utils import tornado_utils, audit_utils

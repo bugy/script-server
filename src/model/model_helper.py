@@ -91,6 +91,20 @@ def read_dict(values_dict, key, default=None):
     raise Exception('"' + key + '" has invalid type. Dict expected')
 
 
+def read_bool_from_config(key, config_obj, *, default=None):
+    value = config_obj.get(key)
+    if value is None:
+        return default
+
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, str):
+        return value.lower() == 'true'
+
+    raise Exception('"' + key + '" field should be true or false')
+
+
 def read_bool(value):
     if isinstance(value, bool):
         return value
@@ -114,6 +128,7 @@ def normalize_incoming_values(param_values, parameters):
             normalized_values[param.name] = normalized_value
 
     return normalized_values
+
 
 def fill_parameter_values(parameter_configs, template, values):
     result = template
@@ -187,3 +202,9 @@ class InvalidFileException(Exception):
     def __init__(self, path, message) -> None:
         super().__init__(message)
         self.path = path
+
+
+class InvalidValueException(Exception):
+    def __init__(self, param_name, validation_error) -> None:
+        super().__init__(validation_error)
+        self.param_name = param_name

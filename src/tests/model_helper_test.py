@@ -2,87 +2,11 @@ import os
 import unittest
 
 from config.constants import PARAM_TYPE_MULTISELECT, FILE_TYPE_FILE, FILE_TYPE_DIR
-from model import script_config, model_helper
+from model import model_helper
 from model.model_helper import read_list, read_dict, normalize_incoming_values, fill_parameter_values, resolve_env_vars, \
-    InvalidFileException
+    InvalidFileException, read_bool_from_config
 from tests import test_utils
 from tests.test_utils import create_parameter_model, set_env_value
-
-
-class TestDefaultValue(unittest.TestCase):
-    env_key = 'test_val'
-
-    def test_no_value(self):
-        default = script_config._resolve_default(None, None, None)
-
-        self.assertEqual(default, None)
-
-    def test_empty_value(self):
-        default = script_config._resolve_default('', None, None)
-
-        self.assertEqual(default, '')
-
-    def test_text_value(self):
-        default = script_config._resolve_default('text', None, None)
-
-        self.assertEqual(default, 'text')
-
-    def test_unicode_value(self):
-        default = script_config._resolve_default(u'text', None, None)
-
-        self.assertEqual(default, u'text')
-
-    def test_int_value(self):
-        default = script_config._resolve_default(5, None, None)
-
-        self.assertEqual(default, 5)
-
-    def test_bool_value(self):
-        default = script_config._resolve_default(True, None, None)
-
-        self.assertEqual(default, True)
-
-    def test_env_variable(self):
-        os.environ[self.env_key] = 'text'
-
-        default = script_config._resolve_default('$$test_val', None, None)
-
-        self.assertEqual(default, 'text')
-
-    def test_missing_env_variable(self):
-        self.assertRaises(Exception, script_config._resolve_default, '$$test_val', None, None)
-
-    def test_auth_username(self):
-        default = script_config._resolve_default('${auth.username}', 'buggy', None)
-        self.assertEqual('buggy', default)
-
-    def test_auth_username_when_none(self):
-        default = script_config._resolve_default('${auth.username}', None, None)
-        self.assertEqual('', default)
-
-    def test_auth_username_when_inside_text(self):
-        default = script_config._resolve_default('__${auth.username}__', 'usx', None)
-        self.assertEqual('__usx__', default)
-
-    def test_auth_audit_name(self):
-        default = script_config._resolve_default('${auth.audit_name}', None, '127.0.0.1')
-        self.assertEqual('127.0.0.1', default)
-
-    def test_auth_audit_name_when_none(self):
-        default = script_config._resolve_default('${auth.audit_name}', None, None)
-        self.assertEqual('', default)
-
-    def test_auth_audit_name_when_inside_text(self):
-        default = script_config._resolve_default('__${auth.audit_name}__', None, 'usx')
-        self.assertEqual('__usx__', default)
-
-    def test_auth_username_and_audit_name(self):
-        default = script_config._resolve_default('${auth.username}:${auth.audit_name}', 'buggy', 'localhost')
-        self.assertEqual('buggy:localhost', default)
-
-    def tearDown(self):
-        if self.env_key in os.environ:
-            del os.environ[self.env_key]
 
 
 class TestReadList(unittest.TestCase):
@@ -148,6 +72,48 @@ class TestReadDict(unittest.TestCase):
         values_dict = {'another_key': {'key1': 'value1'}}
         dict_value = read_dict(values_dict, 'dict_key', {'key2': 'value2'})
         self.assertEqual(dict_value, {'key2': 'value2'})
+
+
+class TestReadBoolFromConfig(unittest.TestCase):
+
+    def test_bool_true(self):
+        value = read_bool_from_config('my_bool', {'my_bool': True})
+        self.assertEqual(True, value)
+
+    def test_bool_false(self):
+        value = read_bool_from_config('my_bool', {'my_bool': False})
+        self.assertEqual(False, value)
+
+    def test_str_true(self):
+        value = read_bool_from_config('my_bool', {'my_bool': 'true'})
+        self.assertEqual(True, value)
+
+    def test_str_false(self):
+        value = read_bool_from_config('my_bool', {'my_bool': 'false'})
+        self.assertEqual(False, value)
+
+    def test_str_true_ignore_case(self):
+        value = read_bool_from_config('my_bool', {'my_bool': 'TRUE'})
+        self.assertEqual(True, value)
+
+    def test_str_false_ignore_case(self):
+        value = read_bool_from_config('my_bool', {'my_bool': 'False'})
+        self.assertEqual(False, value)
+
+    def test_missing_value_without_default(self):
+        value = read_bool_from_config('my_bool', {'text': '123'})
+        self.assertIsNone(value)
+
+    def test_missing_value_with_default(self):
+        value = read_bool_from_config('my_bool', {'text': '123'}, default=True)
+        self.assertEqual(True, value)
+
+    def test_unsupported_type(self):
+        self.assertRaisesRegex(
+            Exception, '"my_bool" field should be true or false',
+            read_bool_from_config,
+            'my_bool',
+            {'my_bool': 1})
 
 
 class TestNormalizeIncomingValues(unittest.TestCase):
