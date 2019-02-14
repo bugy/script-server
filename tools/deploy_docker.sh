@@ -2,7 +2,7 @@
 
 set -e
 
-if [ -z "$DOCKER_USER" ] || [ -z "$DOCKER_PASSWORD" ] || [ -z "$TRAVIS_BRANCH" ] || [ -z "$COMMIT" ]; then
+if [ -z "$DOCKER_USER" ] || [ -z "$DOCKER_PASSWORD" ] || [ -z "$TRAVIS_BRANCH" ]; then
     echo 'Some environment variables are not set'
     exit -1
 fi
@@ -22,7 +22,7 @@ fi
 docker build -f tools/Dockerfile -t "$IMAGE_NAME":"$DOCKER_TAG" .
 
 if [ ! -z "$NEW_GIT_TAG" ]; then
-    docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":"$NEW_GIT_TAG"
+    docker tag "$IMAGE_NAME":"$DOCKER_TAG" "$IMAGE_NAME":"$NEW_GIT_TAG"
 fi
 
 docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
