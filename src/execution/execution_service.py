@@ -4,7 +4,7 @@ from collections import namedtuple
 from typing import Optional, Dict, Callable, Any
 
 from execution.executor import ScriptExecutor
-from model import script_configs
+from model import script_config
 from utils import audit_utils
 
 LOGGER = logging.getLogger('script_server.execution_service')
@@ -98,7 +98,7 @@ class ExecutionService:
 
         return result
 
-    def get_config(self, execution_id) -> Optional[script_configs.ConfigModel]:
+    def get_config(self, execution_id) -> Optional[script_config.ConfigModel]:
         return self._get_for_execution_info(execution_id,
                                             lambda i: i.config)
 

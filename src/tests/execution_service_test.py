@@ -3,7 +3,7 @@ import unittest
 
 from execution import executor
 from execution.execution_service import ExecutionService
-from model.script_configs import ConfigModel
+from model.script_config import ConfigModel
 from tests import test_utils
 from tests.test_utils import mock_object, create_audit_names, _MockProcessWrapper
 

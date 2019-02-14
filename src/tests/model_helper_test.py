@@ -2,7 +2,7 @@ import os
 import unittest
 
 from config.constants import PARAM_TYPE_MULTISELECT, FILE_TYPE_FILE, FILE_TYPE_DIR
-from model import script_configs, model_helper
+from model import script_config, model_helper
 from model.model_helper import read_list, read_dict, normalize_incoming_values, fill_parameter_values, resolve_env_vars, \
     InvalidFileException
 from tests import test_utils
@@ -13,71 +13,71 @@ class TestDefaultValue(unittest.TestCase):
     env_key = 'test_val'
 
     def test_no_value(self):
-        default = script_configs._resolve_default(None, None, None)
+        default = script_config._resolve_default(None, None, None)
 
         self.assertEqual(default, None)
 
     def test_empty_value(self):
-        default = script_configs._resolve_default('', None, None)
+        default = script_config._resolve_default('', None, None)
 
         self.assertEqual(default, '')
 
     def test_text_value(self):
-        default = script_configs._resolve_default('text', None, None)
+        default = script_config._resolve_default('text', None, None)
 
         self.assertEqual(default, 'text')
 
     def test_unicode_value(self):
-        default = script_configs._resolve_default(u'text', None, None)
+        default = script_config._resolve_default(u'text', None, None)
 
         self.assertEqual(default, u'text')
 
     def test_int_value(self):
-        default = script_configs._resolve_default(5, None, None)
+        default = script_config._resolve_default(5, None, None)
 
         self.assertEqual(default, 5)
 
     def test_bool_value(self):
-        default = script_configs._resolve_default(True, None, None)
+        default = script_config._resolve_default(True, None, None)
 
         self.assertEqual(default, True)
 
     def test_env_variable(self):
         os.environ[self.env_key] = 'text'
 
-        default = script_configs._resolve_default('$$test_val', None, None)
+        default = script_config._resolve_default('$$test_val', None, None)
 
         self.assertEqual(default, 'text')
 
     def test_missing_env_variable(self):
-        self.assertRaises(Exception, script_configs._resolve_default, '$$test_val', None, None)
+        self.assertRaises(Exception, script_config._resolve_default, '$$test_val', None, None)
 
     def test_auth_username(self):
-        default = script_configs._resolve_default('${auth.username}', 'buggy', None)
+        default = script_config._resolve_default('${auth.username}', 'buggy', None)
         self.assertEqual('buggy', default)
 
     def test_auth_username_when_none(self):
-        default = script_configs._resolve_default('${auth.username}', None, None)
+        default = script_config._resolve_default('${auth.username}', None, None)
         self.assertEqual('', default)
 
     def test_auth_username_when_inside_text(self):
-        default = script_configs._resolve_default('__${auth.username}__', 'usx', None)
+        default = script_config._resolve_default('__${auth.username}__', 'usx', None)
         self.assertEqual('__usx__', default)
 
     def test_auth_audit_name(self):
-        default = script_configs._resolve_default('${auth.audit_name}', None, '127.0.0.1')
+        default = script_config._resolve_default('${auth.audit_name}', None, '127.0.0.1')
         self.assertEqual('127.0.0.1', default)
 
     def test_auth_audit_name_when_none(self):
-        default = script_configs._resolve_default('${auth.audit_name}', None, None)
+        default = script_config._resolve_default('${auth.audit_name}', None, None)
         self.assertEqual('', default)
 
     def test_auth_audit_name_when_inside_text(self):
-        default = script_configs._resolve_default('__${auth.audit_name}__', None, 'usx')
+        default = script_config._resolve_default('__${auth.audit_name}__', None, 'usx')
         self.assertEqual('__usx__', default)
 
     def test_auth_username_and_audit_name(self):
-        default = script_configs._resolve_default('${auth.username}:${auth.audit_name}', 'buggy', 'localhost')
+        default = script_config._resolve_default('${auth.username}:${auth.audit_name}', 'buggy', 'localhost')
         self.assertEqual('buggy:localhost', default)
 
     def tearDown(self):

@@ -8,7 +8,7 @@ import uuid
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
 from execution.process_base import ProcessWrapper
-from model.script_configs import ConfigModel, ParameterModel
+from model.script_config import ConfigModel, ParameterModel
 from react.properties import ObservableDict
 from utils import audit_utils
 
