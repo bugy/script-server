@@ -11,21 +11,20 @@ IMAGE_NAME='bugy/script-server'
 
 unzip -o build/script-server.zip -d build/script-server
 
-docker build -f tools/Dockerfile -t "$IMAGE_NAME":"$COMMIT" .
+if [ "$TRAVIS_BRANCH" == "stable" ]; then
+    DOCKER_TAG='latest'
+elif [ "$TRAVIS_BRANCH" == "master" ]; then
+    DOCKER_TAG='dev'
+else
+    DOCKER_TAG="$TRAVIS_BRANCH"
+fi
+
+docker build -f tools/Dockerfile -t "$IMAGE_NAME":"$DOCKER_TAG" .
+
+if [ ! -z "$NEW_GIT_TAG" ]; then
+    docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":"$NEW_GIT_TAG"
+fi
 
 docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
-
-if [ "$TRAVIS_BRANCH" == "stable" ]; then
-    docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":latest
-
-    if [ ! -z "$NEW_GIT_TAG" ]; then
-        docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":"$NEW_GIT_TAG"
-    fi
-
-elif [ "$TRAVIS_BRANCH" == "master" ]; then
-    docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":dev
-else
-    docker tag "$IMAGE_NAME":"$COMMIT" "$IMAGE_NAME":"$TRAVIS_BRANCH"
-fi
 
 docker push "$IMAGE_NAME"
