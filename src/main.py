@@ -20,6 +20,7 @@ from model import server_conf
 from utils import tool_utils, file_utils
 from utils.tool_utils import InvalidWebBuildException
 from web import server
+from web.client import tornado_client_config
 
 parser = argparse.ArgumentParser(description='Launch script-server.')
 parser.add_argument('-d', '--config-dir', default='conf')
@@ -72,6 +73,8 @@ def main():
     server_config = server_conf.from_json(SERVER_CONF_PATH, TEMP_FOLDER)
 
     secret = get_secret(TEMP_FOLDER)
+
+    tornado_client_config.initialize()
 
     group_provider = create_group_provider(
         server_config.user_groups, server_config.authenticator, server_config.admin_users)
