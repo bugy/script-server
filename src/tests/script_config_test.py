@@ -132,6 +132,18 @@ class ConfigModelValuesTest(unittest.TestCase):
         values = {'p1': 'XabcX', 'p2': 'abc'}
         self.assertRaisesRegex(Exception, 'Could not resolve order', config_model.set_all_param_values, values)
 
+    def test_set_all_values_with_normalization(self):
+        allowed_values = ['abc', 'def', 'xyz']
+        parameters = [
+            create_script_param_config('p1', type=PARAM_TYPE_MULTISELECT, allowed_values=allowed_values),
+            create_script_param_config('p2', type=PARAM_TYPE_MULTISELECT, allowed_values=allowed_values),
+            create_script_param_config('p3', type=PARAM_TYPE_MULTISELECT, allowed_values=allowed_values)]
+
+        config_model = _create_config_model('config', parameters=parameters)
+        config_model.set_all_param_values({'p1': '', 'p2': ['def'], 'p3': 'abc'})
+
+        self.assertEqual({'p1': [], 'p2': ['def'], 'p3': ['abc']}, config_model.parameter_values)
+
 
 class ConfigModelListFilesTest(unittest.TestCase):
     def test_list_files_for_valid_param(self):

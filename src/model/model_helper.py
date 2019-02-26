@@ -105,16 +105,6 @@ def is_empty(value):
     return (not value) and (value != 0) and (value is not False)
 
 
-def normalize_incoming_values(param_values, parameters):
-    normalized_values = {}
-
-    for param in parameters:
-        if param.name in param_values:
-            normalized_value = param.normalize_user_value(param_values[param.name])
-            normalized_values[param.name] = normalized_value
-
-    return normalized_values
-
 def fill_parameter_values(parameter_configs, template, values):
     result = template
 

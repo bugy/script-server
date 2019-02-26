@@ -1,9 +1,9 @@
 import os
 import unittest
 
-from config.constants import PARAM_TYPE_MULTISELECT, FILE_TYPE_FILE, FILE_TYPE_DIR
+from config.constants import FILE_TYPE_FILE, FILE_TYPE_DIR
 from model import script_configs, model_helper
-from model.model_helper import read_list, read_dict, normalize_incoming_values, fill_parameter_values, resolve_env_vars, \
+from model.model_helper import read_list, read_dict, fill_parameter_values, resolve_env_vars, \
     InvalidFileException
 from tests import test_utils
 from tests.test_utils import create_parameter_model
@@ -148,32 +148,6 @@ class TestReadDict(unittest.TestCase):
         values_dict = {'another_key': {'key1': 'value1'}}
         dict_value = read_dict(values_dict, 'dict_key', {'key2': 'value2'})
         self.assertEqual(dict_value, {'key2': 'value2'})
-
-
-class TestNormalizeIncomingValues(unittest.TestCase):
-
-    def test_no_values(self):
-        normalized = normalize_incoming_values({}, [])
-
-        self.assertEqual({}, normalized)
-
-    def test_normalize_simple_parameters(self):
-        p1 = create_parameter_model('p1')
-        p2 = create_parameter_model('p2')
-        p3 = create_parameter_model('p3')
-
-        normalized = normalize_incoming_values({'p1': 1, 'p3': None}, [p1, p2, p3])
-
-        self.assertEqual({'p1': 1, 'p3': None}, normalized)
-
-    def test_normalize_one_multiselect(self):
-        p1 = create_parameter_model('p1')
-        p2 = create_parameter_model('p2', type=PARAM_TYPE_MULTISELECT, allowed_values=['abc'])
-        p3 = create_parameter_model('p3')
-
-        normalized = normalize_incoming_values({'p2': 'abc', 'p3': True}, [p1, p2, p3])
-
-        self.assertEqual({'p2': ['abc'], 'p3': True}, normalized)
 
 
 class TestFillParameterValues(unittest.TestCase):

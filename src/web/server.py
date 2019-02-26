@@ -27,7 +27,6 @@ from execution.logging import ExecutionLoggingService
 from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
 from model import external_model
-from model import model_helper
 from model.external_model import to_short_execution_log, to_long_execution_log, parameter_to_external
 from model.model_helper import is_empty
 from model.script_configs import InvalidValueException, ParameterNotFoundException, WrongParameterUsageException
@@ -373,10 +372,9 @@ class ScriptExecute(BaseRequestHandler):
                     file_path = file_upload_feature.save_file(file_info.filename, file_info.body, audit_name)
                     parameter_values[key] = file_path
 
-            parameter_values = model_helper.normalize_incoming_values(parameter_values, config_model.parameters)
-
             try:
                 config_model.set_all_param_values(parameter_values)
+                normalized_values = dict(config_model.parameter_values)
             except InvalidValueException as e:
                 message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
                 LOGGER.error(message)
@@ -389,7 +387,7 @@ class ScriptExecute(BaseRequestHandler):
 
             execution_id = self.application.execution_service.start_script(
                 config_model,
-                parameter_values,
+                normalized_values,
                 user_id,
                 all_audit_names)
 

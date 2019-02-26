@@ -91,10 +91,6 @@ class ConfigModel:
         self.parameter_values[param_name] = value
 
     def set_all_param_values(self, param_values):
-        for key, value in param_values.items():
-            if self.find_parameter(key) is None:
-                LOGGER.warning('Incoming value for unknown parameter ' + key)
-
         original_values = dict(self.parameter_values)
         processed = {}
 
@@ -110,7 +106,7 @@ class ConfigModel:
                 if required_parameters and any(r not in processed for r in required_parameters):
                     continue
 
-                value = param_values.get(parameter.name)
+                value = parameter.normalize_user_value(param_values.get(parameter.name))
                 validation_error = parameter.validate_value(value)
                 if validation_error:
                     self.parameter_values.set(original_values)
@@ -124,6 +120,10 @@ class ConfigModel:
                 remaining = [p.name for p in self.parameters if p.name not in processed]
                 self.parameter_values.set(original_values)
                 raise Exception('Could not resolve order for dependencies. Remaining: ' + str(remaining))
+
+        for key, value in param_values.items():
+            if self.find_parameter(key) is None:
+                LOGGER.warning('Incoming value for unknown parameter ' + key)
 
     def list_files_for_param(self, parameter_name, path):
         parameter = self.find_parameter(parameter_name)
