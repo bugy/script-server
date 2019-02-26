@@ -13,8 +13,8 @@ elif [ "$TRAVIS_BRANCH" == "stable" ]; then
     npm_tag=`grep -Po '"version": "\d+.\d+.\d+"' web-src/package.json | grep -Po '\d+.\d+.\d+'`
     minor_npm_version=${npm_tag%.*}
     if [ ${last_tag%.*} == "$minor_npm_version" ]; then
-        patch_npm_version=${npm_tag##*.}
-        next_patch_version=$((patch_npm_version + 1))
+        last_patch_version=${last_tag##*.}
+        next_patch_version=$((last_patch_version + 1))
         export NEW_GIT_TAG="$minor_npm_version.$next_patch_version"
     else
         export NEW_GIT_TAG="$npm_tag"
