@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from config.constants import PARAM_TYPE_SERVER_FILE
+from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from model.script_config import ConfigModel, InvalidValueException, _TemplateProperty, ParameterNotFoundException
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
