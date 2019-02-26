@@ -24,6 +24,12 @@ class TerminalFormatterTest(unittest.TestCase):
         self.assertListEqual([self._output_chunk('some text', text_color='red')],
                              self._get_output())
 
+    def test_formatting_with_reset_code(self):
+        self._feed('[0;1;42;97msome text')
+
+        self.assertListEqual([self._output_chunk('some text', text_color='white', background_color='green')],
+                             self._get_output())
+
     def test_caret_return_inside_chunk(self):
         self._feed('some\rtext')
 

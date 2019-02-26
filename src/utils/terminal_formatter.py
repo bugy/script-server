@@ -25,9 +25,9 @@ class _SetGraphicsCommandHandler(_CommandHandler):
         super().__init__(1, 10)
 
     def handle(self, arguments, terminal):
-        if '0' in arguments:
+        reset_graphics = '0' in arguments
+        if reset_graphics:
             terminal.reset_graphic_mode()
-            return
 
         for key in TEXT_COLOR_DICT:
             if key in arguments:
@@ -39,14 +39,15 @@ class _SetGraphicsCommandHandler(_CommandHandler):
                 terminal.set_background_color(BACKGROUND_COLOR_DICT[key])
                 break
 
-        for key in TEXT_STYLES_DICT:
-            zero_padded_key = '0' + key
-            if (key in arguments) or (zero_padded_key in arguments):
-                terminal.add_style(TEXT_STYLES_DICT[key])
+        if not reset_graphics:
+            for key in TEXT_STYLES_DICT:
+                zero_padded_key = '0' + key
+                if (key in arguments) or (zero_padded_key in arguments):
+                    terminal.add_style(TEXT_STYLES_DICT[key])
 
-        for key in RESET_STYLES_DICT:
-            if key in arguments:
-                terminal.remove_style(RESET_STYLES_DICT[key])
+            for key in RESET_STYLES_DICT:
+                if key in arguments:
+                    terminal.remove_style(RESET_STYLES_DICT[key])
 
 
 COMMAND_HANDLERS = {
