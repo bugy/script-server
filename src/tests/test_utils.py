@@ -4,6 +4,7 @@ import shutil
 import stat
 import threading
 import uuid
+from collections import Set
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
@@ -14,6 +15,7 @@ from utils import audit_utils
 
 temp_folder = 'tests_temp'
 _original_env = {}
+
 
 def create_file(filepath, overwrite=False):
     if not os.path.exists(temp_folder):
@@ -54,14 +56,14 @@ def create_dir(dir_path):
 
 def setup():
     if os.path.exists(temp_folder):
-        _rmtree()
+        _rmtree(temp_folder)
 
     os.makedirs(temp_folder)
 
 
 def cleanup():
     if os.path.exists(temp_folder):
-        _rmtree()
+        _rmtree(temp_folder)
 
     os_utils.reset_os()
 
@@ -74,7 +76,7 @@ def cleanup():
     _original_env.clear()
 
 
-def _rmtree():
+def _rmtree(folder):
     exception = None
 
     def on_rm_error(func, path, exc_info):
@@ -87,7 +89,7 @@ def _rmtree():
             if exception is None:
                 exception = e
 
-    shutil.rmtree(temp_folder, onerror=on_rm_error)
+    shutil.rmtree(folder, onerror=on_rm_error)
     if exception:
         raise exception
 
@@ -134,7 +136,6 @@ def create_script_param_config(
         file_recursive=None,
         file_type=None,
         file_extensions=None):
-
     conf = {'name': param_name}
 
     if type is not None:
@@ -308,6 +309,42 @@ def set_env_value(key, value):
     os.environ[key] = value
 
 
+def assert_large_dict_equal(expected, actual, testcase):
+    if len(expected) < 20 and len(actual) < 20:
+        testcase.assertEqual(expected, actual)
+        return
+
+    if expected == actual:
+        return
+
+    diff_expected = {}
+    diff_actual = {}
+    too_large_diff = False
+
+    all_keys = set()
+    all_keys.update(expected.keys())
+    all_keys.update(actual.keys())
+    for key in all_keys:
+        expected_value = expected.get(key)
+        actual_value = actual.get(key)
+
+        if expected_value == actual_value:
+            continue
+
+        diff_expected[key] = expected_value
+        diff_actual[key] = actual_value
+
+        if len(diff_expected) >= 50:
+            too_large_diff = True
+            break
+
+    message = 'Showing only different elements'
+    if too_large_diff:
+        message += ' (limited to 50)'
+
+    testcase.assertEqual(diff_expected, diff_actual, message)
+
+
 class _MockProcessWrapper(ProcessWrapper):
     def __init__(self, executor, command, working_directory):
         super().__init__(command, working_directory)
@@ -374,4 +411,3 @@ class AnyUserAuthorizer:
 
     def is_admin(self, user_id):
         return True
-

@@ -4,7 +4,7 @@ import unittest
 from config.constants import FILE_TYPE_FILE, FILE_TYPE_DIR
 from model import model_helper
 from model.model_helper import read_list, read_dict, fill_parameter_values, resolve_env_vars, \
-    InvalidFileException, read_bool_from_config
+    InvalidFileException, read_bool_from_config, InvalidValueException, InvalidValueTypeException
 from tests import test_utils
 from tests.test_utils import create_parameter_model, set_env_value
 
@@ -282,3 +282,35 @@ class ListFilesTest(unittest.TestCase):
 
     def tearDown(self):
         test_utils.cleanup()
+
+
+class TestReadIntFromConfig(unittest.TestCase):
+    def test_normal_int_value(self):
+        value = model_helper.read_int_from_config('abc', {'abc': 123})
+        self.assertEqual(123, value)
+
+    def test_zero_int_value(self):
+        value = model_helper.read_int_from_config('abc', {'abc': 0})
+        self.assertEqual(0, value)
+
+    def test_string_value(self):
+        value = model_helper.read_int_from_config('abc', {'abc': '-666'})
+        self.assertEqual(-666, value)
+
+    def test_string_value_when_invalid(self):
+        self.assertRaises(InvalidValueException, model_helper.read_int_from_config, 'abc', {'abc': '1000b'})
+
+    def test_unsupported_type(self):
+        self.assertRaises(InvalidValueTypeException, model_helper.read_int_from_config, 'abc', {'abc': True})
+
+    def test_default_value(self):
+        value = model_helper.read_int_from_config('my_key', {'abc': 100})
+        self.assertIsNone(value)
+
+    def test_default_value_explicit(self):
+        value = model_helper.read_int_from_config('my_key', {'abc': 100}, default=5)
+        self.assertEqual(5, value)
+
+    def test_default_value_when_empty_string(self):
+        value = model_helper.read_int_from_config('my_key', {'my_key': ' '}, default=9999)
+        self.assertEqual(9999, value)

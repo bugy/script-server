@@ -115,6 +115,25 @@ def read_bool(value):
     return value.lower() == 'true'
 
 
+def read_int_from_config(key, config_obj, *, default=None):
+    value = config_obj.get(key)
+    if value is None:
+        return default
+
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+
+    if isinstance(value, str):
+        if value.strip() == '':
+            return default
+        try:
+            return int(value)
+        except ValueError as e:
+            raise InvalidValueException(key, 'Invalid %s value: integer expected, but was: %s' % (key, value)) from e
+
+    raise InvalidValueTypeException('Invalid %s value: integer expected, but was: %s' % (key, repr(value)))
+
+
 def is_empty(value):
     return (not value) and (value != 0) and (value is not False)
 
@@ -197,3 +216,8 @@ class InvalidValueException(Exception):
     def __init__(self, param_name, validation_error) -> None:
         super().__init__(validation_error)
         self.param_name = param_name
+
+
+class InvalidValueTypeException(Exception):
+    def __init__(self, message) -> None:
+        super().__init__(message)

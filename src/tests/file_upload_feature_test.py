@@ -1,4 +1,5 @@
 import os
+import time
 import unittest
 
 from features.file_upload_feature import FileUploadFeature
@@ -17,16 +18,17 @@ class TestUserFileStorage(unittest.TestCase):
         test_utils.cleanup()
         self.__storage._stop_autoclean()
 
-    def test_create_file(self):
-        file_path = self.upload_feature.save_file('my_file.txt', b'test text', 'userX')
+    def test_prepare_new_folder(self):
+        file_path = self.upload_feature.prepare_new_folder('userX')
         self.assertTrue(os.path.exists(file_path))
 
-    def test_content_in_created_file(self):
-        file_path = self.upload_feature.save_file('my_file.txt', b'My text', 'userX')
-        content = file_utils.read_file(file_path)
-        self.assertEqual('My text', content)
+    def test_prepare_new_folder_different_users(self):
+        path1 = self.upload_feature.prepare_new_folder('userX')
+        path2 = self.upload_feature.prepare_new_folder('userY')
+        self.assertNotEqual(path1, path2)
 
-    def test_same_filename(self):
-        file_path1 = self.upload_feature.save_file('my_file.txt', b'some text', 'userX')
-        file_path2 = self.upload_feature.save_file('my_file.txt', b'some text', 'userX')
+    def test_prepare_new_folder_twice(self):
+        file_path1 = self.upload_feature.prepare_new_folder('userX')
+        time.sleep(0.1)
+        file_path2 = self.upload_feature.prepare_new_folder('userX')
         self.assertNotEqual(file_path1, file_path2)

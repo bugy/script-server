@@ -32,12 +32,14 @@ from model.model_helper import is_empty
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
 from model.server_conf import ServerConfig
+from utils import audit_utils
 from utils import file_utils as file_utils
-from utils import tornado_utils, audit_utils
-from utils.audit_utils import get_all_audit_names
 from utils.audit_utils import get_audit_name_from_request
 from utils.terminal_formatter import TerminalOutputTransformer, TerminalOutputChunk
 from utils.tornado_utils import respond_error, redirect_relative
+from web.streaming_form_reader import StreamingFormReader
+
+BYTES_IN_MB = 1024 * 1024
 
 LOGGER = logging.getLogger('web_server')
 
@@ -342,16 +344,39 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
             self.ioloop.add_callback(self.write_message, message)
 
 
+@tornado.web.stream_request_body
 class ScriptExecute(BaseRequestHandler):
+
+    def __init__(self, application, request, **kwargs):
+        super().__init__(application, request, **kwargs)
+
+        self.form_reader = None
+
     @check_authorization
+    def prepare(self):
+        if self.request.method != 'POST':
+            respond_error(self, 405, 'Method not allowed')
+            return
+
+        audit_name = get_audit_name_from_request(self)
+
+        file_upload_feature = self.application.file_upload_feature
+        upload_folder = file_upload_feature.prepare_new_folder(audit_name)
+
+        self.request.connection.set_max_body_size(self.application.max_request_size_mb * BYTES_IN_MB)
+        self.form_reader = StreamingFormReader(self.request.headers, upload_folder)
+
+    def data_received(self, chunk):
+        self.form_reader.read(chunk)
+
     @inject_user
     def post(self, user):
         script_name = None
 
-        audit_name = get_audit_name_from_request(self)
+        audit_name = user.get_audit_name()
 
         try:
-            arguments = tornado_utils.get_form_arguments(self)
+            arguments = self.form_reader.values
             execution_info = external_model.to_execution_info(arguments)
 
             script_name = execution_info.script
@@ -366,12 +391,9 @@ class ScriptExecute(BaseRequestHandler):
 
             parameter_values = execution_info.param_values
 
-            if self.request.files:
-                file_upload_feature = self.application.file_upload_feature
-                for key, value in self.request.files.items():
-                    file_info = value[0]
-                    file_path = file_upload_feature.save_file(file_info.filename, file_info.body, audit_name)
-                    parameter_values[key] = file_path
+            if self.form_reader.files:
+                for key, value in self.form_reader.files.items():
+                    parameter_values[key] = value.path
 
             try:
                 config_model.set_all_param_values(parameter_values)
@@ -382,14 +404,13 @@ class ScriptExecute(BaseRequestHandler):
                 respond_error(self, 400, message)
                 return
 
-            user_id = _identify_user(self)
-            all_audit_names = get_all_audit_names(self)
-            LOGGER.info('Calling script ' + script_name + '. User ' + str(all_audit_names))
+            all_audit_names = user.audit_names
+            LOGGER.info('Calling script %s. User %s', script_name, all_audit_names)
 
             execution_id = self.application.execution_service.start_script(
                 config_model,
                 normalized_values,
-                user_id,
+                user.user_id,
                 all_audit_names)
 
             self.write(str(execution_id))
@@ -850,10 +871,11 @@ def init(server_config: ServerConfig,
     application.config_service = config_service
     application.alerts_service = alerts_service
     application.identification = identification
+    application.max_request_size_mb = server_config.max_request_size_mb
 
     io_loop = tornado.ioloop.IOLoop.current()
 
-    http_server = httpserver.HTTPServer(application, ssl_options=ssl_context)
+    http_server = httpserver.HTTPServer(application, ssl_options=ssl_context, max_buffer_size=10 * BYTES_IN_MB)
     http_server.listen(server_config.port, address=server_config.address)
 
     intercept_stop_when_running_scripts(io_loop, execution_service)

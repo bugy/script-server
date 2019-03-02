@@ -5,7 +5,7 @@ import os
 import utils.file_utils as file_utils
 from auth.authorization import ANY_USER
 from model import model_helper
-from model.model_helper import read_list
+from model.model_helper import read_list, read_int_from_config
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('server_conf')
@@ -26,6 +26,7 @@ class ServerConfig(object):
         self.trusted_ips = []
         self.user_groups = None
         self.admin_users = []
+        self.max_request_size_mb = None
 
     def get_port(self):
         return self.port
@@ -128,6 +129,8 @@ def from_json(conf_path, temp_folder):
     config.logging_config = parse_logging_config(json_object)
     config.user_groups = user_groups
     config.admin_users = admin_users
+
+    config.max_request_size_mb = read_int_from_config('max_request_size', json_object, default=10)
 
     return config
 

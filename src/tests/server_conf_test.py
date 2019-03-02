@@ -105,6 +105,20 @@ class TestAdminUsersInit(unittest.TestCase):
         test_utils.cleanup()
 
 
+class TestMaxRequestSize(unittest.TestCase):
+    def test_int_value(self):
+        config = _from_json({'max_request_size': 5})
+        self.assertEqual(5, config.max_request_size_mb)
+
+    def test_string_value(self):
+        config = _from_json({'max_request_size': '123'})
+        self.assertEqual(123, config.max_request_size_mb)
+
+    def test_default_value(self):
+        config = _from_json({})
+        self.assertEqual(10, config.max_request_size_mb)
+
+
 def _from_json(content):
     json_obj = json.dumps(content)
     conf_path = os.path.join(test_utils.temp_folder, 'conf.json')

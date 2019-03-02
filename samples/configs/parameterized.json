@@ -2,7 +2,6 @@
   "name": "Very parameterized",
   "script_path": "scripts/parameterized.sh",
   "description": "This script does nothing except accepting a lot of parameters and printing them",
-  "requires_terminal": false,
   "allowed_users": [
     "*"
   ],
