@@ -22,7 +22,8 @@ before_install:
 - sudo apt-get -y install python3-pip python3-setuptools
 install:
 - sudo pip3 install -r requirements.txt
-- sudo pip3 install ldap3 requests parameterized
+- sudo pip3 install ldap3 parameterized
+- sudo pip3 install requests --upgrade
 - sudo pip3 install pyasn1 --upgrade
 - cd web-src
 - npm install
