@@ -397,6 +397,11 @@ input[type=checkbox]:not(.browser-default) + span {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
+.dropdown-content {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
 #content-panel .select-dropdown li.disabled,
 #content-panel .select-dropdown li.disabled > span,
 #content-panel .select-dropdown li.optgroup {
