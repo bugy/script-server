@@ -35,7 +35,6 @@ from model.server_conf import ServerConfig
 from utils import audit_utils
 from utils import file_utils as file_utils
 from utils.audit_utils import get_audit_name_from_request
-from utils.terminal_formatter import TerminalOutputTransformer, TerminalOutputChunk
 from utils.tornado_utils import respond_error, redirect_relative
 from web.streaming_form_reader import StreamingFormReader
 
@@ -290,7 +289,6 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
         execution_service = self.application.execution_service
 
-        config = execution_service.get_config(execution_id)
         self.executor = execution_service.get_active_executor(execution_id)
 
         self.ioloop = tornado.ioloop.IOLoop.current()
@@ -300,8 +298,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         user_id = _identify_user(self)
 
         output_stream = execution_service.get_raw_output_stream(execution_id, user_id)
-        ansi_enabled = config.ansi_enabled
-        pipe_output_to_http(output_stream, ansi_enabled, self.safe_write)
+        pipe_output_to_http(output_stream, self.safe_write)
 
         def finished(web_socket, downloads_folder, file_download_feature):
             try:
@@ -703,25 +700,6 @@ class GetLongHistoryEntryHandler(BaseRequestHandler):
         self.write(json.dumps(long_log))
 
 
-def wrap_script_output(text, text_color=None, background_color=None, text_styles=None, custom_position=None):
-    output_object = {'text': text}
-
-    if text_color:
-        output_object['text_color'] = text_color
-
-    if background_color:
-        output_object['background_color'] = background_color
-
-    if text_styles:
-        output_object['text_styles'] = text_styles
-
-    if custom_position:
-        output_object['replace'] = True
-        output_object['custom_position'] = {'x': custom_position.x, 'y': custom_position.y}
-
-    return wrap_to_server_event('output', output_object)
-
-
 def wrap_to_server_event(event_type, data):
     return json.dumps({
         "event": event_type,
@@ -729,37 +707,15 @@ def wrap_to_server_event(event_type, data):
     })
 
 
-def pipe_output_to_http(output_stream, ansi_enabled, write_callback):
-    if ansi_enabled:
-        terminal_output_stream = TerminalOutputTransformer(output_stream)
+def pipe_output_to_http(output_stream, write_callback):
+    class OutputToHttpListener:
+        def on_next(self, output):
+            write_callback(wrap_to_server_event('output', output))
 
-        class OutputToHttpListener:
-            def on_next(self, terminal_output: TerminalOutputChunk):
-                formatted_text = terminal_output.formatted_text
-                custom_position = terminal_output.custom_position
+        def on_close(self):
+            pass
 
-                write_callback(wrap_script_output(
-                    formatted_text.text,
-                    text_color=formatted_text.text_color,
-                    background_color=formatted_text.background_color,
-                    text_styles=formatted_text.styles,
-                    custom_position=custom_position))
-
-            def on_close(self):
-                terminal_output_stream.dispose()
-                pass
-
-        terminal_output_stream.subscribe(OutputToHttpListener())
-
-    else:
-        class OutputToHttpListener:
-            def on_next(self, output):
-                write_callback(wrap_script_output(output))
-
-            def on_close(self):
-                pass
-
-        output_stream.subscribe(OutputToHttpListener())
+    output_stream.subscribe(OutputToHttpListener())
 
 
 def _identify_user(request_handler):

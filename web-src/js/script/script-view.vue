@@ -47,7 +47,7 @@
 
     import marked from 'marked';
     import {mapActions, mapState} from 'vuex'
-    import {forEachKeyValue, isEmptyObject, isEmptyString, isNull, toBoolean} from '../common';
+    import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '../common';
     import LogPanel from '../components/log_panel'
     import ScriptParametersView from './script-parameters-view'
     import {RESET_DOWNLOADABLE_FILES, SEND_USER_INPUT, START_EXECUTION, STOP_EXECUTION} from './vuex_constants';
@@ -144,12 +144,8 @@
                 this.$refs.logPanel.setLog(text);
             },
 
-            appendLog: function (text, textColor, backgroundColor, textStyles) {
-                this.$refs.logPanel.appendLog(text, textColor, backgroundColor, textStyles);
-            },
-
-            replaceLog: function (text, textColor, backgroundColor, textStyles, x, y) {
-                this.$refs.logPanel.replaceLog(text, textColor, backgroundColor, textStyles, x, y);
+            appendLog: function (text) {
+                this.$refs.logPanel.appendLog(text);
             },
 
             getParameterErrors: function () {
@@ -194,17 +190,7 @@
                     for (; this.nextLogIndex < newValue.length; this.nextLogIndex++) {
                         const logChunk = newValue[this.nextLogIndex];
 
-                        var text = logChunk.text;
-                        var textColor = logChunk.text_color;
-                        var backgroundColor = logChunk.background_color;
-                        var textStyles = logChunk.text_styles;
-
-                        if (toBoolean(logChunk.replace)) {
-                            this.replaceLog(text, textColor, backgroundColor, textStyles, logChunk.custom_position.x, logChunk.custom_position.y);
-                        } else {
-                            this.appendLog(text, textColor, backgroundColor, textStyles);
-                        }
-
+                        this.appendLog(logChunk);
                     }
                 }
             }

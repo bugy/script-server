@@ -488,7 +488,7 @@ ScriptController.prototype._initStore = function () {
             },
 
             [SET_LOG](state, log) {
-                state.logChunks = [{text: log}]
+                state.logChunks = [log]
             },
 
             [APPEND_LOG_CHUNK](state, logChunk) {
@@ -527,7 +527,7 @@ ScriptController.prototype._initStore = function () {
                     if (!(error instanceof HttpUnauthorizedError)) {
                         logError(error);
 
-                        commit(APPEND_LOG_CHUNK, {text: '\n\n' + error.message});
+                        commit(APPEND_LOG_CHUNK, '\n\n' + error.message);
                     }
                 }
 
