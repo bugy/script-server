@@ -5,6 +5,7 @@ import os
 import signal
 import ssl
 import time
+import urllib
 import uuid
 from itertools import chain
 from urllib.parse import urlencode
@@ -630,7 +631,8 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
         super().set_extra_headers(path)
 
         filename = os.path.basename(path)
-        self.set_header('Content-Disposition', 'attachment; filename=' + filename + '')
+        encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
+        self.set_header('Content-Disposition', 'attachment; filename*=UTF-8\'\'' + encoded_filename + '')
 
     @check_authorization
     def validate_absolute_path(self, root, absolute_path):
