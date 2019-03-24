@@ -27,30 +27,27 @@ class FileDownloadFeature:
     def subscribe(self, execution_service: ExecutionService):
         download_feature = self
 
-        def execution_started(execution_id):
+        def execution_finished(execution_id):
             config = execution_service.get_config(execution_id)
             if not download_feature._is_downloadable(config):
                 return
 
             output_stream = execution_service.get_anonymized_output_stream(execution_id)
 
-            def output_closed():
-                output_stream_data = read_until_closed(output_stream)
-                script_output = ''.join(output_stream_data)
+            output_stream_data = read_until_closed(output_stream)
+            script_output = ''.join(output_stream_data)
 
-                parameter_values = execution_service.get_user_parameter_values(execution_id)
-                owner = execution_service.get_owner(execution_id)
+            parameter_values = execution_service.get_user_parameter_values(execution_id)
+            owner = execution_service.get_owner(execution_id)
 
-                downloadable_files = download_feature._prepare_downloadable_files(
-                    config,
-                    script_output,
-                    parameter_values,
-                    owner)
-                download_feature._execution_download_files[execution_id] = downloadable_files
+            downloadable_files = download_feature._prepare_downloadable_files(
+                config,
+                script_output,
+                parameter_values,
+                owner)
+            download_feature._execution_download_files[execution_id] = downloadable_files
 
-            output_stream.subscribe_on_close(output_closed)
-
-        execution_service.add_start_listener(execution_started)
+        execution_service.add_finish_listener(execution_finished)
 
     def get_downloadable_files(self, execution_id):
         return self._execution_download_files.get(execution_id, [])

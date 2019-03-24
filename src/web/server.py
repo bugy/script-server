@@ -281,6 +281,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
         self.executor = None
 
+    @check_authorization
     def open(self, execution_id):
         auth = self.application.auth
         if not auth.is_authenticated(self):
@@ -301,7 +302,11 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         output_stream = execution_service.get_raw_output_stream(execution_id, user_id)
         pipe_output_to_http(output_stream, self.safe_write)
 
-        def finished(web_socket, downloads_folder, file_download_feature):
+        downloads_folder = self.application.downloads_folder
+        file_download_feature = self.application.file_download_feature
+        web_socket = self
+
+        def finished():
             try:
                 downloadable_files = file_download_feature.get_downloadable_files(execution_id)
 
@@ -323,12 +328,10 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
                 # we need to stop callback explicitly and as soon as possible, to avoid sending ping after close
                 connection.ping_callback.stop()
 
+            output_stream.wait_close(timeout=5)
             web_socket.ioloop.add_callback(web_socket.close, code=1000)
 
-        output_stream.subscribe_on_close(finished,
-                                         self,
-                                         self.application.downloads_folder,
-                                         self.application.file_download_feature)
+        execution_service.add_finish_listener(finished, execution_id)
 
     def on_message(self, text):
         self.executor.write_to_input(text)

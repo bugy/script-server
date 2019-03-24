@@ -4,7 +4,6 @@ import shutil
 import stat
 import threading
 import uuid
-from collections import Set
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
@@ -17,7 +16,7 @@ temp_folder = 'tests_temp'
 _original_env = {}
 
 
-def create_file(filepath, overwrite=False):
+def create_file(filepath, overwrite=False, text=None):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
@@ -30,7 +29,10 @@ def create_file(filepath, overwrite=False):
     if os.path.exists(file_path) and not overwrite:
         raise Exception('File ' + file_path + ' already exists')
 
-    file_utils.write_file(file_path, 'test text')
+    if text is None:
+        text = 'test text'
+
+    file_utils.write_file(file_path, text)
 
     return file_path
 
@@ -199,7 +201,8 @@ def create_config_model(name, *,
                         path=None,
                         parameters=None,
                         parameter_values=None,
-                        script_command='ls'):
+                        script_command='ls',
+                        output_files=None):
     result_config = {}
 
     if config:
@@ -212,6 +215,9 @@ def create_config_model(name, *,
 
     if path is None:
         path = name
+
+    if output_files is not None:
+        result_config['output_files'] = output_files
 
     result_config['script_path'] = script_command
 
@@ -345,6 +351,12 @@ def assert_large_dict_equal(expected, actual, testcase):
     testcase.assertEqual(diff_expected, diff_actual, message)
 
 
+def wait_observable_close_notification(observable, timeout):
+    close_condition = threading.Event()
+    observable.subscribe_on_close(lambda: close_condition.set())
+    close_condition.wait(timeout)
+
+
 class _MockProcessWrapper(ProcessWrapper):
     def __init__(self, executor, command, working_directory):
         super().__init__(command, working_directory)
@@ -362,6 +374,10 @@ class _MockProcessWrapper(ProcessWrapper):
         if self.is_finished():
             raise Exception('Cannot finish a script twice')
         self.__finish(exit_code)
+
+    # method for tests
+    def write_output(self, output):
+        self._write_script_output(output)
 
     def stop(self):
         self.__finish(9)
@@ -411,3 +427,16 @@ class AnyUserAuthorizer:
 
     def is_admin(self, user_id):
         return True
+
+
+class _IdGeneratorMock:
+    def __init__(self) -> None:
+        super().__init__()
+        self.generated_ids = []
+        self._next_id = 123
+
+    def next_id(self):
+        id = str(self._next_id)
+        self._next_id += 1
+        self.generated_ids.append(id)
+        return id

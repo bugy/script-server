@@ -20,6 +20,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
         self.finish_listeners = []
 
+        # output_stream is guaranteed to close not earlier than process exit
         self.output_stream = ReplayObservable()
 
         self.notify_finish_thread = None

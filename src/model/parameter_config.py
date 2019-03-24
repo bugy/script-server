@@ -201,6 +201,15 @@ class ParameterModel(object):
 
         return str(value)
 
+    def get_secured_value(self, value):
+        if (not self.secure) or (value is None) or self.no_value:
+            return value
+
+        if isinstance(value, list):
+            return [self.value_to_str(e) for e in value]
+
+        return self.value_to_str(value)
+
     def map_to_script(self, user_value):
         def map_single_value(user_value):
             if self._values_provider:

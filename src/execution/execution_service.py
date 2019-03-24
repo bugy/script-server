@@ -176,8 +176,21 @@ class ExecutionService:
         executor.cleanup()
         self._active_executor_ids.remove(execution_id)
 
-    def add_finish_listener(self, callback):
-        self._finish_listeners.append(callback)
+    def add_finish_listener(self, callback, execution_id=None):
+        if execution_id is None:
+            self._finish_listeners.append(callback)
+
+        else:
+            executor = self._executors.get(execution_id)
+            if not executor:
+                LOGGER.error('Failed to find executor for id ' + execution_id)
+                return
+
+            class FinishListener:
+                def finished(self):
+                    callback()
+
+            executor.add_finish_listener(FinishListener())
 
     def _add_post_finish_handling(self, execution_id, executor):
         self_service = self

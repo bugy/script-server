@@ -161,53 +161,6 @@ class TestBuildCommandArgs(unittest.TestCase):
 
         self.assertEqual(args_string, ['-p1', 'val1', 'val2', '--p3', 'val5'])
 
-    def test_parameter_secure_no_value(self):
-        parameter = create_script_param_config('p1', param='-p1', secure=True)
-        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
-
-        executor = ScriptExecutor(config, {})
-        secure_command = executor.get_secure_command()
-
-        self.assertEqual('ls', secure_command)
-
-    def test_parameter_secure_some_value(self):
-        parameter = create_script_param_config('p1', param='-p1', secure=True)
-        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
-
-        executor = ScriptExecutor(config, {'p1': 'value'})
-        secure_command = executor.get_secure_command()
-
-        self.assertEqual('ls -p1 ******', secure_command)
-
-    def test_parameter_secure_value_and_same_unsecure(self):
-        p1 = create_script_param_config('p1', param='-p1', secure=True)
-        p2 = create_script_param_config('p2', param='-p2')
-        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[p1, p2])
-
-        executor = ScriptExecutor(config, {'p1': 'value', 'p2': 'value'})
-        secure_command = executor.get_secure_command()
-
-        self.assertEqual('ls -p1 ****** -p2 value', secure_command)
-
-    def test_parameter_secure_multiselect(self):
-        parameter = create_script_param_config('p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT)
-        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
-
-        executor = ScriptExecutor(config, {'p1': ['one', 'two', 'three']})
-        secure_command = executor.get_secure_command()
-
-        self.assertEqual('ls -p1 ******', secure_command)
-
-    def test_parameter_secure_multiselect_as_multiarg(self):
-        parameter = create_script_param_config(
-            'p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT, multiple_arguments=True)
-        config = create_config_model('config_x', config={'script_path': 'ls'}, parameters=[parameter])
-
-        executor = ScriptExecutor(config, {'p1': ['one', 'two', 'three']})
-        secure_command = executor.get_secure_command()
-
-        self.assertEqual('ls -p1 ******', secure_command)
-
     def build_command_args(self, param_values, config):
         if config.script_command is None:
             config.script_command = 'ping'
@@ -339,7 +292,7 @@ class TestProcessOutput(unittest.TestCase):
 
     @staticmethod
     def _create_config(parameters=None):
-        return create_config_model('config_x', config={'script_path': 'ls'}, parameters=parameters)
+        return create_config_model('config_x', parameters=parameters)
 
     def setUp(self):
         self.config = create_config_model('config_x')
@@ -378,6 +331,95 @@ class TestProcessOutput(unittest.TestCase):
         self.executor = ScriptExecutor(config, parameter_values)
         self.executor.start()
         return self.executor
+
+
+class GetSecureCommandTest(unittest.TestCase):
+    def test_secure_value_not_specified(self):
+        parameter = create_script_param_config('p1', param='-p1', secure=True)
+        secure_command = self.get_secure_command([parameter], {})
+
+        self.assertEqual('ls', secure_command)
+
+    def test_some_secure_value(self):
+        parameter = create_script_param_config('p1', param='-p1', secure=True)
+        secure_command = self.get_secure_command([parameter], {'p1': 'value'})
+
+        self.assertEqual('ls -p1 ******', secure_command)
+
+    def test_parameter_secure_value_and_same_unsecure(self):
+        p1 = create_script_param_config('p1', param='-p1', secure=True)
+        p2 = create_script_param_config('p2', param='-p2')
+
+        secure_command = self.get_secure_command([p1, p2], {'p1': 'value', 'p2': 'value'})
+
+        self.assertEqual('ls -p1 ****** -p2 value', secure_command)
+
+    def test_parameter_secure_multiselect(self):
+        parameter = create_script_param_config('p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT)
+
+        secure_command = self.get_secure_command([parameter], {'p1': ['one', 'two', 'three']})
+
+        self.assertEqual('ls -p1 ******', secure_command)
+
+    def test_parameter_secure_multiselect_as_multiarg(self):
+        parameter = create_script_param_config(
+            'p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT, multiple_arguments=True)
+
+        secure_command = self.get_secure_command([parameter], {'p1': ['one', 'two', 'three']})
+
+        self.assertEqual('ls -p1 ****** ****** ******', secure_command)
+
+    def test_parameter_no_value(self):
+        parameter = create_script_param_config(
+            'p1', param='-p1', no_value=True)
+
+        secure_command = self.get_secure_command([parameter], {'p1': True})
+
+        self.assertEqual('ls -p1', secure_command)
+
+    def test_parameter_multiselect_and_multiple_arguments(self):
+        parameter = create_script_param_config(
+            'p1', param='-p1', type=PARAM_TYPE_MULTISELECT, multiple_arguments=True)
+
+        secure_command = self.get_secure_command([parameter], {'p1': ['abc', 'def']})
+
+        self.assertEqual('ls -p1 abc def', secure_command)
+
+    def test_when_parameter_multiselect_and_comma_separated(self):
+        parameter = create_script_param_config(
+            'p1', param='-p1', type=PARAM_TYPE_MULTISELECT)
+
+        secure_command = self.get_secure_command([parameter], {'p1': ['abc', 'def']})
+
+        self.assertEqual('ls -p1 abc,def', secure_command)
+
+    def test_secure_parameter_no_value(self):
+        parameter = create_script_param_config(
+            'p1', param='-p1', no_value=True, secure=True)
+        secure_command = self.get_secure_command([parameter], {'p1': True})
+
+        self.assertEqual('ls -p1', secure_command)
+
+    def test_parameter_int(self):
+        parameter = create_script_param_config(
+            'p1', param='-p1', type='int')
+
+        secure_command = self.get_secure_command([parameter], {'p1': 123})
+
+        self.assertEqual('ls -p1 123', secure_command)
+
+    def test_secure_parameter_int(self):
+        parameter = create_script_param_config(
+            'p1', param='-p1', type='int', secure=True)
+
+        secure_command = self.get_secure_command([parameter], {'p1': 123})
+
+        self.assertEqual('ls -p1 ******', secure_command)
+
+    def get_secure_command(self, parameters, values):
+        config = create_config_model('config_x', parameters=parameters)
+        executor = ScriptExecutor(config, values)
+        return executor.get_secure_command()
 
 
 def wait_buffer_flush():

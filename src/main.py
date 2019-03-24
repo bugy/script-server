@@ -11,7 +11,7 @@ from auth.authorization import create_group_provider, Authorizer
 from config.config_service import ConfigService
 from execution.execution_service import ExecutionService
 from execution.id_generator import IdGenerator
-from execution.logging import ExecutionLoggingService, LogNameCreator, ExecutionLoggingInitiator
+from execution.logging import ExecutionLoggingService, LogNameCreator, ExecutionLoggingController
 from features.fail_alerter_feature import FailAlerterFeature
 from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
@@ -97,8 +97,8 @@ def main():
 
     execution_service = ExecutionService(id_generator)
 
-    execution_logging_initiator = ExecutionLoggingInitiator(execution_service, execution_logging_service)
-    execution_logging_initiator.start()
+    execution_logging_controller = ExecutionLoggingController(execution_service, execution_logging_service)
+    execution_logging_controller.start()
 
     user_file_storage = UserFileStorage(secret)
     file_download_feature = FileDownloadFeature(user_file_storage, TEMP_FOLDER)
