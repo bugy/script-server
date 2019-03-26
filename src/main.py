@@ -6,7 +6,7 @@ import os
 import sys
 
 import migrations.migrate
-from alerts.alerts_service import AlertsService
+from communications.alerts_service import AlertsService
 from auth.authorization import create_group_provider, Authorizer
 from config.config_service import ConfigService
 from execution.execution_service import ExecutionService

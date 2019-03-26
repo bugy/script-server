@@ -1,7 +1,7 @@
 import unittest
 
-from alerts.alerts_service import AlertsService
-from alerts.destination_base import Destination
+from communications.alerts_service import AlertsService
+from communications.destination_base import Destination
 from model.server_conf import AlertsConfig
 
 

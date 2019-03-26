@@ -1,6 +1,6 @@
 import requests
 
-import alerts.destination_base as destination_base
+import communications.destination_base as destination_base
 
 
 class HttpDestination(destination_base.Destination):

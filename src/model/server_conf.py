@@ -181,8 +181,8 @@ def _prepare_allowed_users(allowed_users, admin_users, user_groups):
 
 
 def parse_alerts_config(json_object):
-    if json_object.get('alerts'):
-        alerts_object = json_object.get('alerts')
+    if json_object.get('communications'):
+        alerts_object = json_object.get('communications')
         destination_objects = alerts_object.get('destinations')
 
         if destination_objects:
@@ -192,10 +192,10 @@ def parse_alerts_config(json_object):
                 destination_type = destination_object.get('type')
 
                 if destination_type == 'email':
-                    import alerts.destination_email as email
+                    import communications.destination_email as email
                     destination = email.EmailDestination(destination_object)
                 elif destination_type == 'http':
-                    import alerts.destination_http as http
+                    import communications.destination_http as http
                     destination = http.HttpDestination(destination_object)
                 else:
                     raise Exception('Unknown alert destination type: ' + destination_type)

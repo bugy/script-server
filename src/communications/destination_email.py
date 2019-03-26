@@ -4,7 +4,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
 
-from alerts import destination_base
+from communications import destination_base
 from model import model_helper
 
 

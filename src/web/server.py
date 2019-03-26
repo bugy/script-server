@@ -18,7 +18,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
-from alerts.alerts_service import AlertsService
+from communications.alerts_service import AlertsService
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from auth.user import User
@@ -665,7 +665,7 @@ class ReceiveAlertHandler(BaseRequestHandler):
 
             LOGGER.info('ReceiveAlertHandler. Writing file ' + filename)
 
-            file_path = os.path.join('logs', 'alerts', filename)
+            file_path = os.path.join('logs', 'communications', filename)
             file_utils.write_file(file_path, file.body.decode('utf-8'))
 
 

@@ -1,4 +1,4 @@
-from alerts.alerts_service import AlertsService
+from communications.alerts_service import AlertsService
 from execution.execution_service import ExecutionService
 from react.observable import read_until_closed
 
