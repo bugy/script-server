@@ -151,6 +151,10 @@ class ExecutionService:
 
         return self._get_for_executor(execution_id, getter)
 
+    def get_process_id(self, execution_id):
+        return self._get_for_executor(execution_id,
+                                      lambda e: e.get_process_id())
+
     def _get_for_executor(self, execution_id, getter: Callable[[ScriptExecutor], Any]):
         executor = self._executors.get(execution_id)
         if executor is None:

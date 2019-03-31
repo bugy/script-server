@@ -366,7 +366,7 @@ class _MockProcessWrapper(ProcessWrapper):
         self.process_id = int.from_bytes(uuid.uuid1().bytes, byteorder='big')
         self.finish_condition = threading.Condition()
 
-    def _get_process_id(self):
+    def get_process_id(self):
         return self.process_id
 
     # method for tests

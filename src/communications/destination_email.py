@@ -6,6 +6,7 @@ from email.utils import formatdate
 
 from communications import destination_base
 from model import model_helper
+from model.model_helper import read_bool_from_config
 
 
 def split_addresses(addresses_string):
@@ -18,14 +19,43 @@ def split_addresses(addresses_string):
     return [addresses_string]
 
 
+def _create_communicator(config):
+    return EmailCommunicator(config)
+
+
+def _body_dict_to_message(body_dict):
+    result = ''
+
+    for key, value in body_dict.items():
+        if result:
+            result += '\n'
+        result += key + ': ' + str(value)
+
+    return result
+
+
 class EmailDestination(destination_base.Destination):
+
+    def __init__(self, config) -> None:
+        super().__init__()
+
+        self._communicator = _create_communicator(config)
+
+    def send(self, title, body, files=None):
+        if isinstance(body, dict):
+            body = _body_dict_to_message(body)
+
+        self._communicator.send(title, body, files)
+
+
+class EmailCommunicator:
     def __init__(self, params_dict):
         self.from_address = params_dict.get('from')
         self.to_addresses = params_dict.get('to')
         self.server = params_dict.get('server')
-        self.auth_enabled = params_dict.get('auth_enabled')
+        self.auth_enabled = read_bool_from_config('auth_enabled', params_dict)
         self.login = params_dict.get('login')
-        self.tls = params_dict.get('tls')
+        self.tls = read_bool_from_config('tls', params_dict)
 
         self.password = self.read_password(params_dict)
         self.to_addresses = split_addresses(self.to_addresses)
@@ -41,10 +71,6 @@ class EmailDestination(destination_base.Destination):
 
         if self.auth_enabled is None:
             self.auth_enabled = self.password or self.login
-        elif (self.auth_enabled is True) or (self.auth_enabled.lower() == 'true'):
-            self.auth_enabled = True
-        else:
-            self.auth_enabled = False
 
         if self.auth_enabled and (not self.login):
             self.login = self.from_address
@@ -59,7 +85,7 @@ class EmailDestination(destination_base.Destination):
 
         return password
 
-    def send(self, title, body, logs=None):
+    def send(self, title, body, files=None):
         message = MIMEMultipart()
         message['From'] = self.from_address
         message['To'] = ','.join(self.to_addresses)
@@ -77,11 +103,12 @@ class EmailDestination(destination_base.Destination):
         if self.auth_enabled:
             server.login(self.login, self.password)
 
-        if logs:
-            logs_filename = 'log.txt'
-            part = MIMEApplication(logs, Name=logs_filename)
-            part['Content-Disposition'] = 'attachment; filename="%s"' % logs_filename
-            message.attach(part)
+        if files:
+            for file in files:
+                filename = file.filename
+                part = MIMEApplication(file.content, Name=filename)
+                part['Content-Disposition'] = 'attachment; filename="%s"' % filename
+                message.attach(part)
 
         server.sendmail(self.from_address, self.to_addresses, message.as_string())
         server.quit()

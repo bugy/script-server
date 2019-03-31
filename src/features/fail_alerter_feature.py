@@ -1,4 +1,5 @@
 from communications.alerts_service import AlertsService
+from communications.communication_model import File
 from execution.execution_service import ExecutionService
 from react.observable import read_until_closed
 
@@ -32,7 +33,8 @@ class FailAlerterFeature:
                 output_stream_data = read_until_closed(output_stream)
                 script_output = ''.join(output_stream_data)
 
-                alert_service.send_alert(title, body, script_output)
+                files = [File(filename='log.txt', content=script_output)]
+                alert_service.send_alert(title, body, files)
 
         execution_service.add_finish_listener(finished)
 

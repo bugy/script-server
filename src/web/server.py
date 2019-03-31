@@ -18,10 +18,10 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
-from communications.alerts_service import AlertsService
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from auth.user import User
+from communications.alerts_service import AlertsService
 from config.config_service import ConfigService, ConfigNotAllowedException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
@@ -33,7 +33,7 @@ from model.model_helper import is_empty
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
 from model.server_conf import ServerConfig
-from utils import audit_utils
+from utils import audit_utils, tornado_utils
 from utils import file_utils as file_utils
 from utils.audit_utils import get_audit_name_from_request
 from utils.tornado_utils import respond_error, redirect_relative
@@ -655,18 +655,21 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
 # Use for testing only
 class ReceiveAlertHandler(BaseRequestHandler):
     def post(self):
-        message = self.get_body_argument('message')
-        LOGGER.info('ReceiveAlertHandler. Received alert: ' + message)
+        body = tornado_utils.get_request_body(self)
 
-        log_files = self.request.files['log']
-        if log_files:
-            file = log_files[0]
-            filename = str(time.time()) + '_' + file.filename
+        files = body.get('files', {})
+        if files:
+            del body['files']
+
+        LOGGER.info('ReceiveAlertHandler. Received alert: ' + str(body))
+
+        for key, value in files.items():
+            filename = str(time.time()) + '_' + key
 
             LOGGER.info('ReceiveAlertHandler. Writing file ' + filename)
 
-            file_path = os.path.join('logs', 'communications', filename)
-            file_utils.write_file(file_path, file.body.decode('utf-8'))
+            file_path = os.path.join('logs', 'alerts', filename)
+            file_utils.write_file(file_path, value)
 
 
 class GetShortHistoryEntriesHandler(BaseRequestHandler):

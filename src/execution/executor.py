@@ -159,6 +159,9 @@ class ScriptExecutor:
     def get_raw_output_stream(self):
         return self.raw_output_stream
 
+    def get_process_id(self):
+        return self.process_wrapper.get_process_id()
+
     def get_return_code(self):
         return self.process_wrapper.get_return_code()
 
@@ -207,7 +210,7 @@ def build_command_args(param_values, config):
             value = param_values[name]
 
             if parameter.no_value:
-                if value == True:
+                if value is True:
                     result.append(parameter.param)
 
             elif value:

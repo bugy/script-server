@@ -10,6 +10,7 @@ from utils.string_utils import strip
 
 LOGGER = logging.getLogger('server_conf')
 
+
 class ServerConfig(object):
     def __init__(self) -> None:
         self.address = None
@@ -27,6 +28,7 @@ class ServerConfig(object):
         self.user_groups = None
         self.admin_users = []
         self.max_request_size_mb = None
+        self.callbacks_config = None
 
     def get_port(self):
         return self.port
@@ -39,21 +41,6 @@ class ServerConfig(object):
 
     def get_ssl_cert_path(self):
         return self.ssl_cert_path
-
-    def get_alerts_config(self):
-        return self.alerts_config
-
-
-class AlertsConfig:
-    def __init__(self) -> None:
-        self.destinations = []
-
-    def add_destination(self, destination):
-        self.destinations.append(destination)
-
-    def get_destinations(self):
-        return self.destinations
-
 
 class LoggingConfig:
     def __init__(self) -> None:
@@ -125,7 +112,8 @@ def from_json(conf_path, temp_folder):
         admin_users = def_admins
 
     config.allowed_users = _prepare_allowed_users(allowed_users, admin_users, user_groups)
-    config.alerts_config = parse_alerts_config(json_object)
+    config.alerts_config = json_object.get('alerts')
+    config.callbacks_config = json_object.get('callbacks')
     config.logging_config = parse_logging_config(json_object)
     config.user_groups = user_groups
     config.admin_users = admin_users
@@ -178,33 +166,6 @@ def _prepare_allowed_users(allowed_users, admin_users, user_groups):
                 coerced_users.update(users)
 
     return list(coerced_users)
-
-
-def parse_alerts_config(json_object):
-    if json_object.get('communications'):
-        alerts_object = json_object.get('communications')
-        destination_objects = alerts_object.get('destinations')
-
-        if destination_objects:
-            alerts_config = AlertsConfig()
-
-            for destination_object in destination_objects:
-                destination_type = destination_object.get('type')
-
-                if destination_type == 'email':
-                    import communications.destination_email as email
-                    destination = email.EmailDestination(destination_object)
-                elif destination_type == 'http':
-                    import communications.destination_http as http
-                    destination = http.HttpDestination(destination_object)
-                else:
-                    raise Exception('Unknown alert destination type: ' + destination_type)
-
-                alerts_config.add_destination(destination)
-
-            return alerts_config
-
-    return None
 
 
 def parse_logging_config(json_object):

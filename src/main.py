@@ -6,12 +6,13 @@ import os
 import sys
 
 import migrations.migrate
-from communications.alerts_service import AlertsService
 from auth.authorization import create_group_provider, Authorizer
+from communications.alerts_service import AlertsService
 from config.config_service import ConfigService
 from execution.execution_service import ExecutionService
 from execution.id_generator import IdGenerator
 from execution.logging import ExecutionLoggingService, LogNameCreator, ExecutionLoggingController
+from features.executions_callback_feature import ExecutionsCallbackFeature
 from features.fail_alerter_feature import FailAlerterFeature
 from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
@@ -83,7 +84,7 @@ def main():
 
     config_service = ConfigService(authorizer, CONFIG_FOLDER)
 
-    alerts_service = AlertsService(server_config.get_alerts_config())
+    alerts_service = AlertsService(server_config.alerts_config)
     alerts_service = alerts_service
 
     execution_logs_path = os.path.join(LOG_FOLDER, 'processes')
@@ -107,6 +108,9 @@ def main():
 
     alerter_feature = FailAlerterFeature(execution_service, alerts_service)
     alerter_feature.start()
+
+    executions_callback_feature = ExecutionsCallbackFeature(execution_service, server_config.callbacks_config)
+    executions_callback_feature.start()
 
     server.init(
         server_config,
