@@ -45,17 +45,22 @@ class CommunicatorsMock:
 
             return creator
 
-        self.http_patch = patch('communications.destination_http._create_communicator')
-        http_patched_func = self.http_patch.start()
-        http_patched_func.side_effect = communicator_generator('http', MockHttpCommunicator)
+        self.patches = []
 
-        self.email_patch = patch('communications.destination_email._create_communicator')
-        email_patched_func = self.email_patch.start()
-        email_patched_func.side_effect = communicator_generator('email', MockEmailCommunicator)
+        communicator_types = {
+            'email': MockEmailCommunicator,
+            'http': MockHttpCommunicator,
+            'script': MockScriptCommunicator}
+
+        for communicator_type, clazz in communicator_types.items():
+            communicator_patch = patch('communications.destination_' + communicator_type + '._create_communicator')
+            http_patched_func = communicator_patch.start()
+            http_patched_func.side_effect = communicator_generator(communicator_type, clazz)
+            self.patches.append(communicator_patch)
 
     def stop(self):
-        self.http_patch.stop()
-        self.email_patch.stop()
+        for communicator_patch in self.patches:
+            communicator_patch.stop()
 
 
 class MockDestination(Destination):
@@ -88,3 +93,15 @@ class MockHttpCommunicator:
         message = (None, body, None)
         self.messages.append(message)
         self.captured_arguments.append({'body': body, 'content_type': content_type})
+
+
+class MockScriptCommunicator:
+    def __init__(self, name) -> None:
+        self.messages = []
+        self.captured_arguments = []
+        self.name = name
+
+    def send(self, parameters, environment_variables=None):
+        message = (None, parameters, None)
+        self.messages.append(message)
+        self.captured_arguments.append({'parameters': parameters, 'environment_variables': environment_variables})

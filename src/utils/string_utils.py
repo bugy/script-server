@@ -51,3 +51,16 @@ def is_blank(value):
     if not value.strip():
         return True
     return False
+
+
+def values_to_string(value):
+    if not value:
+        return value
+
+    if isinstance(value, dict):
+        return {k: str(v) for k, v in value.items()}
+
+    if isinstance(value, list):
+        return [str(element) for element in value]
+
+    return value

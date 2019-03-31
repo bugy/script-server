@@ -6,6 +6,7 @@ from communications import destination_email
 from features.executions_callback_feature import ExecutionsCallbackFeature
 from tests.communications.communication_test_utils import mock_communicators
 from tests.test_utils import create_config_model
+from utils.string_utils import values_to_string
 
 
 @mock_communicators
@@ -20,10 +21,15 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
 
         self.assert_created_destinations(['email1'])
 
-    def test_init_mixed_communicators(self):
-        self.create_feature(['email', 'http', 'http', 'email'])
+    def test_init_script_communicator(self):
+        self.create_feature(['script'])
 
-        self.assert_created_destinations(['email1', 'http1', 'http2', 'email2'])
+        self.assert_created_destinations(['script1'])
+
+    def test_init_mixed_communicators(self):
+        self.create_feature(['email', 'http', 'http', 'script', 'email'])
+
+        self.assert_created_destinations(['email1', 'http1', 'http2', 'script1', 'email2'])
 
     def test_unknown_communicator(self):
         self.assertRaisesRegex(Exception, 'Unknown destination type: socket',
@@ -112,6 +118,24 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
 
         self.assert_messages([123], 'execution_finished')
 
+    def test_send_started_callback_to_script_destination(self):
+        feature = self.create_feature(['script'])
+        feature.start()
+
+        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.fire_started(123)
+
+        self.assert_messages([123], 'execution_started')
+
+    def test_send_finished_callback_to_script_destination(self):
+        feature = self.create_feature(['script'])
+        feature.start()
+
+        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.fire_finished(123)
+
+        self.assert_messages([123], 'execution_finished')
+
     def test_started_callback_when_disabled(self):
         feature = self.create_feature(['http'], on_start=False)
         feature.start()
@@ -161,7 +185,8 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
             config['notification_fields'] = notification_fields
 
         # noinspection PyTypeChecker
-        return ExecutionsCallbackFeature(self, config)
+        self.callback_feature = ExecutionsCallbackFeature(self, config)
+        return self.callback_feature
 
     def assert_created_destinations(self, expected_names):
         communicators = self.get_communicators()
@@ -208,11 +233,13 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
             return destination_email._body_dict_to_message(body)
         elif communicator.name.startswith('http'):
             return json.dumps(body)
+        elif communicator.name.startswith('script'):
+            return values_to_string(list(body.values()))
 
         return body
 
     def build_title(self, event_type, communicator, execution_id):
-        if communicator.name.startswith('http'):
+        if communicator.name.startswith('http') or communicator.name.startswith('script'):
             return None
 
         if event_type == 'execution_started':
@@ -256,9 +283,15 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         for listener in self.start_listeners:
             listener(execution_id)
 
+        if self.callback_feature:
+            self.callback_feature._wait()
+
     def fire_finished(self, execution_id):
         for listener in self.finish_listeners:
             listener(execution_id)
+
+        if self.callback_feature:
+            self.callback_feature._wait()
 
 
 class _ExecutionInfo:

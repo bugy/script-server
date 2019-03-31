@@ -2,6 +2,7 @@ import logging
 from collections import OrderedDict
 
 from communications.communicaton_service import CommunicationsService
+from communications.destination_script import ScriptDestination
 from execution.execution_service import ExecutionService
 from model.model_helper import read_bool_from_config, read_list
 
@@ -23,6 +24,8 @@ def _init_destinations(destinations_config):
         elif destination_type == 'http':
             import communications.destination_http as http
             destination = http.HttpDestination(destination_config)
+        elif destination_type == 'script':
+            destination = ScriptDestination(destination_config)
         else:
             raise Exception('Unknown destination type: ' + destination_type)
 
@@ -103,3 +106,7 @@ class ExecutionsCallbackFeature:
         notification_object.move_to_end('event_type', False)
 
         return notification_object
+
+    # tests only
+    def _wait(self):
+        self._communication_service._wait()
