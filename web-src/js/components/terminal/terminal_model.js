@@ -13,7 +13,7 @@ function addUniqueSortedInt(arr, value, start, end) {
         return;
     }
 
-    if (start === end) {
+    if (start >= end) {
         const existing = arr[start];
         if (existing < value) {
             arr.splice(start + 1, 0, value);

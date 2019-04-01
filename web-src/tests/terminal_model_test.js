@@ -481,6 +481,27 @@ describe('Test terminal model', function () {
             assert.deepEqual(['12def', '456', '78'], this.model.lines);
         });
 
+        it('Test move cursor up, when 2 writes and second write moves up to itself', function () {
+            this.model.write('12345\n');
+            this.model.write('abc\nde' + moveCursorUp(1) + 'fgh');
+
+            assert.deepEqual(['12345', 'abfgh', 'de'], this.model.lines);
+        });
+
+        it('Test move cursor up, when 2 writes and second write moves up 1 line to previous write', function () {
+            this.model.write('12345\n');
+            this.model.write('abc' + moveCursorUp(1) + 'def');
+
+            assert.deepEqual(['123def', 'abc'], this.model.lines);
+        });
+
+        it('Test move cursor up, when 2 writes and second write moves up 2 lines to previous write', function () {
+            this.model.write('12345\n');
+            this.model.write('abc\nde' + moveCursorUp(2) + 'fgh');
+
+            assert.deepEqual(['12fgh', 'abc', 'de'], this.model.lines);
+        });
+
         it('Test move cursor down to unexisting line', function () {
             this.model.write('1' + moveCursorDown(1) + 'abc');
 
@@ -492,7 +513,6 @@ describe('Test terminal model', function () {
 
             assert.deepEqual(['12345', '', '', '     a'], this.model.lines);
         });
-
 
         it('Test move cursor down when bottom line is shorter', function () {
             this.model.write('12\n34\n56' + moveCursorUp(3) + '\rabcdef' + moveCursorDown(2) + 'gh');
