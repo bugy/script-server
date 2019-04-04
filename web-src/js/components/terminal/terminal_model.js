@@ -41,6 +41,8 @@ export class TerminalModel {
         this.listeners = [];
 
         this.clear();
+
+        this.changedLines = [];
     }
 
     addListener(listener) {
@@ -53,8 +55,6 @@ export class TerminalModel {
 
         let commandBuffer = null;
         let currentText = '';
-
-        let changedLines = [];
 
         for (let i = 0; i < this.buffer.length; i++) {
             const char = this.buffer[i];
@@ -79,7 +79,7 @@ export class TerminalModel {
 
                 if (!correctCommand) {
                     if (commandBuffer !== null) {
-                        this.flushText(commandBuffer, changedLines);
+                        this.flushText(commandBuffer);
                         commandBuffer = null;
                     }
 
@@ -87,21 +87,23 @@ export class TerminalModel {
                 }
 
             } else if (char === FORMAT_ESCAPE_CHARACTER) {
-                this.flushText(currentText, changedLines);
+                this.flushText(currentText);
                 currentText = '';
 
                 commandBuffer = char;
 
             } else if (char === '\n') {
-                this.flushText(currentText, changedLines);
+                this.flushText(currentText);
                 currentText = '';
 
                 this.currentPosition = 0;
                 this.currentLine++;
+                this.maxLine = Math.max(this.maxLine, this.currentLine);
+
                 lastReadIndex = i;
 
             } else if (char === '\r') {
-                this.flushText(currentText, changedLines);
+                this.flushText(currentText);
                 currentText = '';
 
                 this.currentPosition = 0;
@@ -113,8 +115,11 @@ export class TerminalModel {
             }
         }
 
-        this.flushText(currentText, changedLines);
+        this.flushText(currentText);
         this.buffer = this.buffer.substr(lastReadIndex + 1);
+
+        const changedLines = this.changedLines;
+        this.changedLines = [];
 
         if (changedLines.length > 0) {
             for (const listener of this.listeners) {
@@ -129,6 +134,7 @@ export class TerminalModel {
 
         this.currentLine = 0;
         this.currentPosition = 0;
+        this.maxLine = 0;
 
         this.buffer = '';
 
@@ -139,11 +145,44 @@ export class TerminalModel {
         }
     }
 
+    clearFullLine() {
+        this.lines[this.currentLine] = '';
+        this.addChangedLine(this.currentLine);
+    }
+
+    clearLineToRight() {
+        const line = this.getLine(this.currentLine);
+
+        if (line.length <= this.currentPosition) {
+            return;
+        }
+
+        this.lines[this.currentLine] = line.substring(0, this.currentPosition);
+        this.addChangedLine(this.currentLine);
+    }
+
+    clearLineToLeft() {
+        if (this.currentPosition === 0) {
+            return;
+        }
+
+        const line = this.getLine(this.currentLine);
+        if (line.length <= this.currentPosition) {
+            this.lines[this.currentLine] = '';
+            this.addChangedLine(this.currentLine);
+            return;
+        }
+
+        const spaces = ' '.repeat(this.currentPosition);
+        this.lines[this.currentLine] = spaces + line.substring(this.currentPosition);
+        this.addChangedLine(this.currentLine);
+    }
+
     getStyle(line) {
         return this.lineStyles.get(line);
     }
 
-    flushText(text, changedLines) {
+    flushText(text) {
         if (text.length === 0) {
             return;
         }
@@ -156,7 +195,11 @@ export class TerminalModel {
 
         this.currentPosition = end;
 
-        addUniqueSortedInt(changedLines, this.currentLine, 0, changedLines.length);
+        this.addChangedLine(this.currentLine);
+    }
+
+    addChangedLine(changedLine) {
+        addUniqueSortedInt(this.changedLines, changedLine, 0, this.changedLines.length);
     }
 
     getLine(lineIndex) {
@@ -185,15 +228,14 @@ export class TerminalModel {
     handleCommand(args, commandCharacter) {
         const handler = COMMAND_HANDLERS.get(commandCharacter);
         if (handler === null) {
-            return false;
+            return;
         }
 
         if (!handler.isValidArgumentsCount(args.length)) {
-            return false;
+            return;
         }
 
         handler.handle(args, this);
-        return true
     }
 
     updateTextStyle(lineIndex, start, end, style) {
@@ -412,7 +454,7 @@ class MoveCursorVerticallyHandler extends CommandHandler {
         if (this.moveUp) {
             newLine = Math.max(0, terminal.currentLine - delta);
         } else {
-            newLine = terminal.currentLine + delta;
+            newLine = Math.min(terminal.currentLine + delta, terminal.maxLine);
         }
         terminal.setCursorPosition(newLine, terminal.currentPosition);
     }
@@ -438,9 +480,29 @@ class MoveCursorHorizontallyHandler extends CommandHandler {
     }
 }
 
+class ClearLineHandler extends CommandHandler {
+    constructor() {
+        super();
+    }
+
+    handle(args, terminal) {
+        const direction = args[0];
+
+        if (direction === 0) {
+            terminal.clearLineToRight();
+        } else if (direction === 1) {
+            terminal.clearLineToLeft();
+        } else if (direction === 2) {
+            terminal.clearFullLine();
+        } else {
+            console.log('WARN! Unsupported [' + direction + 'K command');
+        }
+    }
+}
+
 const COMMAND_HANDLERS = new Map();
 COMMAND_HANDLERS.set('m', new SetGraphicsCommandHandler());
-COMMAND_HANDLERS.set('K', null);
+COMMAND_HANDLERS.set('K', new ClearLineHandler());
 COMMAND_HANDLERS.set('H', null);
 COMMAND_HANDLERS.set('f', null);
 COMMAND_HANDLERS.set('A', new MoveCursorVerticallyHandler(true));

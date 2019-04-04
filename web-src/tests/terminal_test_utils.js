@@ -16,10 +16,26 @@ export function moveCursorDown(lines) {
     return escapePrefix + lines + 'B';
 }
 
-export function moveCursorLeft(lines) {
-    return escapePrefix + lines + 'D';
+export function moveCursorLeft(positions) {
+    return escapePrefix + positions + 'D';
 }
 
-export function moveCursorRight(lines) {
-    return escapePrefix + lines + 'C';
+export function moveCursorRight(positions) {
+    return escapePrefix + positions + 'C';
+}
+
+export function clearLineToRight() {
+    return clearLine('');
+}
+
+export function clearLineToLeft() {
+    return clearLine('1');
+}
+
+export function clearFullLine() {
+    return clearLine('2');
+}
+
+export function clearLine(arg) {
+    return escapePrefix + arg + 'K';
 }

@@ -17,6 +17,7 @@ module.exports = function (config) {
         transpilers: ['webpack'],
         webpack: {
             configFile: 'webpack.mutation.js'
-        }
+        },
+        reporter: ['progress', 'clear-text', 'html']
     });
 };

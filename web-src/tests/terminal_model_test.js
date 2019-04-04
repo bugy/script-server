@@ -3,9 +3,33 @@
 import {assert, config as chaiConfig} from 'chai';
 import {isNull} from '../js/common';
 import {Style, StyledRange, TerminalModel} from '../js/components/terminal/terminal_model';
-import {format, moveCursorDown, moveCursorLeft, moveCursorRight, moveCursorUp} from './terminal_test_utils';
+import {
+    clearFullLine, clearLine,
+    clearLineToLeft,
+    clearLineToRight,
+    format,
+    moveCursorDown,
+    moveCursorLeft,
+    moveCursorRight,
+    moveCursorUp
+} from './terminal_test_utils';
 
 chaiConfig.truncateThreshold = 0;
+
+function addChangedLinesListener(testCase) {
+    const changedLinesField = [];
+    testCase.changedLines = changedLinesField;
+
+    testCase.model.addListener({
+        linesChanges: function (changedLines) {
+            changedLinesField.push(changedLines);
+        },
+
+        cleared: function () {
+
+        }
+    });
+}
 
 describe('Test terminal model', function () {
 
@@ -351,18 +375,7 @@ describe('Test terminal model', function () {
     describe('Test changed lines', function () {
 
         beforeEach(function () {
-            const changedLinesField = [];
-            this.changedLines = changedLinesField;
-
-            this.model.addListener({
-                linesChanges: function (changedLines) {
-                    changedLinesField.push(changedLines);
-                },
-
-                cleared: function () {
-
-                }
-            });
+            addChangedLinesListener(this);
         });
 
         it('Test write one char', function () {
@@ -505,13 +518,31 @@ describe('Test terminal model', function () {
         it('Test move cursor down to unexisting line', function () {
             this.model.write('1' + moveCursorDown(1) + 'abc');
 
-            assert.deepEqual(['1', ' abc'], this.model.lines);
+            assert.deepEqual(['1abc'], this.model.lines);
         });
 
         it('Test move cursor down N to unexisting line', function () {
             this.model.write('12345' + moveCursorDown(3) + 'a');
 
-            assert.deepEqual(['12345', '', '', '     a'], this.model.lines);
+            assert.deepEqual(['12345a'], this.model.lines);
+        });
+
+        it('Test move cursor down to empty line', function () {
+            this.model.write('1\n' + moveCursorUp(1) + moveCursorDown(1) + 'abc');
+
+            assert.deepEqual(['1', 'abc'], this.model.lines);
+        });
+
+        it('Test move cursor down 3 times, when only 2 empty lines', function () {
+            this.model.write('1\n\n' + moveCursorUp(2) + moveCursorDown(3) + 'abc');
+
+            assert.deepEqual(['1', '', 'abc'], this.model.lines);
+        });
+
+        it('Test move cursor down N to unexisting line', function () {
+            this.model.write('12345' + moveCursorDown(3) + 'a');
+
+            assert.deepEqual(['12345a'], this.model.lines);
         });
 
         it('Test move cursor down when bottom line is shorter', function () {
@@ -615,6 +646,167 @@ describe('Test terminal model', function () {
             this.model.write('12\n34\n56\n78\n90' + moveCursorUp(3) + moveCursorDown(3) + 'abc');
 
             assert.deepEqual(['12', '34', '56', '78', '90abc'], this.model.lines);
+        });
+    });
+
+    describe('Test clear line command', function () {
+        beforeEach(function () {
+            addChangedLinesListener(this);
+        });
+
+        it('Test clear line to the right in the middle, same write', function () {
+            this.model.write('123456' + moveCursorLeft(3) + clearLineToRight());
+
+            assert.deepEqual(['123'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test clear line to the right at the beginning, same write', function () {
+            this.model.write('123456' + moveCursorLeft(6) + clearLineToRight());
+
+            assert.deepEqual([''], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test clear line to the right in the middle, second write', function () {
+            this.model.write('123456' + moveCursorLeft(3));
+            this.model.write(clearLineToRight());
+
+            assert.deepEqual(['123'], this.model.lines);
+            assert.deepEqual([[0], [0]], this.changedLines);
+        });
+
+        it('Test clear line to the right before last, second write', function () {
+            this.model.write('123456' + moveCursorLeft(1));
+            this.model.write(clearLineToRight());
+
+            assert.deepEqual(['12345'], this.model.lines);
+            assert.deepEqual([[0], [0]], this.changedLines);
+        });
+
+        it('Test clear line to the right after last, second write', function () {
+            this.model.write('123456');
+            this.model.write(clearLineToRight());
+
+            assert.deepEqual(['123456'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test clear line to the right one position after last, second write', function () {
+            this.model.write('123456' + moveCursorRight(1));
+            this.model.write(clearLineToRight());
+
+            assert.deepEqual(['123456'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test clear line to the right many positions after last, second write', function () {
+            this.model.write('123456' + moveCursorRight(5));
+            this.model.write(clearLineToRight());
+
+            assert.deepEqual(['123456'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test clear line to the right, one line above, second write', function () {
+            this.model.write('123456\nabc' + moveCursorUp(1));
+            this.model.write(clearLineToRight());
+
+            assert.deepEqual(['123', 'abc'], this.model.lines);
+            assert.deepEqual([[0, 1], [0]], this.changedLines);
+        });
+
+        it('Test clear line to the left in the middle, same write', function () {
+            this.model.write('123456' + moveCursorLeft(3) + clearLineToLeft());
+
+            assert.deepEqual(['   456'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test clear line to the left in the middle, second write', function () {
+            this.model.write('123456' + moveCursorLeft(3));
+            this.model.write(clearLineToLeft());
+
+            assert.deepEqual(['   456'], this.model.lines);
+            assert.deepEqual([[0], [0]], this.changedLines);
+        });
+
+        it('Test clear line to the left before last, second write', function () {
+            this.model.write('123456' + moveCursorLeft(1));
+            this.model.write(clearLineToLeft());
+
+            assert.deepEqual(['     6'], this.model.lines);
+            assert.deepEqual([[0], [0]], this.changedLines);
+        });
+
+        it('Test clear line to the left after last, second write', function () {
+            this.model.write('123456');
+            this.model.write(clearLineToLeft());
+
+            assert.deepEqual([''], this.model.lines);
+            assert.deepEqual([[0], [0]], this.changedLines);
+        });
+
+        it('Test clear line to the left one position after last, second write', function () {
+            this.model.write('123456' + moveCursorRight(1));
+            this.model.write(clearLineToLeft());
+
+            assert.deepEqual([''], this.model.lines);
+            assert.deepEqual([[0], [0]], this.changedLines);
+        });
+
+        it('Test clear line to the left at position 1, second write', function () {
+            this.model.write('123456' + moveCursorLeft(5));
+            this.model.write(clearLineToLeft());
+
+            assert.deepEqual([' 23456'], this.model.lines);
+            assert.deepEqual([[0], [0]], this.changedLines);
+        });
+
+        it('Test clear line to the left at position 0, second write', function () {
+            this.model.write('123456' + moveCursorLeft(6));
+            this.model.write(clearLineToLeft());
+
+            assert.deepEqual(['123456'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test clear line to the left, one line above, second write', function () {
+            this.model.write('123456\nabc' + moveCursorUp(1));
+            this.model.write(clearLineToLeft());
+
+            assert.deepEqual(['   456', 'abc'], this.model.lines);
+            assert.deepEqual([[0, 1], [0]], this.changedLines);
+        });
+
+        it('Test clear full in the middle, same write', function () {
+            this.model.write('123456' + moveCursorLeft(3) + clearFullLine());
+
+            assert.deepEqual([''], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test clear full in the middle, second write', function () {
+            this.model.write('123456' + moveCursorLeft(3));
+            this.model.write(clearFullLine());
+
+            assert.deepEqual([''], this.model.lines);
+            assert.deepEqual([[0], [0]], this.changedLines);
+        });
+
+        it('Test clear full line, one line above, second write', function () {
+            this.model.write('123456\nabc' + moveCursorUp(1));
+            this.model.write(clearFullLine());
+
+            assert.deepEqual(['', 'abc'], this.model.lines);
+            assert.deepEqual([[0, 1], [0]], this.changedLines);
+        });
+
+        it('Test clear line wrong parameter', function () {
+            this.model.write('123456' + moveCursorLeft(3) + clearLine(3));
+
+            assert.deepEqual(['123456'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
         });
     });
 });
