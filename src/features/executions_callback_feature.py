@@ -41,7 +41,9 @@ class ExecutionsCallbackFeature:
         self._execution_service = execution_service
 
         if config is None:
-            config = {}
+            self.notify_on_start = False
+            self.notify_on_finish = False
+            return
 
         self.notify_on_start = read_bool_from_config('notify_on_start', config, default=True)
         self.notify_on_finish = read_bool_from_config('notify_on_finish', config, default=True)
