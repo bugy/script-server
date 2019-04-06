@@ -96,3 +96,15 @@ _Important!_ Command injection protection is fully supported for linux, but _onl
 
 ### XSS and CSRF
 At the moment script server _is_ vulnerable to these attacks.
+
+## Contribution
+If you like the project and think you could help with making it better, there are many ways you can do it:
+- Create new issue for new feature proposal or a bug
+- Implement existing issues (there are quite some of them: frontend/backend, simple/complex, choose whatever you like)
+- Help with improving the documentation
+- Set up a demo server
+- Spread a word about the project to your collegues, friends, blogs or any other channels
+- Any other things you could imagine
+
+Any contribution would be of great help and I will highly appreciate it! 
+If you have any questions, please create a new issue, or concact me via buggygm@gmail.com
