@@ -1,17 +1,21 @@
 'use strict';
 
-import {assert, config as chaiConfig} from 'chai';
+import {assert, config as chaiConfig, expect} from 'chai';
+import * as sinon from 'sinon';
 import {isNull} from '../js/common';
 import {Style, StyledRange, TerminalModel} from '../js/components/terminal/terminal_model';
 import {
-    clearFullLine, clearLine,
+    clearFullLine,
+    clearLine,
     clearLineToLeft,
     clearLineToRight,
+    escapePrefix,
     format,
     moveCursorDown,
     moveCursorLeft,
     moveCursorRight,
-    moveCursorUp
+    moveCursorUp,
+    moveToPosition
 } from './terminal_test_utils';
 
 chaiConfig.truncateThreshold = 0;
@@ -652,6 +656,12 @@ describe('Test terminal model', function () {
     describe('Test clear line command', function () {
         beforeEach(function () {
             addChangedLinesListener(this);
+
+            sinon.stub(console, 'log').returns(void 0);
+        });
+
+        afterEach(function () {
+            console.log.restore();
         });
 
         it('Test clear line to the right in the middle, same write', function () {
@@ -807,6 +817,157 @@ describe('Test terminal model', function () {
 
             assert.deepEqual(['123456'], this.model.lines);
             assert.deepEqual([[0]], this.changedLines);
+            expect(console.log.args[0][0]).to.equal('WARN! Unsupported [3K command');
+        });
+    });
+
+    describe('Test move cursor to position', function () {
+        beforeEach(function () {
+            addChangedLinesListener(this);
+        });
+
+        it('Test move to middle in the first line', function () {
+            this.model.write('123456' + moveToPosition(0, 3) + 'abc');
+
+            assert.deepEqual(['123abc'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test move to explicit beginning in the first line', function () {
+            this.model.write('123456' + moveToPosition(0, 0) + 'abc');
+
+            assert.deepEqual(['abc456'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test move to the end in the first line', function () {
+            this.model.write('123456' + moveToPosition(0, 6) + 'abc');
+
+            assert.deepEqual(['123456abc'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test move after the end in the first line', function () {
+            this.model.write('123456' + moveToPosition(0, 7) + 'abc');
+
+            assert.deepEqual(['123456 abc'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test move after the end in the second line, when 3 lines', function () {
+            this.model.write('12\n3456\n789' + moveToPosition(1, 7) + 'abc');
+
+            assert.deepEqual(['12', '3456   abc', '789'], this.model.lines);
+            assert.deepEqual([[0, 1, 2]], this.changedLines);
+        });
+
+        it('Test move to the second line from the end, when 3 lines available', function () {
+            this.model.write('1234\n5678\n90' + moveToPosition(1, 3) + 'abc');
+
+            assert.deepEqual(['1234', '567abc', '90'], this.model.lines);
+            assert.deepEqual([[0, 1, 2]], this.changedLines);
+        });
+
+        it('Test move to the first line from the end, when 3 lines available', function () {
+            this.model.write('1234\n5678\n90' + moveToPosition(0, 2) + 'abc');
+
+            assert.deepEqual(['12abc', '5678', '90'], this.model.lines);
+            assert.deepEqual([[0, 1, 2]], this.changedLines);
+        });
+
+        it('Test move to the implicit beginning from the end, when 3 lines available', function () {
+            this.model.write('1234\n5678\n90' + moveToPosition('', '') + 'abc');
+
+            assert.deepEqual(['abc4', '5678', '90'], this.model.lines);
+            assert.deepEqual([[0, 1, 2]], this.changedLines);
+        });
+
+        it('Test move to the last line, when 3 lines available', function () {
+            this.model.write('1234\n5678\n90' + moveCursorUp(2) + moveToPosition(2, 1) + 'abc');
+
+            assert.deepEqual(['1234', '5678', '9abc'], this.model.lines);
+            assert.deepEqual([[0, 1, 2]], this.changedLines);
+        });
+
+        it('Test move to the second line, when only one is available', function () {
+            this.model.write('123456' + moveToPosition(1, 0) + 'abc');
+
+            assert.deepEqual(['abc456'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test move to the third line, when only two are available', function () {
+            this.model.write('12345\n67890' + moveCursorUp(1) + moveToPosition(2, 2) + 'abc');
+
+            assert.deepEqual(['12345', '67abc'], this.model.lines);
+            assert.deepEqual([[0, 1]], this.changedLines);
+        });
+
+        it('Test move to line without specified column, when 1 line', function () {
+            this.model.write('12345' + moveToPosition(0, '') + 'abc');
+
+            assert.deepEqual(['abc45'], this.model.lines);
+            assert.deepEqual([[0]], this.changedLines);
+        });
+
+        it('Test move to the first line without specified column, when 2 lines', function () {
+            this.model.write('12345\n67890' + moveToPosition(0, '') + 'abc');
+
+            assert.deepEqual(['abc45', '67890'], this.model.lines);
+            assert.deepEqual([[0, 1]], this.changedLines);
+        });
+
+        it('Test move to the second line without specified column, when 2 lines', function () {
+            this.model.write('12345\n67890' + moveToPosition(1, '') + 'abc');
+
+            assert.deepEqual(['12345', 'abc90'], this.model.lines);
+            assert.deepEqual([[0, 1]], this.changedLines);
+        });
+
+        it('Test f command', function () {
+            this.model.write('1234\n56\n7890' + moveToPosition(1, 1, 'f') + 'abc');
+
+            assert.deepEqual(['1234', '5abc', '7890'], this.model.lines);
+            assert.deepEqual([[0, 1, 2]], this.changedLines);
+        });
+
+        it('Test without any arguments', function () {
+            this.model.write('1234\n56\n7890' + escapePrefix + 'H' + 'abc');
+
+            assert.deepEqual(['abc4', '56', '7890'], this.model.lines);
+            assert.deepEqual([[0, 1, 2]], this.changedLines);
+        });
+
+        it('Test changed lines, when no text', function () {
+            this.model.write('1234\n56');
+            this.model.write(moveToPosition(0, 0));
+
+            assert.deepEqual(['1234', '56'], this.model.lines);
+            assert.deepEqual([[0, 1]], this.changedLines);
+        });
+
+        it('Test changed lines, when text in the first line', function () {
+            this.model.write('1234\n56\n789');
+            this.model.write(moveToPosition(0, 1) + 'abc');
+
+            assert.deepEqual(['1abc', '56', '789'], this.model.lines);
+            assert.deepEqual([[0, 1, 2], [0]], this.changedLines);
+        });
+
+        it('Test changed lines, when text in the second line', function () {
+            this.model.write('1234\n56\n789');
+            this.model.write(moveToPosition(1, 1) + 'abc');
+
+            assert.deepEqual(['1234', '5abc', '789'], this.model.lines);
+            assert.deepEqual([[0, 1, 2], [1]], this.changedLines);
+        });
+
+        it('Test changed lines, when text in the last line', function () {
+            this.model.write('1234\n56\n789');
+            this.model.write(moveToPosition(2, 2) + 'abc');
+
+            assert.deepEqual(['1234', '56', '78abc'], this.model.lines);
+            assert.deepEqual([[0, 1, 2], [2]], this.changedLines);
         });
     });
 });

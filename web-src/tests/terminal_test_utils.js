@@ -1,4 +1,4 @@
-const escapePrefix = '\u001B[';
+export const escapePrefix = '\u001B[';
 
 export function format(...styles) {
     if (!Array.isArray(styles)) {
@@ -22,6 +22,10 @@ export function moveCursorLeft(positions) {
 
 export function moveCursorRight(positions) {
     return escapePrefix + positions + 'C';
+}
+
+export function moveToPosition(line, column, command = 'H') {
+    return escapePrefix + line + ';' + column + command;
 }
 
 export function clearLineToRight() {

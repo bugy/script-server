@@ -480,6 +480,30 @@ class MoveCursorHorizontallyHandler extends CommandHandler {
     }
 }
 
+class MoveCursorToPositionHandler extends CommandHandler {
+    constructor() {
+        super(1, 2);
+    }
+
+    handle(args, terminal) {
+        const line = Math.min(args[0], terminal.maxLine);
+        let position;
+
+        if (args.length === 1) {
+            position = 0;
+        } else {
+            position = args[1];
+        }
+
+        if ((position < 0) || (line < 0)) {
+            console.log('Negative line/column are not allowed: were ' + line + ';' + position);
+            return;
+        }
+
+        terminal.setCursorPosition(line, position);
+    }
+}
+
 class ClearLineHandler extends CommandHandler {
     constructor() {
         super();
@@ -503,12 +527,15 @@ class ClearLineHandler extends CommandHandler {
 const COMMAND_HANDLERS = new Map();
 COMMAND_HANDLERS.set('m', new SetGraphicsCommandHandler());
 COMMAND_HANDLERS.set('K', new ClearLineHandler());
-COMMAND_HANDLERS.set('H', null);
-COMMAND_HANDLERS.set('f', null);
+COMMAND_HANDLERS.set('J', null);
+COMMAND_HANDLERS.set('H', new MoveCursorToPositionHandler());
+COMMAND_HANDLERS.set('f', new MoveCursorToPositionHandler());
 COMMAND_HANDLERS.set('A', new MoveCursorVerticallyHandler(true));
 COMMAND_HANDLERS.set('B', new MoveCursorVerticallyHandler(false));
 COMMAND_HANDLERS.set('C', new MoveCursorHorizontallyHandler(true));
 COMMAND_HANDLERS.set('D', new MoveCursorHorizontallyHandler(false));
+COMMAND_HANDLERS.set('s', null);
+COMMAND_HANDLERS.set('u', null);
 
 const TEXT_COLOR_DICT = new Map();
 TEXT_COLOR_DICT.set(39, null);

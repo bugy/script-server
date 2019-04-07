@@ -37,6 +37,7 @@
     "karma-webpack": "^3.0.5",
     "mini-css-extract-plugin": "^0.5.0",
     "mocha": "^5.2.0",
+    "sinon": "^7.3.1",
     "style-loader": "^0.23.1",
     "vue-loader": "^15.4.2",
     "vue-style-loader": "^4.1.2",
