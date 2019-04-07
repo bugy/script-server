@@ -2,6 +2,7 @@ import importlib
 import json
 import sys
 import unittest
+from collections import OrderedDict
 from unittest import mock
 
 from communications import alerts_service
@@ -138,12 +139,12 @@ class TestAlertsService(unittest.TestCase):
 
         self.send_alert(alerts_service, body, files, title)
 
-        expected_body = json.dumps({
-            'title': title,
-            'message': body,
-            'files': {
+        expected_body = json.dumps(OrderedDict([
+            ('title', title),
+            ('message', body),
+            ('files', {
                 'log.txt': 'doing X'
-            }})
+            })]))
         self.assertEqual([(None, expected_body, None)], self.get_communicators()[0].messages)
 
     def test_import_alerts_service_with_missing_dependencies(self):

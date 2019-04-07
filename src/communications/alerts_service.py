@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 
 from communications import destination_base
 from communications.communicaton_service import CommunicationsService
@@ -49,7 +50,7 @@ class _HttpDestinationWrapper(destination_base.Destination):
         self._destination = http.HttpDestination(params_dict)
 
     def send(self, title, body, files=None):
-        data = {'title': title, 'message': body}
+        data = OrderedDict([('title', title), ('message', body)])
 
         self._destination.send(title, data, files=files)
 
