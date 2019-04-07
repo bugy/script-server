@@ -28,6 +28,14 @@ export function moveToPosition(line, column, command = 'H') {
     return escapePrefix + line + ';' + column + command;
 }
 
+export function savePosition() {
+    return escapePrefix + 's';
+}
+
+export function restorePosition() {
+    return escapePrefix + 'u';
+}
+
 export function clearLineToRight() {
     return clearLine('');
 }

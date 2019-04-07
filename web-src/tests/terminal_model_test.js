@@ -15,7 +15,9 @@ import {
     moveCursorLeft,
     moveCursorRight,
     moveCursorUp,
-    moveToPosition
+    moveToPosition,
+    restorePosition,
+    savePosition
 } from './terminal_test_utils';
 
 chaiConfig.truncateThreshold = 0;
@@ -970,4 +972,49 @@ describe('Test terminal model', function () {
             assert.deepEqual([[0, 1, 2], [2]], this.changedLines);
         });
     });
+
+    describe('Save/restore cursor position', function () {
+        beforeEach(function () {
+            sinon.stub(console, 'log').returns(void 0);
+        });
+
+        afterEach(function () {
+            console.log.restore();
+        });
+
+        it('Test restore in the first line', function () {
+            this.model.write('1234' + savePosition() + '5678' + restorePosition() + 'abc');
+
+            assert.deepEqual(['1234abc8'], this.model.lines);
+        });
+
+        it('Test restore in the first line, when 3 lines', function () {
+            this.model.write('123' + savePosition() + '45\n678\n90' + restorePosition() + 'abc');
+
+            assert.deepEqual(['123abc', '678', '90'], this.model.lines);
+        });
+
+        it('Test restore in the last line, when 3 lines', function () {
+            this.model.write('123\n4567\n8' + savePosition() + '90' + moveCursorUp(2) + 'X'
+                + restorePosition() + 'abc');
+
+            assert.deepEqual(['123X', '4567', '8abc'], this.model.lines);
+        });
+
+        it('Test restore position without save', function () {
+            this.model.write('1234' + restorePosition() + 'abc');
+
+            assert.deepEqual(['1234abc'], this.model.lines);
+            expect(console.log.args[0][0]).to.equal('WARN! trying to restore cursor position, but nothing is saved');
+        });
+
+        it('Test restore position after clear', function () {
+            this.model.write('1234' + savePosition());
+            this.model.clear();
+            this.model.write('abc' + restorePosition() + 'XYZ');
+
+            assert.deepEqual(['abcXYZ'], this.model.lines);
+            expect(console.log.args[0][0]).to.equal('WARN! trying to restore cursor position, but nothing is saved');
+        });
+    })
 });

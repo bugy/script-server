@@ -41,8 +41,6 @@ export class TerminalModel {
         this.listeners = [];
 
         this.clear();
-
-        this.changedLines = [];
     }
 
     addListener(listener) {
@@ -139,6 +137,10 @@ export class TerminalModel {
         this.buffer = '';
 
         this.currentStyle = null;
+
+        this.changedLines = [];
+
+        this.savedCursorPosition = null;
 
         for (const listener of this.listeners) {
             listener.cleared();
@@ -504,6 +506,23 @@ class MoveCursorToPositionHandler extends CommandHandler {
     }
 }
 
+class SaveCursorPositionHandler extends CommandHandler {
+    handle(args, terminal) {
+        terminal.savedCursorPosition = [terminal.currentLine, terminal.currentPosition];
+    }
+}
+
+class RestoreCursorPositionHandler extends CommandHandler {
+    handle(args, terminal) {
+        if (isNull(terminal.savedCursorPosition)) {
+            console.log('WARN! trying to restore cursor position, but nothing is saved');
+            return;
+        }
+        const [line, position] = terminal.savedCursorPosition;
+        terminal.setCursorPosition(line, position);
+    }
+}
+
 class ClearLineHandler extends CommandHandler {
     constructor() {
         super();
@@ -534,8 +553,8 @@ COMMAND_HANDLERS.set('A', new MoveCursorVerticallyHandler(true));
 COMMAND_HANDLERS.set('B', new MoveCursorVerticallyHandler(false));
 COMMAND_HANDLERS.set('C', new MoveCursorHorizontallyHandler(true));
 COMMAND_HANDLERS.set('D', new MoveCursorHorizontallyHandler(false));
-COMMAND_HANDLERS.set('s', null);
-COMMAND_HANDLERS.set('u', null);
+COMMAND_HANDLERS.set('s', new SaveCursorPositionHandler());
+COMMAND_HANDLERS.set('u', new RestoreCursorPositionHandler());
 
 const TEXT_COLOR_DICT = new Map();
 TEXT_COLOR_DICT.set(39, null);
