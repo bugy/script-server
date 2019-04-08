@@ -4,7 +4,7 @@ import {assert, config as chaiConfig} from 'chai';
 import {removeElement} from '../js/common';
 import {TerminalModel} from '../js/components/terminal/terminal_model';
 import {Terminal} from '../js/components/terminal/terminal_view';
-import {format, moveCursorUp} from './terminal_test_utils';
+import {clearScreen, clearScreenDown, clearScreenUp, format, moveCursorUp, moveToPosition} from './terminal_test_utils';
 
 chaiConfig.truncateThreshold = 0;
 
@@ -388,5 +388,81 @@ describe('Test terminal view', function () {
             assertTexts(['123', '', 'abc', '', '456'], this.terminal.element);
         });
 
-    })
+    });
+
+    describe('Test clear screen commands', function () {
+
+        it('Test clear all', function () {
+            this.model.write('123\n456\n789\n' + moveToPosition(1, 1) + clearScreen() + 'abc');
+
+            assert.equal(1, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode('abc')]);
+        });
+
+        it('Test clear all, when separate writes', function () {
+            this.model.write('123\n456\n789\n' + moveToPosition(1, 1));
+            this.model.write(clearScreen() + 'abc');
+
+            assert.equal(1, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode('abc')]);
+        });
+
+        it('Test clear to the bottom', function () {
+            this.model.write('123\n45\n6\n7890\n' + moveToPosition(1, 1) + clearScreenDown() + 'abc\nd');
+
+            assert.equal(3, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode('123')]);
+            assertLine(this.terminal.element.childNodes[1], [textNode('4abc')]);
+            assertLine(this.terminal.element.childNodes[2], [textNode('d')]);
+        });
+
+        it('Test clear to the bottom, when separate writes', function () {
+            this.model.write('123\n45\n6\n7890\n' + moveToPosition(1, 1));
+            this.model.write(clearScreenDown() + 'abc\nd');
+
+            assert.equal(3, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode('123')]);
+            assertLine(this.terminal.element.childNodes[1], [textNode('4abc')]);
+            assertLine(this.terminal.element.childNodes[2], [textNode('d')]);
+        });
+
+        it('Test clear to the bottom, when line below is empty', function () {
+            this.model.write('123\n45\n' + clearScreenDown() + 'abc');
+
+            assert.equal(3, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode('123')]);
+            assertLine(this.terminal.element.childNodes[1], [textNode('45')]);
+            assertLine(this.terminal.element.childNodes[2], [textNode('abc')]);
+        });
+
+        it('Test clear to the bottom, when line below is empty and separate writes', function () {
+            this.model.write('123\n45\n');
+            this.model.write(clearScreenDown() + 'abc');
+
+            assert.equal(3, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode('123')]);
+            assertLine(this.terminal.element.childNodes[1], [textNode('45')]);
+            assertLine(this.terminal.element.childNodes[2], [textNode('abc')]);
+        });
+
+
+        it('Test clear to the top', function () {
+            this.model.write('123\n345\n67\n890\n' + moveToPosition(1, 1) + clearScreenUp() + 'abc\nd');
+
+            assert.equal(3, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode(' abc')]);
+            assertLine(this.terminal.element.childNodes[1], [textNode('d7')]);
+            assertLine(this.terminal.element.childNodes[2], [textNode('890')]);
+        });
+
+        it('Test clear to the top, when separate writes', function () {
+            this.model.write('123\n345\n67\n890\n' + moveToPosition(1, 1));
+            this.model.write(clearScreenUp() + 'abc\nd');
+
+            assert.equal(3, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode(' abc')]);
+            assertLine(this.terminal.element.childNodes[1], [textNode('d7')]);
+            assertLine(this.terminal.element.childNodes[2], [textNode('890')]);
+        });
+    });
 });

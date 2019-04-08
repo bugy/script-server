@@ -18,7 +18,7 @@ Example of the user interface during script execution:
 - Different script parameter types
 - Alerts
 - Logging and auditing
-- Formatted output support (colors, styles, caret positioning)
+- Formatted output support (colors, styles, cursor positioning, clearing)
 - Download of script output files
 - Admin page (admin.html) with script execution logs
 

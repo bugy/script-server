@@ -51,3 +51,15 @@ export function clearFullLine() {
 export function clearLine(arg) {
     return escapePrefix + arg + 'K';
 }
+
+export function clearScreen() {
+    return escapePrefix + '2J';
+}
+
+export function clearScreenUp() {
+    return escapePrefix + '1J';
+}
+
+export function clearScreenDown() {
+    return escapePrefix + 'J';
+}

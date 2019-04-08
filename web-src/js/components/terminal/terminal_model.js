@@ -48,14 +48,14 @@ export class TerminalModel {
     }
 
     write(text) {
-        this.buffer += text;
+        const buffer = this.buffer + text;
         let lastReadIndex = 0;
 
         let commandBuffer = null;
         let currentText = '';
 
-        for (let i = 0; i < this.buffer.length; i++) {
-            const char = this.buffer[i];
+        for (let i = 0; i < buffer.length; i++) {
+            const char = buffer[i];
 
             if (commandBuffer !== null) {
                 commandBuffer += char;
@@ -114,7 +114,7 @@ export class TerminalModel {
         }
 
         this.flushText(currentText);
-        this.buffer = this.buffer.substr(lastReadIndex + 1);
+        this.buffer = buffer.substr(lastReadIndex + 1);
 
         const changedLines = this.changedLines;
         this.changedLines = [];
@@ -163,21 +163,85 @@ export class TerminalModel {
         this.addChangedLine(this.currentLine);
     }
 
-    clearLineToLeft() {
-        if (this.currentPosition === 0) {
+    clearLineToLeft(position) {
+        if (position === 0) {
             return;
         }
 
         const line = this.getLine(this.currentLine);
-        if (line.length <= this.currentPosition) {
+        if (line.length <= position) {
             this.lines[this.currentLine] = '';
             this.addChangedLine(this.currentLine);
             return;
         }
 
-        const spaces = ' '.repeat(this.currentPosition);
-        this.lines[this.currentLine] = spaces + line.substring(this.currentPosition);
+        const spaces = ' '.repeat(position);
+        this.lines[this.currentLine] = spaces + line.substring(position);
         this.addChangedLine(this.currentLine);
+    }
+
+    deleteBottomLines(startLine) {
+        const oldEnd = this.lines.length;
+        if (oldEnd <= startLine) {
+            return;
+        }
+
+        for (let i = startLine; i <= this.lines.length; i++) {
+            this.lineStyles.delete(i);
+        }
+
+        for (let i = this.changedLines.length - 1; i >= 0; i--) {
+            const changedLine = this.changedLines[i];
+            if (changedLine >= startLine) {
+                this.changedLines.splice(i, 1);
+            } else {
+                break;
+            }
+        }
+
+        this.lines = this.lines.splice(0, startLine);
+        this.maxLine = Math.max(0, startLine - 1);
+
+        this.savedCursorPosition = null;
+
+        for (const listener of this.listeners) {
+            listener.linesDeleted(startLine, oldEnd);
+        }
+    }
+
+    deleteTopLines(linesCount) {
+        if (linesCount <= 0) {
+            return;
+        }
+
+        for (let i = 0; i < linesCount; i++) {
+            this.lineStyles.delete(i);
+        }
+
+        for (let i = 0; i < this.lines.length; i++) {
+            const oldIndex = i + linesCount;
+            if (this.lineStyles.has(oldIndex)) {
+                this.lineStyles.set(i, this.lineStyles.get(oldIndex));
+                this.lineStyles.delete(oldIndex);
+            }
+        }
+
+        this.lines = this.lines.splice(linesCount);
+
+        this.currentLine = Math.max(0, this.currentLine - linesCount);
+
+        this.savedCursorPosition = null;
+
+        this.maxLine = Math.max(0, this.lines.length - 1);
+        this.changedLines = [];
+
+        for (const listener of this.listeners) {
+            listener.cleared();
+        }
+
+        for (let i = 0; i < this.lines.length; i++) {
+            this.changedLines.push(i);
+        }
     }
 
     getStyle(line) {
@@ -534,7 +598,7 @@ class ClearLineHandler extends CommandHandler {
         if (direction === 0) {
             terminal.clearLineToRight();
         } else if (direction === 1) {
-            terminal.clearLineToLeft();
+            terminal.clearLineToLeft(terminal.currentPosition);
         } else if (direction === 2) {
             terminal.clearFullLine();
         } else {
@@ -543,10 +607,31 @@ class ClearLineHandler extends CommandHandler {
     }
 }
 
+class ClearScreenHandler extends CommandHandler {
+    constructor() {
+        super();
+    }
+
+    handle(args, terminal) {
+        const direction = args[0];
+
+        if (direction === 0) {
+            terminal.deleteBottomLines(terminal.currentLine + 1);
+        } else if (direction === 1) {
+            terminal.deleteTopLines(terminal.currentLine);
+            terminal.clearLineToLeft(terminal.currentPosition + 1);
+        } else if ((direction === 2) || (direction === 3)) {
+            terminal.clear();
+        } else {
+            console.log('WARN! Unsupported [' + direction + 'J command');
+        }
+    }
+}
+
 const COMMAND_HANDLERS = new Map();
 COMMAND_HANDLERS.set('m', new SetGraphicsCommandHandler());
 COMMAND_HANDLERS.set('K', new ClearLineHandler());
-COMMAND_HANDLERS.set('J', null);
+COMMAND_HANDLERS.set('J', new ClearScreenHandler());
 COMMAND_HANDLERS.set('H', new MoveCursorToPositionHandler());
 COMMAND_HANDLERS.set('f', new MoveCursorToPositionHandler());
 COMMAND_HANDLERS.set('A', new MoveCursorVerticallyHandler(true));

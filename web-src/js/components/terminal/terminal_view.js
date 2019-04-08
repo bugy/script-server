@@ -171,4 +171,16 @@ export class Terminal {
     cleared() {
         destroyChildren(this.element);
     }
+
+    linesDeleted(startLine, endLine) {
+        if (startLine >= this.element.childElementCount) {
+            return;
+        }
+
+        const lastIndex = Math.min(endLine - 1, this.element.childElementCount - 1);
+        for (let i = lastIndex; i >= startLine; i--) {
+            const childNode = this.element.childNodes[i];
+            this.element.removeChild(childNode);
+        }
+    }
 }

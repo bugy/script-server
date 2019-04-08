@@ -2,13 +2,16 @@
 
 import {assert, config as chaiConfig, expect} from 'chai';
 import * as sinon from 'sinon';
-import {isNull} from '../js/common';
+import {clearArray, isNull} from '../js/common';
 import {Style, StyledRange, TerminalModel} from '../js/components/terminal/terminal_model';
 import {
     clearFullLine,
     clearLine,
     clearLineToLeft,
     clearLineToRight,
+    clearScreen,
+    clearScreenDown,
+    clearScreenUp,
     escapePrefix,
     format,
     moveCursorDown,
@@ -1016,5 +1019,196 @@ describe('Test terminal model', function () {
             assert.deepEqual(['abcXYZ'], this.model.lines);
             expect(console.log.args[0][0]).to.equal('WARN! trying to restore cursor position, but nothing is saved');
         });
-    })
+    });
+
+    describe('Clear screen command', function () {
+        function changedLinesNotification(changedLines) {
+            return {'linesChanged': changedLines};
+        }
+
+        function clearedNotification() {
+            return {'cleared': true};
+        }
+
+        function linesDeletedNotification(start, end) {
+            return {'linesDeleted': [start, end]};
+        }
+
+        beforeEach(function () {
+            const notifications = [];
+            this.notifications = notifications;
+
+            this.model.addListener({
+                linesChanges: function (changedLines) {
+                    notifications.push(changedLinesNotification(changedLines))
+                },
+
+                cleared: function () {
+                    notifications.push(clearedNotification())
+                },
+
+                linesDeleted: function (start, end) {
+                    notifications.push(linesDeletedNotification(start, end))
+                }
+            });
+
+            sinon.stub(console, 'log').returns(void 0);
+        });
+
+        afterEach(function () {
+            console.log.restore();
+        });
+
+        it('Clear full screen for single line', function () {
+            this.model.write('123' + clearScreen() + 'abc');
+
+            assert.deepEqual(['abc'], this.model.lines);
+            assert.deepEqual([clearedNotification(), changedLinesNotification([0])], this.notifications);
+        });
+
+        it('Clear full screen for multiline', function () {
+            this.model.write('123\n456\n789' + clearScreen() + 'abc');
+
+            assert.deepEqual(['abc'], this.model.lines);
+            assert.deepEqual([clearedNotification(), changedLinesNotification([0])], this.notifications);
+        });
+
+        it('Clear screen to the bottom for multiline', function () {
+            this.model.write('12\n3456\n7\n890' + moveToPosition(1, 1) + clearScreenDown() + 'abc');
+
+            assert.deepEqual(['12', '3abc'], this.model.lines);
+            assert.deepEqual([linesDeletedNotification(2, 4), changedLinesNotification([0, 1])], this.notifications);
+        });
+
+        it('Clear screen to the bottom for multiline, when separate writes', function () {
+            this.model.write('12\n3456\n7\n890' + moveToPosition(1, 1));
+            assert.deepEqual([changedLinesNotification([0, 1, 2, 3])], this.notifications);
+            clearArray(this.notifications);
+
+            this.model.write(clearScreenDown());
+            assert.deepEqual([linesDeletedNotification(2, 4)], this.notifications);
+            clearArray(this.notifications);
+
+            this.model.write('abc');
+            assert.deepEqual([changedLinesNotification([1])], this.notifications);
+
+            assert.deepEqual(['12', '3abc'], this.model.lines);
+        });
+
+        it('Clear screen to the bottom, when single line', function () {
+            this.model.write('12345' + moveCursorLeft(2) + clearScreenDown() + 'abc');
+
+            assert.deepEqual(['123abc'], this.model.lines);
+            assert.deepEqual([changedLinesNotification([0])], this.notifications);
+        });
+
+        it('Clear screen to the top', function () {
+            this.model.write('12\n3456\n7\n890' + moveToPosition(1, 1) + clearScreenUp() + 'abc');
+
+            assert.deepEqual([' abc', '7', '890'], this.model.lines);
+            assert.deepEqual([
+                clearedNotification(),
+                changedLinesNotification([0, 1, 2])], this.notifications);
+        });
+
+        it('Clear screen to the top, when separate writes', function () {
+            this.model.write('12\n3456\n');
+            this.model.write('7\n890' + moveToPosition(1, 1));
+            assert.deepEqual([changedLinesNotification([0, 1]), changedLinesNotification([2, 3])], this.notifications);
+            clearArray(this.notifications);
+
+            this.model.write(clearScreenUp());
+            assert.deepEqual([
+                clearedNotification(),
+                changedLinesNotification([0, 1, 2])], this.notifications);
+            clearArray(this.notifications);
+
+            this.model.write('abc');
+
+            assert.deepEqual([' abc', '7', '890'], this.model.lines);
+            assert.deepEqual([changedLinesNotification([0])], this.notifications);
+        });
+
+        it('Clear screen to the top, when single line', function () {
+            this.model.write('12345' + moveCursorLeft(2) + clearScreenUp() + 'X');
+
+            assert.deepEqual(['   X5'], this.model.lines);
+            assert.deepEqual([changedLinesNotification([0])], this.notifications);
+        });
+
+        it('Test styles, when clear all', function () {
+            this.model.write(format(31) + '123\n' + format(32) + '45' + format(33, 41) + '\n678'
+                + clearScreen() + format(1) + 'abc');
+
+            assert.deepEqual(['abc'], this.model.lines);
+            assertStyles(this.model.getStyle(0), [new StyledRange(0, 3, new Style({styles: ['bold']}))]);
+        });
+
+        it('Test styles, when clear to the bottom', function () {
+            this.model.write(format(31) + '123\n' + format(32) + '45' + format(33, 44) + '678\n90\nX'
+                + moveCursorUp(2) + clearScreenDown() + 'ab\n' + format(2) + 'c');
+
+            assert.deepEqual(['123', '4ab78', 'c'], this.model.lines);
+            assertStyles(this.model.getStyle(0), [new StyledRange(0, 3, new Style({color: 'red'}))]);
+            assertStyles(this.model.getStyle(1), [
+                new StyledRange(0, 1, new Style({color: 'green'})),
+                new StyledRange(1, 3, new Style({color: 'yellow', 'background': 'blue'})),
+                new StyledRange(3, 5, new Style({color: 'yellow', 'background': 'blue'}))
+            ]);
+            assertStyles(this.model.getStyle(2), [
+                new StyledRange(0, 1, new Style({color: 'yellow', 'background': 'blue', styles: ['dim']}))]);
+            assertStyles(this.model.getStyle(3), null);
+        });
+
+        it('Test styles, when clear to the top', function () {
+            this.model.write(format(31) + '123\n'
+                + format(32) + '45' + format(33, 44) + '678\n'
+                + format(0, 35) + '90\n'
+                + 'X'
+                + moveCursorUp(2) + clearScreenUp()
+                + 'ab\n'
+                + format(36, 2) + 'c');
+
+            assert.deepEqual([' ab78', 'c0', 'X'], this.model.lines);
+            assertStyles(this.model.getStyle(0), [
+                new StyledRange(0, 1, new Style({color: 'green'})),
+                new StyledRange(1, 3, new Style({color: 'magenta'})),
+                new StyledRange(3, 5, new Style({color: 'yellow', 'background': 'blue'}))
+            ]);
+            assertStyles(this.model.getStyle(1), [
+                new StyledRange(0, 1, new Style({color: 'cyan', styles: ['dim']})),
+                new StyledRange(1, 2, new Style({color: 'magenta'}))]);
+            assertStyles(this.model.getStyle(2), [
+                new StyledRange(0, 1, new Style({color: 'magenta'}))]);
+        });
+
+        it('Test move cursor down after clear to the bottom', function () {
+            this.model.write('1234\n56\n789\n0' + moveToPosition(1, 1) + clearScreenDown()
+                + moveCursorDown(1) + 'abc');
+
+            assert.deepEqual(['1234', '5abc'], this.model.lines);
+        });
+
+        it('Test move cursor down after clear to the top', function () {
+            this.model.write('1234\n56\n789\n0' + moveToPosition(2, 1) + clearScreenUp()
+                + moveCursorDown(2) + 'abc');
+
+            assert.deepEqual(['  9', '0abc'], this.model.lines);
+        });
+
+        it('Test clear with argument 3', function () {
+            this.model.write('1234\n56\n789' + moveToPosition(1, 1) + escapePrefix + '3J' + 'abc');
+
+            assert.deepEqual(['abc'], this.model.lines);
+            assert.deepEqual([clearedNotification(), changedLinesNotification([0])], this.notifications);
+        });
+
+        it('Test clear with argument 4', function () {
+            this.model.write('1234\n56\n789' + moveToPosition(1, 1) + escapePrefix + '4J' + 'abc');
+
+            assert.deepEqual(['1234', '5abc', '789'], this.model.lines);
+            assert.deepEqual([changedLinesNotification([0, 1, 2])], this.notifications);
+            expect(console.log.args[0][0]).to.equal('WARN! Unsupported [4J command');
+        });
+    });
 });
