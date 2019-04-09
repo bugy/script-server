@@ -1,0 +1,16 @@
+FROM ubuntu:latest
+
+
+RUN apt-get install -y python3-pip python3-dev \
+  && cd /usr/local/bin \
+  && ln -s /usr/bin/python3 python \
+  && pip3 install --upgrade pip \
+  && pip3 install wheel 
+
+
+RUN wget `curl -s https://api.github.com/repos/bugy/script-server/releases/latest | grep browser_download_url | cut -d '"' -f 4` \
+  && unzip script-server.zip \
+  && pip3 install -r requirements.txt
+
+EXPOSE 5000
+CMD [ "python3", "launcher.py" ]
