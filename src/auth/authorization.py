@@ -7,22 +7,16 @@ GROUP_PREFIX = '@'
 
 class Authorizer:
     def __init__(self, app_allowed_users, admin_users, groups_provider):
-        self._app_auth_check = self.init_auth_check(app_allowed_users)
-        self._admin_check = self.init_auth_check(admin_users)
+        self._app_allowed_users = app_allowed_users
+        self._admin_users = admin_users
 
         self._groups_provider = groups_provider
 
-    def init_auth_check(self, users):
-        if ANY_USER in users:
-            return AnyUserAuthorizationCheck()
-        else:
-            return ListBasedAuthorizationCheck(users)
-
     def is_allowed_in_app(self, user_id):
-        return self._app_auth_check.is_allowed(user_id)
+        return self.is_allowed(user_id, self._app_allowed_users)
 
     def is_admin(self, user_id):
-        return self._admin_check.is_allowed(user_id)
+        return self.is_allowed(user_id, self._admin_users)
 
     def is_allowed(self, user_id, allowed_users):
         if not allowed_users:
@@ -43,20 +37,6 @@ class Authorizer:
                 return True
 
         return False
-
-
-class ListBasedAuthorizationCheck:
-    def __init__(self, allowed_users) -> None:
-        self.allowed_users = set(allowed_users)
-
-    def is_allowed(self, user_id):
-        return user_id in self.allowed_users
-
-
-class AnyUserAuthorizationCheck:
-    @staticmethod
-    def is_allowed(user_id):
-        return True
 
 
 class EmptyGroupProvider:
@@ -127,6 +107,7 @@ class CombinedGroupProvider:
 
 def create_group_provider(user_groups, authenticator, admin_users):
     if admin_users:
+        admin_users = _exclude_unknown_groups_from_admin_users(admin_users, user_groups)
         if user_groups is None:
             user_groups = {ADMIN_GROUP: admin_users}
         elif ADMIN_GROUP not in user_groups:
@@ -142,3 +123,20 @@ def create_group_provider(user_groups, authenticator, admin_users):
         return preconfigured_groups_provider
 
     return CombinedGroupProvider(preconfigured_groups_provider, authenticator)
+
+
+# in case groups will be loaded from ldap
+def _exclude_unknown_groups_from_admin_users(admin_users, known_groups):
+    if not admin_users or not known_groups:
+        return admin_users
+
+    result = []
+    for user in admin_users:
+        if user.startswith(GROUP_PREFIX):
+            group = user[1:]
+            if group not in known_groups.keys():
+                continue
+
+        result.append(user)
+
+    return result
