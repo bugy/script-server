@@ -383,6 +383,15 @@ ScriptController.prototype._initStore = function () {
             [ADD_PARAMETER](state, parameter) {
                 _preprocessParameter(parameter, this);
                 state.parameters.push(parameter);
+
+                let parameterName = parameter.name;
+                if (!state.parameterValues.hasOwnProperty(parameterName)) {
+                    if (!isNull(parameter.default)) {
+                        state.parameterValues[parameterName] = parameter.default;
+                    } else {
+                        state.parameterValues[parameterName] = null;
+                    }
+                }
             },
 
             [UPDATE_PARAMETER](state, parameter) {

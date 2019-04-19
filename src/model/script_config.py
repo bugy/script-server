@@ -182,6 +182,9 @@ class ConfigModel:
                                                self.parameter_values,
                                                self.working_directory)
                     self.parameters.append(parameter)
+
+                    if parameter.name not in self.parameter_values:
+                        self.parameter_values[parameter.name] = parameter.default
                     continue
                 else:
                     LOGGER.warning('Parameter ' + parameter_name + ' exists in original and included file. '

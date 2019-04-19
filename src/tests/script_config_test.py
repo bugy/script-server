@@ -352,28 +352,18 @@ class ConfigModelIncludeTest(unittest.TestCase):
         self.assertEqual(True, param1.required)
 
     def test_dynamic_include_add_parameter(self):
-        included_path = test_utils.write_script_config({'parameters': [
+        (config_model, included_path) = self.prepare_config_model_with_included([
             create_script_param_config('included_param')
-        ]}, 'included')
-        config_model = _create_config_model('main_conf', config={
-            'include': '${p1}',
-            'parameters': [create_script_param_config('p1')]})
-        config_model.set_param_value('p1', included_path)
+        ], 'p1')
 
         self.assertEqual(2, len(config_model.parameters))
         included_param = config_model.parameters[1]
         self.assertEqual('included_param', included_param.name)
 
     def test_dynamic_include_remove_parameter(self):
-        included_path = test_utils.write_script_config({'parameters': [
+        (config_model, included_path) = self.prepare_config_model_with_included([
             create_script_param_config('included_param')
-        ]}, 'included')
-        config_model = _create_config_model(
-            'main_conf',
-            config={
-                'include': '${p1}',
-                'parameters': [create_script_param_config('p1')]},
-            parameter_values={'p1': included_path})
+        ], 'p1')
 
         config_model.set_param_value('p1', '')
 
@@ -382,17 +372,11 @@ class ConfigModelIncludeTest(unittest.TestCase):
         self.assertEqual('p1', included_param.name)
 
     def test_dynamic_include_remove_multiple_parameters(self):
-        included_path = test_utils.write_script_config({'parameters': [
+        (config_model, included_path) = self.prepare_config_model_with_included([
             create_script_param_config('included_param1'),
             create_script_param_config('included_param2'),
             create_script_param_config('included_param3')
-        ]}, 'included')
-        config_model = _create_config_model(
-            'main_conf',
-            config={
-                'include': '${p1}',
-                'parameters': [create_script_param_config('p1')]},
-            parameter_values={'p1': included_path})
+        ], 'p1')
 
         config_model.set_param_value('p1', '')
 
@@ -427,18 +411,14 @@ class ConfigModelIncludeTest(unittest.TestCase):
         self.assertEqual(2, len(config_model.parameters))
 
     def test_dynamic_include_replace(self):
-        included_path1 = test_utils.write_script_config({'parameters': [
+        (config_model, included_path1) = self.prepare_config_model_with_included([
             create_script_param_config('included_param_X')
-        ]}, 'included1')
+        ], 'p1')
 
         included_path2 = test_utils.write_script_config({'parameters': [
             create_script_param_config('included_param_Y')
         ]}, 'included2')
 
-        config_model = _create_config_model('main_conf', config={
-            'include': '${p1}',
-            'parameters': [create_script_param_config('p1')]})
-        config_model.set_param_value('p1', included_path1)
         config_model.set_param_value('p1', included_path2)
 
         self.assertEqual(2, len(config_model.parameters))
@@ -446,14 +426,10 @@ class ConfigModelIncludeTest(unittest.TestCase):
         self.assertEqual('included_param_Y', config_model.parameters[1].name)
 
     def test_dynamic_include_replace_with_missing_file(self):
-        included_path1 = test_utils.write_script_config({'parameters': [
+        (config_model, included_path) = self.prepare_config_model_with_included([
             create_script_param_config('included_param_X')
-        ]}, 'included1')
+        ], 'p1')
 
-        config_model = _create_config_model('main_conf', config={
-            'include': '${p1}',
-            'parameters': [create_script_param_config('p1')]})
-        config_model.set_param_value('p1', included_path1)
         config_model.set_param_value('p1', 'a/b/c/some.txt')
 
         self.assertEqual(1, len(config_model.parameters))
@@ -474,6 +450,48 @@ class ConfigModelIncludeTest(unittest.TestCase):
         config_model.set_all_param_values(values)
 
         self.assertEqual(values, config_model.parameter_values)
+
+    def test_dynamic_include_add_parameter_with_default(self):
+        (config_model, included_path) = self.prepare_config_model_with_included([
+            create_script_param_config('included_param', default='abc 123')
+        ], 'p1')
+
+        self.assertEqual('abc 123', config_model.parameter_values.get('included_param'))
+
+    def test_dynamic_include_add_parameter_with_default_when_value_exist(self):
+        (config_model, included_path) = self.prepare_config_model_with_included([
+            create_script_param_config('included_param', default='abc 123')
+        ], 'p1')
+        config_model.set_param_value('p1', included_path)
+        config_model.set_param_value('included_param', 'def 456')
+
+        config_model.set_param_value('p1', 'random value')
+        self.assertEqual('def 456', config_model.parameter_values.get('included_param'))
+
+        config_model.set_param_value('p1', included_path)
+        self.assertEqual('def 456', config_model.parameter_values.get('included_param'))
+
+    def test_dynamic_include_add_2_parameters_with_default_when_one_dependant(self):
+        (config_model, included_path) = self.prepare_config_model_with_included([
+            create_script_param_config('included_param1', default='ABC'),
+            create_script_param_config('included_param2', default='xABCx', type='list',
+                                       values_script='echo x${included_param1}x'),
+        ], 'p1')
+
+        self.assertEqual('ABC', config_model.parameter_values.get('included_param1'))
+        self.assertEqual('xABCx', config_model.parameter_values.get('included_param2'))
+
+        dependant_parameter = config_model.find_parameter('included_param2')
+        self.assertEqual(['xABCx'], dependant_parameter.values)
+
+    def prepare_config_model_with_included(self, included_params, static_param_name):
+        included_path = test_utils.write_script_config({'parameters': included_params}, 'included')
+        config_model = _create_config_model('main_conf', config={
+            'include': '${' + static_param_name + '}',
+            'parameters': [create_script_param_config(static_param_name)]})
+        config_model.set_param_value(static_param_name, included_path)
+
+        return (config_model, included_path)
 
     def setUp(self):
         test_utils.setup()
