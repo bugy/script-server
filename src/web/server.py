@@ -172,10 +172,9 @@ class BaseStaticHandler(tornado.web.StaticFileHandler):
         self.set_header('X-Frame-Options', 'DENY')
 
 
-class GetServerTitle(BaseRequestHandler):
+class GetServerConf(BaseRequestHandler):
     def get(self):
-        if self.application.server_title:
-            self.write(self.application.server_title)
+        self.write(external_model.server_conf_to_external(self.application.server_config))
 
 
 class GetScripts(BaseRequestHandler):
@@ -788,7 +787,7 @@ def init(server_config: ServerConfig,
 
     downloads_folder = file_download_feature.get_result_files_folder()
 
-    handlers = [(r'/conf/title', GetServerTitle),
+    handlers = [(r'/conf', GetServerConf),
                 (r'/scripts', GetScripts),
                 (r'/scripts/([^/]*)', ScriptConfigSocket),
                 (r'/scripts/([^/]*)/([^/]*)/list-files', ScriptParameterListFiles),
@@ -825,7 +824,7 @@ def init(server_config: ServerConfig,
 
     application.auth = auth
 
-    application.server_title = server_config.title
+    application.server_config = server_config
     application.authorizer = authorizer
     application.downloads_folder = downloads_folder
     application.file_download_feature = file_download_feature

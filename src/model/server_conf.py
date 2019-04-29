@@ -5,7 +5,7 @@ import os
 import utils.file_utils as file_utils
 from auth.authorization import ANY_USER
 from model import model_helper
-from model.model_helper import read_list, read_int_from_config
+from model.model_helper import read_list, read_int_from_config, read_bool_from_config
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('server_conf')
@@ -24,6 +24,7 @@ class ServerConfig(object):
         self.logging_config = None
         self.admin_config = None
         self.title = None
+        self.enable_script_titles = None
         self.trusted_ips = []
         self.user_groups = None
         self.admin_users = []
@@ -81,6 +82,7 @@ def from_json(conf_path, temp_folder):
 
     if json_object.get('title'):
         config.title = json_object.get('title')
+    config.enable_script_titles = read_bool_from_config('enable_script_titles', json_object, default=True)
 
     access_config = json_object.get('access')
     if access_config:

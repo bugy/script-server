@@ -1,4 +1,3 @@
-import json
 from datetime import timezone
 
 from utils import date_utils
@@ -105,3 +104,10 @@ def to_execution_info(request_parameters):
     info.param_values = param_values
 
     return info
+
+
+def server_conf_to_external(server_config):
+    return {
+        'title': server_config.title,
+        'enableScriptTitles': server_config.enable_script_titles
+    }

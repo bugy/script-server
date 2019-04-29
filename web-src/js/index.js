@@ -28,15 +28,21 @@ const scriptSelectionListeners = [];
 const scriptMenuItems = new Map();
 const runningScriptExecutors = [];
 let activeScriptController = null;
+let enableScriptTitles = false;
+let mainTitle = document.title;
 
 window.onload = onLoad;
 
 function onLoad() {
-    authorizedCallHttp('conf/title', null, 'GET', function (result) {
-        if (result) {
-            document.title = result;
+    authorizedCallHttp('conf', null, 'GET', function (result) {
+        const config = JSON.parse(result);
+        if (!isNull(config.title)) {
+            mainTitle = config.title;
         }
+        enableScriptTitles = isNull(config.enableScriptTitles) || config.enableScriptTitles;
+        updateTitle();
     });
+    scriptSelectionListeners.push(updateTitle);
 
     var response = authorizedCallHttp('scripts');
 
@@ -504,4 +510,12 @@ function hideErrorPanel() {
     removeClass(scriptPanelContainer, 'collapsed');
 
     hide(errorPanel);
+}
+
+function updateTitle() {
+    if ((enableScriptTitles) && (!isNull(selectedScript))) {
+        document.title = selectedScript + ' - ' + mainTitle;
+    } else {
+        document.title = mainTitle;
+    }
 }

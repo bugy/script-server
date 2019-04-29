@@ -119,6 +119,28 @@ class TestMaxRequestSize(unittest.TestCase):
         self.assertEqual(10, config.max_request_size_mb)
 
 
+class TestSimpleConfigs(unittest.TestCase):
+    def test_server_title(self):
+        config = _from_json({'title': 'my server'})
+        self.assertEqual('my server', config.title)
+
+    def test_server_title_default(self):
+        config = _from_json({})
+        self.assertIsNone(config.title)
+
+    def test_enable_script_titles_enabled(self):
+        config = _from_json({'enable_script_titles': 'true'})
+        self.assertIs(True, config.enable_script_titles)
+
+    def test_enable_script_titles_disabled(self):
+        config = _from_json({'enable_script_titles': 'false'})
+        self.assertIs(False, config.enable_script_titles)
+
+    def test_enable_script_titles_default(self):
+        config = _from_json({})
+        self.assertIs(True, config.enable_script_titles)
+
+
 def _from_json(content):
     json_obj = json.dumps(content)
     conf_path = os.path.join(test_utils.temp_folder, 'conf.json')
