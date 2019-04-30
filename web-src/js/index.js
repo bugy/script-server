@@ -8,7 +8,7 @@ import {
     hasClass,
     hide,
     HttpRequestError,
-    HttpUnauthorizedError,
+    HttpUnauthorizedError, isEmptyArray,
     isEmptyObject,
     isNull,
     logError,
@@ -19,6 +19,7 @@ import {
 } from './common';
 
 import './connections/rxWebsocket.js';
+import {setDefaultFavicon, setExecutingFavicon, setFinishedFavicon} from './components/favicon/favicon_manager';
 import {ScriptController} from './script/script-controller';
 import {restoreExecutor} from './script/script-execution-model';
 import './style_imports.js';
@@ -43,6 +44,8 @@ function onLoad() {
         updateTitle();
     });
     scriptSelectionListeners.push(updateTitle);
+
+    setDefaultFavicon();
 
     var response = authorizedCallHttp('scripts');
 
@@ -85,6 +88,7 @@ function onLoad() {
         scriptMenuItems.set(script, scriptElement);
 
         updateMenuItemState(script);
+        updateFavicon();
     });
 
     var contentPanel = document.getElementById('content-panel');
@@ -321,10 +325,12 @@ function initWelcomeIcon() {
 function addRunningExecutor(scriptExecutor) {
     runningScriptExecutors.push(scriptExecutor);
     updateMenuItemState(scriptExecutor.scriptName);
+    updateFavicon();
 
     scriptExecutor.addListener({
         'onExecutionStop': function () {
             updateMenuItemState(scriptExecutor.scriptName);
+            updateFavicon();
         }
     })
 }
@@ -340,6 +346,7 @@ function showScript(selectedScript, parameterValues) {
             removeElements(runningScriptExecutors, executorsToRemove);
 
             updateMenuItemState(previousScriptName);
+            updateFavicon();
         }
 
         activeScriptController.destroy();
@@ -456,6 +463,26 @@ function updateMenuItemState(scriptName) {
 
     if (!isNull(state)) {
         addClass(stateElement, state);
+    }
+}
+
+function updateFavicon() {
+    if (isEmptyArray(runningScriptExecutors)) {
+        setDefaultFavicon();
+        return;
+    }
+
+    let hasExecuting = false;
+    runningScriptExecutors.forEach(function (executor) {
+        if (!executor.isFinished()) {
+            hasExecuting = true;
+        }
+    });
+
+    if (hasExecuting) {
+        setExecutingFavicon();
+    } else {
+        setFinishedFavicon();
     }
 }
 
