@@ -1,6 +1,6 @@
 {
   "name": "script-server",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "dependencies": {
     "@babel/runtime": "^7.3.4",
     "jquery": "^3.3.1",
