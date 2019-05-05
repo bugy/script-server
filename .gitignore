@@ -67,6 +67,6 @@ conf/conf.json
 logs
 .idea
 temp
-web
+/web
 web-src/node_modules
 web-src/package-lock.json

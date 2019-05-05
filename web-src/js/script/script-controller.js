@@ -383,6 +383,15 @@ ScriptController.prototype._initStore = function () {
             [ADD_PARAMETER](state, parameter) {
                 _preprocessParameter(parameter, this);
                 state.parameters.push(parameter);
+
+                let parameterName = parameter.name;
+                if (!state.parameterValues.hasOwnProperty(parameterName)) {
+                    if (!isNull(parameter.default)) {
+                        state.parameterValues[parameterName] = parameter.default;
+                    } else {
+                        state.parameterValues[parameterName] = null;
+                    }
+                }
             },
 
             [UPDATE_PARAMETER](state, parameter) {
@@ -488,7 +497,7 @@ ScriptController.prototype._initStore = function () {
             },
 
             [SET_LOG](state, log) {
-                state.logChunks = [{text: log}]
+                state.logChunks = [log]
             },
 
             [APPEND_LOG_CHUNK](state, logChunk) {
@@ -527,7 +536,7 @@ ScriptController.prototype._initStore = function () {
                     if (!(error instanceof HttpUnauthorizedError)) {
                         logError(error);
 
-                        commit(APPEND_LOG_CHUNK, {text: '\n\n' + error.message});
+                        commit(APPEND_LOG_CHUNK, '\n\n' + error.message);
                     }
                 }
 

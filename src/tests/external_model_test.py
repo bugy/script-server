@@ -3,7 +3,8 @@ import unittest
 from datetime import datetime, timezone
 
 from execution.logging import HistoryEntry
-from model.external_model import to_short_execution_log, to_long_execution_log
+from model.external_model import to_short_execution_log, to_long_execution_log, server_conf_to_external
+from model.server_conf import ServerConfig
 
 
 class TestHistoryEntry(unittest.TestCase):
@@ -140,3 +141,23 @@ class TestHistoryEntry(unittest.TestCase):
 
     def setUp(self):
         self.random_instance = random.seed(a=123)
+
+
+class TestServerConf(unittest.TestCase):
+    def test_full_config(self):
+        config = ServerConfig()
+        config.title = 'test title'
+        config.enable_script_titles = False
+
+        external_config = server_conf_to_external(config)
+        self.assertEqual('test title', external_config.get('title'))
+        self.assertIs(False, external_config.get('enableScriptTitles'))
+
+    def test_config_with_none_values(self):
+        config = ServerConfig()
+        config.title = None
+        config.enable_script_titles = None
+
+        external_config = server_conf_to_external(config)
+        self.assertIsNone(external_config.get('title'))
+        self.assertIsNone(external_config.get('enableScriptTitles'))

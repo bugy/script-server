@@ -8,14 +8,15 @@ import uuid
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
 from execution.process_base import ProcessWrapper
-from model.script_configs import ConfigModel, ParameterModel
+from model.script_config import ConfigModel, ParameterModel
 from react.properties import ObservableDict
 from utils import audit_utils
 
 temp_folder = 'tests_temp'
+_original_env = {}
 
 
-def create_file(filepath, overwrite=False):
+def create_file(filepath, overwrite=False, text=None):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
@@ -28,7 +29,10 @@ def create_file(filepath, overwrite=False):
     if os.path.exists(file_path) and not overwrite:
         raise Exception('File ' + file_path + ' already exists')
 
-    file_utils.write_file(file_path, 'test text')
+    if text is None:
+        text = 'test text'
+
+    file_utils.write_file(file_path, text)
 
     return file_path
 
@@ -54,19 +58,27 @@ def create_dir(dir_path):
 
 def setup():
     if os.path.exists(temp_folder):
-        _rmtree()
+        _rmtree(temp_folder)
 
     os.makedirs(temp_folder)
 
 
 def cleanup():
     if os.path.exists(temp_folder):
-        _rmtree()
+        _rmtree(temp_folder)
 
     os_utils.reset_os()
 
+    for key, value in _original_env.items():
+        if value is None:
+            del os.environ[key]
+        else:
+            os.environ[key] = value
 
-def _rmtree():
+    _original_env.clear()
+
+
+def _rmtree(folder):
     exception = None
 
     def on_rm_error(func, path, exc_info):
@@ -79,7 +91,7 @@ def _rmtree():
             if exception is None:
                 exception = e
 
-    shutil.rmtree(temp_folder, onerror=on_rm_error)
+    shutil.rmtree(folder, onerror=on_rm_error)
     if exception:
         raise exception
 
@@ -126,7 +138,6 @@ def create_script_param_config(
         file_recursive=None,
         file_type=None,
         file_extensions=None):
-
     conf = {'name': param_name}
 
     if type is not None:
@@ -190,7 +201,8 @@ def create_config_model(name, *,
                         path=None,
                         parameters=None,
                         parameter_values=None,
-                        script_command='ls'):
+                        script_command='ls',
+                        output_files=None):
     result_config = {}
 
     if config:
@@ -203,6 +215,9 @@ def create_config_model(name, *,
 
     if path is None:
         path = name
+
+    if output_files is not None:
+        result_config['output_files'] = output_files
 
     result_config['script_path'] = script_command
 
@@ -290,6 +305,58 @@ def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostnam
     return result
 
 
+def set_env_value(key, value):
+    if key not in _original_env:
+        if key in os.environ:
+            _original_env[key] = value
+        else:
+            _original_env[key] = None
+
+    os.environ[key] = value
+
+
+def assert_large_dict_equal(expected, actual, testcase):
+    if len(expected) < 20 and len(actual) < 20:
+        testcase.assertEqual(expected, actual)
+        return
+
+    if expected == actual:
+        return
+
+    diff_expected = {}
+    diff_actual = {}
+    too_large_diff = False
+
+    all_keys = set()
+    all_keys.update(expected.keys())
+    all_keys.update(actual.keys())
+    for key in all_keys:
+        expected_value = expected.get(key)
+        actual_value = actual.get(key)
+
+        if expected_value == actual_value:
+            continue
+
+        diff_expected[key] = expected_value
+        diff_actual[key] = actual_value
+
+        if len(diff_expected) >= 50:
+            too_large_diff = True
+            break
+
+    message = 'Showing only different elements'
+    if too_large_diff:
+        message += ' (limited to 50)'
+
+    testcase.assertEqual(diff_expected, diff_actual, message)
+
+
+def wait_observable_close_notification(observable, timeout):
+    close_condition = threading.Event()
+    observable.subscribe_on_close(lambda: close_condition.set())
+    close_condition.wait(timeout)
+
+
 class _MockProcessWrapper(ProcessWrapper):
     def __init__(self, executor, command, working_directory):
         super().__init__(command, working_directory)
@@ -299,7 +366,7 @@ class _MockProcessWrapper(ProcessWrapper):
         self.process_id = int.from_bytes(uuid.uuid1().bytes, byteorder='big')
         self.finish_condition = threading.Condition()
 
-    def _get_process_id(self):
+    def get_process_id(self):
         return self.process_id
 
     # method for tests
@@ -307,6 +374,10 @@ class _MockProcessWrapper(ProcessWrapper):
         if self.is_finished():
             raise Exception('Cannot finish a script twice')
         self.__finish(exit_code)
+
+    # method for tests
+    def write_output(self, output):
+        self._write_script_output(output)
 
     def stop(self):
         self.__finish(9)
@@ -356,3 +427,16 @@ class AnyUserAuthorizer:
 
     def is_admin(self, user_id):
         return True
+
+
+class _IdGeneratorMock:
+    def __init__(self) -> None:
+        super().__init__()
+        self.generated_ids = []
+        self._next_id = 123
+
+    def next_id(self):
+        id = str(self._next_id)
+        self._next_id += 1
+        self.generated_ids.append(id)
+        return id

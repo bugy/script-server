@@ -3,7 +3,8 @@ import stat
 import unittest
 
 from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, FILE_TYPE_DIR
-from model.script_configs import WrongParameterUsageException, InvalidValueException
+from model.parameter_config import WrongParameterUsageException
+from model.script_config import InvalidValueException
 from tests import test_utils
 from tests.test_utils import create_script_param_config, create_files
 

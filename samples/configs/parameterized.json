@@ -2,7 +2,6 @@
   "name": "Very parameterized",
   "script_path": "scripts/parameterized.sh",
   "description": "This script does nothing except accepting a lot of parameters and printing them",
-  "requires_terminal": false,
   "allowed_users": [
     "*"
   ],
@@ -94,11 +93,6 @@
       "no_value": true,
       "description": "Boolean Two",
       "default": true
-    },
-    {
-      "name": "Default Text from variable",
-      "description": "Parameter Eight",
-      "default": "$$USER"
     },
     {
       "name": "Constant Text",
@@ -205,10 +199,9 @@
       "name": "Server file",
       "param": "--server_file",
       "type": "server_file",
-      "file_dir": "/home/$$USER/Documents",
+      "file_dir": "/var/log",
       "file_extensions": [
-        "txt",
-        "jpg"
+        "log"
       ],
       "secure": true
     },

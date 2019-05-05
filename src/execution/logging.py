@@ -19,13 +19,14 @@ LOGGER = logging.getLogger('script_server.execution.logging')
 
 
 class ScriptOutputLogger:
-    def __init__(self, log_file_path, output_stream, on_close_callback=None):
+    def __init__(self, log_file_path, output_stream):
         self.opened = False
+        self.closed = False
         self.output_stream = output_stream
 
         self.log_file_path = log_file_path
         self.log_file = None
-        self.on_close_callback = on_close_callback
+        self.close_callback = None
 
     def start(self):
         self._ensure_file_open()
@@ -65,8 +66,10 @@ class ScriptOutputLogger:
         except:
             LOGGER.exception("Couldn't close the log file")
 
-        if self.on_close_callback is not None:
-            self.on_close_callback()
+        self.closed = True
+
+        if self.close_callback:
+            self.close_callback()
 
     def on_next(self, output):
         self.__log(output)
@@ -78,6 +81,16 @@ class ScriptOutputLogger:
         self._ensure_file_open()
 
         self.__log(text + os.linesep)
+
+    def set_close_callback(self, callback):
+        if self.close_callback is not None:
+            LOGGER.error('Attempt to override close callback ' + repr(self.close_callback) + ' with ' + repr(callback))
+            return
+
+        self.close_callback = callback
+
+        if self.closed:
+            self.close_callback()
 
 
 class HistoryEntry:
@@ -91,12 +104,6 @@ class HistoryEntry:
         self.exit_code = None
 
 
-class PostExecutionInfoProvider(metaclass=abc.ABCMeta):
-    @abc.abstractmethod
-    def get_exit_code(self, execution_id):
-        pass
-
-
 class ExecutionLoggingService:
     def __init__(self, output_folder, log_name_creator):
         self._output_folder = output_folder
@@ -104,6 +111,7 @@ class ExecutionLoggingService:
 
         self._visited_files = set()
         self._ids_to_file_map = {}
+        self._output_loggers = {}
 
         file_utils.prepare_folder(output_folder)
 
@@ -115,7 +123,6 @@ class ExecutionLoggingService:
                       script_name,
                       command,
                       output_stream,
-                      post_execution_info_provider,
                       all_audit_names,
                       start_time_millis=None):
 
@@ -127,10 +134,7 @@ class ExecutionLoggingService:
         log_file_path = os.path.join(self._output_folder, log_filename)
         log_file_path = file_utils.create_unique_filename(log_file_path)
 
-        def write_post_execution_info():
-            self._write_post_execution_info(execution_id, log_file_path, post_execution_info_provider)
-
-        output_logger = ScriptOutputLogger(log_file_path, output_stream, write_post_execution_info)
+        output_logger = ScriptOutputLogger(log_file_path, output_stream)
         output_logger.write_line('id:' + execution_id)
         output_logger.write_line('user_name:' + user_name)
         output_logger.write_line('user_id:' + user_id)
@@ -143,6 +147,22 @@ class ExecutionLoggingService:
         log_filename = os.path.basename(log_file_path)
         self._visited_files.add(log_filename)
         self._ids_to_file_map[execution_id] = log_filename
+        self._output_loggers[execution_id] = output_logger
+
+    def write_post_execution_info(self, execution_id, exit_code):
+        filename = self._ids_to_file_map.get(execution_id)
+        if not filename:
+            LOGGER.warning('Failed to find filename for execution ' + execution_id)
+            return
+
+        logger = self._output_loggers.get(execution_id)
+        if not logger:
+            LOGGER.warning('Failed to find logger for execution ' + execution_id)
+            return
+
+        log_file_path = os.path.join(self._output_folder, filename)
+
+        logger.set_close_callback(lambda: self._write_post_execution_info(log_file_path, exit_code))
 
     def get_history_entries(self):
         self._renew_files_cache()
@@ -288,11 +308,7 @@ class ExecutionLoggingService:
         return entry
 
     @staticmethod
-    def _write_post_execution_info(execution_id, log_file_path, post_execution_info_provider):
-        exit_code = post_execution_info_provider.get_exit_code(execution_id)
-        if exit_code is None:
-            return
-
+    def _write_post_execution_info(log_file_path, exit_code):
         file_content = file_utils.read_file(log_file_path, keep_newlines=True)
 
         file_parts = file_content.split(OUTPUT_STARTED_MARKER + os.linesep, 1)
@@ -338,7 +354,7 @@ class LogNameCreator:
         return filename
 
 
-class ExecutionLoggingInitiator:
+class ExecutionLoggingController:
     def __init__(self, execution_service: ExecutionService, execution_logging_service):
         self._execution_logging_service = execution_logging_service
         self._execution_service = execution_service
@@ -363,10 +379,14 @@ class ExecutionLoggingInitiator:
                 script_name,
                 audit_command,
                 output_stream,
-                execution_service,
                 all_audit_names)
 
+        def finished(execution_id):
+            exit_code = execution_service.get_exit_code(execution_id)
+            logging_service.write_post_execution_info(execution_id, exit_code)
+
         self._execution_service.add_start_listener(started)
+        self._execution_service.add_finish_listener(finished)
 
 
 def _rstrip_once(text, char):

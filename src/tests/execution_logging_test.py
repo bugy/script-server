@@ -1,14 +1,39 @@
+import functools
+import inspect
 import os
+import threading
+import traceback
 import unittest
 import uuid
 from datetime import datetime, timedelta
 
+from typing import Optional
+
+from execution import executor
+from execution.execution_service import ExecutionService
 from execution.logging import ScriptOutputLogger, ExecutionLoggingService, OUTPUT_STARTED_MARKER, \
-    PostExecutionInfoProvider, LogNameCreator
+    LogNameCreator, ExecutionLoggingController
 from react.observable import Observable
 from tests import test_utils
+from tests.test_utils import _IdGeneratorMock, create_config_model, _MockProcessWrapper, create_audit_names, \
+    create_script_param_config, wait_observable_close_notification
 from utils import file_utils, audit_utils
 from utils.date_utils import get_current_millis, ms_to_datetime, to_millis
+
+
+def default_values_decorator(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        spec = inspect.getfullargspec(func)
+        defaults = spec.kwonlydefaults
+
+        for key, value in defaults.items():
+            if key in kwargs and kwargs[key] is None:
+                kwargs[key] = value
+
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class TestScriptOutputLogging(unittest.TestCase):
@@ -188,11 +213,36 @@ class TestLoggingService(unittest.TestCase):
         self.assertIsNone(log)
 
     def test_exit_code_in_history(self):
-        self.exit_codes['1'] = 13
-        self.simulate_logging(execution_id='1', log_lines=['text'])
+        self.simulate_logging(execution_id='1', log_lines=['text'], exit_code=13)
 
         entry = self.logging_service.get_history_entries()[0]
         self.validate_history_entry(entry, id='1', exit_code=13)
+
+    def test_exit_code_when_no_post_execution_call(self):
+        self.simulate_logging(execution_id='1', log_lines=['text'], exit_code=13, write_post_execution_info=False)
+
+        entry = self.logging_service.get_history_entries()[0]
+        self.validate_history_entry(entry, id='1', exit_code=None)
+
+    def test_write_post_execution_info_before_log_closed(self):
+        output_stream = Observable()
+
+        execution_id = '999'
+        self.start_logging(output_stream, execution_id=execution_id)
+
+        output_stream.push('abcde')
+
+        self.logging_service.write_post_execution_info(execution_id, 255)
+
+        old_entry = self.logging_service.find_history_entry(execution_id)
+        self.validate_history_entry(old_entry, id=execution_id, exit_code=None)
+
+        output_stream.close()
+        new_entry = self.logging_service.find_history_entry(execution_id)
+        self.validate_history_entry(new_entry, id=execution_id, exit_code=255)
+
+    def test_write_post_execution_info_for_unknown_id(self):
+        self.logging_service.write_post_execution_info('999', 13)
 
     def test_history_entries_after_restart(self):
         self.simulate_logging(execution_id='id1')
@@ -275,7 +325,7 @@ class TestLoggingService(unittest.TestCase):
                                script_name='my_script',
                                start_time='IGNORE',
                                command='cmd',
-                               exit_code=0):
+                               exit_code: Optional[int] = 0):
 
         if user_id is None:
             user_id = user_name
@@ -298,22 +348,52 @@ class TestLoggingService(unittest.TestCase):
 
     def simulate_logging(self,
                          execution_id=None,
-                         user_name='userX',
+                         user_name=None,
                          user_id=None,
-                         script_name='my_script',
-                         command='cmd',
+                         script_name=None,
+                         command=None,
                          log_lines=None,
-                         start_time_millis=None):
+                         start_time_millis=None,
+                         exit_code=0,
+                         write_post_execution_info=True):
+
+        output_stream = Observable()
+
+        execution_id = self.start_logging(command=command,
+                                          execution_id=execution_id,
+                                          output_stream=output_stream,
+                                          script_name=script_name,
+                                          start_time_millis=start_time_millis,
+                                          user_id=user_id,
+                                          user_name=user_name)
+
+        if log_lines:
+            for line in log_lines:
+                output_stream.push(line + '\n')
+
+        output_stream.close()
+
+        if write_post_execution_info:
+            self.logging_service.write_post_execution_info(execution_id, exit_code)
+
+    @default_values_decorator
+    def start_logging(self,
+                      output_stream,
+                      *,
+                      execution_id=None,
+                      user_name='userX',
+                      user_id=None,
+                      script_name='my_script',
+                      command='cmd',
+                      start_time_millis=None):
+
         if not execution_id:
             execution_id = str(uuid.uuid1())
 
         if user_id is None:
             user_id = user_name
 
-        output_stream = Observable()
-
         all_audit_names = {audit_utils.AUTH_USERNAME: user_id}
-
         self.logging_service.start_logging(
             execution_id,
             user_name,
@@ -321,15 +401,10 @@ class TestLoggingService(unittest.TestCase):
             script_name,
             command,
             output_stream,
-            self.post_info_provider,
             all_audit_names,
             start_time_millis)
 
-        if log_lines:
-            for line in log_lines:
-                output_stream.push(line + '\n')
-
-        output_stream.close()
+        return execution_id
 
     @staticmethod
     def get_log_files(pattern=None):
@@ -346,21 +421,96 @@ class TestLoggingService(unittest.TestCase):
     def setUp(self):
         test_utils.setup()
 
-        self.exit_codes = {}
-        self.post_info_provider = _MapBasedPostExecInfo(self.exit_codes)
-
         self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
 
     def tearDown(self):
         test_utils.cleanup()
 
 
-class _MapBasedPostExecInfo(PostExecutionInfoProvider):
-    def __init__(self, exit_codes):
-        self.exit_codes = exit_codes
+class ExecutionLoggingInitiatorTest(unittest.TestCase):
+    def test_start_logging_on_execution_start(self):
+        execution_id = self.executor_service.start_script(
+            create_config_model('my_script'),
+            {},
+            'userX',
+            create_audit_names(ip='localhost'))
 
-    def get_exit_code(self, execution_id):
-        if execution_id in self.exit_codes:
-            return self.exit_codes[execution_id]
+        executor = self.executor_service.get_active_executor(execution_id)
+        executor.process_wrapper.finish(0)
 
-        return 0
+        entry = self.logging_service.find_history_entry(execution_id)
+        self.assertIsNotNone(entry)
+
+    def test_logging_values(self):
+        param1 = create_script_param_config('p1')
+        param2 = create_script_param_config('p2', param='-x')
+        param3 = create_script_param_config('p3', param='-y', no_value=True)
+        param4 = create_script_param_config('p4', param='-z', type='int')
+        config_model = create_config_model(
+            'my_script', script_command='echo', parameters=[param1, param2, param3, param4])
+
+        execution_id = self.executor_service.start_script(
+            config_model,
+            {'p1': 'abc', 'p3': True, 'p4': 987},
+            'userX',
+            create_audit_names(ip='localhost', auth_username='sandy'))
+
+        executor = self.executor_service.get_active_executor(execution_id)
+        executor.process_wrapper._write_script_output('some text\n')
+        executor.process_wrapper._write_script_output('another text')
+        executor.process_wrapper.finish(0)
+
+        wait_observable_close_notification(executor.get_anonymized_output_stream(), 2)
+
+        entry = self.logging_service.find_history_entry(execution_id)
+        self.assertIsNotNone(entry)
+        self.assertEqual('userX', entry.user_id)
+        self.assertEqual('sandy', entry.user_name)
+        self.assertEqual('my_script', entry.script_name)
+        self.assertEqual('echo abc -y -z 987', entry.command)
+        self.assertEqual('my_script', entry.script_name)
+
+        log = self.logging_service.find_log(execution_id)
+        self.assertEqual('some text\nanother text', log)
+
+    def test_exit_code(self):
+        config_model = create_config_model(
+            'my_script', script_command='ls', parameters=[])
+
+        execution_id = self.executor_service.start_script(
+            config_model,
+            {},
+            'userX',
+            create_audit_names(ip='localhost'))
+
+        executor = self.executor_service.get_active_executor(execution_id)
+        executor.process_wrapper._write_script_output('some text\n')
+        executor.process_wrapper._write_script_output('another text')
+        executor.process_wrapper.finish(14)
+
+        wait_observable_close_notification(executor.get_anonymized_output_stream(), 2)
+
+        entry = self.logging_service.find_history_entry(execution_id)
+        self.assertEqual(14, entry.exit_code)
+
+    def setUp(self):
+        test_utils.setup()
+
+        executor._process_creator = _MockProcessWrapper
+
+        self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
+        self.executor_service = ExecutionService(_IdGeneratorMock())
+
+        self.controller = ExecutionLoggingController(self.executor_service, self.logging_service)
+        self.controller.start()
+
+    def tearDown(self):
+        test_utils.cleanup()
+
+        executions = self.executor_service.get_active_executions('userX')
+        for execution_id in executions:
+            try:
+                self.executor_service.kill_script(execution_id)
+                self.executor_service.cleanup_execution(execution_id)
+            except:
+                traceback.print_exc()

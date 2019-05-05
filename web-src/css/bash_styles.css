@@ -1,164 +1,164 @@
-#script-panel-container .log-content > span.text_color_red,
-#script-panel-container .log-content > span.text_color_red a {
+span.text_color_red,
+span.text_color_red a {
     color: #f44336;
 }
 
-#script-panel-container .log-content > span.text_color_black,
-#script-panel-container .log-content > span.text_color_black a {
+span.text_color_black,
+span.text_color_black a {
     color: #000;
 }
 
-#script-panel-container .log-content > span.text_color_green,
-#script-panel-container .log-content > span.text_color_green a {
+span.text_color_green,
+span.text_color_green a {
     color: #689f38;
 }
 
-#script-panel-container .log-content > span.text_color_yellow,
-#script-panel-container .log-content > span.text_color_yellow a {
+span.text_color_yellow,
+span.text_color_yellow a {
     color: #fdd835;
 }
 
-#script-panel-container .log-content > span.text_color_blue,
-#script-panel-container .log-content > span.text_color_blue a {
+span.text_color_blue,
+span.text_color_blue a {
     color: #1976D2;
 }
 
-#script-panel-container .log-content > span.text_color_magenta,
-#script-panel-container .log-content > span.text_color_magenta a {
+span.text_color_magenta,
+span.text_color_magenta a {
     color: #d81b60;
 }
 
-#script-panel-container .log-content > span.text_color_cyan,
-#script-panel-container .log-content > span.text_color_cyan a {
+span.text_color_cyan,
+span.text_color_cyan a {
     color: #0097A7;
 }
 
-#script-panel-container .log-content > span.text_color_lightgray,
-#script-panel-container .log-content > span.text_color_lightgray a {
+span.text_color_lightgray,
+span.text_color_lightgray a {
     color: #BDBDBD;
 }
 
-#script-panel-container .log-content > span.text_color_darkgray,
-#script-panel-container .log-content > span.text_color_darkgray a {
+span.text_color_darkgray,
+span.text_color_darkgray a {
     color: #616161;
 }
 
-#script-panel-container .log-content > span.text_color_lightred,
-#script-panel-container .log-content > span.text_color_lightred a {
+span.text_color_lightred,
+span.text_color_lightred a {
     color: #EF9A9A;
 }
 
-#script-panel-container .log-content > span.text_color_lightgreen,
-#script-panel-container .log-content > span.text_color_lightgreen a {
+span.text_color_lightgreen,
+span.text_color_lightgreen a {
     color: #9ccc65;
 }
 
-#script-panel-container .log-content > span.text_color_lightyellow,
-#script-panel-container .log-content > span.text_color_lightyellow a {
+span.text_color_lightyellow,
+span.text_color_lightyellow a {
     color: #fff59d;
 }
 
-#script-panel-container .log-content > span.text_color_lightblue,
-#script-panel-container .log-content > span.text_color_lightblue a {
+span.text_color_lightblue,
+span.text_color_lightblue a {
     color: #90CAF9;
 }
 
-#script-panel-container .log-content > span.text_color_lightmagenta,
-#script-panel-container .log-content > span.text_color_lightmagenta a {
+span.text_color_lightmagenta,
+span.text_color_lightmagenta a {
     color: #f06292;
 }
 
-#script-panel-container .log-content > span.text_color_lightcyan,
-#script-panel-container .log-content > span.text_color_lightcyan a {
+span.text_color_lightcyan,
+span.text_color_lightcyan a {
     color: #26C6DA;
 }
 
-#script-panel-container .log-content > span.text_color_white,
-#script-panel-container .log-content > span.text_color_white a {
+span.text_color_white,
+span.text_color_white a {
     color: #fff;
 }
 
-#script-panel-container .log-content > span.background_red,
-#script-panel-container .log-content > span.background_red a {
+span.background_red,
+span.background_red a {
     background-color: #f44336;
 }
 
-#script-panel-container .log-content > span.background_black,
-#script-panel-container .log-content > span.background_black a {
+span.background_black,
+span.background_black a {
     background-color: #000;
 }
 
-#script-panel-container .log-content > span.background_green,
-#script-panel-container .log-content > span.background_green a {
+span.background_green,
+span.background_green a {
     background-color: #689f38;
 }
 
-#script-panel-container .log-content > span.background_yellow,
-#script-panel-container .log-content > span.background_yellow a {
+span.background_yellow,
+span.background_yellow a {
     background-color: #fdd835;
 }
 
-#script-panel-container .log-content > span.background_blue,
-#script-panel-container .log-content > span.background_blue a {
+span.background_blue,
+span.background_blue a {
     background-color: #1976D2;
 }
 
-#script-panel-container .log-content > span.background_magenta {
+span.background_magenta {
     background-color: #d81b60;
 }
 
-#script-panel-container .log-content > span.background_cyan {
+span.background_cyan {
     background-color: #0097A7;
 }
 
-#script-panel-container .log-content > span.background_lightgray {
+span.background_lightgray {
     background-color: #BDBDBD;
 }
 
-#script-panel-container .log-content > span.background_darkgray {
+span.background_darkgray {
     background-color: #616161;
 }
 
-#script-panel-container .log-content > span.background_lightred {
+span.background_lightred {
     background-color: #EF9A9A;
 }
 
-#script-panel-container .log-content > span.background_lightgreen {
+span.background_lightgreen {
     background-color: #9ccc65;
 }
 
-#script-panel-container .log-content > span.background_lightyellow {
+span.background_lightyellow {
     background-color: #fff59d;
 }
 
-#script-panel-container .log-content > span.background_lightblue {
+span.background_lightblue {
     background-color: #90CAF9;
 }
 
-#script-panel-container .log-content > span.background_lightmagenta {
+span.background_lightmagenta {
     background-color: #f06292;
 }
 
-#script-panel-container .log-content > span.background_lightcyan {
+span.background_lightcyan {
     background-color: #26C6DA;
 }
 
-#script-panel-container .log-content > span.background_white {
+span.background_white {
     background-color: #fff;
 }
 
-#script-panel-container .log-content > span.text_style_bold {
+span.text_style_bold {
     font-weight: bold;
 }
 
-#script-panel-container .log-content > span.text_style_underlined {
+span.text_style_underlined {
     text-decoration: underline;
 }
 
-#script-panel-container .log-content > span.text_style_dim {
+span.text_style_dim {
     opacity: 0.5;
 }
 
-#script-panel-container .log-content > span.text_style_hidden {
+span.text_style_hidden {
     opacity: 0;
 }

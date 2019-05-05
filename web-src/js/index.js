@@ -8,7 +8,7 @@ import {
     hasClass,
     hide,
     HttpRequestError,
-    HttpUnauthorizedError,
+    HttpUnauthorizedError, isEmptyArray,
     isEmptyObject,
     isNull,
     logError,
@@ -19,6 +19,7 @@ import {
 } from './common';
 
 import './connections/rxWebsocket.js';
+import {setDefaultFavicon, setExecutingFavicon, setFinishedFavicon} from './components/favicon/favicon_manager';
 import {ScriptController} from './script/script-controller';
 import {restoreExecutor} from './script/script-execution-model';
 import './style_imports.js';
@@ -28,15 +29,23 @@ const scriptSelectionListeners = [];
 const scriptMenuItems = new Map();
 const runningScriptExecutors = [];
 let activeScriptController = null;
+let enableScriptTitles = false;
+let mainTitle = document.title;
 
 window.onload = onLoad;
 
 function onLoad() {
-    authorizedCallHttp('conf/title', null, 'GET', function (result) {
-        if (result) {
-            document.title = result;
+    authorizedCallHttp('conf', null, 'GET', function (result) {
+        const config = JSON.parse(result);
+        if (!isNull(config.title)) {
+            mainTitle = config.title;
         }
+        enableScriptTitles = isNull(config.enableScriptTitles) || config.enableScriptTitles;
+        updateTitle();
     });
+    scriptSelectionListeners.push(updateTitle);
+
+    setDefaultFavicon();
 
     var response = authorizedCallHttp('scripts');
 
@@ -79,6 +88,7 @@ function onLoad() {
         scriptMenuItems.set(script, scriptElement);
 
         updateMenuItemState(script);
+        updateFavicon();
     });
 
     var contentPanel = document.getElementById('content-panel');
@@ -315,10 +325,12 @@ function initWelcomeIcon() {
 function addRunningExecutor(scriptExecutor) {
     runningScriptExecutors.push(scriptExecutor);
     updateMenuItemState(scriptExecutor.scriptName);
+    updateFavicon();
 
     scriptExecutor.addListener({
         'onExecutionStop': function () {
             updateMenuItemState(scriptExecutor.scriptName);
+            updateFavicon();
         }
     })
 }
@@ -334,6 +346,7 @@ function showScript(selectedScript, parameterValues) {
             removeElements(runningScriptExecutors, executorsToRemove);
 
             updateMenuItemState(previousScriptName);
+            updateFavicon();
         }
 
         activeScriptController.destroy();
@@ -453,6 +466,26 @@ function updateMenuItemState(scriptName) {
     }
 }
 
+function updateFavicon() {
+    if (isEmptyArray(runningScriptExecutors)) {
+        setDefaultFavicon();
+        return;
+    }
+
+    let hasExecuting = false;
+    runningScriptExecutors.forEach(function (executor) {
+        if (!executor.isFinished()) {
+            hasExecuting = true;
+        }
+    });
+
+    if (hasExecuting) {
+        setExecutingFavicon();
+    } else {
+        setFinishedFavicon();
+    }
+}
+
 export function authorizedCallHttp(url, object, method, asyncHandler) {
     try {
         return callHttp(url, object, method, asyncHandler);
@@ -504,4 +537,12 @@ function hideErrorPanel() {
     removeClass(scriptPanelContainer, 'collapsed');
 
     hide(errorPanel);
+}
+
+function updateTitle() {
+    if ((enableScriptTitles) && (!isNull(selectedScript))) {
+        document.title = selectedScript + ' - ' + mainTitle;
+    } else {
+        document.title = mainTitle;
+    }
 }

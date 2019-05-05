@@ -70,7 +70,8 @@ module.exports = {
                         options: {
                             presets: [
                                 ['@babel/preset-env', {
-                                    'useBuiltIns': 'usage'
+                                    'useBuiltIns': 'usage',
+                                    'targets': '> 0.25%, not dead'
                                 }]
                             ],
                             babelrc: false

@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from model import script_configs
+from model import script_config
 from utils import os_utils, file_utils
 
 LOGGER = logging.getLogger('config_service')
@@ -21,7 +21,7 @@ class ConfigService:
         def load_script(path, content):
             try:
                 json_object = json.loads(content)
-                short_config = script_configs.read_short(path, json_object)
+                short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
                     return None
@@ -39,7 +39,7 @@ class ConfigService:
         def find_and_load(path, content):
             try:
                 json_object = json.loads(content)
-                short_config = script_configs.read_short(path, json_object)
+                short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
                     return None
@@ -95,7 +95,7 @@ class ConfigService:
             json_object = json.loads(content_or_json_dict)
         else:
             json_object = content_or_json_dict
-        config = script_configs.ConfigModel(
+        config = script_config.ConfigModel(
             json_object,
             path,
             user.get_username(),

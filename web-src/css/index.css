@@ -397,6 +397,11 @@ input[type=checkbox]:not(.browser-default) + span {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
+.dropdown-content {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
 #content-panel .select-dropdown li.disabled,
 #content-panel .select-dropdown li.disabled > span,
 #content-panel .select-dropdown li.optgroup {
@@ -560,4 +565,32 @@ input[type=checkbox]:not(.browser-default) + span {
     width: 12px;
     margin-left: 10px;
     vertical-align: middle;
+}
+
+/*noinspection CssInvalidPropertyValue,CssOverwrittenProperties*/
+.log-content {
+    display: block;
+    overflow-y: auto;
+    height: 100%;
+
+    font-size: .875em;
+
+    padding: 1.5em;
+
+    white-space: pre-wrap; /* CSS 3 */
+    white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+    white-space: -o-pre-wrap; /* Opera 7 */
+    overflow-wrap: break-word;
+
+    -ms-word-break: break-all;
+    /* This is the dangerous one in WebKit, as it breaks things wherever */
+    word-break: break-all;
+    /* Instead use this non-standard one: */
+    word-break: break-word;
+
+    /* Adds a hyphen where the word breaks, if supported (No Blink) */
+    -ms-hyphens: auto;
+    -moz-hyphens: auto;
+    -webkit-hyphens: auto;
+    hyphens: auto;
 }

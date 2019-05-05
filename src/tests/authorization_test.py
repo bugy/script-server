@@ -1,7 +1,8 @@
 import unittest
 from collections import defaultdict
 
-from auth.authorization import Authorizer, ANY_USER, PreconfiguredGroupProvider, create_group_provider
+from auth.authorization import Authorizer, ANY_USER, PreconfiguredGroupProvider, create_group_provider, \
+    EmptyGroupProvider
 
 
 class TestIsAllowed(unittest.TestCase):
@@ -59,6 +60,70 @@ class TestIsAllowed(unittest.TestCase):
         self.user_groups = defaultdict(list)
 
         self.authorizer = Authorizer([], [], self)
+
+
+class TestIsAllowedInApp(unittest.TestCase):
+    def test_single_user_allowed(self):
+        self.assertAllowed('user1', ['user1'], True)
+
+    def test_multiple_users_allowed(self):
+        self.assertAllowed('user2', ['user1', 'user2', 'user3'], True)
+
+    def test_multiple_users_not_allowed(self):
+        self.assertAllowed('user4', ['user1', 'user2', 'user3'], False)
+
+    def test_any_user_allowed(self):
+        self.assertAllowed('user5', [ANY_USER], True)
+
+    def test_any_user_allowed_when_mixed(self):
+        self.assertAllowed('user5', ['user1', ANY_USER, 'user2'], True)
+
+    def test_allowed_user_when_in_group(self):
+        self.assertAllowed('user5', ['user1', 'user2', '@my_group'], True, groups={'my_group': ['user5']})
+
+    def test_not_allowed_user_when_not_in_group(self):
+        self.assertAllowed('user5', ['user1', 'user2', '@my_group'], False, groups={'my_group': ['user3']})
+
+    def assertAllowed(self, user, allowed_users, expected_allowed, groups=None):
+        group_provider = PreconfiguredGroupProvider(groups) if groups else EmptyGroupProvider()
+        authorizer = Authorizer(allowed_users, [], group_provider)
+
+        allowed = authorizer.is_allowed_in_app(user)
+        if allowed != expected_allowed:
+            self.fail('Expected ' + user + ' to be allowed=' + str(expected_allowed)
+                      + ' for ' + str(allowed_users) + ' but was ' + str(allowed))
+
+
+class TestIsAdmin(unittest.TestCase):
+    def test_single_admin_allowed(self):
+        self.assertAdmin('admin1', ['admin1'], True)
+
+    def test_multiple_admins_allowed(self):
+        self.assertAdmin('admin2', ['admin1', 'admin2', 'admin3'], True)
+
+    def test_multiple_admins_not_allowed(self):
+        self.assertAdmin('user1', ['admin1', 'admin2', 'admin3'], False)
+
+    def test_any_user_is_admin(self):
+        self.assertAdmin('admin5', [ANY_USER], True)
+
+    def test_any_admin_when_mixed(self):
+        self.assertAdmin('admin5', ['admin1', ANY_USER, 'admin2'], True)
+
+    def test_is_admin_when_in_group(self):
+        self.assertAdmin('admin5', ['admin1', 'admin2', '@my_group'], True, groups={'my_group': ['admin5']})
+
+    def test_not_admin_admin_when_not_in_group(self):
+        self.assertAdmin('admin5', ['admin1', 'admin2', '@my_group'], False, groups={'my_group': ['admin3']})
+
+    def assertAdmin(self, user, admin_users, expected_allowed, groups=None):
+        group_provider = PreconfiguredGroupProvider(groups) if groups else EmptyGroupProvider()
+        authorizer = Authorizer([], admin_users, group_provider)
+
+        allowed = authorizer.is_admin(user)
+        if allowed != expected_allowed:
+            self.fail('Expected ' + user + ' to be admin=' + str(expected_allowed)
+                      + ' for ' + str(admin_users) + ' but was ' + str(allowed))
 
 
 class TestPreconfiguredGroupProvider(unittest.TestCase):
@@ -131,6 +196,16 @@ class TestCreateGroupProvider(unittest.TestCase):
         provider = create_group_provider({'group1': ['user1'], 'admin_users': ['user2']}, None, ['user1'])
         self.assertCountEqual(provider.get_groups('user1'), ['group1'])
         self.assertCountEqual(provider.get_groups('user2'), ['admin_users'])
+
+    def test_create_from_group_and_admin_users_when_admin_group_has_unknown_group(self):
+        provider = create_group_provider({'group1': ['user1']}, None, ['user2', '@some_group'])
+        self.assertCountEqual(provider.get_groups('user1'), ['group1'])
+        self.assertCountEqual(provider.get_groups('user2'), ['admin_users'])
+
+    def test_create_from_group_including_admin_users_when_admin_group_has_unknown_group(self):
+        provider = create_group_provider({'group1': ['user1', '@admin_users']}, None, ['user2', '@some_group'])
+        self.assertCountEqual(provider.get_groups('user1'), ['group1'])
+        self.assertCountEqual(provider.get_groups('user2'), ['admin_users', 'group1'])
 
     def test_create_from_groups_and_empty_authenticator(self):
         auth = self._create_authenticator({})

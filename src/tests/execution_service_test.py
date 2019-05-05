@@ -3,9 +3,9 @@ import unittest
 
 from execution import executor
 from execution.execution_service import ExecutionService
-from model.script_configs import ConfigModel
+from model.script_config import ConfigModel
 from tests import test_utils
-from tests.test_utils import mock_object, create_audit_names, _MockProcessWrapper
+from tests.test_utils import mock_object, create_audit_names, _MockProcessWrapper, _IdGeneratorMock
 
 DEFAULT_USER = 'test_user'
 DEFAULT_AUDIT_NAMES = create_audit_names(auth_username=DEFAULT_USER)
@@ -190,6 +190,20 @@ class ExecutionServiceTest(unittest.TestCase):
         self.get_process(id1).stop()
         self.assertCountEqual([id1, id2], finished_ids)
 
+    def test_finish_listener_by_id(self):
+        execution_service = self.create_execution_service()
+
+        id1 = self._start(execution_service)
+        id2 = self._start(execution_service)
+
+        notifications = []
+
+        execution_service.add_finish_listener(lambda: notifications.append('event'), id1)
+
+        self.get_process(id2).stop()
+        self.get_process(id1).stop()
+        self.assertEqual(1, len(notifications))
+
     def _start(self, execution_service, user_id=DEFAULT_USER):
         execution_id = execution_service.start_script(
             self._create_script_config([]),
@@ -254,16 +268,3 @@ class ExecutionServiceTest(unittest.TestCase):
 
     def get_last_id(self):
         return self.id_generator.generated_ids[-1]
-
-
-class _IdGeneratorMock:
-    def __init__(self) -> None:
-        super().__init__()
-        self.generated_ids = []
-        self._next_id = 123
-
-    def next_id(self):
-        id = str(self._next_id)
-        self._next_id += 1
-        self.generated_ids.append(id)
-        return id

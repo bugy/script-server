@@ -60,6 +60,8 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
         self.process.wait()
 
     def pipe_process_output(self):
+        utf8_stream = self.encoding.lower() == 'utf-8'
+
         try:
             while True:
                 finished = False
@@ -88,8 +90,7 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
                         if data.endswith(b"\r"):
                             data += os.read(self.pty_master, 1)
 
-                        if data and (self.encoding.lower() == "utf-8"):
-
+                        if utf8_stream and data:
                             while data[len(data) - 1] >= 127:
                                 next_byte = os.read(self.pty_master, 1)
                                 if not next_byte:

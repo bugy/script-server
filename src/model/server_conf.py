@@ -1,11 +1,14 @@
 import json
+import logging
 import os
 
 import utils.file_utils as file_utils
 from auth.authorization import ANY_USER
 from model import model_helper
-from model.model_helper import read_list
+from model.model_helper import read_list, read_int_from_config, read_bool_from_config
 from utils.string_utils import strip
+
+LOGGER = logging.getLogger('server_conf')
 
 
 class ServerConfig(object):
@@ -21,9 +24,12 @@ class ServerConfig(object):
         self.logging_config = None
         self.admin_config = None
         self.title = None
+        self.enable_script_titles = None
         self.trusted_ips = []
         self.user_groups = None
         self.admin_users = []
+        self.max_request_size_mb = None
+        self.callbacks_config = None
 
     def get_port(self):
         return self.port
@@ -36,21 +42,6 @@ class ServerConfig(object):
 
     def get_ssl_cert_path(self):
         return self.ssl_cert_path
-
-    def get_alerts_config(self):
-        return self.alerts_config
-
-
-class AlertsConfig:
-    def __init__(self) -> None:
-        self.destinations = []
-
-    def add_destination(self, destination):
-        self.destinations.append(destination)
-
-    def get_destinations(self):
-        return self.destinations
-
 
 class LoggingConfig:
     def __init__(self) -> None:
@@ -91,6 +82,7 @@ def from_json(conf_path, temp_folder):
 
     if json_object.get('title'):
         config.title = json_object.get('title')
+    config.enable_script_titles = read_bool_from_config('enable_script_titles', json_object, default=True)
 
     access_config = json_object.get('access')
     if access_config:
@@ -122,10 +114,13 @@ def from_json(conf_path, temp_folder):
         admin_users = def_admins
 
     config.allowed_users = _prepare_allowed_users(allowed_users, admin_users, user_groups)
-    config.alerts_config = parse_alerts_config(json_object)
+    config.alerts_config = json_object.get('alerts')
+    config.callbacks_config = json_object.get('callbacks')
     config.logging_config = parse_logging_config(json_object)
     config.user_groups = user_groups
     config.admin_users = admin_users
+
+    config.max_request_size_mb = read_int_from_config('max_request_size', json_object, default=10)
 
     return config
 
@@ -175,33 +170,6 @@ def _prepare_allowed_users(allowed_users, admin_users, user_groups):
     return list(coerced_users)
 
 
-def parse_alerts_config(json_object):
-    if json_object.get('alerts'):
-        alerts_object = json_object.get('alerts')
-        destination_objects = alerts_object.get('destinations')
-
-        if destination_objects:
-            alerts_config = AlertsConfig()
-
-            for destination_object in destination_objects:
-                destination_type = destination_object.get('type')
-
-                if destination_type == 'email':
-                    import alerts.destination_email as email
-                    destination = email.EmailDestination(destination_object)
-                elif destination_type == 'http':
-                    import alerts.destination_http as http
-                    destination = http.HttpDestination(destination_object)
-                else:
-                    raise Exception('Unknown alert destination type: ' + destination_type)
-
-                alerts_config.add_destination(destination)
-
-            return alerts_config
-
-    return None
-
-
 def parse_logging_config(json_object):
     config = LoggingConfig()
 
@@ -214,4 +182,9 @@ def parse_logging_config(json_object):
 
 
 def _parse_admin_users(json_object, default_admins=None):
-    return strip(read_list(json_object, 'admin_users', default=default_admins))
+    admins = strip(read_list(json_object, 'admin_users', default=default_admins))
+    if '*' in admins:
+        LOGGER.warning('Any user is allowed to access admin page, be careful!')
+        return [ANY_USER]
+
+    return admins

@@ -2,7 +2,7 @@ import logging
 import os
 
 from files.user_file_storage import UserFileStorage
-from utils import file_utils
+from utils.file_utils import normalize_path
 
 RESULT_FILES_FOLDER = 'uploadFiles'
 
@@ -16,11 +16,6 @@ class FileUploadFeature:
 
         user_file_storage.start_autoclean(self.folder, 1000 * 60 * 60 * 24)
 
-    def save_file(self, filename, body, username) -> str:
-        upload_folder = self.user_file_storage.prepare_new_folder(username, self.folder)
-        pref_result_path = os.path.join(upload_folder, filename)
-
-        result_path = file_utils.create_unique_filename(pref_result_path)
-        file_utils.write_file(result_path, body, True)
-
-        return file_utils.normalize_path(result_path)
+    def prepare_new_folder(self, username) -> str:
+        new_folder = self.user_file_storage.prepare_new_folder(username, self.folder)
+        return normalize_path(new_folder)

@@ -4,6 +4,8 @@ from urllib import parse as urllib_parse
 from urllib.parse import urljoin
 
 from model.model_helper import is_empty
+from utils import string_utils
+from utils.string_utils import unwrap_quotes
 
 
 def respond_error(request_handler, status_code, message):
@@ -82,3 +84,46 @@ def get_secure_cookie(request_handler, key):
         return None
 
     return value.decode('utf-8')
+
+
+def parse_header(header):
+    header_split = []
+    current = ''
+    current_quote = None
+    for char in header:
+        if char == '"' or char == "'":
+            if current_quote is None:
+                current_quote = char
+            elif current_quote == char:
+                current_quote = None
+        elif char == ';' and current_quote is None:
+            if current:
+                header_split.append(current)
+            current = ''
+            continue
+
+        current += char
+
+    if current:
+        header_split.append(current)
+
+    main_value = header_split[0]
+    if ':' in main_value:
+        main_value = main_value[main_value.index(':') + 1:]
+    main_value = string_utils.unwrap_quotes(main_value.strip())
+
+    sub_headers = header_split[1:]
+    sub_headers_dict = {}
+    for sub_header in sub_headers:
+        split = sub_header.split('=', 1)
+
+        if len(split) > 1:
+            key = split[0].strip()
+            value = unwrap_quotes(split[1].strip())
+        else:
+            key = sub_header.strip()
+            value = ''
+
+        sub_headers_dict[key] = value
+
+    return main_value, sub_headers_dict

@@ -1,4 +1,3 @@
-import collections
 import logging
 import re
 import sys
@@ -54,15 +53,16 @@ def _wrap_values(user_values, parameters):
 
             if parameter.no_value:
                 bool_value = model_helper.read_bool(user_value)
-                result[name] = _Value(user_value, bool_value, bool_value, parameter.value_to_str(bool_value))
+                result[name] = _Value(user_value, bool_value, bool_value)
                 continue
 
             elif user_value:
                 mapped_value = parameter.map_to_script(user_value)
                 script_arg = parameter.to_script_args(mapped_value)
-                result[name] = _Value(user_value, mapped_value, script_arg, parameter.value_to_str(script_arg))
+                secure_value = parameter.get_secured_value(script_arg)
+                result[name] = _Value(user_value, mapped_value, script_arg, secure_value)
         else:
-            result[name] = _Value(None, None, None, '')
+            result[name] = _Value(None, None, None)
 
     return result
 
@@ -146,8 +146,9 @@ class ScriptExecutor:
 
     def get_secure_command(self):
         audit_script_args = build_command_args(
-            {name: str(v) for name, v in self._parameter_values.items()},
+            {name: v.get_secure_value() for name, v in self._parameter_values.items()},
             self.config)
+        audit_script_args = [str(a) for a in audit_script_args]
 
         command = self.script_base_command + audit_script_args
         return ' '.join(command)
@@ -157,6 +158,9 @@ class ScriptExecutor:
 
     def get_raw_output_stream(self):
         return self.raw_output_stream
+
+    def get_process_id(self):
+        return self.process_wrapper.get_process_id()
 
     def get_return_code(self):
         return self.process_wrapper.get_return_code()
@@ -206,7 +210,7 @@ def build_command_args(param_values, config):
             value = param_values[name]
 
             if parameter.no_value:
-                if value == True:
+                if value is True:
                     result.append(parameter.param)
 
             elif value:
@@ -229,14 +233,19 @@ def _concat_output(output_chunks):
 
 
 class _Value:
-    def __init__(self, user_value, mapped_script_value, script_arg, print_value=None):
+    def __init__(self, user_value, mapped_script_value, script_arg, secure_value=None):
         self.user_value = user_value
         self.mapped_script_value = mapped_script_value
         self.script_arg = script_arg
-        self.print_value = print_value
+        self.secure_value = secure_value
+
+    def get_secure_value(self):
+        if self.secure_value is not None:
+            return self.secure_value
+        return self.script_arg
 
     def __str__(self) -> str:
-        if self.print_value is not None:
-            return self.print_value
+        if self.secure_value is not None:
+            return str(self.secure_value)
 
         return str(self.script_arg)

@@ -1,9 +1,15 @@
 import os
+import threading
 import unittest
 
+from execution import executor
+from execution.execution_service import ExecutionService
 from features import file_download_feature
+from features.file_download_feature import FileDownloadFeature
+from files.user_file_storage import UserFileStorage
 from tests import test_utils
-from tests.test_utils import create_parameter_model
+from tests.test_utils import create_parameter_model, _MockProcessWrapper, _IdGeneratorMock, create_config_model, \
+    create_audit_names, create_script_param_config
 from utils import file_utils
 
 
@@ -258,3 +264,95 @@ class TestParametersSubstitute(unittest.TestCase):
 
         self.assertEqual(files, ['/home/user/${param1}.txt'])
 
+
+class FileDownloadFeatureTest(unittest.TestCase):
+
+    def test_prepare_file_on_finish(self):
+        file1_path = test_utils.create_file('file1.txt')
+
+        downloadable_files = self.perform_execution([file1_path])
+
+        self.assert_downloadable_files(downloadable_files, [file1_path])
+
+    def test_no_output_files_in_config(self):
+        test_utils.create_file('file1.txt')
+
+        downloadable_files = self.perform_execution(None)
+
+        self.assertEqual([], downloadable_files)
+
+    def test_output_files_with_parameter_substitution(self):
+        file1 = test_utils.create_file('file1.txt', text='hello world')
+        file2 = test_utils.create_file(os.path.join('sub', 'child', 'admin.log'), text='password=123')
+
+        downloadable_files = self.perform_execution([
+            os.path.join(test_utils.temp_folder, '${p1}.txt'),
+            os.path.join(test_utils.temp_folder, 'sub', '${p2}', 'admin.log')],
+            parameter_values={'p1': 'file1', 'p2': 'child'})
+
+        self.assert_downloadable_files(downloadable_files, [file1, file2])
+
+    def test_output_files_with_secure_parameters(self):
+        test_utils.create_file('file1.txt', text='hello world')
+        file2 = test_utils.create_file(os.path.join('sub', 'child', 'admin.log'), text='password=123')
+
+        param1 = create_script_param_config('p1', secure=True)
+        param2 = create_script_param_config('p2')
+
+        downloadable_files = self.perform_execution([
+            os.path.join(test_utils.temp_folder, '${p1}.txt'),
+            os.path.join(test_utils.temp_folder, 'sub', '${p2}', 'admin.log')],
+            parameter_values={'p1': 'file1', 'p2': 'child'},
+            parameters=[param1, param2])
+
+        self.assert_downloadable_files(downloadable_files, [file2])
+
+    def perform_execution(self, output_files, parameter_values=None, parameters=None):
+        if parameter_values is None:
+            parameter_values = {}
+
+        if parameters is None:
+            parameters = [create_script_param_config(key) for key in parameter_values.keys()]
+
+        config_model = create_config_model('my_script', output_files=output_files, parameters=parameters)
+
+        execution_id = self.executor_service.start_script(
+            config_model, parameter_values, 'userX', create_audit_names(ip='127.0.0.1'))
+        self.executor_service.stop_script(execution_id)
+
+        finish_condition = threading.Event()
+        self.executor_service.add_finish_listener(lambda: finish_condition.set(), execution_id)
+        finish_condition.wait(2)
+
+        downloadable_files = self.feature.get_downloadable_files(execution_id)
+
+        return downloadable_files
+
+    def setUp(self):
+        super().setUp()
+        test_utils.setup()
+
+        executor._process_creator = _MockProcessWrapper
+        self.executor_service = ExecutionService(_IdGeneratorMock())
+
+        self.feature = FileDownloadFeature(UserFileStorage(b'123456'), test_utils.temp_folder)
+        self.feature.subscribe(self.executor_service)
+
+    def tearDown(self):
+        super().tearDown()
+        test_utils.cleanup()
+
+    def assert_downloadable_files(self, prepared_files, original_files):
+        prepared_files_dict = {os.path.basename(f): f for f in prepared_files}
+        original_files_dict = {os.path.basename(f): f for f in original_files}
+
+        self.assertEqual(original_files_dict.keys(), prepared_files_dict.keys())
+
+        for filename in original_files_dict.keys():
+            prepared_file = prepared_files_dict[filename]
+            original_file = original_files_dict[filename]
+
+            prepared_content = file_utils.read_file(prepared_file)
+            original_content = file_utils.read_file(original_file)
+
+            self.assertEqual(original_content, prepared_content, 'Different content for file ' + filename)
