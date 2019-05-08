@@ -319,7 +319,7 @@ export function getWebsocketUrl(relativePath) {
 
     var dir = getUrlDir();
     if (dir) {
-        hostUrl += '/' + dir;
+        hostUrl += dir;
     }
 
     if (isEmptyString(relativePath)) {
