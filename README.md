@@ -8,8 +8,8 @@ For system administrators it's a possibility to share their scripts with users, 
 
 No script modifications are needed - you add a configuration for each script to the script-server and it takes care of proper UI, validation, execution, etc.  
 
-Example of the user interface during script execution:
-![Example of user interface](https://cloud.githubusercontent.com/assets/1275813/26519407/f0318706-42c0-11e7-8328-34ded505839c.png)
+
+[DEMO server](https://script-server.org)
 
 ## Features
 - Interactive output/input web console
