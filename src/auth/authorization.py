@@ -41,7 +41,7 @@ class Authorizer:
 
 class EmptyGroupProvider:
 
-    def get_groups(self, user):
+    def get_groups(self, user, known_groups=None):
         return []
 
 
@@ -49,7 +49,7 @@ def _flatten_groups(groups):
     result = {}
 
     for group in groups.keys():
-        group_users = set()
+        group_members = set()
         visited_groups = set()
 
         queue = [group]
@@ -61,17 +61,17 @@ def _flatten_groups(groups):
             visited_groups.add(current_group)
 
             if current_group in result:
-                group_users.update(result[current_group])
+                group_members.update(result[current_group])
                 continue
 
             current_group_members = groups[current_group]
             for member in current_group_members:
-                if member.startswith(GROUP_PREFIX):
-                    queue.append(member[1:])
-                else:
-                    group_users.add(member)
+                group_members.add(member)
 
-        result[group] = group_users
+                if member.startswith(GROUP_PREFIX) and (member[1:] in groups):
+                    queue.append(member[1:])
+
+        result[group] = group_members
 
     return result
 
@@ -80,14 +80,26 @@ class PreconfiguredGroupProvider:
 
     def __init__(self, groups) -> None:
         self._user_groups = defaultdict(list)
+        self._lazy_group_parents = defaultdict(list)
 
         flat_groups = _flatten_groups(groups)
-        for group, users in flat_groups.items():
-            for user in users:
-                self._user_groups[user].append(group)
+        for group, members in flat_groups.items():
+            for member in members:
+                if member.startswith(GROUP_PREFIX):
+                    self._lazy_group_parents[member[1:]].append(group)
+                else:
+                    self._user_groups[member].append(group)
 
-    def get_groups(self, user):
-        return self._user_groups[user]
+    def get_groups(self, user, known_groups=None):
+        user_groups = set(self._user_groups[user])
+
+        if known_groups:
+            for known_group in known_groups:
+                if known_group in self._lazy_group_parents:
+                    parent_groups = self._lazy_group_parents[known_group]
+                    user_groups.update(parent_groups)
+
+        return user_groups
 
 
 class CombinedGroupProvider:
@@ -95,12 +107,17 @@ class CombinedGroupProvider:
     def __init__(self, *other_providers) -> None:
         self._other_providers = list(other_providers)
 
-    def get_groups(self, user):
+    def get_groups(self, user, known_groups=None):
         groups = set()
+
+        if not known_groups:
+            known_groups = []
+
         for provider in self._other_providers:
-            provider_groups = provider.get_groups(user)
+            provider_groups = provider.get_groups(user, known_groups)
             if provider_groups:
                 groups.update(provider_groups)
+                known_groups.extend(provider_groups)
 
         return groups
 
@@ -122,7 +139,7 @@ def create_group_provider(user_groups, authenticator, admin_users):
     if not authenticator:
         return preconfigured_groups_provider
 
-    return CombinedGroupProvider(preconfigured_groups_provider, authenticator)
+    return CombinedGroupProvider(authenticator, preconfigured_groups_provider)
 
 
 # in case groups will be loaded from ldap

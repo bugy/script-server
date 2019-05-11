@@ -13,7 +13,7 @@ class Authenticator(metaclass=abc.ABCMeta):
     def get_client_visible_config(self):
         return self._client_visible_config
 
-    def get_groups(self, user):
+    def get_groups(self, user, known_groups=None):
         return []
 
 

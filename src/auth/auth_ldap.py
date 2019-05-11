@@ -158,7 +158,7 @@ class LdapAuthenticator(auth_base.Authenticator):
         self._user_groups[user] = groups
         return groups
 
-    def get_groups(self, user):
+    def get_groups(self, user, known_groups=None):
         return self._get_groups(user)
 
     def _fetch_user_groups(self, user_dn, user_uid, connection):

@@ -2,7 +2,7 @@ import unittest
 from collections import defaultdict
 
 from auth.authorization import Authorizer, ANY_USER, PreconfiguredGroupProvider, create_group_provider, \
-    EmptyGroupProvider
+    EmptyGroupProvider, CombinedGroupProvider
 
 
 class TestIsAllowed(unittest.TestCase):
@@ -51,7 +51,7 @@ class TestIsAllowed(unittest.TestCase):
     def test_not_allowed_from_empty(self):
         self.assertFalse(self.authorizer.is_allowed('user1', []))
 
-    def get_groups(self, user):
+    def get_groups(self, user, known_groups=None):
         return self.user_groups[user]
 
     def setUp(self):
@@ -171,6 +171,43 @@ class TestPreconfiguredGroupProvider(unittest.TestCase):
         self.assertCountEqual(provider.get_groups('user1'), ['group1', 'group2'])
         self.assertCountEqual(provider.get_groups('user2'), ['group1', 'group2'])
 
+    def test_known_group_when_exists(self):
+        provider = PreconfiguredGroupProvider({'group1': ['@group2', 'user2']})
+        self.assertCountEqual(provider.get_groups('user1', known_groups=['group2']), ['group1'])
+
+    def test_known_group_when_exists_and_multiple_and_mixed(self):
+        provider = PreconfiguredGroupProvider(
+            {'group1': ['@lazy1', 'user2'],
+             'group2': ['@lazy2', 'user3'],
+             'group3': ['@lazy3', 'user1'],
+             'group4': ['@lazy4', 'user4']})
+        actual_groups = provider.get_groups('user1', known_groups=['lazy2', 'lazy4'])
+        self.assertCountEqual(actual_groups, ['group2', 'group3', 'group4'])
+
+    def test_known_group_when_duplicated(self):
+        provider = PreconfiguredGroupProvider(
+            {'group1': ['@lazy1', 'user1'],
+             'group2': ['@lazy21', '@lazy22', 'user2'],
+             'group3': ['@lazy3', 'user3']})
+        actual_groups = provider.get_groups('user1', known_groups=['lazy1', 'lazy21', 'lazy22'])
+        self.assertCountEqual(actual_groups, ['group1', 'group2'])
+
+    def test_known_group_when_multiple_parents(self):
+        provider = PreconfiguredGroupProvider(
+            {'group1': ['@lazy1', 'user1'],
+             'group2': ['@lazy1', '@lazy2', 'user2'],
+             'group3': ['@lazy3', 'user3']})
+        actual_groups = provider.get_groups('userX', known_groups=['lazy1'])
+        self.assertCountEqual(actual_groups, ['group1', 'group2'])
+
+    def test_known_group_when_not_exists(self):
+        provider = PreconfiguredGroupProvider({'group1': ['@group2', 'user2']})
+        self.assertCountEqual(provider.get_groups('user1', known_groups=['group3']), [])
+
+    def test_known_group_when_username_starts_with_at(self):
+        provider = PreconfiguredGroupProvider({'group1': ['@group2', 'user2']})
+        self.assertCountEqual(provider.get_groups('@group2'), [])
+
 
 class TestCreateGroupProvider(unittest.TestCase):
     def test_create_from_groups_only(self):
@@ -234,9 +271,56 @@ class TestCreateGroupProvider(unittest.TestCase):
         provider = create_group_provider(None, auth, None)
         self.assertCountEqual(provider.get_groups('user1'), ['group1'])
 
+    def test_known_groups_when_create_from_authenticator_and_preconfigured(self):
+        auth = self._create_authenticator({'user1': ['group1']})
+        provider = create_group_provider({'group2': ['@group1']}, auth, None)
+        self.assertCountEqual(provider.get_groups('user1'), ['group1', 'group2'])
+
     def _create_authenticator(self, user_groups):
         class GroupTestAuthenticator:
-            def get_groups(self, user):
+            def get_groups(self, user, known_groups=None):
                 return user_groups.get(user)
 
         return GroupTestAuthenticator()
+
+
+class TestCombinedGroupProvider(unittest.TestCase):
+    def test_single_provider(self):
+        provider = CombinedGroupProvider(PreconfiguredGroupProvider({'group1': ['user1', 'user2']}))
+        self.assertCountEqual(provider.get_groups('user1'), ['group1'])
+
+    def test_multiple_providers(self):
+        provider = CombinedGroupProvider(
+            PreconfiguredGroupProvider({'group1': ['user1', 'user2']}),
+            PreconfiguredGroupProvider({'group2': ['user3', 'user4']}),
+            PreconfiguredGroupProvider({'group3': ['user2', 'user5']}))
+        self.assertCountEqual(provider.get_groups('user2'), ['group1', 'group3'])
+
+    def test_multiple_providers_when_same_groups(self):
+        provider = CombinedGroupProvider(
+            PreconfiguredGroupProvider({'group1': ['user1', 'user2']}),
+            PreconfiguredGroupProvider({'group2': ['user3', 'user4']}),
+            PreconfiguredGroupProvider({'group1': ['user2', 'user5']}))
+        self.assertCountEqual(provider.get_groups('user2'), ['group1'])
+
+    def test_known_groups_when_single_provider(self):
+        provider = CombinedGroupProvider(
+            PreconfiguredGroupProvider({'group1': ['user1', '@lazy1']}))
+        self.assertCountEqual(provider.get_groups('user2', ['lazy1']), ['group1'])
+
+    def test_known_groups_when_multiple_provider(self):
+        provider = CombinedGroupProvider(
+            PreconfiguredGroupProvider({'group1': ['@lazy1', 'user1']}),
+            PreconfiguredGroupProvider({'group2': ['userX', 'user2']}),
+            PreconfiguredGroupProvider({'group3': ['user3']}),
+            PreconfiguredGroupProvider({'group4': ['@lazy4', 'user4']}))
+        self.assertCountEqual(provider.get_groups('userX', ['lazy1', 'lazy4']), ['group1', 'group2', 'group4'])
+
+    def test_known_groups_when_multiple_dependant_providers(self):
+        provider = CombinedGroupProvider(
+            PreconfiguredGroupProvider({'group1': ['@lazy1', 'user1']}),
+            PreconfiguredGroupProvider({'group2': ['@group1', 'user2']}),
+            PreconfiguredGroupProvider({'group3': ['userX']}),
+            PreconfiguredGroupProvider({'group4': ['user4']}),
+            PreconfiguredGroupProvider({'group5': ['@group3', '@group4']}))
+        self.assertCountEqual(provider.get_groups('userX', ['lazy1']), ['group1', 'group2', 'group3', 'group5'])
