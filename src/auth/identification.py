@@ -33,7 +33,7 @@ class IpBasedIdentification(Identification):
     COOKIE_KEY = 'client_id_token'
     EMPTY_TOKEN = (None, None)
 
-    def __init__(self, trusted_ips) -> None:
+    def __init__(self, trusted_ips, user_header_name) -> None:
         self._trusted_ips = set(trusted_ips)
         self._user_header_name = user_header_name
 
