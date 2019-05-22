@@ -783,7 +783,7 @@ def init(server_config: ServerConfig,
     if auth.is_enabled():
         identification = AuthBasedIdentification(auth)
     else:
-        identification = IpBasedIdentification(server_config.trusted_ips)
+        identification = IpBasedIdentification(server_config.trusted_ips, server_config.user_header_name)
 
     downloads_folder = file_download_feature.get_result_files_folder()
 

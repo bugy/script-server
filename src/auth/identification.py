@@ -33,8 +33,9 @@ class IpBasedIdentification(Identification):
     COOKIE_KEY = 'client_id_token'
     EMPTY_TOKEN = (None, None)
 
-    def __init__(self, trusted_ips) -> None:
+    def __init__(self, trusted_ips, user_header_name) -> None:
         self._trusted_ips = set(trusted_ips)
+        self._user_header_name = user_header_name
 
     def identify(self, request_handler):
         remote_ip = request_handler.request.remote_ip
@@ -43,6 +44,10 @@ class IpBasedIdentification(Identification):
         if new_trusted:
             if request_handler.get_cookie(self.COOKIE_KEY):
                 request_handler.clear_cookie(self.COOKIE_KEY)
+            if self._user_header_name:
+                user_header = request_handler.request.headers.get(self._user_header_name, None)
+                if user_header:
+                    return user_header
             return self._resolve_ip(request_handler)
 
         (client_id, days_remaining) = self._read_client_token(request_handler)
