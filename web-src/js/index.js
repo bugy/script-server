@@ -488,7 +488,7 @@ function updateFavicon() {
     if (hasExecuting) {
         setExecutingFavicon();
     } else {
-        setFinishedFavicon();
+        setDefaultFavicon();
     }
 }
 

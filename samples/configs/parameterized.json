@@ -22,7 +22,8 @@
     {
       "name": "Simple Text",
       "param": "--simple_text",
-      "description": "Parameter Four"
+      "description": "Parameter Four",
+      "required": true
     },
     {
       "name": "Simple List",
