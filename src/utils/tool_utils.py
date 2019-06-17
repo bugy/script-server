@@ -1,5 +1,7 @@
 import os
 
+from utils import file_utils
+
 
 def validate_web_build_exists(project_path):
     web_folder = os.path.join(project_path, 'web')
@@ -17,6 +19,17 @@ def validate_web_build_exists(project_path):
         file_path = os.path.join(web_folder, file)
         if not os.path.exists(file_path):
             raise InvalidWebBuildException('web folder is invalid. \n' + how_to_fix_build_message)
+
+
+def get_server_version(project_path):
+    version_file = os.path.join(project_path, 'version.txt')
+    if not os.path.exists(version_file):
+        return None
+
+    file_content = file_utils.read_file(version_file).strip()
+    if not file_content:
+        return None
+    return file_content
 
 
 class InvalidWebBuildException(Exception):

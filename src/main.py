@@ -53,8 +53,10 @@ def get_secret(temp_folder):
 
 
 def main():
+    project_path = os.getcwd()
+
     try:
-        tool_utils.validate_web_build_exists(os.getcwd())
+        tool_utils.validate_web_build_exists(project_path)
     except InvalidWebBuildException as e:
         print(str(e))
         sys.exit(-1)
@@ -65,6 +67,9 @@ def main():
         file_utils.prepare_folder(LOG_FOLDER)
 
         logging.config.dictConfig(log_config)
+
+    server_version = tool_utils.get_server_version(project_path)
+    logging.info('Starting Script Server' + (', v' + server_version if server_version else ' (custom version)'))
 
     file_utils.prepare_folder(CONFIG_FOLDER)
     file_utils.prepare_folder(TEMP_FOLDER)
@@ -122,7 +127,8 @@ def main():
         alerts_service,
         file_upload_feature,
         file_download_feature,
-        secret)
+        secret,
+        server_version)
 
 
 if __name__ == '__main__':

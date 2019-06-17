@@ -174,7 +174,9 @@ class BaseStaticHandler(tornado.web.StaticFileHandler):
 
 class GetServerConf(BaseRequestHandler):
     def get(self):
-        self.write(external_model.server_conf_to_external(self.application.server_config))
+        self.write(external_model.server_conf_to_external(
+            self.application.server_config,
+            self.application.server_version))
 
 
 class GetScripts(BaseRequestHandler):
@@ -772,7 +774,8 @@ def init(server_config: ServerConfig,
          alerts_service: AlertsService,
          file_upload_feature: FileUploadFeature,
          file_download_feature: FileDownloadFeature,
-         secret):
+         secret,
+         server_version):
     ssl_context = None
     if server_config.is_ssl():
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -825,6 +828,7 @@ def init(server_config: ServerConfig,
     application.auth = auth
 
     application.server_config = server_config
+    application.server_version = server_version
     application.authorizer = authorizer
     application.downloads_folder = downloads_folder
     application.file_download_feature = file_download_feature

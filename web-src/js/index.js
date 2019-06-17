@@ -8,7 +8,8 @@ import {
     hasClass,
     hide,
     HttpRequestError,
-    HttpUnauthorizedError, isEmptyArray,
+    HttpUnauthorizedError,
+    isEmptyArray,
     isEmptyObject,
     isNull,
     logError,
@@ -17,9 +18,9 @@ import {
     removeElements,
     show
 } from './common';
+import {setDefaultFavicon, setExecutingFavicon, setFinishedFavicon} from './components/favicon/favicon_manager';
 
 import './connections/rxWebsocket.js';
-import {setDefaultFavicon, setExecutingFavicon, setFinishedFavicon} from './components/favicon/favicon_manager';
 import {ScriptController} from './script/script-controller';
 import {restoreExecutor} from './script/script-execution-model';
 import './style_imports.js';
@@ -42,6 +43,11 @@ function onLoad() {
         }
         enableScriptTitles = isNull(config.enableScriptTitles) || config.enableScriptTitles;
         updateTitle();
+
+        if (!isNull(config.version)) {
+            const header = document.getElementById('serverHeader');
+            header.title = 'v' + config.version;
+        }
     });
     scriptSelectionListeners.push(updateTitle);
 

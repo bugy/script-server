@@ -47,6 +47,7 @@ body {
 
 #serverHeader {
     flex-grow: 1;
+    margin-left: 0.4rem;
 }
 
 #searchField {
@@ -165,7 +166,7 @@ body {
 }
 
 #logoutButton {
-    margin: 0 10px;
+    margin-left: 10px;
 }
 
 #content-panel {

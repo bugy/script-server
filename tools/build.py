@@ -104,3 +104,5 @@ build_info.exclude(BUILD_FOLDER)
 zip = zipfile.ZipFile(os.path.join(BUILD_FOLDER, 'script-server.zip'), 'w', zipfile.ZIP_DEFLATED)
 for file in build_info.get_files():
     zip.write(file)
+
+os.remove(VERSION_FILE)

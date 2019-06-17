@@ -106,8 +106,9 @@ def to_execution_info(request_parameters):
     return info
 
 
-def server_conf_to_external(server_config):
+def server_conf_to_external(server_config, server_version):
     return {
         'title': server_config.title,
-        'enableScriptTitles': server_config.enable_script_titles
+        'enableScriptTitles': server_config.enable_script_titles,
+        'version': server_version
     }
