@@ -4,7 +4,7 @@
   "dependencies": {
     "@babel/runtime": "^7.3.4",
     "jquery": "^3.3.1",
-    "marked": "^0.5.1",
+    "marked": "^0.6.2",
     "material-design-icons": "^3.0.1",
     "materialize-css": "^1.0.0",
     "typeface-roboto": "0.0.54",
