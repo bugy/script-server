@@ -9,6 +9,7 @@ module.exports = merge(common, {
     devServer: {
         contentBase: path.resolve(__dirname + '/../web'),
         hot: true,
+        host: '0.0.0.0',
         proxy: [{
             context: ['/scripts', '/executions', '/conf', '/auth', '/result_files', '/admin', '/login', '/logout'],
             target: 'http://localhost:5000',
