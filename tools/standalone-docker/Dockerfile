@@ -12,5 +12,4 @@ WORKDIR script-server
 
 RUN pip3 install -r requirements.txt
 
-EXPOSE 5000
-ENTRYPOINT [ "python3", "launcher.py" ]
+ENTRYPOINT [ "python3", "launcher.py", "-f", "/app/config/guess_number.json"]
