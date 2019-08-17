@@ -1,6 +1,6 @@
-import {getWebsocketUrl, HttpUnauthorizedError, isWebsocketClosed, SocketClosedError} from '../common';
+import {getWebsocketUrl, HttpUnauthorizedError, isWebsocketClosed, isWebsocketOpen, SocketClosedError} from '../common';
 
-var i = 0;
+let i = 0;
 
 export function ReactiveWebSocket(path, observer) {
     if (/^((https?)|(wss?)):\/\//.test(path)) {
@@ -48,7 +48,7 @@ export function ReactiveWebSocket(path, observer) {
     });
 
     this._websocket.addEventListener('message', function (rawMessage) {
-        self._observer.onNext(rawMessage);
+        self._observer.onNext(rawMessage.data);
     });
 
     this.close = function () {
@@ -63,5 +63,13 @@ export function ReactiveWebSocket(path, observer) {
         }
 
         self._websocket.send(data);
+    };
+
+    this.isClosed = function () {
+        return isWebsocketClosed(self._websocket) || self._finished;
+    };
+
+    this.isOpen = function () {
+        return isWebsocketOpen(self._websocket);
     }
 }

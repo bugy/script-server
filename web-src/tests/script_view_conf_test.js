@@ -1,8 +1,8 @@
 'use strict';
 import {createLocalVue, mount} from '@vue/test-utils';
-import Vuex from 'vuex';
-import ScriptView from '../js/script/script-view';
 import {assert, config as chaiConfig} from 'chai';
+import Vuex from 'vuex';
+import ScriptView from '../js/main-app/script-view';
 
 chaiConfig.truncateThreshold = 0;
 
@@ -13,9 +13,14 @@ describe('Test Configuration of ScriptView', function () {
 
     beforeEach(function () {
         const store = new Vuex.Store({
-            state: {
+            modules: {
                 scriptConfig: {
-                    description: ''
+                    namespaced: true,
+                    state: {
+                        scriptConfig: {
+                            description: ''
+                        }
+                    }
                 }
             }
         });
@@ -35,22 +40,22 @@ describe('Test Configuration of ScriptView', function () {
     describe('Test descript section', function () {
 
         it('test simple text', async function () {
-            this.store.state.scriptConfig.description = 'some text';
+            this.store.state.scriptConfig.scriptConfig.description = 'some text';
             assert.equal('some text', this.scriptView.vm.formattedDescription)
         });
 
         it('test bold', function () {
-            this.store.state.scriptConfig.description = 'some **bold** text';
+            this.store.state.scriptConfig.scriptConfig.description = 'some **bold** text';
             assert.equal('some <strong>bold</strong> text', this.scriptView.vm.formattedDescription)
         });
 
         it('test explicit link', function () {
-            this.store.state.scriptConfig.description = 'some [link_text](https://google.com)';
+            this.store.state.scriptConfig.scriptConfig.description = 'some [link_text](https://google.com)';
             assert.equal('some <a href="https://google.com">link_text</a>', this.scriptView.vm.formattedDescription)
         });
 
         it('test new line', function () {
-            this.store.state.scriptConfig.description = 'line1\nline2';
+            this.store.state.scriptConfig.scriptConfig.description = 'line1\nline2';
             assert.equal('line1<br>line2', this.scriptView.vm.formattedDescription)
         });
     })

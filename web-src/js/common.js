@@ -179,32 +179,6 @@ export function destroyChildren(element) {
     }
 }
 
-export function hide(element) {
-    var currentDisplay = window.getComputedStyle(element).display;
-    if (currentDisplay === 'none') {
-        return;
-    }
-
-    element.oldDisplay = currentDisplay;
-    element.style.display = 'none';
-}
-
-export function show(element, displayStyle) {
-    if (isNull(displayStyle) && (isNull(element.oldDisplay))) {
-        if (element.style.display === 'none') {
-            element.style.display = '';
-        }
-
-        var currentDisplay = window.getComputedStyle(element).display;
-        if (currentDisplay !== 'none') {
-            return;
-        }
-    }
-
-    displayStyle = displayStyle || element.oldDisplay || 'block';
-    element.style.display = displayStyle;
-}
-
 export function removeElement(array, element) {
     var index = array.indexOf(element);
     if (index >= 0) {
@@ -337,6 +311,10 @@ export function isWebsocketClosed(websocket) {
     return ((websocket.readyState === 2) || (websocket.readyState === 3));
 }
 
+export function isWebsocketOpen(websocket) {
+    return !isNull(websocket) && (websocket.readyState === 1);
+}
+
 export function getUnparameterizedUrl() {
     return [location.protocol, '//', location.host, location.pathname].join('');
 }
@@ -355,20 +333,15 @@ export function forEachKeyValue(array, callback) {
 }
 
 export function toBoolean(value) {
-    if (typeof(value) === 'boolean') {
+    if (typeof (value) === 'boolean') {
         return value;
 
-    } else if (typeof(value) === 'string') {
+    } else if (typeof (value) === 'string') {
         return value.toLowerCase() === 'true';
 
     } else {
         return Boolean(value);
     }
-}
-
-export function getLinesCount(text) {
-    var linesMatch = text.match(/\n/g);
-    return isNull(linesMatch) ? 0 : linesMatch.length;
 }
 
 export function arraysEqual(arr1, arr2) {
@@ -428,15 +401,6 @@ export function toDict(array, fieldName) {
         result[element[fieldName]] = element;
     }
     return result;
-}
-
-export function setButtonEnabled(button, enabled) {
-    button.disabled = !enabled;
-    if (!enabled) {
-        addClass(button, "disabled");
-    } else {
-        removeClass(button, "disabled");
-    }
 }
 
 function compareNulls(value1, value2) {
@@ -550,4 +514,8 @@ export function toMap(elements, keyExtractor, valueExtractor) {
             Object.assign(obj, {[keyExtractor(element)]: valueExtractor(element)})
         , {}
     );
+}
+
+export function deepCloneObject(obj) {
+    return JSON.parse(JSON.stringify(obj));
 }

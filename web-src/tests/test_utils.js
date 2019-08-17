@@ -17,6 +17,12 @@ export async function vueTicks(count) {
     return promise;
 }
 
+export async function timeout(ms) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms);
+    });
+}
+
 export function wrapVModel(inputComponent) {
     inputComponent.vm.$on('input', function (value) {
         inputComponent.setProps({value});

@@ -9,9 +9,13 @@ webpackConfig.devtool = 'inline-source-map';
 webpackConfig.mode = 'development';
 webpackConfig.watch = true;
 
-// karma-webpack cannot handle MiniCssExtractPlugin, so just remove it
 for (const rule of webpackConfig.module.rules) {
-    if (rule.test && /\.css/.test(rule.test)) {
+    if (!rule.test) {
+        continue;
+    }
+
+    if (/\.css/.test(rule.test)) {
+        // karma-webpack cannot handle MiniCssExtractPlugin, so just remove it
         for (let i = 0; i < rule.loaders.length; i++) {
             const loader = rule.loaders[i];
 
@@ -19,6 +23,13 @@ for (const rule of webpackConfig.module.rules) {
                 rule.loaders.splice(i, 1);
                 i--;
             }
+        }
+    } else if (/\.js/.test(rule.test)) {
+        const options = rule.use.options;
+        if ((typeof options.plugins) === 'undefined') {
+            options.plugins = ['babel-plugin-rewire'];
+        } else {
+            options.plugins.push('babel-plugin-rewire');
         }
     }
 }

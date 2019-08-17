@@ -17,6 +17,14 @@ export function preprocessParameter(parameter, fileLoadFunction) {
     }
 }
 
+export function isComboboxParameter(parameter) {
+    return comboboxTypes.includes(parameter.type) && !isRecursiveFileParameter(parameter);
+}
+
 export function isRecursiveFileParameter(parameter) {
     return (parameter.type === PARAM_TYPE_SERVER_FILE) && (parameter.fileRecursive);
+}
+
+export function scriptNameToHash(scriptName) {
+    return scriptName.replace(/\s/g, "_");
 }
