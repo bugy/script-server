@@ -2,7 +2,7 @@
     <div :id="id" class="script-view">
         <p class="script-description" v-show="scriptDescription" v-html="formattedDescription"></p>
         <ScriptParametersView ref="parametersView"/>
-        <div>
+        <div class="actions-panel">
             <button class="button-execute btn"
                     :disabled="!enableExecuteButton"
                     v-bind:class="{ disabled: !enableExecuteButton }"
@@ -283,20 +283,23 @@
         margin: 15px 17px 0;
     }
 
+    .actions-panel {
+        display: flex;
+    }
+
     .button-execute {
-        width: 80%;
+        flex: 6 1 auto;
         margin-left: 2%;
         margin-right: 0;
         margin-top: 6px;
-        display: inline;
     }
 
     .button-stop {
-        width: calc(96% - 80% - 12px - 5px); /* width without margins - executeButton - margin between button - rounding error */
+        flex: 1 0 auto;
+
         margin-left: 12px;
         margin-right: 2%;
         margin-top: 6px;
-        display: inline;
     }
 
     .script-input-panel {
