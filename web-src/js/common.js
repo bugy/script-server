@@ -65,6 +65,10 @@ export function addClass(element, clazz) {
 }
 
 export function hasClass(element, clazz) {
+    if (isNull(element.classList)) {
+        return false;
+    }
+    
     return element.classList.contains(clazz);
 }
 

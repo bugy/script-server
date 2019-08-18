@@ -268,6 +268,15 @@
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
+
+
+        /* (firefox)
+            we have to specify min-size explicitly, because by default it's content size.
+            It means, that when child content is larger than parent, it will grow out of parent
+            See https://drafts.csswg.org/css-flexbox/#min-size-auto
+            and https://bugzilla.mozilla.org/show_bug.cgi?id=1114904
+        */
+        min-height: 0;
     }
 
     .script-description {

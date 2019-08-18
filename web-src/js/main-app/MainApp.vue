@@ -1,6 +1,6 @@
 <template xmlns:v-slot="http://www.w3.org/1999/XSL/Transform">
     <div>
-        <AppLayout>
+        <AppLayout ref="appLayout">
             <template v-slot:sidebar>
                 <MainAppSidebar/>
             </template>
@@ -19,6 +19,7 @@
 
 <script>
     import {mapActions, mapState} from 'vuex';
+    import {isEmptyString} from '../common';
     import AppLayout from '../components/AppLayout';
     import AppWelcomePanel from './AppWelcomePanel';
     import DocumentTitleManager from './DocumentTitleManager';
@@ -50,6 +51,14 @@
 
         created() {
             this.init();
+
+            this.$store.watch((state) => state.scripts.selectedScript, (selectedScript) => {
+                this.$refs.appLayout.setSidebarVisibility(isEmptyString(selectedScript));
+            });
+        },
+
+        mounted() {
+            this.$refs.appLayout.setSidebarVisibility(true);
         }
     }
 </script>

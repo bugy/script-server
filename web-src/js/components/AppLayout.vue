@@ -1,55 +1,89 @@
 <template>
     <div class="app-layout">
-        <div class="app-sidebar">
+        <div :class="{collapsed: !showSidebar}" class="app-sidebar" ref="appSidebar">
             <slot name="sidebar"/>
         </div>
         <div class="app-content">
-            <div class="content-header" ref="contentHeader">
+            <div :class="{emptyHeader: !hasHeader}" class="content-header" ref="contentHeader">
+                <a @click="setSidebarVisibility(true)" class="btn-flat app-menu-button">
+                    <i class="material-icons">menu</i>
+                </a>
                 <slot name="header"/>
             </div>
             <div class="content-panel" ref="contentPanel">
                 <slot name="content"/>
             </div>
         </div>
+        <div @click="setSidebarVisibility(false)" class="sidenav-overlay" v-show="showSidebar"></div>
     </div>
 </template>
 
 <script>
+    import {hasClass, isNull} from '../common';
+
     export default {
         name: 'AppLayout',
-
+        data() {
+            return {
+                narrowView: false,
+                showSidebar: false,
+                hasHeader: false
+            }
+        },
         mounted() {
             const contentHeader = this.$refs.contentHeader;
             const contentPanel = this.$refs.contentPanel;
 
-            this.$nextTick(function () {
-                let headerHeight = contentHeader.offsetHeight;
-                contentPanel.style.maxHeight = 'calc(100% - ' + headerHeight + 'px)';
+            updatedStylesBasedOnContent(contentHeader, contentPanel, this);
 
-                if (headerHeight <= 5) {
-                    let maxHeight = headerHeight;
+            const sidebarStyle = getComputedStyle(this.$refs.appSidebar);
 
-                    const mutationObserver = new MutationObserver(function (mutations) {
-                        mutations.forEach(function (mutation) {
-                            let headerHeight = contentHeader.offsetHeight;
-                            if (headerHeight <= maxHeight) {
-                                return;
-                            }
-
-                            contentPanel.style.maxHeight = 'calc(100% - ' + headerHeight + 'px)';
-                            maxHeight = headerHeight;
-                        });
-                    });
-
-                    mutationObserver.observe(contentHeader, {
-                        childList: true,
-                        subtree: true,
-                        characterData: true
-                    })
+            const resizeListener = () => {
+                const position = sidebarStyle.position;
+                if (!this.narrowView) {
+                    this.setSidebarVisibility(false);
                 }
-            })
+                this.narrowView = position === 'absolute';
+            };
+            window.addEventListener('resize', resizeListener);
+            resizeListener();
+        },
+
+        methods: {
+            setSidebarVisibility(visible) {
+                this.showSidebar = visible;
+            }
         }
     }
+
+    function updatedStylesBasedOnContent(contentHeader, contentPanel, appLayout) {
+        const mutationObserver = new MutationObserver(mutations => {
+            mutations.forEach(() => {
+                let childrenHeight = 0;
+                for (const child of Array.from(contentHeader.childNodes)) {
+                    if (hasClass(child, 'app-menu-button')) {
+                        continue
+                    }
+
+                    if (!isNull(child.offsetHeight)) {
+                        childrenHeight = Math.max(childrenHeight, child.offsetHeight);
+                    }
+                }
+                appLayout.hasHeader = childrenHeight >= 1;
+
+                appLayout.$nextTick(() => {
+                    contentPanel.style.maxHeight = 'calc(100% - ' + contentHeader.offsetHeight + 'px)';
+                });
+            });
+        });
+
+        mutationObserver.observe(contentHeader, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    }
+
 </script>
 
 <style scoped>
@@ -77,9 +111,47 @@
         flex-direction: column;
     }
 
+    .app-menu-button {
+        display: none;
+
+        float: left;
+        position: relative;
+        z-index: 1;
+        margin-right: 8px;
+        margin-top: 12px;
+        text-align: center;
+    }
+
+    .app-menu-button:hover {
+        background: none;
+    }
+
+    .app-menu-button > i {
+        font-size: 2rem;
+        line-height: 1;
+    }
+
     @media (max-width: 992px) {
-        .app-content {
-            border-left: none;
+        .app-sidebar {
+            position: absolute;
+            height: 100vh;
+            z-index: 999;
+            transition: transform 0.3s;
+        }
+
+        .app-sidebar.collapsed {
+            -webkit-transform: translateX(-105%);
+            transform: translateX(-105%);
+        }
+
+        .sidenav-overlay {
+            opacity: 1;
+            display: block;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .app-menu-button {
+            display: block;
         }
     }
 
@@ -87,6 +159,10 @@
         flex: 0 0 auto;
 
         border-bottom: 1px solid #C8C8C8;
+    }
+
+    .content-header.emptyHeader {
+        border-bottom: none;
     }
 
     .content-panel {
