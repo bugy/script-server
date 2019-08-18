@@ -201,6 +201,12 @@ class ParameterModel(object):
 
         return str(value)
 
+    def value_to_repr(self, value):
+        if self.secure:
+            return SECURE_MASK
+
+        return repr(value)
+
     def get_secured_value(self, value):
         if (not self.secure) or (value is None) or self.no_value:
             return value
@@ -250,7 +256,7 @@ class ParameterModel(object):
                 return 'is not specified'
             return None
 
-        value_string = self.value_to_str(value)
+        value_string = self.value_to_repr(value)
 
         if self.no_value:
             if value not in ['true', True, 'false', False]:
@@ -297,7 +303,7 @@ class ParameterModel(object):
         if (self.type == 'list') or (self._is_plain_server_file()):
             if value not in allowed_values:
                 return 'has value ' + value_string \
-                       + ', but should be in [' + ','.join(allowed_values) + ']'
+                       + ', but should be in ' + repr(allowed_values)
             return None
 
         if self.type == PARAM_TYPE_MULTISELECT:
@@ -305,9 +311,9 @@ class ParameterModel(object):
                 return 'should be a list, but was: ' + value_string + '(' + str(type(value)) + ')'
             for value_element in value:
                 if value_element not in allowed_values:
-                    element_str = self.value_to_str(value_element)
+                    element_str = self.value_to_repr(value_element)
                     return 'has value ' + element_str \
-                           + ', but should be in [' + ','.join(allowed_values) + ']'
+                           + ', but should be in ' + repr(allowed_values)
             return None
 
         if self._is_recursive_server_file():

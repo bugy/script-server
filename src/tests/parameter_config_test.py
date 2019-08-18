@@ -102,6 +102,15 @@ class ParameterModelInitTest(unittest.TestCase):
             'values': {'script': 'echo "123\n" "456"'}})
         self.assertEqual(['123', ' 456'], parameter_model.values)
 
+    def test_values_from_script_win_newline(self):
+        test_utils.set_win()
+
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'list',
+            'values': {'script': 'echo "123\r\n" "456"'}})
+        self.assertEqual(['123', ' 456'], parameter_model.values)
+
     def test_allowed_values_for_non_list(self):
         parameter_model = _create_parameter_model({
             'name': 'def_param',
@@ -513,6 +522,12 @@ class TestSingleParameterValidation(unittest.TestCase):
 
     def test_list_with_script_when_matches(self):
         parameter = create_parameter_model('param', type='list', values_script="echo '123\n' 'abc'")
+
+        error = parameter.validate_value('123')
+        self.assertIsNone(error)
+
+    def test_list_with_script_when_matches_and_win_newline(self):
+        parameter = create_parameter_model('param', type='list', values_script="echo '123\r\n' 'abc'")
 
         error = parameter.validate_value('123')
         self.assertIsNone(error)

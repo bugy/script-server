@@ -23,12 +23,10 @@ def invoke(command, work_dir='.', *, environment_variables=None):
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          cwd=work_dir,
-                         env=env)
+                         env=env,
+                         universal_newlines=True)
 
-    (output_bytes, error_bytes) = p.communicate()
-
-    output = output_bytes.decode("utf-8")
-    error = error_bytes.decode("utf-8")
+    (output, error) = p.communicate()
 
     result_code = p.returncode
     if result_code != 0:
