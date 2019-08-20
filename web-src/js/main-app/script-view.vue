@@ -9,11 +9,14 @@
                     @click="executeScript">
                 Execute
             </button>
-            <button class="button-stop btn red lighten-1"
+            <button class="button-stop btn"
                     :disabled="!enableStopButton"
-                    v-bind:class="{ disabled: !enableStopButton}"
+                    v-bind:class="{
+                    disabled: !enableStopButton,
+                    'red lighten-1': !killEnabled,
+                    'grey darken-4': killEnabled}"
                     @click="stopScript">
-                Stop
+                {{stopButtonLabel}}
             </button>
         </div>
         <LogPanel ref="logPanel" v-show="showLog && !hasErrors && !hideExecutionControls"/>
@@ -131,7 +134,25 @@
             },
 
             enableStopButton() {
-                return !isNull(this.currentExecutor) && this.currentExecutor.state.status === STATUS_EXECUTING;
+                return this.status === STATUS_EXECUTING;
+            },
+
+            stopButtonLabel() {
+                if (this.status === STATUS_EXECUTING) {
+                    if (this.killEnabled) {
+                        return 'Kill';
+                    }
+
+                    if (!isNull(this.killEnabledTimeout)) {
+                        return 'Stop (' + this.killEnabledTimeout + ')';
+                    }
+                }
+
+                return 'Stop';
+            },
+
+            status() {
+                return isNull(this.currentExecutor) ? null : this.currentExecutor.state.status;
             },
 
             showLog() {
@@ -147,7 +168,7 @@
             },
 
             inputPromptText() {
-                if (isNull(this.currentExecutor) || (this.currentExecutor.state.status !== STATUS_EXECUTING)) {
+                if (this.status !== STATUS_EXECUTING) {
                     return null;
                 }
 
@@ -160,6 +181,14 @@
                 }
 
                 return this.currentExecutor.state.logChunks;
+            },
+
+            killEnabled() {
+                return !isNull(this.currentExecutor) && this.currentExecutor.state.killEnabled;
+            },
+
+            killEnabledTimeout() {
+                return isNull(this.currentExecutor) ? null : this.currentExecutor.state.killTimeoutSec;
             }
         },
 
@@ -197,7 +226,11 @@
                     return;
                 }
 
-                this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/stopExecution');
+                if (this.killEnabled) {
+                    this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/killExecution');
+                } else {
+                    this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/stopExecution');
+                }
             },
 
             sendUserInput(value) {
@@ -288,14 +321,15 @@
     }
 
     .button-execute {
-        flex: 6 1 auto;
+        flex: 6 1 5em;
+
         margin-left: 2%;
         margin-right: 0;
         margin-top: 6px;
     }
 
     .button-stop {
-        flex: 1 0 auto;
+        flex: 1 0 5em;
 
         margin-left: 12px;
         margin-right: 2%;

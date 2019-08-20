@@ -276,6 +276,14 @@ class ScriptStop(BaseRequestHandler):
         self.application.execution_service.stop_script(execution_id)
 
 
+class ScriptKill(BaseRequestHandler):
+    @check_authorization
+    def post(self, execution_id):
+        validate_execution_id(execution_id, self)
+
+        self.application.execution_service.kill_script(execution_id)
+
+
 class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
     def __init__(self, application, request, **kwargs):
         super().__init__(application, request, **kwargs)
@@ -796,6 +804,7 @@ def init(server_config: ServerConfig,
                 (r'/scripts/([^/]*)/([^/]*)/list-files', ScriptParameterListFiles),
                 (r'/executions/start', ScriptExecute),
                 (r'/executions/stop/(.*)', ScriptStop),
+                (r'/executions/kill/(.*)', ScriptKill),
                 (r'/executions/io/(.*)', ScriptStreamSocket),
                 (r'/executions/active', GetActiveExecutionIds),
                 (r'/executions/config/(.*)', GetExecutingScriptConfig),

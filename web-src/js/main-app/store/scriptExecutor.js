@@ -7,6 +7,7 @@ export const STATUS_FINISHED = 'finished';
 export const STATUS_DISCONNECTED = 'disconnected';
 export const STATUS_ERROR = 'error';
 
+let oneSecDelay = 1000;
 
 export default (id, scriptName, parameterValues) => {
 
@@ -32,29 +33,66 @@ export default (id, scriptName, parameterValues) => {
             downloadableFiles: [],
             parameterValues: parameterValues,
             status: STATUS_INITIALIZING,
-            scriptName: scriptName
+            scriptName: scriptName,
+
+            killIntervalId: null,
+            killTimeoutSec: null,
+            killEnabled: false
         },
 
         actions: {
             reconnect({state, dispatch, commit}) {
-                commit('SET_STATUS', STATUS_EXECUTING);
-                attachToWebsocket(internalState, state, commit);
+                dispatch('setStatus', STATUS_EXECUTING);
+                attachToWebsocket(internalState, state, commit, dispatch);
             },
 
-            stopExecution({state}) {
+            stopExecution({state, commit, dispatch}) {
+                if (isNull(state.killIntervalId) && (!state.killEnabled)) {
+                    const intervalId = setInterval(() => {
+                        dispatch('_tickKillInterval')
+                    }, oneSecDelay);
+
+                    commit('SET_KILL_INTERVAL', {id: intervalId, timeoutSec: 5, killEnabled: false});
+                }
+
                 return axios.post('executions/stop/' + state.id);
             },
 
-            setInitialising({commit}) {
-                commit('SET_STATUS', STATUS_INITIALIZING);
-                commit('SET_LOG', 'Calling the script...');
+            _tickKillInterval({state, commit}) {
+
+                if (state.status !== STATUS_EXECUTING) {
+                    if (!isNull(state.killIntervalId)) {
+                        clearInterval(state.killIntervalId);
+                    }
+                    commit('SET_KILL_INTERVAL', {id: null, timeoutSec: null, killEnabled: false});
+                    return;
+                }
+
+                if (state.killTimeoutSec <= 1) {
+                    if (!isNull(state.killIntervalId)) {
+                        clearInterval(state.killIntervalId);
+                    }
+                    commit('SET_KILL_INTERVAL', {id: null, timeoutSec: null, killEnabled: true});
+                    return;
+                }
+
+                commit('DEC_KILL_INTERVAL');
             },
 
-            start({state, commit}, executionId) {
+            killExecution({state}) {
+                return axios.post('executions/kill/' + state.id);
+            },
+
+            setInitialising({commit, dispatch}) {
+                commit('SET_LOG', 'Calling the script...');
+                dispatch('setStatus', STATUS_INITIALIZING);
+            },
+
+            start({state, dispatch, commit}, executionId) {
                 commit('SET_ID', executionId);
-                commit('SET_STATUS', STATUS_EXECUTING);
                 commit('SET_LOG', null);
-                attachToWebsocket(internalState, state, commit);
+                dispatch('setStatus', STATUS_EXECUTING);
+                attachToWebsocket(internalState, state, commit, dispatch);
             },
 
             sendUserInput({}, userInput) {
@@ -63,8 +101,8 @@ export default (id, scriptName, parameterValues) => {
                 }
             },
 
-            setErrorStatus({commit}) {
-                commit('SET_STATUS', STATUS_ERROR);
+            setErrorStatus({dispatch}) {
+                dispatch('setStatus', STATUS_ERROR);
             },
 
             appendLog({commit}, log) {
@@ -80,6 +118,16 @@ export default (id, scriptName, parameterValues) => {
             abort({dispatch}) {
                 return dispatch('stopExecution')
                     .finally(() => dispatch('cleanup'));
+            },
+
+            setStatus({commit, state}, status) {
+
+                if (!isNull(state.killIntervalId)) {
+                    clearInterval(state.killIntervalId);
+                    commit('SET_KILL_INTERVAL', {id: null, timeoutSec: null, killEnabled: false})
+                }
+
+                commit('SET_STATUS', status);
             }
         },
 
@@ -121,12 +169,22 @@ export default (id, scriptName, parameterValues) => {
 
             SET_ID(state, id) {
                 state.id = id;
+            },
+
+            SET_KILL_INTERVAL(state, {id, timeoutSec, killEnabled}) {
+                state.killIntervalId = id;
+                state.killTimeoutSec = timeoutSec;
+                state.killEnabled = killEnabled;
+            },
+
+            DEC_KILL_INTERVAL(state) {
+                state.killTimeoutSec--;
             }
         }
     }
 }
 
-function attachToWebsocket(internalState, state, commit) {
+function attachToWebsocket(internalState, state, commit, dispatch) {
     if (!isNull(internalState.websocket)) {
         return;
     }
@@ -164,21 +222,21 @@ function attachToWebsocket(internalState, state, commit) {
         let executionFinished = (event.code === 1000);
         if (!executionFinished) {
             axios.get('executions/status/' + executionId)
-                .then(({status: data}) => {
-                    if (data === 'finished') {
-                        commit('SET_STATUS', STATUS_FINISHED);
+                .then(({data: status}) => {
+                    if (status === 'finished') {
+                        dispatch('setStatus', STATUS_FINISHED);
                         axios.post('executions/cleanup/' + executionId);
                     } else {
-                        commit('SET_STATUS', STATUS_DISCONNECTED);
+                        dispatch('setStatus', STATUS_DISCONNECTED);
                     }
                 })
                 .catch((error) => {
                     console.log('Failed to connect to the server: ' + error);
-                    commit('SET_STATUS', STATUS_ERROR);
+                    dispatch('setErrorStatus');
                 });
 
         } else {
-            commit('SET_STATUS', STATUS_FINISHED);
+            dispatch('setStatus', STATUS_FINISHED);
             axios.post('executions/cleanup/' + executionId);
         }
     });
