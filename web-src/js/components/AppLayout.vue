@@ -105,7 +105,7 @@
     }
 
     .app-content {
-        flex: 1 1 auto;
+        flex: 1 1 0;
 
         display: flex;
         flex-direction: column;
@@ -166,6 +166,6 @@
     }
 
     .content-panel {
-        flex: 1 1 auto;
+        flex: 1 1 0;
     }
 </style>

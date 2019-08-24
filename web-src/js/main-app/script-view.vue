@@ -300,7 +300,7 @@
     .script-view {
         display: flex;
         flex-direction: column;
-        flex: 1 1 auto;
+        flex: 1 1 0;
 
 
         /* (firefox)
@@ -310,6 +310,12 @@
             and https://bugzilla.mozilla.org/show_bug.cgi?id=1114904
         */
         min-height: 0;
+    }
+
+    .script-view >>> .script-parameters-panel,
+    .actions-panel,
+    .files-download-panel {
+        flex: 0 0 content;
     }
 
     .script-description {
