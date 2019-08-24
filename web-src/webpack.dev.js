@@ -10,6 +10,7 @@ module.exports = merge(common, {
         contentBase: path.resolve(__dirname + '/../web'),
         hot: true,
         host: '0.0.0.0',
+        disableHostCheck: true,
         proxy: [{
             context: ['/scripts', '/executions', '/conf', '/auth', '/result_files', '/admin', '/login', '/logout'],
             target: 'http://localhost:5000',
