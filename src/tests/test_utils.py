@@ -16,7 +16,7 @@ temp_folder = 'tests_temp'
 _original_env = {}
 
 
-def create_file(filepath, overwrite=False, text=None):
+def create_file(filepath, overwrite=False, text='test text'):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
@@ -28,9 +28,6 @@ def create_file(filepath, overwrite=False, text=None):
     file_path = os.path.join(folder, filename)
     if os.path.exists(file_path) and not overwrite:
         raise Exception('File ' + file_path + ' already exists')
-
-    if text is None:
-        text = 'test text'
 
     file_utils.write_file(file_path, text)
 

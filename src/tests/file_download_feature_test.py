@@ -10,7 +10,8 @@ from files.user_file_storage import UserFileStorage
 from tests import test_utils
 from tests.test_utils import create_parameter_model, _MockProcessWrapper, _IdGeneratorMock, create_config_model, \
     create_audit_names, create_script_param_config
-from utils import file_utils
+from utils import file_utils, os_utils
+from utils.file_utils import normalize_path
 
 
 class TestFileMatching(unittest.TestCase):
@@ -356,3 +357,222 @@ class FileDownloadFeatureTest(unittest.TestCase):
             original_content = file_utils.read_file(original_file)
 
             self.assertEqual(original_content, prepared_content, 'Different content for file ' + filename)
+
+
+def inline_image(path):
+    return {'type': 'inline-image', 'path': path}
+
+
+class TestInlineImages(unittest.TestCase):
+    def setUp(self) -> None:
+        test_utils.setup()
+
+        executor._process_creator = _MockProcessWrapper
+        self.executor_service = ExecutionService(_IdGeneratorMock())
+
+        self.file_download_feature = file_download_feature.FileDownloadFeature(
+            UserFileStorage(b'123456'), test_utils.temp_folder)
+        self.file_download_feature.subscribe(self.executor_service)
+
+        self.images = []
+
+    def tearDown(self) -> None:
+        test_utils.cleanup()
+
+        executions = self.executor_service.get_active_executions('userX')
+        for execution in executions:
+            self.executor_service.kill_script(execution)
+
+    def _add_image(self, original_path, new_path):
+        self.images.append((original_path, new_path))
+
+    def test_single_static_image(self):
+        path = test_utils.create_file('test.png')
+        config = create_config_model('my_script', output_files=[inline_image(path)])
+
+        execution_id = self.start_execution(config)
+
+        self.write_output(execution_id, '123\n456')
+
+        self.wait_output_chunks(execution_id, chunks_count=1)
+
+        self.assert_images(path)
+
+    def test_multiple_static_images(self):
+        path1 = test_utils.create_file('test1.png')
+        path2 = test_utils.create_file('test2.png')
+        path3 = test_utils.create_file('test3.png')
+        config = create_config_model('my_script',
+                                     output_files=[inline_image(path1), inline_image(path2), inline_image(path3)])
+
+        execution_id = self.start_execution(config)
+
+        self.write_output(execution_id, '123\n' + '456')
+
+        self.wait_output_chunks(execution_id, chunks_count=1)
+
+        self.assert_images(path1, path2, path3)
+
+    def test_single_static_image_when_multiple_outputs(self):
+        path = test_utils.create_file('test.png')
+        config = create_config_model('my_script', output_files=[inline_image(path)])
+
+        execution_id = self.start_execution(config)
+
+        self.write_output(execution_id, '123\n456')
+        self.wait_output_chunks(execution_id, chunks_count=1)
+
+        self.write_output(execution_id, '789\n0')
+        self.wait_output_chunks(execution_id, chunks_count=2)
+
+        self.assert_images(path)
+
+    def test_single_dynamic_image(self):
+        path = test_utils.create_file('test.png')
+        config = create_config_model('my_script', output_files=[inline_image('##any_path.png#')])
+
+        execution_id = self.start_execution(config)
+
+        full_path = file_utils.normalize_path(path)
+        self.write_output(execution_id, '123\n' + full_path + '\n456')
+        self.wait_output_chunks(execution_id, chunks_count=1)
+
+        self.assert_images(full_path)
+
+    def test_mixed_images_when_multiple_output(self):
+        path1 = test_utils.create_file('test123.png')
+        path2 = test_utils.create_file('images/test.png')
+        path3 = test_utils.create_file('a.b.c.png')
+        path4 = test_utils.create_file('test456.png')
+        path5 = test_utils.create_file('some/long/path/me.jpg')
+
+        config = create_config_model('my_script', output_files=[
+            inline_image(test_utils.temp_folder + os_utils.path_sep() + '#test\d+.png#'),
+            inline_image(path2),
+            inline_image(path3),
+            inline_image('##any_path/path/\w+#.jpg')
+        ])
+
+        execution_id = self.start_execution(config)
+
+        paths = [normalize_path(p) for p in (path1, path2, path3, path4, path5)]
+        for index, path in enumerate(paths):
+            self.write_output(execution_id, '__ ' + path + ' __\n')
+            self.wait_output_chunks(execution_id, chunks_count=index + 1)
+
+        self.write_output(execution_id, '__ ' + path2 + ' __\n')
+        self.wait_output_chunks(execution_id, chunks_count=len(paths) + 1)
+
+        self.assert_images(*paths)
+
+    def test_find_multiple_images_by_same_pattern(self):
+        path1 = test_utils.create_file('test123.png')
+        test_utils.create_file('images/test.png')
+        path3 = test_utils.create_file('a.b.c.png')
+        path4 = test_utils.create_file('some/sub/folder/test456.png')
+
+        config = create_config_model('my_script', output_files=[
+            inline_image('##any_path.png#')
+        ])
+
+        execution_id = self.start_execution(config)
+
+        paths = [normalize_path(p) for p in (path1, path3, path4)]
+        for index, path in enumerate(paths):
+            self.write_output(execution_id, '__ ' + path + ' __\n')
+            self.wait_output_chunks(execution_id, chunks_count=index + 1)
+
+        self.assert_images(*paths)
+
+    def test_image_path_split_in_chunks(self):
+        path = test_utils.create_file('test123.png')
+
+        config = create_config_model('my_script', output_files=[inline_image('##any_path.png#')])
+
+        execution_id = self.start_execution(config)
+
+        normalized = normalize_path(path)
+
+        self.write_output(execution_id, normalized[:4])
+        self.wait_output_chunks(execution_id, chunks_count=1)
+
+        self.write_output(execution_id, normalized[4:] + '\n')
+        self.wait_output_chunks(execution_id, chunks_count=2)
+
+        self.assert_images(path)
+
+    def test_image_path_split_in_chunks_and_no_newlines(self):
+        path = test_utils.create_file('test123.png')
+
+        config = create_config_model('my_script', output_files=[inline_image('##any_path.png#')])
+
+        execution_id = self.start_execution(config)
+
+        normalized = normalize_path(path)
+
+        self.write_output(execution_id, normalized[:4])
+        self.wait_output_chunks(execution_id, chunks_count=1)
+
+        self.write_output(execution_id, normalized[4:])
+        self.wait_output_chunks(execution_id, chunks_count=2)
+
+        self.executor_service.get_active_executor(execution_id).process_wrapper.stop()
+        self.wait_close(execution_id)
+
+        self.assert_images(path)
+
+    def wait_output_chunks(self, execution_id, *, chunks_count):
+        waiter = OutputWaiter()
+        self.executor_service.get_anonymized_output_stream(execution_id).subscribe(waiter)
+        waiter.wait_chunks(chunks_count, timeout=0.5)
+
+    def wait_close(self, execution_id):
+        chunk_condition = threading.Condition()
+        closed = False
+
+        def waiter():
+            global closed
+            closed = True
+            with chunk_condition:
+                chunk_condition.notify_all()
+
+        self.executor_service.get_anonymized_output_stream(execution_id).subscribe_on_close(waiter)
+        with chunk_condition:
+            chunk_condition.wait_for(lambda: closed, 0.5)
+
+    def write_output(self, execution_id, output):
+        process_wrapper = self.executor_service.get_active_executor(execution_id).process_wrapper
+        process_wrapper.write_output(output)
+
+    def start_execution(self, config):
+        execution_id = self.executor_service.start_script(config, {}, 'userX', {})
+        self.file_download_feature.subscribe_on_inline_images(execution_id, self._add_image)
+        return execution_id
+
+    def assert_images(self, *paths):
+        normalized_paths = [file_utils.normalize_path(p) for p in paths]
+        actual_paths = [image[0] for image in self.images]
+
+        self.assertCountEqual(normalized_paths, actual_paths)
+
+
+class OutputWaiter:
+    def __init__(self) -> None:
+        self.chunks = []
+        self.chunk_condition = threading.Condition()
+
+    def on_next(self, chunk):
+        self.chunks.append(chunk)
+
+        with self.chunk_condition:
+            self.chunk_condition.notify_all()
+
+    def on_close(self):
+        pass
+
+    def wait_chunks(self, chunk_count, *, timeout):
+        with self.chunk_condition:
+            result = self.chunk_condition.wait_for(lambda: len(self.chunks) >= chunk_count, timeout)
+
+        if not result:
+            raise Exception('Chunk count did not reach ' + str(chunk_count))
