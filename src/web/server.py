@@ -311,7 +311,6 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         output_stream = execution_service.get_raw_output_stream(execution_id, user_id)
         pipe_output_to_http(output_stream, self.safe_write)
 
-        downloads_folder = self.application.downloads_folder
         file_download_feature = self.application.file_download_feature
         web_socket = self
 
@@ -321,10 +320,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
                 for file in downloadable_files:
                     filename = os.path.basename(file)
-                    relative_path = file_utils.relative_path(file, downloads_folder)
-
-                    url_path = relative_path.replace(os.path.sep, '/')
-                    url_path = 'result_files/' + url_path
+                    url_path = web_socket.prepare_download_url(file)
 
                     web_socket.safe_write(wrap_to_server_event(
                         'file',
@@ -340,6 +336,8 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
             output_stream.wait_close(timeout=5)
             web_socket.ioloop.add_callback(web_socket.close, code=1000)
 
+        file_download_feature.subscribe_on_inline_images(execution_id, self.send_inline_image)
+
         execution_service.add_finish_listener(finished, execution_id)
 
     def on_message(self, text):
@@ -352,6 +350,18 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
     def safe_write(self, message):
         if self.ws_connection is not None:
             self.ioloop.add_callback(self.write_message, message)
+
+    def send_inline_image(self, original_path, download_path):
+        self.safe_write(wrap_to_server_event(
+            'inline-image',
+            {'output_path': original_path, 'download_url': self.prepare_download_url(download_path)}))
+
+    def prepare_download_url(self, file):
+        downloads_folder = self.application.downloads_folder
+        relative_path = file_utils.relative_path(file, downloads_folder)
+        url_path = relative_path.replace(os.path.sep, '/')
+        url_path = 'result_files/' + url_path
+        return url_path
 
 
 @tornado.web.stream_request_body

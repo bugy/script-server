@@ -51,7 +51,7 @@
 
     import marked from 'marked';
     import {mapActions, mapState} from 'vuex'
-    import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '../common';
+    import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '../common';
     import LogPanel from '../components/log_panel'
     import {
         STATUS_DISCONNECTED,
@@ -67,7 +67,8 @@
                 id: null,
                 everStarted: false,
                 errors: [],
-                nextLogIndex: 0
+                nextLogIndex: 0,
+                lastInlineImages: {}
             }
         },
 
@@ -165,6 +166,14 @@
                 }
 
                 return this.currentExecutor.state.downloadableFiles;
+            },
+
+            inlineImages() {
+                if (!this.currentExecutor) {
+                    return {};
+                }
+
+                return this.currentExecutor.state.inlineImages;
             },
 
             inputPromptText() {
@@ -289,6 +298,28 @@
 
                         this.appendLog(logChunk);
                     }
+                }
+            },
+
+            inlineImages: {
+                handler(newValue, oldValue) {
+                    const logPanel = this.$refs.logPanel;
+
+                    forEachKeyValue(this.lastInlineImages, (key, value) => {
+                        if (!newValue.hasOwnProperty(key)) {
+                            logPanel.removeInlineImage(key);
+                        } else if (value !== newValue[key]) {
+                            logPanel.setInlineImage(key, value);
+                        }
+                    });
+
+                    forEachKeyValue(newValue, (key, value) => {
+                        if (!this.lastInlineImages.hasOwnProperty(key)) {
+                            logPanel.setInlineImage(key, value);
+                        }
+                    });
+
+                    this.lastInlineImages = deepCloneObject(newValue);
                 }
             }
         }

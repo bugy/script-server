@@ -439,6 +439,19 @@ class TestInlineImages(unittest.TestCase):
 
         self.assert_images(full_path)
 
+    def test_single_dynamic_image_when_unnormalized(self):
+        test_utils.create_file('sub/test.png')
+        config = create_config_model('my_script', output_files=[inline_image('#([\.\w]+/)+\w+.png#')])
+
+        execution_id = self.start_execution(config)
+
+        unnormalized_path = os.path.join(test_utils.temp_folder, '.', 'sub', '..', 'sub', 'test.png')
+        self.write_output(execution_id, '_ ' + unnormalized_path + ' _\n')
+        self.wait_output_chunks(execution_id, chunks_count=1)
+
+        image_keys = [img[0] for img in self.images]
+        self.assertEqual([unnormalized_path], image_keys)
+
     def test_mixed_images_when_multiple_output(self):
         path1 = test_utils.create_file('test123.png')
         path2 = test_utils.create_file('images/test.png')
@@ -551,7 +564,7 @@ class TestInlineImages(unittest.TestCase):
 
     def assert_images(self, *paths):
         normalized_paths = [file_utils.normalize_path(p) for p in paths]
-        actual_paths = [image[0] for image in self.images]
+        actual_paths = [file_utils.normalize_path(image[0]) for image in self.images]
 
         self.assertCountEqual(normalized_paths, actual_paths)
 

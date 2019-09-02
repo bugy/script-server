@@ -1211,4 +1211,54 @@ describe('Test terminal model', function () {
             expect(console.log.args[0][0]).to.equal('WARN! Unsupported [4J command');
         });
     });
+
+    describe('Test inline images', function () {
+
+        it('Test set inline image, when not exists', function () {
+            addChangedLinesListener(this);
+
+            this.model.write('abc\ndef');
+            this.model.setInlineImage('my-img.png', 'hello.jpg');
+
+            assert.deepEqual({'my-img.png': 'hello.jpg'}, this.model.inlineImages);
+            assert.deepEqual([[0, 1]], this.changedLines);
+        });
+
+        it('Test set inline image, when exists', function () {
+            addChangedLinesListener(this);
+
+            this.model.write('abc\n_ my-img.png _ \ndef');
+            this.model.setInlineImage('my-img.png', 'hello.jpg');
+
+            assert.deepEqual([[0, 1, 2], [1]], this.changedLines);
+        });
+
+        it('Test set inline image, when exists and multiple', function () {
+            addChangedLinesListener(this);
+
+            this.model.write('abc\n_ my-img.png _ \ndef\nmy-img.png\nhij\nmy-img.png');
+            this.model.setInlineImage('my-img.png', 'hello.jpg');
+
+            assert.deepEqual([[0, 1, 2, 3, 4, 5], [1, 3, 5]], this.changedLines);
+        });
+
+        it('Test remove inline image, when not exists', function () {
+            addChangedLinesListener(this);
+
+            this.model.write('abc\n_ my-img.png _ \ndef');
+            this.model.removeInlineImage('my-img.png');
+
+            assert.deepEqual([[0, 1, 2]], this.changedLines);
+        });
+
+        it('Test remove inline image, when exists', function () {
+            addChangedLinesListener(this);
+
+            this.model.setInlineImage('my-img.png', 'hello.jpg');
+            this.model.write('abc\n_ my-img.png _ \ndef');
+            this.model.removeInlineImage('my-img.png');
+
+            assert.deepEqual([[0, 1, 2], [1]], this.changedLines);
+        });
+    });
 });

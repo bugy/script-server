@@ -164,7 +164,8 @@ class _ScriptHandler:
                 images = script_handler._prepare_downloadable_files(
                     image_paths,
                     script_handler.config,
-                    output)
+                    output,
+                    should_exist=False)
 
                 for key, value in images.items():
                     script_handler._add_inline_image(key, value)
@@ -172,7 +173,7 @@ class _ScriptHandler:
         self.output_stream.subscribe(InlineImageListener())
 
     def _prepare_downloadable_files(self, output_files, config, script_output, *, should_exist=True):
-        correct_files = []
+        found_files = {}
 
         for output_file in output_files:
             files = find_matching_files(output_file, script_output)
@@ -185,21 +186,21 @@ class _ScriptHandler:
                             LOGGER.warning('file ' + file + ' (full path = ' + file_path + ') not found')
                     elif os.path.isdir(file_path):
                         LOGGER.warning('file ' + file + ' is a directory. Not allowed')
-                    elif file_path not in correct_files:
-                        correct_files.append(file_path)
+                    elif file_path not in found_files:
+                        found_files[file] = file_path
             elif should_exist:
                 LOGGER.warning("Couldn't find file for " + output_file)
 
-        if not correct_files:
+        if not found_files:
             return {}
 
         result = {}
-        for file in correct_files:
-            if file in self.prepared_files:
-                result[file] = self.prepared_files[file]
+        for original_file_path, normalized_path in found_files.items():
+            if original_file_path in self.prepared_files:
+                result[original_file_path] = self.prepared_files[original_file_path]
                 continue
 
-            preferred_download_file = os.path.join(self.download_folder, os.path.basename(file))
+            preferred_download_file = os.path.join(self.download_folder, os.path.basename(normalized_path))
 
             try:
                 download_file = create_unique_filename(preferred_download_file)
@@ -207,10 +208,10 @@ class _ScriptHandler:
                 LOGGER.exception('Cannot get unique name')
                 continue
 
-            copyfile(file, download_file)
+            copyfile(normalized_path, download_file)
 
-            result[file] = download_file
-            self.prepared_files[file] = download_file
+            result[original_file_path] = download_file
+            self.prepared_files[original_file_path] = download_file
 
         return result
 

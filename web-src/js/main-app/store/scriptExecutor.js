@@ -1,4 +1,5 @@
 import axios from 'axios';
+import Vue from 'vue';
 import {getWebsocketUrl, isNull, isWebsocketClosed} from '../../common';
 
 export const STATUS_INITIALIZING = 'initializing';
@@ -31,6 +32,7 @@ export default (id, scriptName, parameterValues) => {
             logChunks: [],
             inputPromptText: null,
             downloadableFiles: [],
+            inlineImages: {},
             parameterValues: parameterValues,
             status: STATUS_INITIALIZING,
             scriptName: scriptName,
@@ -159,6 +161,10 @@ export default (id, scriptName, parameterValues) => {
                 state.downloadableFiles.push(file);
             },
 
+            ADD_INLINE_IMAGE(state, {output_path, download_url}) {
+                Vue.set(state.inlineImages, output_path, download_url);
+            },
+
             SET_STATUS(state, status) {
                 state.status = status;
             },
@@ -214,6 +220,11 @@ function attachToWebsocket(internalState, state, commit, dispatch) {
             commit('ADD_FILE', {
                 'url': data.url,
                 'filename': data.filename
+            });
+        } else if (eventType === 'inline-image') {
+            commit('ADD_INLINE_IMAGE', {
+                'output_path': data.output_path,
+                'download_url': data.download_url
             });
         }
     });

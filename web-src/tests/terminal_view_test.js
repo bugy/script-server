@@ -169,6 +169,14 @@ describe('Test terminal view', function () {
         assert.deepEqual(expectedNodes, actualNodes);
     }
 
+    function assertImageLine(lineElement, expectedSrc) {
+        assert.equal(lineElement.tagName, 'DIV');
+
+        assert.equal(lineElement.childNodes.length, 1);
+        assert.equal(lineElement.childNodes[0].tagName, 'IMG');
+        assert.equal(lineElement.childNodes[0].getAttribute('src'), expectedSrc);
+    }
+
     describe('change log content', function () {
 
         it('Test simple text', function () {
@@ -463,6 +471,69 @@ describe('Test terminal view', function () {
             assertLine(this.terminal.element.childNodes[0], [textNode(' abc')]);
             assertLine(this.terminal.element.childNodes[1], [textNode('d7')]);
             assertLine(this.terminal.element.childNodes[2], [textNode('890')]);
+        });
+    });
+
+    describe('Test inline images', function () {
+
+        it('Test when one line and image available before text', function () {
+            this.model.setInlineImage('/home/me/test.png', 'my-img.png');
+            this.model.write('/home/me/test.png');
+
+            assert.equal(1, this.terminal.element.childNodes.length);
+            assertImageLine(this.terminal.element.childNodes[0], 'my-img.png');
+        });
+
+        it('Test when one line and image available after text', function () {
+            this.model.write('/home/me/test.png');
+            this.model.setInlineImage('/home/me/test.png', 'my-img.png');
+
+            assert.equal(1, this.terminal.element.childNodes.length);
+            assertImageLine(this.terminal.element.childNodes[0], 'my-img.png');
+        });
+
+        it('Test when multiline and image available after text', function () {
+            this.model.write('abc\nde\nf');
+            this.model.write('\n123/home/me/test.png456\nghi');
+            this.model.write('jkl\nmno');
+            this.model.setInlineImage('/home/me/test.png', 'my-img.png');
+
+            assert.equal(6, this.terminal.element.childNodes.length);
+            assertImageLine(this.terminal.element.childNodes[3], 'my-img.png');
+            assertLine(this.terminal.element.childNodes[2], [textNode('f')]);
+            assertLine(this.terminal.element.childNodes[4], [textNode('ghijkl')]);
+        });
+
+        it('Test absolute url', function () {
+            const downloadUrl = 'http://localhost:8080/images/my-img.png';
+            this.model.setInlineImage('/home/me/test.png', downloadUrl);
+            this.model.write('/home/me/test.png');
+
+            assert.equal(1, this.terminal.element.childNodes.length);
+            assertImageLine(this.terminal.element.childNodes[0], downloadUrl);
+        });
+
+        it('Test remove inline image', function () {
+            this.model.setInlineImage('/home/me/test.png', 'my-img.png');
+            this.model.write('/home/me/test.png');
+            this.model.removeInlineImage('/home/me/test.png');
+
+            assert.equal(1, this.terminal.element.childNodes.length);
+            assertLine(this.terminal.element.childNodes[0], [textNode('/home/me/test.png')]);
+        });
+
+        it('Test different images', function () {
+            this.model.setInlineImage('/home/me/test1.png', '/images/img1.png');
+            this.model.write('/home/me/test1.png\nabc');
+            this.model.write(' /home/me/test2.png def \n');
+            this.model.write(' hij \n');
+            this.model.setInlineImage('/home/me/test2.png', '/images/img2.png');
+            this.model.write('_ /home/me/test1.png _');
+
+            assert.equal(4, this.terminal.element.childNodes.length);
+            assertImageLine(this.terminal.element.childNodes[0], '/images/img1.png');
+            assertImageLine(this.terminal.element.childNodes[1], '/images/img2.png');
+            assertImageLine(this.terminal.element.childNodes[3], '/images/img1.png');
         });
     });
 });
