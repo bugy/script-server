@@ -108,3 +108,6 @@ If you like the project and think you could help with making it better, there ar
 
 Any contribution would be of great help and I will highly appreciate it! 
 If you have any questions, please create a new issue, or concact me via buggygm@gmail.com
+
+## Special thanks
+![JetBrains logo](https://github.com/JetBrains/logos/blob/master/web/jetbrains/jetbrains.svg)
