@@ -12,19 +12,30 @@
 </template>
 
 <script>
-    import {callHttp} from '../common';
-    import LogPanel from '../components/log_panel';
-    import ReadOnlyField from '../components/readonly-field';
-    import {translateExecutionLog} from './executions-log';
+    import axios from 'axios';
+    import {mapActions, mapGetters} from 'vuex';
+    import {isNull} from '../../common';
+    import LogPanel from '../../components/log_panel';
+    import ReadOnlyField from '../../components/readonly-field';
+    import {translateExecutionLog} from './executions-module';
 
     export default {
         name: 'execution-details',
         mounted: function () {
-            var executionId = this.$route.params.executionId;
+            let executionId = this.$route.params.executionId;
 
-            callHttp('admin/execution_log/long/' + executionId, null, 'GET', function (rawLog) {
-                var incomingLog = JSON.parse(rawLog);
-                var executionLog = translateExecutionLog(incomingLog);
+            let execution = this.findExecution(executionId);
+            if (isNull(execution)) {
+                execution = {
+                    id: executionId,
+                    user: 'Unknown',
+                    script: 'Unknown'
+                }
+            }
+            this.updateSubheaderFromLog(execution);
+
+            axios.get('admin/execution_log/long/' + executionId).then(({data: incomingLog}) => {
+                const executionLog = translateExecutionLog(incomingLog);
 
                 this.script = executionLog.script;
                 this.user = executionLog.user;
@@ -33,20 +44,38 @@
                 this.command = executionLog.command;
                 this.$refs.logPanel.setLog(executionLog.log);
 
-                this.$store.commit('selectExecution', executionLog);
-
-            }.bind(this));
+                this.updateSubheaderFromLog(executionLog);
+            });
         },
 
         data: function () {
             return {
-                script: '', user: '', startTime: '', fullStatus: '', command: '', log: ''
+                script: '',
+                user: '',
+                startTime: '',
+                fullStatus: '',
+                command: ''
             };
         },
 
         components: {
             'readonly-field': ReadOnlyField,
             'log-panel': LogPanel
+        },
+
+        methods: {
+            ...mapActions(['setSubheader']),
+
+            updateSubheaderFromLog(execution) {
+                const subheader = '#' + execution.id + ' - ' + execution.user + '@' + execution.script;
+                this.setSubheader(subheader);
+            }
+        },
+
+        computed: {
+            ...mapGetters('executions', {
+                findExecution: 'findById'
+            })
         }
     }
 </script>

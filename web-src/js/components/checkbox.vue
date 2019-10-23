@@ -1,5 +1,5 @@
 <template>
-    <label class="input-field" :title="config.description">
+    <label :title="config.description" class="input-field checkbox">
         <input :id="config.name"
                type="checkbox"
                :checked="boolValue"

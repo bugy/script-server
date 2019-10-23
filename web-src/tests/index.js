@@ -1,6 +1,6 @@
 const context = require.context(
     '.',
-    false,
+    true,
     /_test.js$/
 );
 

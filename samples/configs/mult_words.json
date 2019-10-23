@@ -1,8 +1,8 @@
 {
   "name": "Multiple words",
   "script_path": "'mult words.py' 1 'word 2' '' 'word4'",
-  "description": "Executes a complex command specified as a scripts path and prints all incoming parameters",
   "working_directory": "./samples/scripts/",
+  "description": "Executes a complex command specified as a scripts path and prints all incoming parameters",
   "parameters": [
     {
       "name": "Param1",

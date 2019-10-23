@@ -1,28 +1,34 @@
 <template>
     <div class="input-field" :title="config.description" :data-error="error">
-        <input :id="config.name"
+        <input :class="{validate : !disabled}"
                :type="fieldType"
                :value="value"
                :required="config.required"
-               class="validate"
+               :disabled="disabled"
                @input="inputFieldChanged"
+               :id="id"
                ref="textField"/>
-        <label :for="config.name" v-bind:class="{ active: labelActive }">{{ config.name }}</label>
+        <label :for="id" v-bind:class="{ active: labelActive }">{{ config.name }}</label>
     </div>
 </template>
 
 <script>
-    import {isEmptyString, isNull} from '../common';
+    import {isBlankString, isEmptyString, isNull} from '../common';
 
     export default {
         props: {
             'value': [String, Number],
-            'config': Object
+            'config': Object,
+            disabled: {
+                type: Boolean,
+                default: false
+            }
         },
 
         data: function () {
             return {
-                error: ''
+                error: '',
+                id: null
             }
         },
 
@@ -53,6 +59,7 @@
 
         mounted: function () {
             this.inputFieldChanged();
+            this.id = this._uid;
         },
 
         watch: {
@@ -65,9 +72,24 @@
                         this._doValidation(this.value);
                     } else {
                         this.$nextTick(function () {
-                            this._doValidation(this.value);
+                            if (this.$refs.textField) {
+                                this._doValidation(this.value);
+                            }
                         }.bind(this));
                     }
+                }
+            },
+            'config.required': {
+                handler() {
+                    this.triggerRevalidationOnWatch();
+                }
+            },
+            disabled() {
+                this.triggerRevalidationOnWatch();
+            },
+            'config.min': {
+                handler() {
+                    this.triggerRevalidationOnWatch();
                 }
             }
         },
@@ -82,7 +104,11 @@
             },
 
             getValidationError(value, textField) {
-                var empty = isEmptyString(value) || isEmptyString(value.trim());
+                if (this.disabled) {
+                    return '';
+                }
+
+                const empty = isBlankString(value);
 
                 if ((textField.validity.badInput)) {
                     return getInvalidTypeError(this.config.type);
@@ -103,11 +129,20 @@
             },
 
             _doValidation(value) {
-                var textField = this.$refs.textField;
+                const textField = this.$refs.textField;
                 this.error = this.getValidationError(value, textField);
                 textField.setCustomValidity(this.error);
 
                 this.$emit('error', this.error);
+            },
+
+            triggerRevalidationOnWatch() {
+                this.$nextTick(() => {
+                    if (this.$refs.textField) {
+                        this._doValidation(this.value);
+                        M.validate_field(cash(this.$refs.textField));
+                    }
+                });
             }
         }
     }

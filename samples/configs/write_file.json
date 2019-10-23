@@ -7,6 +7,14 @@
     "@admin_users",
     "127.0.0.1"
   ],
+  "output_files": [
+    "##any_path#",
+    "~/${filename}",
+    {
+      "type": "inline-image",
+      "path": "##any_path.png#"
+    }
+  ],
   "parameters": [
     {
       "name": "text",
@@ -17,8 +25,8 @@
       "name": "repeats",
       "param": "-r",
       "type": "int",
-      "min": 1,
-      "description": "How many times the text should be written to the file"
+      "description": "How many times the text should be written to the file",
+      "min": 1
     },
     {
       "name": "clear file",
@@ -31,9 +39,5 @@
       "param": "-f",
       "description": "Custom filename"
     }
-  ],
-  "output_files": [
-    "##any_path#",
-    "~/${filename}"
   ]
 }

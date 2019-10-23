@@ -1,5 +1,6 @@
 import logging
 import os
+from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR
@@ -450,3 +451,18 @@ class WrongParameterUsageException(Exception):
     def __init__(self, param_name, error_message) -> None:
         super().__init__(error_message)
         self.param_name = param_name
+
+
+def get_sorted_config(param_config):
+    key_order = ['name', 'required', 'param', 'type', 'no_value', 'default', 'constant', 'description', 'secure',
+                 'values', 'min', 'max', 'multiple_arguments', 'separator', 'file_dir', 'file_recursive', 'file_type',
+                 'file_extensions']
+
+    def get_order(key):
+        if key in key_order:
+            return key_order.index(key)
+        else:
+            return 100
+
+    sorted_config = OrderedDict(sorted(param_config.items(), key=lambda item: get_order(item[0])))
+    return sorted_config

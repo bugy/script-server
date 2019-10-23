@@ -23,7 +23,11 @@ export function findNeighbour(element, tag) {
 }
 
 export function isEmptyString(value) {
-    return isNull(value) || value.length === 0;
+    return isNull(value) || ((typeof value === 'string') && (value.length === 0));
+}
+
+export function isBlankString(value) {
+    return isNull(value) || ((typeof value === 'string') && (value.trim().length === 0));
 }
 
 export function isEmptyArray(value) {
@@ -380,11 +384,19 @@ export function setInputValue(inputField, value, triggerEvent) {
         inputField = inputField.get(0);
     }
 
-    inputField.value = value;
+    if (inputField.type === 'checkbox') {
+        inputField.checked = value;
+    } else {
+        inputField.value = value;
+    }
 
     if (triggerEvent) {
-        var event = document.createEvent('HTMLEvents');
-        event.initEvent('input', true, true);
+        const event = document.createEvent('HTMLEvents');
+        let eventType = 'input';
+        if (inputField.tagName === 'SELECT') {
+            eventType = 'change';
+        }
+        event.initEvent(eventType, true, true);
         inputField.dispatchEvent(event);
     }
 }

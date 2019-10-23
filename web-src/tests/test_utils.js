@@ -66,3 +66,13 @@ export function triggerKeyEvent(element, type, code) {
     const event = new KeyboardEvent(type, {key: code, keyCode: code, which: code});
     element.dispatchEvent(event);
 }
+
+export function setChipListValue(chipListComponent, value) {
+    const chipList = M.Chips.getInstance($(chipListComponent.$el).find('.chips').get(0));
+    while (chipList.chipsData.length > 0) {
+        chipList.deleteChip(0);
+    }
+    for (const valueElement of value) {
+        chipList.addChip({'tag': valueElement});
+    }
+}
