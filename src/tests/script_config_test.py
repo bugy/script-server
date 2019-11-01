@@ -783,7 +783,9 @@ class GetSortedConfigTest(unittest.TestCase):
             ('key2', 123),
             ('parameters', []),
         ])
-        self.assertEqual(expected, config)
+        self.assertEqual(expected.popitem(False), config.popitem(False))
+        self.assertEqual(expected.popitem(False), config.popitem(False))
+        self.assertCountEqual(expected.items(), config.items())
 
     def test_get_sorted_with_parameters(self):
         config = get_sorted_config({
