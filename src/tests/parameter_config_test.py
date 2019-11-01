@@ -708,7 +708,10 @@ class GetSortedParamConfig(unittest.TestCase):
              ('key1', 'abc'),
              ('key2', 123),
              ('key3', [])])
-        self.assertEqual(expected, config)
+
+        self.assertEqual(expected.popitem(last=False), config.popitem(last=False))
+        self.assertEqual(expected.popitem(last=False), config.popitem(last=False))
+        self.assertCountEqual(expected.items(), config.items())
 
 
 def _create_parameter_model(config, *, username=DEF_USERNAME, audit_name=DEF_AUDIT_NAME, all_parameters=None):
