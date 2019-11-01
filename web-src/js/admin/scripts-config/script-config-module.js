@@ -1,4 +1,24 @@
 import axios from 'axios';
+import {contains, forEachKeyValue, isEmptyValue} from '../../common';
+
+const allowedEmptyValuesInParam = ['name'];
+
+function removeEmptyValues(config) {
+    for (const parameter of config.parameters) {
+        let emptyValueKeys = [];
+        forEachKeyValue(parameter, (key, value) => {
+            if (contains(allowedEmptyValuesInParam, key)) {
+                return;
+            }
+
+            if (isEmptyValue(value)) {
+                emptyValueKeys.push(key);
+            }
+        });
+
+        emptyValueKeys.forEach(key => delete parameter[key]);
+    }
+}
 
 export default {
     state: {
@@ -21,11 +41,16 @@ export default {
                 });
         },
 
-        save({state}) {
+        save({dispatch, state}) {
+            const config = $.extend({}, state.scriptConfig);
+
+            removeEmptyValues(config);
+
             return axios.put('admin/scripts', {
-                config: state.scriptConfig,
+                config,
                 filename: state.scriptFilename
-            });
+            })
+                .then(dispatch('init', config.name));
         }
     },
     mutations: {

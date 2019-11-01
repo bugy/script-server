@@ -64,7 +64,7 @@
 
 <script>
     import Vue from 'vue';
-    import {forEachKeyValue, isEmptyArray, isEmptyString} from '../../common';
+    import {forEachKeyValue, isEmptyString} from '../../common';
     import Checkbox from '../../components/checkbox';
     import Combobox from '../../components/combobox';
     import TextArea from '../../components/TextArea';
@@ -90,6 +90,13 @@
         separatorField,
         typeField
     } from './parameter-fields';
+
+    function updateValue(value, configField, newValue) {
+        if (!value.hasOwnProperty(configField)) {
+            Object.assign(value, {[configField]: newValue});
+        }
+        Vue.set(value, configField, newValue);
+    }
 
     export default {
         name: 'ParameterConfigForm',
@@ -121,7 +128,7 @@
             };
 
             forEachKeyValue(simpleFields, (vmField, configField) => {
-                this.$watch(vmField, (newValue) => Vue.set(this.value, configField, newValue));
+                this.$watch(vmField, (newValue) => updateValue(this.value, configField, newValue));
             });
 
             for (const child of this.$children) {
@@ -247,11 +254,7 @@
                 }
             },
             fileExtensions(fileExtensions) {
-                if (isEmptyArray(fileExtensions)) {
-                    Vue.delete(this.value, 'file_extensions');
-                } else {
-                    Vue.set(this.value, 'file_extensions', fileExtensions);
-                }
+                updateValue(this.value, 'file_extensions', fileExtensions);
             },
             allowedValuesFromScript() {
                 this.updateAllowedValues();
@@ -264,15 +267,15 @@
             },
             defaultValue() {
                 if (this.selectedType === 'multiselect') {
-                    Vue.set(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
+                    updateValue(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
                 } else if (this.isRecursiveFile()) {
                     let path = this.defaultValue.split('/').filter(s => !isEmptyString(s));
                     if (this.defaultValue.startsWith('/')) {
                         path = ['/', ...path];
                     }
-                    Vue.set(this.value, 'default', path);
+                    updateValue(this.value, 'default', path);
                 } else {
-                    Vue.set(this.value, 'default', this.defaultValue);
+                    updateValue(this.value, 'default', this.defaultValue);
                 }
             }
         },
@@ -294,9 +297,9 @@
         methods: {
             updateAllowedValues() {
                 if (this.allowedValuesFromScript) {
-                    Vue.set(this.value, 'values', {script: this.allowedValuesScript});
+                    updateValue(this.value, 'values', {script: this.allowedValuesScript});
                 } else {
-                    Vue.set(this.value, 'values', this.allowedValues);
+                    updateValue(this.value, 'values', this.allowedValues);
                 }
             },
             isRecursiveFile() {

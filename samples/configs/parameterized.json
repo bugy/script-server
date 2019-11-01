@@ -11,8 +11,7 @@
     {
       "name": "Simple Int",
       "param": "--simple_int",
-      "type": "int",
-      "max": ""
+      "type": "int"
     },
     {
       "name": "Simple Boolean",

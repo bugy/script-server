@@ -27,7 +27,7 @@
     import ParameterConfigForm from './ParameterConfigForm';
 
     export default {
-        name: 'ParamHeader',
+        name: 'ParamListItem',
         components: {ParameterConfigForm},
 
         props: {

@@ -34,7 +34,7 @@ export function isEmptyArray(value) {
     return isNull(value) || value.length === 0;
 }
 
-function isEmptyValue(value) {
+export function isEmptyValue(value) {
     if (isNull(value)) {
         return true;
     }
@@ -46,6 +46,8 @@ function isEmptyValue(value) {
     if (typeof value === 'object') {
         return isEmptyObject(value);
     }
+
+    return false;
 }
 
 export function isEmptyObject(obj) {

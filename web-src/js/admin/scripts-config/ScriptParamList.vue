@@ -194,9 +194,12 @@
                 }, 40);
             },
 
-            parameters(parameters) {
-                for (const parameter of parameters) {
-                    this.setParameterKey(parameter);
+            parameters :{
+                immediate: true,
+                handler(parameters) {
+                    for (const parameter of parameters) {
+                        this.setParameterKey(parameter);
+                    }
                 }
             }
         }
