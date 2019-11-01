@@ -22,14 +22,14 @@ from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from auth.user import User
 from communications.alerts_service import AlertsService
-from config.config_service import ConfigService, ConfigNotAllowedException
+from config.config_service import ConfigService, ConfigNotAllowedException, InvalidConfigException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
 from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
 from model import external_model
 from model.external_model import to_short_execution_log, to_long_execution_log, parameter_to_external
-from model.model_helper import is_empty
+from model.model_helper import is_empty, InvalidFileException
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
 from model.server_conf import ServerConfig
@@ -190,6 +190,43 @@ class GetScripts(BaseRequestHandler):
         self.write(json.dumps(names))
 
 
+class AdminUpdateScriptEndpoint(BaseRequestHandler):
+    @requires_admin_rights
+    @inject_user
+    def post(self, user):
+        request = tornado_utils.get_request_body(self)
+        config = request.get('config')
+
+        try:
+            self.application.config_service.create_config(user, config)
+        except (InvalidConfigException) as e:
+            raise tornado.web.HTTPError(422, str(e))
+
+    @requires_admin_rights
+    @inject_user
+    def put(self, user):
+        request = tornado_utils.get_request_body(self)
+        config = request.get('config')
+        filename = request.get('filename')
+
+        try:
+            self.application.config_service.update_config(user, config, filename)
+        except (InvalidConfigException, InvalidFileException) as e:
+            raise tornado.web.HTTPError(422, str(e))
+
+
+class AdminGetScriptEndpoint(BaseRequestHandler):
+    @requires_admin_rights
+    @inject_user
+    def get(self, user, script_name):
+        config = self.application.config_service.load_config(script_name, user)
+
+        if config is None:
+            raise tornado.web.HTTPError(404, str('Failed to find config for name: ' + script_name))
+
+        self.write(json.dumps(config))
+
+
 class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
 
     def __init__(self, application, request, **kwargs):
@@ -202,7 +239,7 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
     @inject_user
     def open(self, user, config_name):
         try:
-            self.config_model = self.application.config_service.create_config_model(config_name, user)
+            self.config_model = self.application.config_service.load_config_model(config_name, user)
             active_config_models[self.config_id] = {'model': self.config_model, 'user_id': user.user_id}
         except ConfigNotAllowedException:
             self.close(code=403, reason='Access to the script is denied')
@@ -401,7 +438,7 @@ class ScriptExecute(BaseRequestHandler):
 
             script_name = execution_info.script
 
-            config_model = self.application.config_service.create_config_model(script_name, user)
+            config_model = self.application.config_service.load_config_model(script_name, user)
 
             if not config_model:
                 message = 'Script with name "' + str(script_name) + '" not found'
@@ -826,6 +863,8 @@ def init(server_config: ServerConfig,
                 (r'/result_files/(.*)',
                  DownloadResultFile,
                  {'path': downloads_folder}),
+                (r'/admin/scripts', AdminUpdateScriptEndpoint),
+                (r'/admin/scripts/(.*)', AdminGetScriptEndpoint),
                 (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
 
     if auth.is_enabled():

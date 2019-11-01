@@ -6,7 +6,7 @@
                 class="validate"
                 :required="config.required"
                 :multiple="config.multiselect"
-                :disabled="options.length === 0">
+                :disabled="disabled || (options.length === 0)">
             <option :selected="!anythingSelected" value="" disabled>Choose your option</option>
             <option v-for="option in options"
                     :value="option.value"
@@ -21,9 +21,16 @@
     import {addClass, contains, findNeighbour, isEmptyString, isNull, removeClass} from '../common';
 
     export default {
+        name: 'Combobox',
+
         props: {
             'config': Object,
-            'value': [String, Array]
+            'value': [String, Array],
+            'disabled': {
+                type: Boolean,
+                default: false
+            },
+            dropdownContainer: null
         },
 
         data: function () {
@@ -71,6 +78,10 @@
                         this._selectValue(newValue);
                     }
                 }
+            },
+
+            disabled() {
+                this.$nextTick(() => this.rebuildCombobox());
             }
         },
 
@@ -181,7 +192,7 @@
 
             rebuildCombobox() {
                 this.comboboxWrapper = M.FormSelect.init($(this.$refs.selectField),
-                    {dropdownOptions: {constrainWidth: false}})[0];
+                    {dropdownOptions: {constrainWidth: false, dropdownContainer: this.dropdownContainer}})[0];
 
                 $(this.$refs.selectField).siblings('ul').children('li').each(function () {
                     var text = $(this).children('span:first-child').text();
@@ -199,6 +210,10 @@
             },
 
             updateComboboxValue() {
+                if (isNull(this.$refs.selectField)) {
+                    return;
+                }
+
                 const inputField = findNeighbour(this.$refs.selectField, 'input');
 
                 // setCustomValidity doesn't work since input is readonly
