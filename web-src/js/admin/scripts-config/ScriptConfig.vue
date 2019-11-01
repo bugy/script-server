@@ -32,10 +32,6 @@
             }
         },
 
-        mounted: function () {
-            this.init(this.scriptName);
-        },
-
         methods: {
             ...mapActions('script-config', ['init', 'save'])
         },
@@ -45,6 +41,15 @@
                 scriptConfig: 'scriptConfig',
                 loadingError: 'error'
             })
+        },
+
+        watch: {
+            scriptName: {
+                immediate: true,
+                handler(scriptName) {
+                    this.init(scriptName);
+                }
+            }
         }
     }
 

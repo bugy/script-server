@@ -21,32 +21,6 @@
 
     export default {
         name: 'execution-details',
-        mounted: function () {
-            let executionId = this.$route.params.executionId;
-
-            let execution = this.findExecution(executionId);
-            if (isNull(execution)) {
-                execution = {
-                    id: executionId,
-                    user: 'Unknown',
-                    script: 'Unknown'
-                }
-            }
-            this.updateSubheaderFromLog(execution);
-
-            axios.get('admin/execution_log/long/' + executionId).then(({data: incomingLog}) => {
-                const executionLog = translateExecutionLog(incomingLog);
-
-                this.script = executionLog.script;
-                this.user = executionLog.user;
-                this.startTime = executionLog.startTimeString;
-                this.fullStatus = executionLog.fullStatus;
-                this.command = executionLog.command;
-                this.$refs.logPanel.setLog(executionLog.log);
-
-                this.updateSubheaderFromLog(executionLog);
-            });
-        },
 
         data: function () {
             return {
@@ -76,6 +50,36 @@
             ...mapGetters('executions', {
                 findExecution: 'findById'
             })
+        },
+
+        watch: {
+            '$route.params.executionId': {
+                immediate: true,
+                handler(executionId) {
+                    let execution = this.findExecution(executionId);
+                    if (isNull(execution)) {
+                        execution = {
+                            id: executionId,
+                            user: 'Unknown',
+                            script: 'Unknown'
+                        }
+                    }
+                    this.updateSubheaderFromLog(execution);
+
+                    axios.get('admin/execution_log/long/' + executionId).then(({data: incomingLog}) => {
+                        const executionLog = translateExecutionLog(incomingLog);
+
+                        this.script = executionLog.script;
+                        this.user = executionLog.user;
+                        this.startTime = executionLog.startTimeString;
+                        this.fullStatus = executionLog.fullStatus;
+                        this.command = executionLog.command;
+                        this.$refs.logPanel.setLog(executionLog.log);
+
+                        this.updateSubheaderFromLog(executionLog);
+                    });
+                }
+            }
         }
     }
 </script>

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import {isNull} from '../../common';
 
 export default {
     state: {

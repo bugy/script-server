@@ -1,5 +1,6 @@
 import axios from 'axios';
 import {contains, forEachKeyValue, isEmptyValue} from '../../common';
+import router from '../router'
 
 const allowedEmptyValuesInParam = ['name'];
 
@@ -43,6 +44,7 @@ export default {
 
         save({dispatch, state}) {
             const config = $.extend({}, state.scriptConfig);
+            const oldName = state.scriptName;
 
             removeEmptyValues(config);
 
@@ -50,7 +52,17 @@ export default {
                 config,
                 filename: state.scriptFilename
             })
-                .then(dispatch('init', config.name));
+                .then(() => {
+                    const newName = config.name;
+
+                    if (oldName === newName) {
+                        dispatch('init', newName);
+                    } else {
+                        router.push({
+                            path: `/scripts/${newName}`
+                        });
+                    }
+                });
         }
     },
     mutations: {

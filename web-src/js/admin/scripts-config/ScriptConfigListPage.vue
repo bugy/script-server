@@ -5,9 +5,6 @@
 </template>
 
 <script>
-    import {mapActions, mapState} from 'vuex';
-    import PageProgress from '../components/PageProgress';
-    import ScriptsList from './ScriptsList';
 
     export default {
         name: 'ScriptConfigListPage',
