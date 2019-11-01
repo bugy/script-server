@@ -784,7 +784,7 @@ class GetSortedConfigTest(unittest.TestCase):
             ('parameters', []),
         ])
         self.assertEqual(expected.popitem(False), config.popitem(False))
-        self.assertEqual(expected.popitem(False), config.popitem(False))
+        self.assertEqual(expected.popitem(True), config.popitem(True))
         self.assertCountEqual(expected.items(), config.items())
 
     def test_get_sorted_with_parameters(self):
