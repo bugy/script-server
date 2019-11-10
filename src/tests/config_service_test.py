@@ -69,6 +69,12 @@ class ConfigServiceTest(unittest.TestCase):
         config = self.config_service.load_config_model('conf_x', self.user)
         self.assertIsNone(config)
 
+    def test_load_config_with_slash_in_name(self):
+        _create_script_config_file('conf_x', name='Name with slash /')
+
+        config = self.config_service.load_config_model('Name with slash /', self.user)
+        self.assertEquals('Name with slash /', config.name)
+
     def tearDown(self):
         super().tearDown()
         test_utils.cleanup()

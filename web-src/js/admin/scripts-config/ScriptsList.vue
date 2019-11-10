@@ -7,9 +7,9 @@
                 Add
             </router-link>
             <div class="collection">
-                <router-link :key="script" :to="script" append class="collection-item"
+                <router-link :key="script.name" :to="script.path" append class="collection-item"
                              v-for="script in scripts">
-                    {{script}}
+                    {{script.name}}
                 </router-link>
             </div>
         </div>
@@ -36,7 +36,9 @@
 
         computed: {
             ...mapState('scripts', {
-                scripts: 'scripts',
+                scripts: state => {
+                    return state.scripts ? state.scripts.map(s => ({name: s, path: encodeURIComponent(s)})) : []
+                },
                 loading: 'loading'
             })
         },

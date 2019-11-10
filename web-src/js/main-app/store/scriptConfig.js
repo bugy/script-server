@@ -217,7 +217,7 @@ export default {
 function reconnect(state, internalState, commit, dispatch, selectedScript) {
     let dataReceived = false;
 
-    const socket = new ReactiveWebSocket('scripts/' + selectedScript, {
+    const socket = new ReactiveWebSocket('scripts/' + encodeURIComponent(selectedScript), {
         onNext: function (rawMessage) {
             internalState.reconnectionAttempt = 0;
 
@@ -334,7 +334,7 @@ function loadFiles(scriptConfig, parameterName, path) {
         throw Error('Config is not available');
     }
 
-    const url = encodeURI('scripts/' + scriptConfig.name + '/' + parameterName + '/list-files');
+    const url = encodeURI('scripts/' + encodeURIComponent(scriptConfig.name) + '/' + parameterName + '/list-files');
     const param = $.param({'path': path, 'id': scriptConfig.id}, true);
     const full_url = url + '?' + param;
 

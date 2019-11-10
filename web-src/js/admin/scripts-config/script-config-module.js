@@ -38,9 +38,10 @@ export default {
                 commit('INIT_NEW_SCRIPT');
                 return;
             }
+
             commit('RESET', scriptName);
 
-            axios.get('admin/scripts/' + scriptName)
+            axios.get('admin/scripts/' + encodeURIComponent(scriptName))
                 .then(({data}) => {
                     commit('SET_SCRIPT_CONFIG', {config: data.config, filename: data.filename});
                 })
@@ -68,7 +69,7 @@ export default {
                         dispatch('init', newName);
                     } else {
                         router.push({
-                            path: `/scripts/${newName}`
+                            path: `/scripts/${encodeURIComponent(newName)}`
                         });
                     }
                 })
