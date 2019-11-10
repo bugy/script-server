@@ -21,16 +21,23 @@ function removeEmptyValues(config) {
     }
 }
 
+export const NEW_SCRIPT = '_new';
+
 export default {
     state: {
         scriptName: null,
         scriptConfig: null,
         scriptFilename: null,
-        error: null
+        error: null,
+        new: false
     },
     namespaced: true,
     actions: {
         init({commit, state}, scriptName) {
+            if (scriptName === NEW_SCRIPT) {
+                commit('INIT_NEW_SCRIPT');
+                return;
+            }
             commit('RESET', scriptName);
 
             axios.get('admin/scripts/' + scriptName)
@@ -48,7 +55,9 @@ export default {
 
             removeEmptyValues(config);
 
-            return axios.put('admin/scripts', {
+            const axiosAction = state.new ? axios.post : axios.put;
+
+            return axiosAction('admin/scripts', {
                 config,
                 filename: state.scriptFilename
             })
@@ -62,6 +71,12 @@ export default {
                             path: `/scripts/${newName}`
                         });
                     }
+                })
+                .catch(e => {
+                    if (e.response.status === 422) {
+                        e.userMessage = e.response.data;
+                    }
+                    throw e;
                 });
         }
     },
@@ -71,18 +86,28 @@ export default {
             state.scriptConfig = null;
             state.scriptFilename = null;
             state.error = null;
+            state.new = false;
         },
 
         SET_SCRIPT_CONFIG(state, {config, filename}) {
             state.error = null;
             state.scriptConfig = config;
             state.scriptFilename = filename;
+            state.new = false;
         },
 
         SET_LOAD_ERROR(state, error) {
             state.error = error;
             state.scriptConfig = null;
             state.scriptFilename = null;
+        },
+
+        INIT_NEW_SCRIPT(state) {
+            state.scriptName = null;
+            state.scriptConfig = {parameters: []};
+            state.new = true;
+            state.scriptFilename = null;
+            state.error = null;
         }
     }
 }

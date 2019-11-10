@@ -22,8 +22,13 @@ def _script_name_to_file_name(script_name):
 def _preprocess_incoming_config(config):
     name = config.get('name')
     if is_blank(name):
-        raise InvalidConfigException('Name is a required parameter for script')
+        raise InvalidConfigException('Script name is required')
     config['name'] = name.strip()
+
+    script_path = config.get('script_path')
+    if is_blank(script_path):
+        raise InvalidConfigException('Script path is required')
+    config['script_path'] = script_path.strip()
 
 
 class ConfigService:

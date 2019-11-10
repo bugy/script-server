@@ -200,7 +200,7 @@ class AdminUpdateScriptEndpoint(BaseRequestHandler):
         try:
             self.application.config_service.create_config(user, config)
         except (InvalidConfigException) as e:
-            raise tornado.web.HTTPError(422, str(e))
+            raise tornado.web.HTTPError(422, reason=str(e))
 
     @requires_admin_rights
     @inject_user

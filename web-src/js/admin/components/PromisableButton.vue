@@ -21,6 +21,8 @@
 </template>
 
 <script>
+    import {isEmptyString} from '../../common';
+
     export default {
         name: 'PromisableButton',
         props: {
@@ -47,8 +49,12 @@
                     this.error = null;
                     this.inProgress = false;
                 })
-                    .catch(() => {
-                        this.error = 'Failed to ' + this.title;
+                    .catch((e) => {
+                        if (!isEmptyString(e.userMessage)) {
+                            this.error = e.userMessage;
+                        } else {
+                            this.error = 'Failed to ' + this.title;
+                        }
                         this.inProgress = false;
                     })
             }

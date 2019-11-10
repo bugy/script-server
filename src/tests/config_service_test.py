@@ -175,6 +175,21 @@ class ConfigServiceCreateConfigTest(unittest.TestCase):
         config['name'] = 'conf1'
         _validate_config(self, 'conf1.json', config)
 
+    def test_blank_script_path(self):
+        config = _prepare_script_config_object('Conf X', description='My wonderful test config')
+        config['script_path'] = '   '
+
+        self.assertRaises(InvalidConfigException, self.config_service.create_config,
+                          self.admin_user, config)
+
+    def test_strip_script_path(self):
+        config = _prepare_script_config_object('Conf X', description='My wonderful test config')
+        config['script_path'] = '  my_script.sh\t \t'
+
+        self.config_service.create_config(self.admin_user, config)
+        config['script_path'] = 'my_script.sh'
+        _validate_config(self, 'Conf_X.json', config)
+
     def test_name_already_exists(self):
         _create_script_config_file('confX', name='confX')
         config = _prepare_script_config_object('confX', description='My wonderful test config')
@@ -259,6 +274,21 @@ class ConfigServiceUpdateConfigTest(unittest.TestCase):
 
         self.config_service.update_config(self.admin_user, config, 'confX.json')
         config['name'] = 'Conf X'
+        _validate_config(self, 'confX.json', config)
+
+    def test_blank_script_path(self):
+        config = _prepare_script_config_object('Conf X', description='My wonderful test config')
+        config['script_path'] = '   '
+
+        self.assertRaises(InvalidConfigException, self.config_service.update_config,
+                          self.admin_user, config, 'confX.json')
+
+    def test_strip_script_path(self):
+        config = _prepare_script_config_object('Conf X', description='My wonderful test config')
+        config['script_path'] = '  my_script.sh\t \t'
+
+        self.config_service.update_config(self.admin_user, config, 'confX.json')
+        config['script_path'] = 'my_script.sh'
         _validate_config(self, 'confX.json', config)
 
     def test_name_already_exists(self):
@@ -370,7 +400,7 @@ def _validate_config(test_case, expected_filename, expected_body):
 
 
 def _prepare_script_config_object(name, **kwargs):
-    config = {'name': name}
+    config = {'name': name, 'script_path': name + '.sh'}
 
     if kwargs:
         config.update(kwargs)
