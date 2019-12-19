@@ -13,7 +13,7 @@
 </template>
 
 <script>
-    import {hasClass, guid} from '../../common'
+    import {guid} from '../../common'
     import ParamListItem from './ParamListItem';
 
     export default {
@@ -50,15 +50,6 @@
                     return;
                 }
 
-                let activeElementIndex = this.getActiveParamIndex();
-
-                const collapsible = M.Collapsible.getInstance(this.$refs.parametersPanel);
-                if (index === activeElementIndex) {
-                    collapsible.close(activeElementIndex);
-                } else if (activeElementIndex > index) {
-                    collapsible.open(activeElementIndex - 1);
-                }
-
                 this.$delete(this.parameters, index);
 
                 const toast = M.toast({
@@ -85,14 +76,6 @@
                 const prevParam = this.parameters[index - 1];
                 this.$set(this.parameters, index - 1, param);
                 this.$set(this.parameters, index, prevParam);
-
-                const collapsible = M.Collapsible.getInstance(this.$refs.parametersPanel);
-                const activeParamIndex = this.getActiveParamIndex();
-                if (activeParamIndex === index) {
-                    collapsible.open(index - 1);
-                } else if (activeParamIndex === (index - 1)) {
-                    collapsible.open(index);
-                }
             },
 
             moveDown(param) {
@@ -104,14 +87,6 @@
                 const nextParam = this.parameters[index + 1];
                 this.$set(this.parameters, index + 1, param);
                 this.$set(this.parameters, index, nextParam);
-
-                const collapsible = M.Collapsible.getInstance(this.$refs.parametersPanel);
-                const activeParamIndex = this.getActiveParamIndex();
-                if (activeParamIndex === index) {
-                    collapsible.open(index + 1);
-                } else if (activeParamIndex === (index + 1)) {
-                    collapsible.open(index);
-                }
             },
 
             addParam() {
@@ -148,19 +123,6 @@
                 });
             },
 
-            getActiveParamIndex() {
-                let activeElementIndex = -1;
-                for (let i = 0; i < this.$refs.parametersPanel.childNodes.length; i++) {
-                    const child = this.$refs.parametersPanel.childNodes[i];
-
-                    if (hasClass(child, 'active')) {
-                        activeElementIndex = i;
-                        break;
-                    }
-                }
-                return activeElementIndex;
-            },
-
             scrollToNewParam() {
                 const parameterElements = $(this.$refs.parametersPanel).children('li');
                 const newParamElement = parameterElements[parameterElements.length - 2];
@@ -194,7 +156,7 @@
                 }, 40);
             },
 
-            parameters :{
+            parameters: {
                 immediate: true,
                 handler(parameters) {
                     for (const parameter of parameters) {

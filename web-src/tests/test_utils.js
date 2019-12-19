@@ -76,3 +76,24 @@ export function setChipListValue(chipListComponent, value) {
         chipList.addChip({'tag': valueElement});
     }
 }
+
+export function createVue(component, properties) {
+    document.body.insertAdjacentHTML('afterbegin', '<div id="top-level-element"></div>');
+    const topLevelElement = document.getElementById('top-level-element');
+
+    const ComponentClass = Vue.extend(component);
+    const vm = new ComponentClass({
+        propsData: properties
+    }).$mount(topLevelElement);
+
+    vm.$on('input', function (value) {
+        vm.value = value
+    });
+
+    return vm;
+}
+
+export function destroy(component) {
+    component.$parent
+    component.destroy();
+}
