@@ -9,7 +9,7 @@ For system administrators it's a possibility to share their scripts with users, 
 No script modifications are needed - you add a configuration for each script to the script-server and it takes care of proper UI, validation, execution, etc.  
 
 
-[DEMO server](https://script-server.org)
+[DEMO server](https://script-server.net)
 
 ## Features
 - Interactive output/input web console
