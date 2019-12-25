@@ -11,7 +11,7 @@ class TestPtyProcessWrapper(unittest.TestCase):
         long_unicode_text = ('ΩΨΔ\n' * 100000)
         test_utils.create_file('test.txt', text=long_unicode_text)
 
-        process_wrapper = PtyProcessWrapper(['cat', 'test.txt'], test_utils.temp_folder)
+        process_wrapper = PtyProcessWrapper(['cat', 'test.txt'], test_utils.temp_folder, {})
         process_wrapper.start()
 
         thread = threading.Thread(target=process_wrapper.wait_finish, daemon=True)

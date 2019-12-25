@@ -34,6 +34,7 @@ class ParameterModelInitTest(unittest.TestCase):
         parameter_model = _create_parameter_model({
             'name': name,
             'param': param,
+            'env_var': 'my_Param',
             'no_value': 'true',
             'description': description,
             'required': required,
@@ -48,8 +49,8 @@ class ParameterModelInitTest(unittest.TestCase):
         })
 
         self.assertEqual(name, parameter_model.name)
-        self.assertEqual(name, parameter_model.name)
         self.assertEqual(param, parameter_model.param)
+        self.assertEqual('my_Param', parameter_model.env_var)
         self.assertEqual(True, parameter_model.no_value)
         self.assertEqual(description, parameter_model.description)
         self.assertEqual(required, parameter_model.required)

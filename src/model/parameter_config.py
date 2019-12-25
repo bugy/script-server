@@ -18,6 +18,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
 
 @observable_fields(
     'param',
+    'env_var',
     'no_value',
     'description',
     'required',
@@ -61,6 +62,7 @@ class ParameterModel(object):
         config = self._original_config
 
         self.param = config.get('param')
+        self.env_var = config.get('env_var')
         self.no_value = read_bool_from_config('no_value', config, default=False)
         self.description = config.get('description')
         self.required = read_bool_from_config('required', config, default=False)

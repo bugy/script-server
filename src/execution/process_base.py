@@ -12,11 +12,12 @@ from utils import os_utils
 LOGGER = logging.getLogger('script_server.process_base')
 
 class ProcessWrapper(metaclass=abc.ABCMeta):
-    def __init__(self, command, working_directory):
+    def __init__(self, command, working_directory, env_variables):
         self.process = None
 
         self.working_directory = working_directory
         self.command = command
+        self.env_variables = env_variables
 
         self.finish_listeners = []
 

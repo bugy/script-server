@@ -4,7 +4,9 @@ import sys
 
 from execution import process_popen, process_base
 from model import model_helper
+from model.model_helper import read_bool
 from utils import file_utils, process_utils, os_utils
+from utils.transliteration import transliterate
 
 TIME_BUFFER_MS = 100
 
@@ -13,7 +15,7 @@ LOGGER = logging.getLogger('script_server.ScriptExecutor')
 mock_process = False
 
 
-def create_process_wrapper(executor, command, working_directory):
+def create_process_wrapper(executor, command, working_directory, env_variables):
     run_pty = executor.config.requires_terminal
     if run_pty and not os_utils.is_pty_supported():
         LOGGER.warning(
@@ -22,9 +24,9 @@ def create_process_wrapper(executor, command, working_directory):
 
     if run_pty:
         from execution import process_pty
-        process_wrapper = process_pty.PtyProcessWrapper(command, working_directory)
+        process_wrapper = process_pty.PtyProcessWrapper(command, working_directory, env_variables)
     else:
-        process_wrapper = process_popen.POpenProcessWrapper(command, working_directory)
+        process_wrapper = process_popen.POpenProcessWrapper(command, working_directory, env_variables)
 
     return process_wrapper
 
@@ -86,10 +88,13 @@ class ScriptExecutor:
         if self.process_wrapper is not None:
             raise Exception('Executor already started')
 
-        script_args = build_command_args(self.get_script_parameter_values(), self.config)
-        command = self.script_base_command + script_args
+        parameter_values = self.get_script_parameter_values()
 
-        process_wrapper = _process_creator(self, command, self._working_directory)
+        script_args = build_command_args(parameter_values, self.config)
+        command = self.script_base_command + script_args
+        env_variables = _build_env_variables(parameter_values, self.config.parameters)
+
+        process_wrapper = _process_creator(self, command, self._working_directory, env_variables)
         process_wrapper.start()
 
         self.process_wrapper = process_wrapper
@@ -221,6 +226,50 @@ def build_command_args(param_values, config):
                     result.extend(value)
                 else:
                     result.append(value)
+
+    return result
+
+
+def _to_env_name(key):
+    transliterated = transliterate(key)
+    replaced = re.sub('[^0-9a-zA-Z_]+', '_', transliterated)
+    if replaced == '_':
+        return None
+
+    return 'PARAM_' + replaced.upper()
+
+
+def _build_env_variables(parameter_values, parameters):
+    result = {}
+    excluded = []
+    for param_name, value in parameter_values.items():
+        if isinstance(value, list) or (value is None):
+            continue
+
+        found_parameters = [p for p in parameters if p.name == param_name]
+        if len(found_parameters) != 1:
+            continue
+
+        parameter = found_parameters[0]
+
+        env_var = parameter.env_var
+        if env_var is None:
+            env_var = _to_env_name(param_name)
+
+        if (not env_var) or (env_var in excluded):
+            continue
+
+        if env_var in result:
+            excluded.append(env_var)
+            del result[env_var]
+            continue
+
+        if parameter.no_value:
+            if (value is not None) and (read_bool(value) == True):
+                result[env_var] = 'true'
+            continue
+
+        result[env_var] = str(value)
 
     return result
 

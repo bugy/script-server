@@ -12,6 +12,11 @@ export const argField = {
     description: 'Allows to specify command-line argument for the parameter (e.g. -q or --quiet)'
 };
 
+export const envVarField = {
+    name: 'Env variable',
+    description: 'Environment variable, which will be associated with the parameter (by default PARAM_{uppercase name})'
+};
+
 export const typeField = {
     name: 'Type',
     type: 'list',

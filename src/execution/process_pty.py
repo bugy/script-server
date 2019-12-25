@@ -26,8 +26,8 @@ def _unset_output_flags(fd, *new_attributes):
 
 
 class PtyProcessWrapper(process_base.ProcessWrapper):
-    def __init__(self, command, working_directory):
-        super().__init__(command, working_directory)
+    def __init__(self, command, working_directory, env_variables):
+        super().__init__(command, working_directory, env_variables)
 
         self.pty_master = None
         self.pty_slave = None
@@ -36,12 +36,16 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
 
     def start_execution(self, command, working_directory):
         master, slave = pty.openpty()
+
+        env_variables = dict(os.environ, **self.env_variables)
+
         self.process = subprocess.Popen(command,
                                         cwd=working_directory,
                                         stdin=slave,
                                         stdout=slave,
                                         stderr=slave,
-                                        start_new_session=True)
+                                        start_new_session=True,
+                                        env=env_variables)
         self.pty_slave = slave
         self.pty_master = master
 

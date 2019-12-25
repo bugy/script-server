@@ -8,6 +8,7 @@ from utils import os_utils
 
 LOGGER = logging.getLogger('script_server.process_popen')
 
+
 def prepare_cmd_for_win(command):
     shell = False
 
@@ -22,8 +23,8 @@ def prepare_cmd_for_win(command):
 
 
 class POpenProcessWrapper(process_base.ProcessWrapper):
-    def __init__(self, command, working_directory):
-        super().__init__(command, working_directory)
+    def __init__(self, command, working_directory, env_variables):
+        super().__init__(command, working_directory, env_variables)
 
     def start_execution(self, command, working_directory):
         shell = False
@@ -31,6 +32,7 @@ class POpenProcessWrapper(process_base.ProcessWrapper):
         if os_utils.is_win():
             (command, shell) = prepare_cmd_for_win(command)
 
+        env_variables = dict(os.environ, **self.env_variables)
         self.process = subprocess.Popen(command,
                                         cwd=working_directory,
                                         stdin=subprocess.PIPE,
@@ -38,7 +40,8 @@ class POpenProcessWrapper(process_base.ProcessWrapper):
                                         stderr=subprocess.STDOUT,
                                         start_new_session=True,
                                         universal_newlines=True,
-                                        shell=shell)
+                                        shell=shell,
+                                        env=env_variables)
 
     def write_to_input(self, value):
         input_value = value

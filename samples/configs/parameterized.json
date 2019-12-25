@@ -58,7 +58,8 @@
       "name": "Required Text",
       "required": true,
       "param": "--required_text",
-      "description": "Parameter One"
+      "description": "Parameter One",
+      "env_var": "Req_Text"
     },
     {
       "name": "Required List",

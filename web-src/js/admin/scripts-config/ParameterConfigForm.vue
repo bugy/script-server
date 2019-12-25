@@ -14,6 +14,9 @@
                       @error="handleError(typeField, $event)"
                       class="col s4" v-model="type"/>
         </div>
+        <div class="row">
+            <Textfield :config="envVarField" @error="handleError(envVarField, $event)" class="col s4" v-model="envVar"/>
+        </div>
         <div class="row" v-if="selectedType !== 'file_upload'">
             <Textfield :class="{s6: !isExtendedDefault, s8: isExtendedDefault}" :config="defaultValueField"
                        @error="handleError(defaultValueField, $event)" class="col"
@@ -77,6 +80,7 @@
         constantField,
         defaultValueField,
         descriptionField,
+        envVarField,
         fileDirField,
         fileTypeField,
         maxField,
@@ -113,6 +117,7 @@
                 name: 'name',
                 description: 'description',
                 arg: 'param',
+                envVar: 'env_var',
                 type: 'type',
                 noValue: 'no_value',
                 required: 'required',
@@ -146,6 +151,7 @@
             return {
                 name: null,
                 arg: null,
+                envVar: null,
                 type: null,
                 noValue: null,
                 required: null,
@@ -166,6 +172,7 @@
                 fileExtensions: null,
                 nameField,
                 argField: $.extend({}, argField),
+                envVarField,
                 typeField,
                 noValueField,
                 requiredField,
@@ -193,6 +200,7 @@
                         this.name = config['name'];
                         this.description = config['description'];
                         this.arg = config['param'];
+                        this.envVar = config['env_var'];
                         this.type = config['type'];
                         this.noValue = _.get(config, 'no_value', false);
                         this.required = _.get(config, 'required', false);

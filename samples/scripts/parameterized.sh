@@ -48,4 +48,9 @@ else
     echo "--file_upload: "`md5sum "$my_file"`
 fi
 
+echo
+echo 'Environment variables:'
+echo 'Req_Text='"$Req_Text"
+printenv | grep -P '^PARAM_'
+
 sleep 5
