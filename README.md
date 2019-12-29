@@ -27,7 +27,7 @@ The features can be configured [per-script](https://github.com/bugy/script-serve
 ## Requirements
 ### Server-side
 Python 3.4 or higher with the following modules:
-* Tornado 4/5
+* Tornado 4 / 5 / 6
 * typing *(for python 3.4 only)*
 
 Some features can require additional modules. Such requirements are specified in a corresponding feature description.

@@ -1,2 +1,2 @@
 typing
-tornado<6
+tornado>=4
