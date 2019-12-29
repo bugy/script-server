@@ -17,7 +17,7 @@ export default {
 
         initFromParameters({state, dispatch, commit}, {scriptName, parameters}) {
             if (!isNull(state.lastPredefinedScript)) {
-                if (scriptName === state.lastPredefinedScript) {
+                if ((scriptName === state.lastPredefinedScript) || (scriptName === null)) {
                     return;
                 }
 
