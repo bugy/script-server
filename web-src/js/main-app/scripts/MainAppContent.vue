@@ -6,6 +6,9 @@
             <p v-if="!authenticated">
                 Credentials expired, please <a href="javascript:void(0)" onclick="location.reload()">relogin</a>
             </p>
+            <p v-else-if="scriptLoadError && notFound">
+                Failed to load script info: script '{{ selectedScript }}' not found
+            </p>
             <p v-else-if="scriptLoadError">
                 Failed to load script info. Try to reload the page. Error message:
                 <br>
@@ -17,6 +20,8 @@
 
 <script>
     import {mapState} from 'vuex';
+    import {isEmptyString} from '../../common';
+    import {NOT_FOUND_ERROR_PREFIX} from '../store/scriptConfig';
     import ScriptView from './script-view';
 
     export default {
@@ -28,7 +33,12 @@
                 return !!(this.scriptLoadError || !this.authenticated);
             },
             ...mapState('auth', ['authenticated']),
-            ...mapState('scriptConfig', {scriptLoadError: 'loadError'})
+            ...mapState('scriptConfig', {scriptLoadError: 'loadError'}),
+            ...mapState('scripts', ['selectedScript']),
+
+            notFound() {
+                return !isEmptyString(this.scriptLoadError) && this.scriptLoadError.startsWith(NOT_FOUND_ERROR_PREFIX);
+            }
         }
     }
 </script>
@@ -53,7 +63,7 @@
     }
 
     .collapsed {
-        flex-grow: 0;
+        flex: 0 1 auto;
     }
 
     .error-panel {

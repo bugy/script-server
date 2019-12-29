@@ -18,10 +18,9 @@
 <script>
     import Vue from 'vue';
     import Vuex, {mapActions, mapState} from 'vuex';
-    import executions from './executions/executions-module';
+    import executions from '../history/executions-module';
     import scripts from './scripts-config/scripts-module';
     import scriptConfig from './scripts-config/script-config-module';
-
 
     Vue.use(Vuex);
 
@@ -30,7 +29,7 @@
             subheader: null
         },
         modules: {
-            executions: executions,
+            'history': executions(),
             scripts: scripts,
             'script-config': scriptConfig
         },

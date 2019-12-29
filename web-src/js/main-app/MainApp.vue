@@ -5,11 +5,10 @@
                 <MainAppSidebar/>
             </template>
             <template v-slot:header>
-                <h2 class="script-header header" v-show="selectedScript">{{ selectedScript }}</h2>
+                <router-view name="header"/>
             </template>
             <template v-slot:content>
-                <MainAppContent v-if="selectedScript"></MainAppContent>
-                <AppWelcomePanel v-else/>
+                <router-view/>
             </template>
         </AppLayout>
         <DocumentTitleManager/>
@@ -24,7 +23,7 @@
     import AppWelcomePanel from './AppWelcomePanel';
     import DocumentTitleManager from './DocumentTitleManager';
     import FaviconManager from './FaviconManager';
-    import MainAppContent from './MainAppContent';
+    import MainAppContent from './scripts/MainAppContent';
     import MainAppSidebar from './MainAppSidebar';
 
     export default {
@@ -43,29 +42,20 @@
             })
         },
 
-        computed: {
-            ...mapState('scripts', {
-                selectedScript: 'selectedScript'
-            })
-        },
-
         created() {
             this.init();
-
-            this.$store.watch((state) => state.scripts.selectedScript, (selectedScript) => {
-                this.$refs.appLayout.setSidebarVisibility(isEmptyString(selectedScript));
-            });
         },
 
         mounted() {
-            this.$refs.appLayout.setSidebarVisibility(true);
+            const currentPath = this.$router.currentRoute.path;
+            this.$refs.appLayout.setSidebarVisibility(isEmptyString(currentPath) || (currentPath === '/'));
+
+            this.$router.afterEach((to) => {
+                this.$refs.appLayout.setSidebarVisibility(false);
+            });
         }
     }
 </script>
 
 <style scoped>
-    .script-header {
-        background: url('../../images/titleBackground.jpg') no-repeat center;
-        background-size: cover;
-    }
 </style>

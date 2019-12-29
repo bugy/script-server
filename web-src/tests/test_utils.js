@@ -94,6 +94,5 @@ export function createVue(component, properties) {
 }
 
 export function destroy(component) {
-    component.$parent
     component.destroy();
 }

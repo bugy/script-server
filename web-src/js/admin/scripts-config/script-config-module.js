@@ -1,10 +1,14 @@
 import axios from 'axios';
-import {contains, forEachKeyValue, isEmptyValue} from '../../common';
+import {contains, forEachKeyValue, isEmptyArray, isEmptyValue} from '../../common';
 import router from '../router'
 
 const allowedEmptyValuesInParam = ['name'];
 
 function removeEmptyValues(config) {
+    if (isEmptyArray(config.parameters)) {
+        return;
+    }
+
     for (const parameter of config.parameters) {
         let emptyValueKeys = [];
         forEachKeyValue(parameter, (key, value) => {

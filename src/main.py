@@ -85,7 +85,11 @@ def main():
     group_provider = create_group_provider(
         server_config.user_groups, server_config.authenticator, server_config.admin_users)
 
-    authorizer = Authorizer(server_config.allowed_users, server_config.admin_users, group_provider)
+    authorizer = Authorizer(
+        server_config.allowed_users,
+        server_config.admin_users,
+        server_config.full_history_users,
+        group_provider)
 
     config_service = ConfigService(authorizer, CONFIG_FOLDER)
 
@@ -96,9 +100,9 @@ def main():
     log_name_creator = LogNameCreator(
         server_config.logging_config.filename_pattern,
         server_config.logging_config.date_format)
-    execution_logging_service = ExecutionLoggingService(execution_logs_path, log_name_creator)
+    execution_logging_service = ExecutionLoggingService(execution_logs_path, log_name_creator, authorizer)
 
-    existing_ids = [entry.id for entry in execution_logging_service.get_history_entries()]
+    existing_ids = [entry.id for entry in execution_logging_service.get_history_entries(None, system_call=True)]
     id_generator = IdGenerator(existing_ids)
 
     execution_service = ExecutionService(id_generator)

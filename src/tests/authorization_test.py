@@ -59,7 +59,7 @@ class TestIsAllowed(unittest.TestCase):
 
         self.user_groups = defaultdict(list)
 
-        self.authorizer = Authorizer([], [], self)
+        self.authorizer = Authorizer([], [], [], self)
 
 
 class TestIsAllowedInApp(unittest.TestCase):
@@ -86,7 +86,7 @@ class TestIsAllowedInApp(unittest.TestCase):
 
     def assertAllowed(self, user, allowed_users, expected_allowed, groups=None):
         group_provider = PreconfiguredGroupProvider(groups) if groups else EmptyGroupProvider()
-        authorizer = Authorizer(allowed_users, [], group_provider)
+        authorizer = Authorizer(allowed_users, [], [], group_provider)
 
         allowed = authorizer.is_allowed_in_app(user)
         if allowed != expected_allowed:
@@ -118,12 +118,44 @@ class TestIsAdmin(unittest.TestCase):
 
     def assertAdmin(self, user, admin_users, expected_allowed, groups=None):
         group_provider = PreconfiguredGroupProvider(groups) if groups else EmptyGroupProvider()
-        authorizer = Authorizer([], admin_users, group_provider)
+        authorizer = Authorizer([], admin_users, [], group_provider)
 
         allowed = authorizer.is_admin(user)
         if allowed != expected_allowed:
             self.fail('Expected ' + user + ' to be admin=' + str(expected_allowed)
                       + ' for ' + str(admin_users) + ' but was ' + str(allowed))
+
+
+class TestHistoryAccess(unittest.TestCase):
+    def test_user_in_the_list(self):
+        self.assert_has_access('user1', [], ['user1'], True)
+
+    def test_any_user_allowed(self):
+        self.assert_has_access('user2', [], [ANY_USER], True)
+
+    def test_user_not_in_the_list(self):
+        self.assert_has_access('user1', [], ['user2', 'user3', 'user4'], False)
+
+    def test_user_not_in_the_list_when_empty(self):
+        self.assert_has_access('user1', [], [], False)
+
+    def test_user_is_admin(self):
+        self.assert_has_access('admin1', ['admin1'], [], True)
+
+    def test_has_access_when_in_group(self):
+        self.assert_has_access('user1', [], ['@group1'], True, groups={'group1': ['user1']})
+
+    def test_has_access_when_in_group_without_access(self):
+        self.assert_has_access('user1', [], ['@group2'], False, groups={'group1': ['user1']})
+
+    def assert_has_access(self, user, admin_users, history_access_users, expected_allowed, groups=None):
+        group_provider = PreconfiguredGroupProvider(groups) if groups else EmptyGroupProvider()
+        authorizer = Authorizer([], admin_users, history_access_users, group_provider)
+
+        has_access = authorizer.has_full_history_access(user)
+        if has_access != expected_allowed:
+            self.fail('Expected ' + user + ' to has_access=' + str(expected_allowed)
+                      + ' for ' + str(history_access_users) + ' but was ' + str(has_access))
 
 
 class TestPreconfiguredGroupProvider(unittest.TestCase):

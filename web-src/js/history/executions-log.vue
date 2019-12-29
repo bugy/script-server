@@ -1,7 +1,7 @@
 <template>
     <div class="container">
         <PageProgress v-if="loading"/>
-        <executions-log-table :rowClick="goToLog" :rows="executionRows" v-else></executions-log-table>
+        <executions-log-table :rowClick="goToLog" :rows="executionRows" v-else/>
     </div>
 </template>
 
@@ -23,7 +23,7 @@
         },
 
         methods: {
-            ...mapActions('executions', ['init']),
+            ...mapActions('history', ['init']),
 
             goToLog(execution_entry) {
                 this.$router.push({
@@ -33,7 +33,7 @@
         },
 
         computed: {
-            ...mapState('executions', {
+            ...mapState('history', {
                 executionRows: 'executions',
                 loading: 'loading'
             })

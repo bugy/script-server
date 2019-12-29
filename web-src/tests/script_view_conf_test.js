@@ -2,7 +2,7 @@
 import {createLocalVue, mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import ScriptView from '../js/main-app/script-view';
+import ScriptView from '../js/main-app/scripts/script-view';
 
 chaiConfig.truncateThreshold = 0;
 

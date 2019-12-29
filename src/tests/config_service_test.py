@@ -138,7 +138,7 @@ class ConfigServiceAuthTest(unittest.TestCase):
         super().setUp()
         test_utils.setup()
 
-        authorizer = Authorizer([], [], EmptyGroupProvider())
+        authorizer = Authorizer([], [], [], EmptyGroupProvider())
         self.user1 = User('user1', {})
         self.config_service = ConfigService(authorizer, test_utils.temp_folder)
 
@@ -149,7 +149,7 @@ class ConfigServiceCreateConfigTest(unittest.TestCase):
         super().setUp()
         test_utils.setup()
 
-        authorizer = Authorizer([], ['admin_user'], EmptyGroupProvider())
+        authorizer = Authorizer([], ['admin_user'], [], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
         self.config_service = ConfigService(authorizer, test_utils.temp_folder)
 
@@ -238,7 +238,7 @@ class ConfigServiceUpdateConfigTest(unittest.TestCase):
         super().setUp()
         test_utils.setup()
 
-        authorizer = Authorizer([], ['admin_user'], EmptyGroupProvider())
+        authorizer = Authorizer([], ['admin_user'], [], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
         self.config_service = ConfigService(authorizer, test_utils.temp_folder)
 
@@ -346,7 +346,7 @@ class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
         super().setUp()
         test_utils.setup()
 
-        authorizer = Authorizer([], ['admin_user'], EmptyGroupProvider())
+        authorizer = Authorizer([], ['admin_user'], [], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
         self.config_service = ConfigService(authorizer, test_utils.temp_folder)
 

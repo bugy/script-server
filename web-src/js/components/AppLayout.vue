@@ -56,24 +56,32 @@
         }
     }
 
+    function recalculateHeight(contentHeader, appLayout, contentPanel) {
+        if (!contentHeader.childNodes) {
+            return;
+        }
+
+        let childrenHeight = 0;
+        for (const child of Array.from(contentHeader.childNodes)) {
+            if (hasClass(child, 'app-menu-button')) {
+                continue
+            }
+
+            if (!isNull(child.offsetHeight)) {
+                childrenHeight = Math.max(childrenHeight, child.offsetHeight);
+            }
+        }
+        appLayout.hasHeader = childrenHeight >= 1;
+
+        appLayout.$nextTick(() => {
+            contentPanel.style.maxHeight = 'calc(100% - ' + contentHeader.offsetHeight + 'px)';
+        });
+    }
+
     function updatedStylesBasedOnContent(contentHeader, contentPanel, appLayout) {
         const mutationObserver = new MutationObserver(mutations => {
             mutations.forEach(() => {
-                let childrenHeight = 0;
-                for (const child of Array.from(contentHeader.childNodes)) {
-                    if (hasClass(child, 'app-menu-button')) {
-                        continue
-                    }
-
-                    if (!isNull(child.offsetHeight)) {
-                        childrenHeight = Math.max(childrenHeight, child.offsetHeight);
-                    }
-                }
-                appLayout.hasHeader = childrenHeight >= 1;
-
-                appLayout.$nextTick(() => {
-                    contentPanel.style.maxHeight = 'calc(100% - ' + contentHeader.offsetHeight + 'px)';
-                });
+                recalculateHeight(contentHeader, appLayout, contentPanel);
             });
         });
 
@@ -81,6 +89,10 @@
             childList: true,
             subtree: true,
             characterData: true
+        });
+
+        appLayout.$nextTick(() => {
+            recalculateHeight(contentHeader, appLayout, contentPanel);
         });
     }
 

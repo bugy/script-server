@@ -15,12 +15,12 @@
 
 <script>
     import {mapActions, mapState} from 'vuex'
-    import Checkbox from '../components/checkbox'
-    import Combobox from '../components/combobox'
-    import FileUpload from '../components/file_upload'
-    import ServerFileField from '../components/server_file_field'
-    import Textfield from '../components/textfield'
-    import {comboboxTypes, isRecursiveFileParameter} from './model_helper'
+    import Checkbox from '../../components/checkbox'
+    import Combobox from '../../components/combobox'
+    import FileUpload from '../../components/file_upload'
+    import ServerFileField from '../../components/server_file_field'
+    import Textfield from '../../components/textfield'
+    import {comboboxTypes, isRecursiveFileParameter} from '../model_helper'
 
     export default {
         name: 'script-parameters-view',

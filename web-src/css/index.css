@@ -196,3 +196,8 @@ input[type=checkbox]:not(.browser-default) + span {
     -webkit-hyphens: auto;
     hyphens: auto;
 }
+
+.main-content-header {
+    background: url('../images/titleBackground.jpg') no-repeat center;
+    background-size: cover;
+}

@@ -21,7 +21,7 @@
 </template>
 
 <script>
-    import {isEmptyString} from '../../common';
+    import {isEmptyString} from '../common';
 
     export default {
         name: 'PromisableButton',

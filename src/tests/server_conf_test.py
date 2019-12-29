@@ -78,12 +78,17 @@ class TestAdminUsersInit(unittest.TestCase):
         config = _from_json({'access': {'admin_users': 'abc'}})
         self.assertEqual(['abc'], config.admin_users)
 
-    def test_missing_when_no_auth(self):
+    def test_missing_when_no_access_section(self):
         config = _from_json({})
         self.assertEqual(['127.0.0.1', '::1'], config.admin_users)
 
-    def test_missing_when_auth_enabled(self):
-        config = _from_json({'auth': {'type': 'ldap', 'url': 'localhost'}})
+    def test_missing_when_access_exist_without_admin_users(self):
+        config = _from_json({'access': {'allowed_users': ['user1', 'user2']}})
+        self.assertEqual(['127.0.0.1', '::1'], config.admin_users)
+
+    def test_missing_when_access_exist_without_admin_users_and_auth_enabled(self):
+        config = _from_json({'access': {'allowed_users': ['user1', 'user2']},
+                             'auth': {'type': 'ldap', 'url': 'localhost'}})
         self.assertEqual([], config.admin_users)
 
     def test_list_with_multiple_values(self):
@@ -97,6 +102,42 @@ class TestAdminUsersInit(unittest.TestCase):
     def test_list_any_user_single_string(self):
         config = _from_json({'access': {'admin_users': '*'}})
         self.assertCountEqual([ANY_USER], config.admin_users)
+
+    def setUp(self):
+        test_utils.setup()
+
+    def tearDown(self):
+        test_utils.cleanup()
+
+
+class TestFullHistoryUsersInit(unittest.TestCase):
+    def test_single_list(self):
+        config = _from_json({'access': {'full_history': ['userX']}})
+        self.assertEqual(['userX'], config.full_history_users)
+
+    def test_single_string(self):
+        config = _from_json({'access': {'full_history': 'abc'}})
+        self.assertEqual(['abc'], config.full_history_users)
+
+    def test_missing_when_no_access_section(self):
+        config = _from_json({})
+        self.assertEqual([], config.full_history_users)
+
+    def test_missing_when_access_exist_without_full_history(self):
+        config = _from_json({'access': {'allowed_users': ['user1', 'user2']}})
+        self.assertEqual([], config.full_history_users)
+
+    def test_list_with_multiple_values(self):
+        config = _from_json({'access': {'full_history': ['user1', 'user2', 'user3']}})
+        self.assertCountEqual(['user1', 'user2', 'user3'], config.full_history_users)
+
+    def test_list_with_any_user(self):
+        config = _from_json({'access': {'full_history': ['user1', '*', 'user3']}})
+        self.assertEqual([ANY_USER], config.full_history_users)
+
+    def test_list_any_user_single_string(self):
+        config = _from_json({'access': {'full_history': '*'}})
+        self.assertCountEqual([ANY_USER], config.full_history_users)
 
     def setUp(self):
         test_utils.setup()

@@ -29,7 +29,7 @@ from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
 from model import external_model
 from model.external_model import to_short_execution_log, to_long_execution_log, parameter_to_external
-from model.model_helper import is_empty, InvalidFileException
+from model.model_helper import is_empty, InvalidFileException, AccessProhibitedException
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
 from model.server_conf import ServerConfig
@@ -730,9 +730,9 @@ class ReceiveAlertHandler(BaseRequestHandler):
 
 class GetShortHistoryEntriesHandler(BaseRequestHandler):
     @check_authorization
-    @requires_admin_rights
-    def get(self):
-        history_entries = self.application.execution_logging_service.get_history_entries()
+    @inject_user
+    def get(self, user):
+        history_entries = self.application.execution_logging_service.get_history_entries(user.user_id)
         running_script_ids = []
         for entry in history_entries:
             if self.application.execution_service.is_running(entry.id):
@@ -744,13 +744,18 @@ class GetShortHistoryEntriesHandler(BaseRequestHandler):
 
 class GetLongHistoryEntryHandler(BaseRequestHandler):
     @check_authorization
-    @requires_admin_rights
-    def get(self, execution_id):
+    @inject_user
+    def get(self, user, execution_id):
         if is_empty(execution_id):
             respond_error(self, 400, 'Execution id is not specified')
             return
 
-        history_entry = self.application.execution_logging_service.find_history_entry(execution_id)
+        try:
+            history_entry = self.application.execution_logging_service.find_history_entry(execution_id, user.user_id)
+        except AccessProhibitedException:
+            respond_error(self, 403, 'Access to execution #' + str(execution_id) + ' is prohibited')
+            return
+
         if history_entry is None:
             respond_error(self, 400, 'No history found for id ' + execution_id)
             return
@@ -857,8 +862,8 @@ def init(server_config: ServerConfig,
                 (r'/executions/config/(.*)', GetExecutingScriptConfig),
                 (r'/executions/cleanup/(.*)', CleanupExecutingScript),
                 (r'/executions/status/(.*)', GetExecutionStatus),
-                (r'/admin/execution_log/short', GetShortHistoryEntriesHandler),
-                (r'/admin/execution_log/long/(.*)', GetLongHistoryEntryHandler),
+                (r'/history/execution_log/short', GetShortHistoryEntriesHandler),
+                (r'/history/execution_log/long/(.*)', GetLongHistoryEntryHandler),
                 (r'/auth/info', AuthInfoHandler),
                 (r'/result_files/(.*)',
                  DownloadResultFile,

@@ -1,8 +1,7 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
-import ExecutionDetails from './executions/execution-details';
-import ExecutionsLog from './executions/executions-log';
-import ExecutionsLogPage from './executions/executions-log-page';
+import {routerChildren as executionRouterChildren} from '../history/executions-log-page';
+import AdminExecutionsLogPage from './history/AdminExecutionsLogPage';
 import ScriptConfig from './scripts-config/ScriptConfig';
 import ScriptConfigListPage from './scripts-config/ScriptConfigListPage';
 import ScriptsList from './scripts-config/ScriptsList';
@@ -14,11 +13,8 @@ const router = new VueRouter({
     routes: [
         {
             path: '/logs',
-            component: ExecutionsLogPage,
-            children: [
-                {path: '', component: ExecutionsLog},
-                {path: ':executionId', component: ExecutionDetails}
-            ]
+            component: AdminExecutionsLogPage,
+            children: executionRouterChildren
         },
         {
             path: '/scripts',

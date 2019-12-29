@@ -26,5 +26,5 @@ export function isRecursiveFileParameter(parameter) {
 }
 
 export function scriptNameToHash(scriptName) {
-    return scriptName.replace(/\s/g, "_");
+    return encodeURIComponent(scriptName);
 }

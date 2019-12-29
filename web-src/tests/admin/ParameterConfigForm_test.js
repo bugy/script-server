@@ -2,7 +2,7 @@
 
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import ChipsList from '../../js/admin/components/ChipsList';
+import ChipsList from '../../js/components/ChipsList';
 import ParameterConfigForm from '../../js/admin/scripts-config/ParameterConfigForm';
 import {isBlankString, isNull, setInputValue} from '../../js/common';
 import Combobox from '../../js/components/combobox';

@@ -1,6 +1,6 @@
 <template>
     <div :id="id" class="script-view">
-        <p class="script-description" v-show="scriptDescription" v-html="formattedDescription"></p>
+        <p class="script-description" v-html="formattedDescription" v-show="scriptDescription"/>
         <ScriptParametersView ref="parametersView"/>
         <div class="actions-panel">
             <button class="button-execute btn"
@@ -34,7 +34,7 @@
                :href="file.url"
                target="_blank">
                 {{ file.filename }}
-                <img src="images/file_download.png">
+                <img src="../../../images/file_download.png">
             </a>
         </div>
         <div class="script-input-panel input-field" v-if="inputPromptText" v-show="!hideExecutionControls">
@@ -51,14 +51,14 @@
 
     import marked from 'marked';
     import {mapActions, mapState} from 'vuex'
-    import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '../common';
-    import LogPanel from '../components/log_panel'
+    import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '../../common';
+    import LogPanel from '../../components/log_panel'
     import {
         STATUS_DISCONNECTED,
         STATUS_ERROR,
         STATUS_EXECUTING,
         STATUS_FINISHED
-    } from '../main-app/store/scriptExecutor';
+    } from '../store/scriptExecutor';
     import ScriptParametersView from './script-parameters-view'
 
     export default {
@@ -125,6 +125,10 @@
             },
 
             enableExecuteButton() {
+                if (this.hideExecutionControls) {
+                    return false;
+                }
+
                 if (isNull(this.currentExecutor)) {
                     return true;
                 }

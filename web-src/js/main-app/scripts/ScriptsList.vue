@@ -1,9 +1,9 @@
 <template>
     <div class="scripts-list collection">
-        <a :href="'#' + script.hash"
-           class="collection-item waves-effect waves-teal"
-           v-bind:class="{ active: script.active}"
-           v-for="script in scriptDescriptors">
+        <router-link :to="'/' + script.hash"
+                     class="collection-item waves-effect waves-teal"
+                     v-bind:class="{ active: script.active}"
+                     v-for="script in scriptDescriptors">
             {{ script.name }}
 
             <div :class="script.state" class="menu-item-state">
@@ -22,14 +22,14 @@
                     </div>
                 </div>
             </div>
-        </a>
+        </router-link>
     </div>
 </template>
 
 <script>
     import {mapState} from 'vuex';
-    import {forEachKeyValue, isEmptyString} from '../common';
-    import {scriptNameToHash} from './model_helper';
+    import {forEachKeyValue, isEmptyString} from '../../common';
+    import {scriptNameToHash} from '../model_helper';
 
     export default {
         name: 'ScriptsList',

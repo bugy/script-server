@@ -72,7 +72,7 @@
     import Combobox from '../../components/combobox';
     import TextArea from '../../components/TextArea';
     import Textfield from '../../components/textfield';
-    import ChipsList from '../components/ChipsList';
+    import ChipsList from '../../components/ChipsList';
     import {
         allowedValuesFromScriptField,
         allowedValuesScriptField,

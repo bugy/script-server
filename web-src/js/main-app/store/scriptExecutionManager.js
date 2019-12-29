@@ -58,7 +58,8 @@ export default {
                                     commit('SELECT_EXECUTOR', executor);
                                     store.dispatch('scriptSetup/setParameterValues', {
                                         values: deepCloneObject(executionConfig.parameterValues),
-                                        forceAllowedValues: true
+                                        forceAllowedValues: true,
+                                        scriptName: executionConfig.scriptName
                                     });
                                 }
                             }));
@@ -95,7 +96,8 @@ export default {
             if (selectedExecutor) {
                 dispatch('scriptSetup/setParameterValues', {
                     values: selectedExecutor.state.parameterValues,
-                    forceAllowedValues: true
+                    forceAllowedValues: true,
+                    scriptName: selectedScript
                 }, {root: true});
             }
         },

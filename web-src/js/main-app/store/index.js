@@ -1,7 +1,8 @@
 import axios from 'axios';
 import Vue from 'vue'
 import Vuex from 'vuex'
-import {isNull, logError} from '../../common';
+import {isEmptyObject, isNull, logError} from '../../common';
+import historyModule from '../../history/executions-module';
 import authModule from './auth';
 
 import scriptConfigModule from './scriptConfig';
@@ -20,7 +21,8 @@ const store = new Vuex.Store({
         scriptConfig: scriptConfigModule,
         scriptSetup: scriptSetupModule,
         executions: scriptExecutionManagerModule,
-        auth: authModule
+        auth: authModule,
+        history: historyModule()
     },
     actions: {
         init({dispatch}) {
@@ -46,11 +48,14 @@ store.watch((state) => state.scripts.selectedScript, (selectedScript) => {
     store.dispatch('scriptSetup/reset');
     store.dispatch('scriptConfig/reloadScript', {selectedScript});
     store.dispatch('executions/selectScript', {selectedScript});
+});
 
-    const predefinedParameters = store.state.scripts.predefinedParameters;
+store.watch((state) => state.scripts.predefinedParameters, (predefinedParameters) => {
     if (!isNull(predefinedParameters)) {
         store.dispatch('scriptSetup/setParameterValues', {
-            values: predefinedParameters, forceAllowedValues: false
+            values: predefinedParameters,
+            forceAllowedValues: false,
+            scriptName: store.state.scripts.selectedScript
         });
     }
 });

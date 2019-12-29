@@ -35,7 +35,7 @@
     import CheckBox from '../../components/checkbox'
     import TextArea from '../../components/TextArea';
     import TextField from '../../components/textfield'
-    import ChipsList from '../components/ChipsList';
+    import ChipsList from '../../components/ChipsList';
     import {
         allowAllField,
         bashFormattingField,

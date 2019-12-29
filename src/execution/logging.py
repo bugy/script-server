@@ -1,11 +1,11 @@
 # noinspection PyBroadException
-import abc
 import logging
 import os
 import re
 from string import Template
 
 from execution.execution_service import ExecutionService
+from model.model_helper import AccessProhibitedException
 from utils import file_utils, audit_utils
 from utils.audit_utils import get_audit_name
 from utils.collection_utils import get_first_existing
@@ -105,9 +105,10 @@ class HistoryEntry:
 
 
 class ExecutionLoggingService:
-    def __init__(self, output_folder, log_name_creator):
+    def __init__(self, output_folder, log_name_creator, authorizer):
         self._output_folder = output_folder
         self._log_name_creator = log_name_creator
+        self._authorizer = authorizer
 
         self._visited_files = set()
         self._ids_to_file_map = {}
@@ -164,19 +165,19 @@ class ExecutionLoggingService:
 
         logger.set_close_callback(lambda: self._write_post_execution_info(log_file_path, exit_code))
 
-    def get_history_entries(self):
+    def get_history_entries(self, user_id, *, system_call=False):
         self._renew_files_cache()
 
         result = []
 
         for file in self._ids_to_file_map.values():
             history_entry = self._extract_history_entry(file)
-            if history_entry is not None:
+            if history_entry is not None and self._can_access_entry(history_entry, user_id, system_call):
                 result.append(history_entry)
 
         return result
 
-    def find_history_entry(self, execution_id):
+    def find_history_entry(self, execution_id, user_id):
         self._renew_files_cache()
 
         file = self._ids_to_file_map.get(execution_id)
@@ -187,6 +188,11 @@ class ExecutionLoggingService:
         entry = self._extract_history_entry(file)
         if entry is None:
             LOGGER.warning('find_history_entry: cannot parse file for %s', execution_id)
+
+        elif not self._can_access_entry(entry, user_id):
+            message = 'User ' + user_id + ' has not access to execution #' + str(execution_id)
+            LOGGER.warning('%s. Original user: %s', message, execution_id)
+            raise AccessProhibitedException(message)
 
         return entry
 
@@ -317,6 +323,18 @@ class ExecutionLoggingService:
 
         new_content = parameters_text + OUTPUT_STARTED_MARKER + os.linesep + file_parts[1]
         file_utils.write_file(log_file_path, new_content.encode(ENCODING), byte_content=True)
+
+    def _can_access_entry(self, entry, user_id, system_call=False):
+        if entry is None:
+            return True
+
+        if entry.user_id == user_id:
+            return True
+
+        if system_call:
+            return True
+
+        return self._authorizer.has_full_history_access(user_id)
 
 
 class LogNameCreator:

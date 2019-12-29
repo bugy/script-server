@@ -6,9 +6,10 @@ GROUP_PREFIX = '@'
 
 
 class Authorizer:
-    def __init__(self, app_allowed_users, admin_users, groups_provider):
+    def __init__(self, app_allowed_users, admin_users, full_history_users, groups_provider):
         self._app_allowed_users = app_allowed_users
         self._admin_users = admin_users
+        self._full_history_users = full_history_users
 
         self._groups_provider = groups_provider
 
@@ -17,6 +18,9 @@ class Authorizer:
 
     def is_admin(self, user_id):
         return self.is_allowed(user_id, self._admin_users)
+
+    def has_full_history_access(self, user_id):
+        return self.is_admin(user_id) or self.is_allowed(user_id, self._full_history_users)
 
     def is_allowed(self, user_id, allowed_users):
         if not allowed_users:

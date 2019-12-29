@@ -1,7 +1,9 @@
 <template>
     <div class="main-app-sidebar">
         <div class="list-header">
-            <h3 :title="versionString" class="header server-header">Script server</h3>
+            <router-link :title="versionString" class="header server-header" to="/">
+                Script server
+            </router-link>
 
             <SearchPanel v-model="searchText"/>
 
@@ -17,7 +19,11 @@
 
         <ScriptsList :search-text="searchText"/>
 
-        <div class="logout-panel" v-if="authEnabled">
+        <router-link class="waves-effect waves-teal btn-flat bottom-panel teal-text history-button" to='history'>
+            History
+        </router-link>
+
+        <div class="logout-panel bottom-panel" v-if="authEnabled">
             <span>{{username}}</span>
             <input :src="logoutIcon" @click="logout" class="logout-button" type="image">
         </div>
@@ -26,9 +32,9 @@
 
 <script>
     import {mapActions, mapState} from 'vuex';
-    import ScriptsList from './ScriptsList'
-    import SearchPanel from './SearchPanel';
     import LogoutButton from '../../images/logout.png'
+    import ScriptsList from './scripts/ScriptsList'
+    import SearchPanel from './SearchPanel';
 
     export default {
         name: 'MainAppSidebar',
@@ -78,6 +84,12 @@
     .server-header {
         flex-grow: 1;
         margin-left: 0.4rem;
+
+        font-size: 1.64rem;
+        padding: 0.8rem;
+        font-weight: 300;
+        line-height: 110%;
+        color: rgba(0, 0, 0, 0.87)
     }
 
     .main-app-sidebar {
@@ -95,17 +107,24 @@
         line-height: 0;
     }
 
-    .logout-panel {
-        height: 45px;
+    .history-button {
+        line-height: 3em;
+        text-align: center;
+    }
+
+    .bottom-panel {
+        height: 3em;
         width: 100%;
         border-top: 1px solid #C8C8C8;
 
+        flex-shrink: 0;
+    }
+
+    .logout-panel {
         display: flex;
         flex-direction: row;
         justify-content: center;
         align-items: center;
-
-        flex-shrink: 0;
     }
 
     .logout-button {

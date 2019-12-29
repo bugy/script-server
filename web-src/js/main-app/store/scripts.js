@@ -1,6 +1,8 @@
 import axios from 'axios';
-import {getUnparameterizedUrl, isEmptyObject, readQueryParameters} from '../../common';
+import Vue from 'vue';
+import {isEmptyObject, isEmptyString, isNull} from '../../common';
 import {scriptNameToHash} from '../model_helper';
+import router from '../router';
 
 export default {
     namespaced: true,
@@ -13,8 +15,8 @@ export default {
 
     actions: {
         init({commit, dispatch}) {
-            window.addEventListener('hashchange', () => {
-                dispatch('selectScriptByHash')
+            router.afterEach((to, from) => {
+                dispatch('selectScriptByHash');
             });
 
             axios.get('scripts')
@@ -24,37 +26,44 @@ export default {
                     });
 
                     commit('SET_SCRIPTS', scripts);
-                    dispatch('selectScriptByHash')
+                    dispatch('selectScriptByHash');
                 });
         },
 
-        selectScript({commit}, scriptName) {
-            commit('SELECT_SCRIPT', scriptName)
-        },
-
         selectScriptByHash({state, commit}) {
-            let hash = window.location.href;
-            const index = hash.indexOf('#');
-            if (index >= 0) {
-                hash = decodeURIComponent(hash.slice(index + 1));
+            let encodedScriptName;
+            let queryParameters;
+            if (router.currentRoute.name === 'script') {
+                encodedScriptName = router.currentRoute.params['scriptName'];
+                queryParameters = router.currentRoute.query;
+            } else {
+                queryParameters = null;
+                encodedScriptName = null;
             }
+
+            let newSelectedScript = null;
 
             for (const script of state.scripts) {
                 const scriptHash = scriptNameToHash(script);
-                if (scriptHash === hash) {
-                    commit('SELECT_SCRIPT', script);
+                if (scriptHash === encodedScriptName) {
+                    newSelectedScript = script;
                     break;
                 }
             }
 
-            let queryParameters = readQueryParameters();
-            if (isEmptyObject(queryParameters)) {
-                queryParameters = null;
-            } else {
-                history.pushState('', '', getUnparameterizedUrl() + window.location.hash)
+            if (!isEmptyString(encodedScriptName) && isNull(newSelectedScript)) {
+                newSelectedScript = encodedScriptName;
             }
 
-            commit('SET_PREDEFINED_PARAMETERS', queryParameters);
+            if (isEmptyObject(queryParameters)) {
+                queryParameters = null;
+            }
+
+            commit('SELECT_SCRIPT', {selectedScript: newSelectedScript, predefinedParameters: queryParameters});
+
+            if (!isEmptyObject(queryParameters)) {
+                Vue.nextTick(() => router.replace({query: null}));
+            }
         }
     },
 
@@ -63,11 +72,8 @@ export default {
             state.scripts = scripts
         },
 
-        SELECT_SCRIPT(state, selectedScript) {
-            state.selectedScript = selectedScript
-        },
-
-        SET_PREDEFINED_PARAMETERS(state, predefinedParameters) {
+        SELECT_SCRIPT(state, {selectedScript, predefinedParameters}) {
+            state.selectedScript = selectedScript;
             state.predefinedParameters = predefinedParameters;
         }
     }

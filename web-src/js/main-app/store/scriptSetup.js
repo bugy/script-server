@@ -5,7 +5,8 @@ export default {
     namespaced: true,
     state: {
         parameterValues: {},
-        errors: {}
+        errors: {},
+        lastPredefinedScript: null
     },
     actions: {
         reset({commit, dispatch}) {
@@ -14,7 +15,15 @@ export default {
             dispatch('scriptConfig/setForcedAllowedValues', {}, {root: true})
         },
 
-        initFromParameters({state, dispatch, commit}, {parameters}) {
+        initFromParameters({state, dispatch, commit}, {scriptName, parameters}) {
+            if (!isNull(state.lastPredefinedScript)) {
+                if (scriptName === state.lastPredefinedScript) {
+                    return;
+                }
+
+                commit('SET_LAST_PREDEFINED_SCRIPT', null);
+            }
+
             if (!isEmptyObject(state.parameterValues)) {
                 for (const parameter of parameters) {
                     const parameterName = parameter.name;
@@ -54,11 +63,13 @@ export default {
             commit('UPDATE_PARAMETER_ERROR', {parameterName, errorMessage})
         },
 
-        setParameterValues({state, rootState, commit, dispatch}, {values, forceAllowedValues}) {
+        setParameterValues({state, rootState, commit, dispatch}, {values, forceAllowedValues, scriptName}) {
             dispatch('_setParameterValues', values);
 
             const forcedAllowedValues = forceAllowedValues ? values : {};
             dispatch('scriptConfig/setForcedAllowedValues', forcedAllowedValues, {root: true});
+
+            commit('SET_LAST_PREDEFINED_SCRIPT', scriptName);
         },
 
         _setParameterValues({state, rootState, commit, dispatch}, values) {
@@ -90,6 +101,9 @@ export default {
             } else {
                 state.errors[parameterName] = errorMessage;
             }
+        },
+        SET_LAST_PREDEFINED_SCRIPT(state, scriptName) {
+            state.lastPredefinedScript = scriptName;
         }
     }
 }
