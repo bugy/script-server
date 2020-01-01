@@ -10,7 +10,10 @@ def read_variable(variable_name, *, fail_on_missing=True):
     return value
 
 
-def is_min_version(version, system_version=sys.version_info):
+def is_min_version(version, system_version=None):
+    if system_version is None:
+        system_version = sys.version_info
+
     version_split = str(version).split('.')
 
     try:

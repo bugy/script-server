@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import asyncio
 import json
 import logging.config
 import os
@@ -33,7 +34,7 @@ from model.model_helper import is_empty, InvalidFileException, AccessProhibitedE
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
 from model.server_conf import ServerConfig
-from utils import audit_utils, tornado_utils
+from utils import audit_utils, tornado_utils, os_utils, env_utils
 from utils import file_utils as file_utils
 from utils.audit_utils import get_audit_name_from_request
 from utils.tornado_utils import respond_error, redirect_relative
@@ -825,6 +826,9 @@ def intercept_stop_when_running_scripts(io_loop, execution_service):
     signal.signal(signal.SIGINT, signal_handler)
 
 
+_http_server = None
+
+
 def init(server_config: ServerConfig,
          authenticator,
          authorizer,
@@ -835,7 +839,9 @@ def init(server_config: ServerConfig,
          file_upload_feature: FileUploadFeature,
          file_download_feature: FileDownloadFeature,
          secret,
-         server_version):
+         server_version,
+         *,
+         start_server=True):
     ssl_context = None
     if server_config.is_ssl():
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -903,13 +909,18 @@ def init(server_config: ServerConfig,
     application.identification = identification
     application.max_request_size_mb = server_config.max_request_size_mb
 
+    if os_utils.is_win() and env_utils.is_min_version('3.8'):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     io_loop = tornado.ioloop.IOLoop.current()
 
-    http_server = httpserver.HTTPServer(application, ssl_options=ssl_context, max_buffer_size=10 * BYTES_IN_MB)
-    http_server.listen(server_config.port, address=server_config.address)
+    global _http_server
+    _http_server = httpserver.HTTPServer(application, ssl_options=ssl_context, max_buffer_size=10 * BYTES_IN_MB)
+    _http_server.listen(server_config.port, address=server_config.address)
 
     intercept_stop_when_running_scripts(io_loop, execution_service)
 
     http_protocol = 'https' if server_config.ssl else 'http'
     print('Server is running on: %s://%s:%s' % (http_protocol, server_config.address, server_config.port))
-    io_loop.start()
+
+    if start_server:
+        io_loop.start()
