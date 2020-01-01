@@ -41,9 +41,16 @@ class ServerTest(TestCase):
     @patch('utils.env_utils.sys.version_info', (3, 8, 0))
     def test_init_when_windows_and_python_3_8(self):
         test_utils.set_win()
-        self.start_server(12345, '127.0.0.1')
 
-        self.check_server_running()
+        try:
+            self.start_server(12345, '127.0.0.1')
+            self.check_server_running()
+
+        except AttributeError:
+            # Linux/Mac doesn't support windows specific classes
+            if not self.windows:
+                return
+            raise
 
     @patch('utils.env_utils.sys.version_info', (3, 7, 0))
     def test_init_when_windows_and_python_3_7(self):
@@ -97,6 +104,7 @@ class ServerTest(TestCase):
 
         test_utils.setup()
         self.requires_explicit_ioloop_factory = os_utils.is_win() and env_utils.is_min_version('3.8')
+        self.windows = os_utils.is_win()
 
     def tearDown(self) -> None:
         super().tearDown()
