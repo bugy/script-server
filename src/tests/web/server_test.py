@@ -1,5 +1,6 @@
 import threading
 import traceback
+from asyncio import set_event_loop_policy
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -128,5 +129,6 @@ class ServerTest(TestCase):
 
         io_loop.add_callback(io_loop.stop)
 
-        self.ioloop_thread.join(timeout=5)
+        self.ioloop_thread.join(timeout=50)
         io_loop.close()
+        set_event_loop_policy(None)
