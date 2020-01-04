@@ -61,7 +61,11 @@ def parse_semver_str(version_string):
 
 
 def create_version_file():
-    current_branch = process_utils.invoke('git rev-parse --abbrev-ref HEAD').strip()
+    if 'TRAVIS_BRANCH' in os.environ:
+        current_branch = os.environ['TRAVIS_BRANCH']
+    else:
+        current_branch = process_utils.invoke('git rev-parse --abbrev-ref HEAD').strip()
+
     npm_version = get_npm_version()
     if current_branch == 'stable':
         last_tag = process_utils.invoke('git describe --abbrev=0 --tags').strip()
