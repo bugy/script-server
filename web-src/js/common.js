@@ -174,6 +174,11 @@ export const SocketClosedError = _createErrorType('SocketClosedError', function 
     this.reason = reason || '';
 });
 
+export const HttpForbiddenError = _createErrorType('HttpForbiddenError', function (code, message) {
+    this.code = code || -1;
+    this.message = message || '';
+});
+
 export const HttpUnauthorizedError = _createErrorType('HttpUnauthorizedError', function (code, message) {
     this.code = code || -1;
     this.message = message || '';

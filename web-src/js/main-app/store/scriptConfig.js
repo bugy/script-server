@@ -4,6 +4,7 @@ import {
     arraysEqual,
     contains,
     forEachKeyValue,
+    HttpForbiddenError,
     HttpRequestError,
     HttpUnauthorizedError,
     isEmptyArray,
@@ -290,8 +291,13 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
                 return;
             }
 
-            if (error instanceof HttpUnauthorizedError) {
+            if (error instanceof HttpForbiddenError) {
                 commit('SET_ERROR', 'Access to the script is denied');
+                return;
+            }
+
+            if (error instanceof HttpUnauthorizedError) {
+                commit('SET_ERROR', 'Failed to authenticate the user');
                 return;
             }
 

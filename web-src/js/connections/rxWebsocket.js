@@ -1,5 +1,6 @@
 import {
     getWebsocketUrl,
+    HttpForbiddenError,
     HttpRequestError,
     HttpUnauthorizedError,
     isWebsocketClosed,
@@ -45,6 +46,11 @@ export function ReactiveWebSocket(path, observer) {
         }
 
         if (event.code === 403) {
+            self._observer.onError(new HttpForbiddenError(event.code, event.reason));
+            return;
+        }
+
+        if (event.code === 401) {
             self._observer.onError(new HttpUnauthorizedError(event.code, event.reason));
             return;
         }

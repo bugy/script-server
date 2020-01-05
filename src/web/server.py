@@ -113,7 +113,14 @@ def check_authorization(func):
             return func(self, *args, **kwargs)
 
         if not isinstance(self, tornado.web.StaticFileHandler):
-            raise tornado.web.HTTPError(401, 'Not authenticated')
+            message = 'Not authenticated'
+            code = 401
+            LOGGER.warning('%s %s %s: user is not authenticated' % (code, self.request.method, request_path))
+            if isinstance(self, tornado.websocket.WebSocketHandler):
+                self.close(code=code, reason=message)
+                return
+            else:
+                raise tornado.web.HTTPError(code, message)
 
         login_url += "?" + urlencode(dict(next=request_path))
 
