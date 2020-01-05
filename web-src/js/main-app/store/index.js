@@ -1,7 +1,7 @@
 import axios from 'axios';
 import Vue from 'vue'
 import Vuex from 'vuex'
-import {isEmptyObject, isNull, logError} from '../../common';
+import {isNull, logError} from '../../common';
 import historyModule from '../../history/executions-module';
 import authModule from './auth';
 
@@ -10,6 +10,7 @@ import scriptExecutionManagerModule from './scriptExecutionManager';
 import scriptsModule from './scripts';
 import scriptSetupModule from './scriptSetup';
 import serverConfigModule from './serverConfig';
+import * as _ from 'lodash';
 
 
 Vue.use(Vuex);
@@ -66,7 +67,7 @@ store.watch((state) => state.scriptConfig.parameters, (parameters) => {
 });
 
 axios.interceptors.response.use((response) => response, (error) => {
-    if (error.response.status === 401) {
+    if (_.get(error, 'response.status') === 401) {
         store.dispatch('auth/setAuthenticated', false);
     }
     throw error;
