@@ -56,7 +56,7 @@ export default {
 
         setParameterValue({state, commit, dispatch}, {parameterName, value}) {
             commit('UPDATE_SINGLE_VALUE', {parameterName, value});
-            dispatch('sendValueToServer', {parameterName, valueToSend: value});
+            dispatch('sendValueToServer', {parameterName, value});
         },
 
         setParameterError({commit}, {parameterName, errorMessage}) {
@@ -75,13 +75,14 @@ export default {
         _setParameterValues({state, rootState, commit, dispatch}, values) {
             commit('SET_VALUES', values);
 
-            forEachKeyValue(values, (parameterName, valueToSend) => dispatch('sendValueToServer', {
+            forEachKeyValue(values, (parameterName, value) => dispatch('sendValueToServer', {
                 parameterName,
-                valueToSend
+                value
             }));
         },
 
-        sendValueToServer({state, commit, dispatch}, {parameterName, valueToSend}) {
+        sendValueToServer({state, commit, dispatch}, {parameterName, value}) {
+            const valueToSend = (parameterName in state.errors) ? null : value;
             dispatch('scriptConfig/sendParameterValue', {parameterName, value: valueToSend}, {root: true});
         }
     },
