@@ -19,7 +19,7 @@
 
         <ScriptsList :search-text="searchText"/>
 
-        <router-link class="waves-effect waves-teal btn-flat bottom-panel teal-text history-button" to='history'>
+        <router-link class="waves-effect waves-teal btn-flat bottom-panel teal-text history-button" to='/history'>
             History
         </router-link>
 
