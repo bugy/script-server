@@ -258,6 +258,11 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
         except ConfigNotAllowedException:
             self.close(code=403, reason='Access to the script is denied')
             return
+        except Exception:
+            message = 'Failed to load script config ' + config_name
+            LOGGER.exception(message)
+            self.close(code=500, reason=message)
+            return
 
         if not self.config_model:
             self.close(code=404, reason='Could not find a script by name')
