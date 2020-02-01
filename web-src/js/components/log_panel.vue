@@ -107,6 +107,14 @@
                 this.terminalModel.write(text);
 
                 this.revalidateScroll();
+            },
+
+            removeInlineImage: function (output_path) {
+                this.terminalModel.removeInlineImage(output_path);
+            },
+
+            setInlineImage: function (output_path, download_url) {
+                this.terminalModel.setInlineImage(output_path, download_url);
             }
         },
 
@@ -160,6 +168,10 @@
         box-shadow: 0 -7px 8px -4px #888888 inset;
         -webkit-box-shadow: 0 -7px 8px -4px #888888 inset;
         -moz-box-shadow: 0 -7px 8px -4px #888888 inset;
+    }
+
+    .log-panel >>> .log-content img {
+        max-width: 100%
     }
 
 </style>

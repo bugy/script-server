@@ -1,5 +1,6 @@
 import logging
 import os
+from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR
@@ -17,6 +18,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
 
 @observable_fields(
     'param',
+    'env_var',
     'no_value',
     'description',
     'required',
@@ -60,6 +62,7 @@ class ParameterModel(object):
         config = self._original_config
 
         self.param = config.get('param')
+        self.env_var = config.get('env_var')
         self.no_value = read_bool_from_config('no_value', config, default=False)
         self.description = config.get('description')
         self.required = read_bool_from_config('required', config, default=False)
@@ -201,6 +204,12 @@ class ParameterModel(object):
 
         return str(value)
 
+    def value_to_repr(self, value):
+        if self.secure:
+            return SECURE_MASK
+
+        return repr(value)
+
     def get_secured_value(self, value):
         if (not self.secure) or (value is None) or self.no_value:
             return value
@@ -250,7 +259,7 @@ class ParameterModel(object):
                 return 'is not specified'
             return None
 
-        value_string = self.value_to_str(value)
+        value_string = self.value_to_repr(value)
 
         if self.no_value:
             if value not in ['true', True, 'false', False]:
@@ -297,7 +306,7 @@ class ParameterModel(object):
         if (self.type == 'list') or (self._is_plain_server_file()):
             if value not in allowed_values:
                 return 'has value ' + value_string \
-                       + ', but should be in [' + ','.join(allowed_values) + ']'
+                       + ', but should be in ' + repr(allowed_values)
             return None
 
         if self.type == PARAM_TYPE_MULTISELECT:
@@ -305,9 +314,9 @@ class ParameterModel(object):
                 return 'should be a list, but was: ' + value_string + '(' + str(type(value)) + ')'
             for value_element in value:
                 if value_element not in allowed_values:
-                    element_str = self.value_to_str(value_element)
+                    element_str = self.value_to_repr(value_element)
                     return 'has value ' + element_str \
-                           + ', but should be in [' + ','.join(allowed_values) + ']'
+                           + ', but should be in ' + repr(allowed_values)
             return None
 
         if self._is_recursive_server_file():
@@ -444,3 +453,18 @@ class WrongParameterUsageException(Exception):
     def __init__(self, param_name, error_message) -> None:
         super().__init__(error_message)
         self.param_name = param_name
+
+
+def get_sorted_config(param_config):
+    key_order = ['name', 'required', 'param', 'type', 'no_value', 'default', 'constant', 'description', 'secure',
+                 'values', 'min', 'max', 'multiple_arguments', 'separator', 'file_dir', 'file_recursive', 'file_type',
+                 'file_extensions']
+
+    def get_order(key):
+        if key in key_order:
+            return key_order.index(key)
+        else:
+            return 100
+
+    sorted_config = OrderedDict(sorted(param_config.items(), key=lambda item: get_order(item[0])))
+    return sorted_config

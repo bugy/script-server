@@ -23,14 +23,18 @@ export function findNeighbour(element, tag) {
 }
 
 export function isEmptyString(value) {
-    return isNull(value) || value.length === 0;
+    return isNull(value) || ((typeof value === 'string') && (value.length === 0));
+}
+
+export function isBlankString(value) {
+    return isNull(value) || ((typeof value === 'string') && (value.trim().length === 0));
 }
 
 export function isEmptyArray(value) {
     return isNull(value) || value.length === 0;
 }
 
-function isEmptyValue(value) {
+export function isEmptyValue(value) {
     if (isNull(value)) {
         return true;
     }
@@ -42,6 +46,8 @@ function isEmptyValue(value) {
     if (typeof value === 'object') {
         return isEmptyObject(value);
     }
+
+    return false;
 }
 
 export function isEmptyObject(obj) {
@@ -65,6 +71,10 @@ export function addClass(element, clazz) {
 }
 
 export function hasClass(element, clazz) {
+    if (isNull(element.classList)) {
+        return false;
+    }
+    
     return element.classList.contains(clazz);
 }
 
@@ -164,6 +174,11 @@ export const SocketClosedError = _createErrorType('SocketClosedError', function 
     this.reason = reason || '';
 });
 
+export const HttpForbiddenError = _createErrorType('HttpForbiddenError', function (code, message) {
+    this.code = code || -1;
+    this.message = message || '';
+});
+
 export const HttpUnauthorizedError = _createErrorType('HttpUnauthorizedError', function (code, message) {
     this.code = code || -1;
     this.message = message || '';
@@ -177,32 +192,6 @@ export function destroyChildren(element) {
     while (element.firstChild) {
         element.removeChild(element.firstChild);
     }
-}
-
-export function hide(element) {
-    var currentDisplay = window.getComputedStyle(element).display;
-    if (currentDisplay === 'none') {
-        return;
-    }
-
-    element.oldDisplay = currentDisplay;
-    element.style.display = 'none';
-}
-
-export function show(element, displayStyle) {
-    if (isNull(displayStyle) && (isNull(element.oldDisplay))) {
-        if (element.style.display === 'none') {
-            element.style.display = '';
-        }
-
-        var currentDisplay = window.getComputedStyle(element).display;
-        if (currentDisplay !== 'none') {
-            return;
-        }
-    }
-
-    displayStyle = displayStyle || element.oldDisplay || 'block';
-    element.style.display = displayStyle;
 }
 
 export function removeElement(array, element) {
@@ -337,6 +326,10 @@ export function isWebsocketClosed(websocket) {
     return ((websocket.readyState === 2) || (websocket.readyState === 3));
 }
 
+export function isWebsocketOpen(websocket) {
+    return !isNull(websocket) && (websocket.readyState === 1);
+}
+
 export function getUnparameterizedUrl() {
     return [location.protocol, '//', location.host, location.pathname].join('');
 }
@@ -355,20 +348,15 @@ export function forEachKeyValue(array, callback) {
 }
 
 export function toBoolean(value) {
-    if (typeof(value) === 'boolean') {
+    if (typeof (value) === 'boolean') {
         return value;
 
-    } else if (typeof(value) === 'string') {
+    } else if (typeof (value) === 'string') {
         return value.toLowerCase() === 'true';
 
     } else {
         return Boolean(value);
     }
-}
-
-export function getLinesCount(text) {
-    var linesMatch = text.match(/\n/g);
-    return isNull(linesMatch) ? 0 : linesMatch.length;
 }
 
 export function arraysEqual(arr1, arr2) {
@@ -403,11 +391,19 @@ export function setInputValue(inputField, value, triggerEvent) {
         inputField = inputField.get(0);
     }
 
-    inputField.value = value;
+    if (inputField.type === 'checkbox') {
+        inputField.checked = value;
+    } else {
+        inputField.value = value;
+    }
 
     if (triggerEvent) {
-        var event = document.createEvent('HTMLEvents');
-        event.initEvent('input', true, true);
+        const event = document.createEvent('HTMLEvents');
+        let eventType = 'input';
+        if (inputField.tagName === 'SELECT') {
+            eventType = 'change';
+        }
+        event.initEvent(eventType, true, true);
         inputField.dispatchEvent(event);
     }
 }
@@ -428,15 +424,6 @@ export function toDict(array, fieldName) {
         result[element[fieldName]] = element;
     }
     return result;
-}
-
-export function setButtonEnabled(button, enabled) {
-    button.disabled = !enabled;
-    if (!enabled) {
-        addClass(button, "disabled");
-    } else {
-        removeClass(button, "disabled");
-    }
 }
 
 function compareNulls(value1, value2) {
@@ -550,4 +537,8 @@ export function toMap(elements, keyExtractor, valueExtractor) {
             Object.assign(obj, {[keyExtractor(element)]: valueExtractor(element)})
         , {}
     );
+}
+
+export function deepCloneObject(obj) {
+    return JSON.parse(JSON.stringify(obj));
 }

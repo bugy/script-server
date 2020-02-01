@@ -149,15 +149,17 @@ class TestServerConf(unittest.TestCase):
         config.title = 'test title'
         config.enable_script_titles = False
 
-        external_config = server_conf_to_external(config)
+        external_config = server_conf_to_external(config, '1.14.0')
         self.assertEqual('test title', external_config.get('title'))
         self.assertIs(False, external_config.get('enableScriptTitles'))
+        self.assertIs('1.14.0', external_config.get('version'))
 
     def test_config_with_none_values(self):
         config = ServerConfig()
         config.title = None
         config.enable_script_titles = None
 
-        external_config = server_conf_to_external(config)
+        external_config = server_conf_to_external(config, None)
         self.assertIsNone(external_config.get('title'))
         self.assertIsNone(external_config.get('enableScriptTitles'))
+        self.assertIsNone(external_config.get('version'))

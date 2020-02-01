@@ -1,8 +1,10 @@
 import os
 import unittest
+from collections import OrderedDict
 
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
-from model.script_config import ConfigModel, InvalidValueException, _TemplateProperty, ParameterNotFoundException
+from model.script_config import ConfigModel, InvalidValueException, _TemplateProperty, ParameterNotFoundException, \
+    get_sorted_config
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
 from tests.test_utils import create_script_param_config, create_parameter_model, create_files
@@ -731,6 +733,76 @@ class TestTemplateProperty(unittest.TestCase):
 
     def set_value(self, name, value):
         self.values[name] = value
+
+
+class GetSortedConfigTest(unittest.TestCase):
+    def test_get_sorted_when_3_fields(self):
+        config = get_sorted_config({'script_path': 'cd ~', 'name': 'Conf X', 'description': 'My wonderful script'})
+
+        expected = OrderedDict(
+            [('name', 'Conf X'),
+             ('script_path', 'cd ~'),
+             ('description', 'My wonderful script')])
+        self.assertEqual(expected, config)
+
+    def test_get_sorted_when_many_fields(self):
+        config = get_sorted_config({
+            'output_files': ['~/my/file'],
+            'name': 'Conf X',
+            'include': 'included',
+            'parameters': [],
+            'description': 'My wonderful script',
+            'requires_terminal': False,
+            'allowed_users': [],
+            'script_path': 'cd ~',
+            'working_directory': '~'})
+
+        expected = OrderedDict([
+            ('name', 'Conf X'),
+            ('script_path', 'cd ~'),
+            ('working_directory', '~'),
+            ('description', 'My wonderful script'),
+            ('allowed_users', []),
+            ('include', 'included'),
+            ('output_files', ['~/my/file']),
+            ('requires_terminal', False),
+            ('parameters', []),
+        ])
+        self.assertEqual(expected, config)
+
+    def test_get_sorted_when_unknown_fields(self):
+        config = get_sorted_config({
+            'parameters': [],
+            'key1': 'abc',
+            'requires_terminal': False,
+            'key2': 123})
+
+        expected = OrderedDict([
+            ('requires_terminal', False),
+            ('key1', 'abc'),
+            ('key2', 123),
+            ('parameters', []),
+        ])
+        self.assertEqual(expected.popitem(False), config.popitem(False))
+        self.assertEqual(expected.popitem(True), config.popitem(True))
+        self.assertCountEqual(expected.items(), config.items())
+
+    def test_get_sorted_with_parameters(self):
+        config = get_sorted_config({
+            'parameters': [{'name': 'param2', 'description': 'desc 1'},
+                           {'type': 'int', 'name': 'paramA'},
+                           {'default': 'false', 'name': 'param1', 'no_value': True}],
+            'name': 'Conf X'})
+
+        expected = OrderedDict([
+            ('name', 'Conf X'),
+            ('parameters', [
+                OrderedDict([('name', 'param2'), ('description', 'desc 1')]),
+                OrderedDict([('name', 'paramA'), ('type', 'int')]),
+                OrderedDict([('name', 'param1'), ('no_value', True), ('default', 'false')])
+            ]),
+        ])
+        self.assertEqual(expected, config)
 
 
 def _create_config_model(name, *,

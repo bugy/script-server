@@ -1,33 +1,13 @@
-body {
-    background: white;
-    font-family: "Roboto", sans-serif;
-    font-weight: normal;
+.input-field:after {
+    content: attr(data-error);
+    color: #F44336;
+    position: absolute;
+    left: 0.9rem;
+    bottom: -0.9rem;
+    font-size: 0.9rem;
 }
 
-.page {
-    height: 100vh;
-}
-
-.page-title {
-    width: 100%;
-    height: 64px;
-    line-height: 64px;
-
-    padding-left: 32px;
-
-    font-size: 18px;
-    font-weight: 400;
-
-    vertical-align: baseline;
-
-    color: #FFF;
-
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-}
-
-.page .section {
-    height: calc(100vh - 64px);
-    width: 100%;
-    overflow: auto;
+#toast-container {
+    right: 5%;
+    left: unset;
 }

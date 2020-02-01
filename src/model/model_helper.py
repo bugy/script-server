@@ -221,3 +221,8 @@ class InvalidValueException(Exception):
 class InvalidValueTypeException(Exception):
     def __init__(self, message) -> None:
         super().__init__(message)
+
+
+class AccessProhibitedException(Exception):
+    def __init__(self, message) -> None:
+        super().__init__(message)

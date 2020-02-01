@@ -128,6 +128,7 @@ export class TerminalModel {
 
     clear() {
         this.lines = [];
+        this.inlineImages = {};
         this.lineStyles = new Map();
 
         this.currentLine = 0;
@@ -355,6 +356,36 @@ export class TerminalModel {
             } else {
                 existing.start = end;
                 return;
+            }
+        }
+    }
+
+    removeInlineImage(output_path) {
+        if (this.inlineImages.hasOwnProperty(output_path)) {
+            delete this.inlineImages[output_path];
+
+            this._notify_inline_image_change(output_path);
+        }
+    }
+
+    setInlineImage(output_path, download_url) {
+        this.inlineImages[output_path] = download_url;
+
+        this._notify_inline_image_change(output_path)
+    }
+
+    _notify_inline_image_change(output_path) {
+        const changedLines = [];
+        for (let i = 0; i < this.lines.length; i++) {
+            const line = this.lines[i];
+            if (line.includes(output_path)) {
+                changedLines.push(i);
+            }
+        }
+
+        if (changedLines.length > 0) {
+            for (const listener of this.listeners) {
+                listener.linesChanges(changedLines);
             }
         }
     }

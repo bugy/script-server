@@ -1,8 +1,10 @@
 import os
 import unittest
+from collections import OrderedDict
 
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from model import parameter_config
+from model.parameter_config import get_sorted_config
 from react.properties import ObservableDict
 from tests import test_utils
 from tests.test_utils import create_parameter_model, create_parameter_model_from_config
@@ -32,6 +34,7 @@ class ParameterModelInitTest(unittest.TestCase):
         parameter_model = _create_parameter_model({
             'name': name,
             'param': param,
+            'env_var': 'my_Param',
             'no_value': 'true',
             'description': description,
             'required': required,
@@ -46,8 +49,8 @@ class ParameterModelInitTest(unittest.TestCase):
         })
 
         self.assertEqual(name, parameter_model.name)
-        self.assertEqual(name, parameter_model.name)
         self.assertEqual(param, parameter_model.param)
+        self.assertEqual('my_Param', parameter_model.env_var)
         self.assertEqual(True, parameter_model.no_value)
         self.assertEqual(description, parameter_model.description)
         self.assertEqual(required, parameter_model.required)
@@ -100,6 +103,15 @@ class ParameterModelInitTest(unittest.TestCase):
             'name': 'def_param',
             'type': 'list',
             'values': {'script': 'echo "123\n" "456"'}})
+        self.assertEqual(['123', ' 456'], parameter_model.values)
+
+    def test_values_from_script_win_newline(self):
+        test_utils.set_win()
+
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'list',
+            'values': {'script': 'echo "123\r\n" "456"'}})
         self.assertEqual(['123', ' 456'], parameter_model.values)
 
     def test_allowed_values_for_non_list(self):
@@ -517,6 +529,12 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value('123')
         self.assertIsNone(error)
 
+    def test_list_with_script_when_matches_and_win_newline(self):
+        parameter = create_parameter_model('param', type='list', values_script="echo '123\r\n' 'abc'")
+
+        error = parameter.validate_value('123')
+        self.assertIsNone(error)
+
     def test_list_with_dependency_when_matches(self):
         parameters = []
         values = ObservableDict()
@@ -636,6 +654,65 @@ class ParameterValueNormalizationTest(unittest.TestCase):
         parameter = create_parameter_model('param', type=PARAM_TYPE_MULTISELECT, allowed_values=['Hello', 'world'])
 
         self.assertEqual([], parameter.normalize_user_value(None))
+
+
+class GetSortedParamConfig(unittest.TestCase):
+    def test_get_sorted_when_3_fields(self):
+        config = get_sorted_config({'type': 'int', 'name': 'Param X', 'required': True})
+
+        expected = OrderedDict(
+            [('name', 'Param X'),
+             ('required', True),
+             ('type', 'int')])
+        self.assertEqual(expected, config)
+
+    def test_get_sorted_when_many_fields(self):
+        config = get_sorted_config({
+            'separator': '/',
+            'constant': False,
+            'min': -10,
+            'type': 'int',
+            'default': 3,
+            'name': 'Param X',
+            'values': [],
+            'required': True,
+            'max': 5,
+            'param': '-i',
+            'description': 'guess number'
+        })
+
+        expected = OrderedDict(
+            [('name', 'Param X'),
+             ('required', True),
+             ('param', '-i'),
+             ('type', 'int'),
+             ('default', 3),
+             ('constant', False),
+             ('description', 'guess number'),
+             ('values', []),
+             ('min', -10),
+             ('max', 5),
+             ('separator', '/')])
+        self.assertEqual(expected, config)
+
+    def test_get_sorted_when_unknown_fields(self):
+        config = get_sorted_config({
+            'key1': 'abc',
+            'file_recursive': True,
+            'key2': 123,
+            'name': 'Param X',
+            'key3': []})
+
+        expected = OrderedDict(
+            [('name', 'Param X'),
+             ('file_recursive', True),
+             ('key1', 'abc'),
+             ('key2', 123),
+             ('key3', [])])
+
+        self.assertEqual(expected.popitem(last=False), config.popitem(last=False))
+        self.assertEqual(expected.popitem(last=False), config.popitem(last=False))
+        self.assertCountEqual(expected.items(), config.items())
 
 
 def _create_parameter_model(config, *, username=DEF_USERNAME, audit_name=DEF_AUDIT_NAME, all_parameters=None):

@@ -7,6 +7,7 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.util import Configurable
 
 from tests import test_utils
+from tests.test_utils import mock_object
 from web.client import tornado_client_config
 
 
@@ -48,7 +49,10 @@ class TestInitializeClient(unittest.TestCase):
         self.assert_proxy(None, None)
 
     def run_initialize(self):
-        with mock.patch.dict(sys.modules, {'pycurl': sys}):
+        module_mock = mock_object()
+        module_mock.Curl = ''
+
+        with mock.patch.dict(sys.modules, {'pycurl': module_mock}):
             tornado_client_config.initialize()
 
     def assert_proxy(self, host, port, username=None, password=None):

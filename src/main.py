@@ -53,8 +53,10 @@ def get_secret(temp_folder):
 
 
 def main():
+    project_path = os.getcwd()
+
     try:
-        tool_utils.validate_web_build_exists(os.getcwd())
+        tool_utils.validate_web_build_exists(project_path)
     except InvalidWebBuildException as e:
         print(str(e))
         sys.exit(-1)
@@ -65,6 +67,9 @@ def main():
         file_utils.prepare_folder(LOG_FOLDER)
 
         logging.config.dictConfig(log_config)
+
+    server_version = tool_utils.get_server_version(project_path)
+    logging.info('Starting Script Server' + (', v' + server_version if server_version else ' (custom version)'))
 
     file_utils.prepare_folder(CONFIG_FOLDER)
     file_utils.prepare_folder(TEMP_FOLDER)
@@ -80,7 +85,11 @@ def main():
     group_provider = create_group_provider(
         server_config.user_groups, server_config.authenticator, server_config.admin_users)
 
-    authorizer = Authorizer(server_config.allowed_users, server_config.admin_users, group_provider)
+    authorizer = Authorizer(
+        server_config.allowed_users,
+        server_config.admin_users,
+        server_config.full_history_users,
+        group_provider)
 
     config_service = ConfigService(authorizer, CONFIG_FOLDER)
 
@@ -91,9 +100,9 @@ def main():
     log_name_creator = LogNameCreator(
         server_config.logging_config.filename_pattern,
         server_config.logging_config.date_format)
-    execution_logging_service = ExecutionLoggingService(execution_logs_path, log_name_creator)
+    execution_logging_service = ExecutionLoggingService(execution_logs_path, log_name_creator, authorizer)
 
-    existing_ids = [entry.id for entry in execution_logging_service.get_history_entries()]
+    existing_ids = [entry.id for entry in execution_logging_service.get_history_entries(None, system_call=True)]
     id_generator = IdGenerator(existing_ids)
 
     execution_service = ExecutionService(id_generator)
@@ -122,7 +131,8 @@ def main():
         alerts_service,
         file_upload_feature,
         file_download_feature,
-        secret)
+        secret,
+        server_version)
 
 
 if __name__ == '__main__':

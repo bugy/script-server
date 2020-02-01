@@ -9,16 +9,8 @@ if [ "$TRAVIS_BRANCH" == "master" ]; then
     export NEW_GIT_TAG='dev'
 
 elif [ "$TRAVIS_BRANCH" == "stable" ]; then
-    last_tag=`git describe --abbrev=0 --tags`
-    npm_tag=`grep -Po '"version": "\d+.\d+.\d+"' web-src/package.json | grep -Po '\d+.\d+.\d+'`
-    minor_npm_version=${npm_tag%.*}
-    if [ ${last_tag%.*} == "$minor_npm_version" ]; then
-        last_patch_version=${last_tag##*.}
-        next_patch_version=$((last_patch_version + 1))
-        export NEW_GIT_TAG="$minor_npm_version.$next_patch_version"
-    else
-        export NEW_GIT_TAG="$npm_tag"
-    fi
+    version=`unzip -qc build/script-server.zip version.txt`
+    export NEW_GIT_TAG="$version"
 fi
 
 set -e

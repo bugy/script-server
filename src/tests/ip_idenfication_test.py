@@ -8,7 +8,7 @@ from utils import date_utils
 COOKIE_KEY = 'client_id_token'
 
 
-def mock_request_handler(ip=None, x_forwarded_for=None, x_real_ip=None, saved_token=None):
+def mock_request_handler(ip=None, x_forwarded_for=None, x_real_ip=None, saved_token=None, user_header_name=None, user_header_name_value=None):
     handler_mock = mock_object()
 
     handler_mock.application = mock_object()
@@ -24,6 +24,9 @@ def mock_request_handler(ip=None, x_forwarded_for=None, x_real_ip=None, saved_to
 
     if x_real_ip:
         handler_mock.request.headers['X-Real-IP'] = x_real_ip
+    
+    if user_header_name and user_header_name_value:
+        handler_mock.request.headers[user_header_name] = user_header_name_value
 
     cookies = {COOKIE_KEY: saved_token}
 
@@ -51,22 +54,22 @@ def mock_request_handler(ip=None, x_forwarded_for=None, x_real_ip=None, saved_to
 class IpIdentificationTest(unittest.TestCase):
 
     def test_localhost_ip_trusted_identification(self):
-        identification = IpBasedIdentification(['127.0.0.1'])
+        identification = IpBasedIdentification(['127.0.0.1'], None)
         id = identification.identify(mock_request_handler(ip='127.0.0.1'))
         self.assertEqual('127.0.0.1', id)
 
     def test_some_ip_trusted_identification(self):
-        identification = IpBasedIdentification(['192.168.21.13'])
+        identification = IpBasedIdentification(['192.168.21.13'], None)
         id = identification.identify(mock_request_handler(ip='192.168.21.13'))
         self.assertEqual('192.168.21.13', id)
 
     def test_ip_untrusted_identification(self):
-        identification = IpBasedIdentification([])
+        identification = IpBasedIdentification([], None)
         id = identification.identify(mock_request_handler(ip='192.168.21.13'))
         self.assertNotEqual('192.168.21.13', id)
 
     def test_ip_untrusted_identification_for_different_connections(self):
-        identification = IpBasedIdentification([])
+        identification = IpBasedIdentification([], None)
 
         ids = set()
         for _ in range(0, 100):
@@ -75,7 +78,7 @@ class IpIdentificationTest(unittest.TestCase):
         self.assertEqual(100, len(ids))
 
     def test_ip_untrusted_identification_same_connection(self):
-        identification = IpBasedIdentification([])
+        identification = IpBasedIdentification([], None)
 
         request_handler = mock_request_handler(ip='192.168.21.13')
         id1 = identification.identify(request_handler)
@@ -83,14 +86,14 @@ class IpIdentificationTest(unittest.TestCase):
         self.assertEqual(id1, id2)
 
     def test_proxied_ip_behind_trusted(self):
-        identification = IpBasedIdentification(['127.0.0.1'])
+        identification = IpBasedIdentification(['127.0.0.1'], None)
 
         request_handler = mock_request_handler(ip='127.0.0.1', x_forwarded_for='192.168.21.13')
         id = identification.identify(request_handler)
         self.assertEqual('192.168.21.13', id)
 
     def test_proxied_ip_behind_untrusted(self):
-        identification = IpBasedIdentification([])
+        identification = IpBasedIdentification([], None)
 
         request_handler = mock_request_handler(ip='127.0.0.1', x_forwarded_for='192.168.21.13')
         id = identification.identify(request_handler)
@@ -100,9 +103,9 @@ class IpIdentificationTest(unittest.TestCase):
     def test_change_to_trusted(self):
         request_handler = mock_request_handler(ip='192.168.21.13')
 
-        old_id = IpBasedIdentification([]).identify(request_handler)
+        old_id = IpBasedIdentification([], None).identify(request_handler)
 
-        trusted_identification = IpBasedIdentification(['192.168.21.13'])
+        trusted_identification = IpBasedIdentification(['192.168.21.13'], None)
         new_id = trusted_identification.identify(request_handler)
 
         self.assertNotEqual(old_id, new_id)
@@ -112,10 +115,10 @@ class IpIdentificationTest(unittest.TestCase):
     def test_change_to_untrusted(self):
         request_handler = mock_request_handler(ip='192.168.21.13')
 
-        trusted_identification = IpBasedIdentification(['192.168.21.13'])
+        trusted_identification = IpBasedIdentification(['192.168.21.13'], None)
         old_id = trusted_identification.identify(request_handler)
 
-        new_id = IpBasedIdentification([]).identify(request_handler)
+        new_id = IpBasedIdentification([], None).identify(request_handler)
 
         self.assertNotEqual(old_id, new_id)
         self.assertNotEqual(new_id, '192.168.21.13')
@@ -124,7 +127,7 @@ class IpIdentificationTest(unittest.TestCase):
     def test_no_cookie_change_for_same_user(self):
         request_handler = mock_request_handler(ip='192.168.21.13')
 
-        identification = IpBasedIdentification([])
+        identification = IpBasedIdentification([], None)
 
         identification.identify(request_handler)
         cookie1 = request_handler.get_cookie(COOKIE_KEY)
@@ -136,7 +139,7 @@ class IpIdentificationTest(unittest.TestCase):
     def test_refresh_old_cookie_with_same_id(self):
         request_handler = mock_request_handler(ip='192.168.21.13')
 
-        identification = IpBasedIdentification([])
+        identification = IpBasedIdentification([], None)
 
         id = '1234567'
         token_expiry = str(date_utils.get_current_millis() + date_utils.days_to_ms(2))
@@ -153,7 +156,7 @@ class IpIdentificationTest(unittest.TestCase):
         request_handler = mock_request_handler(ip='192.168.21.13')
         request_handler.set_secure_cookie(COOKIE_KEY, 'something')
 
-        IpBasedIdentification([]).identify(request_handler)
+        IpBasedIdentification([], None).identify(request_handler)
 
         new_token = request_handler.get_cookie(COOKIE_KEY)
 
@@ -163,7 +166,7 @@ class IpIdentificationTest(unittest.TestCase):
         request_handler = mock_request_handler(ip='192.168.21.13')
         request_handler.set_secure_cookie(COOKIE_KEY, 'something&hello')
 
-        id = IpBasedIdentification([]).identify(request_handler)
+        id = IpBasedIdentification([], None).identify(request_handler)
 
         new_token = request_handler.get_cookie(COOKIE_KEY)
 
@@ -174,7 +177,7 @@ class IpIdentificationTest(unittest.TestCase):
         request_handler = mock_request_handler(ip='192.168.21.13')
         request_handler.set_secure_cookie(COOKIE_KEY, 'something&100000')
 
-        id = IpBasedIdentification([]).identify(request_handler)
+        id = IpBasedIdentification([], None).identify(request_handler)
 
         new_token = request_handler.get_cookie(COOKIE_KEY)
 

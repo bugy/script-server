@@ -1,4 +1,4 @@
-import {destroyChildren, isNull} from '../../common';
+import {destroyChildren, forEachKeyValue, isNull} from '../../common';
 
 const lineElementTemplate = document.createElement('div');
 
@@ -150,10 +150,17 @@ export class Terminal {
             }
 
             const lineText = modelLines[lineIndex];
-            const styleRanges = terminalModel.getStyle(lineIndex);
+            const imageUrl = this.findImage(lineText);
+            if (isNull(imageUrl)) {
+                const styleRanges = terminalModel.getStyle(lineIndex);
 
-            const children = Terminal.createLogLineChildren(lineText, styleRanges);
-            children.forEach(child => lineElement.appendChild(child));
+                const children = Terminal.createLogLineChildren(lineText, styleRanges);
+                children.forEach(child => lineElement.appendChild(child));
+            } else {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                lineElement.appendChild(img);
+            }
         }
 
         for (const child of newLinesFragment.children) {
@@ -182,5 +189,16 @@ export class Terminal {
             const childNode = this.element.childNodes[i];
             this.element.removeChild(childNode);
         }
+    }
+
+    findImage(lineText) {
+        let result = null;
+        forEachKeyValue(this.terminalModel.inlineImages, (path, url) => {
+            if (lineText.includes(path)) {
+                result = url;
+            }
+        });
+
+        return result;
     }
 }

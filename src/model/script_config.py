@@ -2,8 +2,10 @@ import json
 import logging
 import os
 import re
+from collections import OrderedDict
 
 from auth.authorization import ANY_USER
+from model import parameter_config
 from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException
 from model.parameter_config import ParameterModel
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
@@ -225,7 +227,7 @@ def _read_name(file_path, json_object):
         filename = os.path.basename(file_path)
         name = os.path.splitext(filename)[0]
 
-    return name
+    return name.strip()
 
 
 def read_short(file_path, json_object):
@@ -325,3 +327,23 @@ class _TemplateProperty:
 
     def get(self):
         return self._value_property.get()
+
+
+def get_sorted_config(config):
+    key_order = ['name', 'script_path', 'working_directory', 'hidden', 'description', 'allowed_users', 'include',
+                 'output_files', 'requires_terminal', 'bash_formatting', 'parameters']
+
+    def get_order(key):
+        if key == 'parameters':
+            return 99
+        elif key in key_order:
+            return key_order.index(key)
+        else:
+            return 50
+
+    sorted_config = OrderedDict(sorted(config.items(), key=lambda item: get_order(item[0])))
+    if config.get('parameters'):
+        for i, param in enumerate(config['parameters']):
+            config['parameters'][i] = parameter_config.get_sorted_config(param)
+
+    return sorted_config

@@ -26,8 +26,8 @@ def _unset_output_flags(fd, *new_attributes):
 
 
 class PtyProcessWrapper(process_base.ProcessWrapper):
-    def __init__(self, command, working_directory):
-        super().__init__(command, working_directory)
+    def __init__(self, command, working_directory, env_variables):
+        super().__init__(command, working_directory, env_variables)
 
         self.pty_master = None
         self.pty_slave = None
@@ -36,12 +36,16 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
 
     def start_execution(self, command, working_directory):
         master, slave = pty.openpty()
+
+        env_variables = dict(os.environ, **self.env_variables)
+
         self.process = subprocess.Popen(command,
                                         cwd=working_directory,
                                         stdin=slave,
                                         stdout=slave,
                                         stderr=slave,
-                                        start_new_session=True)
+                                        start_new_session=True,
+                                        env=env_variables)
         self.pty_slave = slave
         self.pty_master = master
 
@@ -62,6 +66,8 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
     def pipe_process_output(self):
         utf8_stream = self.encoding.lower() == 'utf-8'
 
+        buffer = b''
+
         try:
             while True:
                 finished = False
@@ -69,8 +75,10 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
 
                 max_read_bytes = 1024
 
+                data = buffer
+                buffer = b''
+
                 if self.is_finished():
-                    data = b""
                     while True:
                         try:
                             chunk = os.read(self.pty_master, max_read_bytes)
@@ -84,9 +92,8 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
                     finished = True
 
                 else:
-                    data = ""
                     try:
-                        data = os.read(self.pty_master, max_read_bytes)
+                        data += os.read(self.pty_master, max_read_bytes)
                         if data.endswith(b"\r"):
                             data += os.read(self.pty_master, 1)
 
@@ -104,9 +111,17 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
                     if not data:
                         wait_new_output = True
 
+                if utf8_stream and data:
+                    while data and data[-1] >= 127:
+                        buffer = bytes([data[-1]]) + buffer
+                        data = data[:-1]
+
                 if data:
-                    output_text = data.decode(self.encoding)
-                    self._write_script_output(output_text)
+                    try:
+                        output_text = data.decode(self.encoding)
+                        self._write_script_output(output_text)
+                    except UnicodeDecodeError as e:
+                        print(e)
 
                 if finished:
                     break
@@ -115,7 +130,7 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
                     time.sleep(0.01)
 
         except:
-            self._write_script_output("Unexpected error occurred. Contact the administrator.")
+            self._write_script_output('\nUnexpected error occurred. Contact the administrator.')
 
             try:
                 self.kill()

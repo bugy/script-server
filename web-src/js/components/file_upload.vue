@@ -7,7 +7,7 @@
                type="file"
                :required="config.required"
                class="validate"
-               @input="updateValue"
+               @change="updateValue"
                @blur="focused = false"
                @focus="focused = true"
                ref="fileField"/>

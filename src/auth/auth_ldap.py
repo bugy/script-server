@@ -4,6 +4,7 @@ import os
 from string import Template
 
 from ldap3 import Connection, SIMPLE
+from ldap3.core.exceptions import LDAPAttributeError
 
 from auth import auth_base
 from model import model_helper
@@ -60,6 +61,13 @@ def _load_multiple_entries_values(dn, search_filter, attribute_name, connection)
             result.append(value)
 
     return result
+
+
+def get_entry_dn(entry):
+    try:
+        return entry.entry_dn
+    except LDAPAttributeError:
+        return entry._dn
 
 
 class LdapAuthenticator(auth_base.Authenticator):
@@ -158,7 +166,7 @@ class LdapAuthenticator(auth_base.Authenticator):
         self._user_groups[user] = groups
         return groups
 
-    def get_groups(self, user):
+    def get_groups(self, user, known_groups=None):
         return self._get_groups(user)
 
     def _fetch_user_groups(self, user_dn, user_uid, connection):
@@ -203,7 +211,7 @@ class LdapAuthenticator(auth_base.Authenticator):
             return full_username, None
 
         entry = entries[0]
-        return entry.entry_dn, entry.uid.value
+        return get_entry_dn(entry), entry.uid.value
 
     def _load_groups(self, groups_file):
         if not os.path.exists(groups_file):

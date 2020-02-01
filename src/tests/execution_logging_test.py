@@ -1,18 +1,18 @@
 import functools
 import inspect
 import os
-import threading
 import traceback
 import unittest
 import uuid
 from datetime import datetime, timedelta
-
 from typing import Optional
 
+from auth.authorization import Authorizer, EmptyGroupProvider
 from execution import executor
 from execution.execution_service import ExecutionService
 from execution.logging import ScriptOutputLogger, ExecutionLoggingService, OUTPUT_STARTED_MARKER, \
     LogNameCreator, ExecutionLoggingController
+from model.model_helper import AccessProhibitedException
 from react.observable import Observable
 from tests import test_utils
 from tests.test_utils import _IdGeneratorMock, create_config_model, _MockProcessWrapper, create_audit_names, \
@@ -132,7 +132,7 @@ def _replace_line_separators(files, original, new):
 
 class TestLoggingService(unittest.TestCase):
     def test_no_history_entries(self):
-        entries = self.logging_service.get_history_entries()
+        entries = self.logging_service.get_history_entries('userX')
         self.assertEqual(0, len(entries))
 
     def test_when_write_log_then_log_file_created(self):
@@ -174,7 +174,7 @@ class TestLoggingService(unittest.TestCase):
                               log_lines=['some text'],
                               start_time_millis=start_time,
                               command='./script.sh -p p1 --flag')
-        entries = self.logging_service.get_history_entries()
+        entries = self.logging_service.get_history_entries('user1')
         self.assertEqual(1, len(entries))
 
         entry = entries[0]
@@ -189,12 +189,12 @@ class TestLoggingService(unittest.TestCase):
         log_path = os.path.join(test_utils.temp_folder, 'wrong.log')
         file_utils.write_file(log_path, 'log\ntext\n')
 
-        logs = self.logging_service.get_history_entries()
+        logs = self.logging_service.get_history_entries('userX')
         self.assertEqual(0, len(logs))
 
     def test_multiline_command_in_history(self):
         self.simulate_logging(execution_id='id1', command='./script.sh -p a\nb -p2 "\n\n\n"')
-        entries = self.logging_service.get_history_entries()
+        entries = self.logging_service.get_history_entries('userX')
         self.assertEqual(1, len(entries))
 
         entry = entries[0]
@@ -215,13 +215,13 @@ class TestLoggingService(unittest.TestCase):
     def test_exit_code_in_history(self):
         self.simulate_logging(execution_id='1', log_lines=['text'], exit_code=13)
 
-        entry = self.logging_service.get_history_entries()[0]
+        entry = self.logging_service.get_history_entries('userX')[0]
         self.validate_history_entry(entry, id='1', exit_code=13)
 
     def test_exit_code_when_no_post_execution_call(self):
         self.simulate_logging(execution_id='1', log_lines=['text'], exit_code=13, write_post_execution_info=False)
 
-        entry = self.logging_service.get_history_entries()[0]
+        entry = self.logging_service.get_history_entries('userX')[0]
         self.validate_history_entry(entry, id='1', exit_code=None)
 
     def test_write_post_execution_info_before_log_closed(self):
@@ -234,11 +234,11 @@ class TestLoggingService(unittest.TestCase):
 
         self.logging_service.write_post_execution_info(execution_id, 255)
 
-        old_entry = self.logging_service.find_history_entry(execution_id)
+        old_entry = self.logging_service.find_history_entry(execution_id, 'userX')
         self.validate_history_entry(old_entry, id=execution_id, exit_code=None)
 
         output_stream.close()
-        new_entry = self.logging_service.find_history_entry(execution_id)
+        new_entry = self.logging_service.find_history_entry(execution_id, 'userX')
         self.validate_history_entry(new_entry, id=execution_id, exit_code=255)
 
     def test_write_post_execution_info_for_unknown_id(self):
@@ -247,8 +247,8 @@ class TestLoggingService(unittest.TestCase):
     def test_history_entries_after_restart(self):
         self.simulate_logging(execution_id='id1')
 
-        new_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
-        entry = new_service.get_history_entries()[0]
+        new_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), self.authorizer)
+        entry = new_service.get_history_entries('userX')[0]
         self.validate_history_entry(entry, id='id1')
 
     def test_get_history_entries_after_delete(self):
@@ -257,8 +257,48 @@ class TestLoggingService(unittest.TestCase):
         for file in os.listdir(test_utils.temp_folder):
             os.remove(os.path.join(test_utils.temp_folder, file))
 
-        entries = self.logging_service.get_history_entries()
+        entries = self.logging_service.get_history_entries('userX')
         self.assertCountEqual([], entries)
+
+    def test_get_history_entries_only_for_current_user(self):
+        self.simulate_logging(execution_id='id1', user_id='userA')
+        self.simulate_logging(execution_id='id2', user_id='userB')
+        self.simulate_logging(execution_id='id3', user_id='userC')
+        self.simulate_logging(execution_id='id4', user_id='userA')
+
+        entries = self._get_entries_sorted('userA')
+        self.assertEquals(2, len(entries))
+
+        self.validate_history_entry(entry=entries[0], id='id1', user_id='userA')
+        self.validate_history_entry(entry=entries[1], id='id4', user_id='userA')
+
+    def test_get_history_entries_for_power_user(self):
+        self.simulate_logging(execution_id='id1', user_id='userA')
+        self.simulate_logging(execution_id='id2', user_id='userB')
+        self.simulate_logging(execution_id='id3', user_id='userC')
+        self.simulate_logging(execution_id='id4', user_id='userA')
+
+        entries = self._get_entries_sorted('power_user')
+        self.assertEquals(4, len(entries))
+
+        self.validate_history_entry(entry=entries[0], id='id1', user_id='userA')
+        self.validate_history_entry(entry=entries[1], id='id2', user_id='userB')
+        self.validate_history_entry(entry=entries[2], id='id3', user_id='userC')
+        self.validate_history_entry(entry=entries[3], id='id4', user_id='userA')
+
+    def test_get_history_entries_for_system_call(self):
+        self.simulate_logging(execution_id='id1', user_id='userA')
+        self.simulate_logging(execution_id='id2', user_id='userB')
+        self.simulate_logging(execution_id='id3', user_id='userC')
+        self.simulate_logging(execution_id='id4', user_id='userA')
+
+        entries = self._get_entries_sorted('some user', system_call=True)
+        self.assertEquals(4, len(entries))
+
+        self.validate_history_entry(entry=entries[0], id='id1', user_id='userA')
+        self.validate_history_entry(entry=entries[1], id='id2', user_id='userB')
+        self.validate_history_entry(entry=entries[2], id='id3', user_id='userC')
+        self.validate_history_entry(entry=entries[3], id='id4', user_id='userA')
 
     def test_find_history_entry_after_delete(self):
         self.simulate_logging(execution_id='id1')
@@ -266,27 +306,27 @@ class TestLoggingService(unittest.TestCase):
         for file in os.listdir(test_utils.temp_folder):
             os.remove(os.path.join(test_utils.temp_folder, file))
 
-        entry = self.logging_service.find_history_entry('id1')
+        entry = self.logging_service.find_history_entry('id1', 'userX')
         self.assertIsNone(entry)
 
     def test_find_history_entry(self):
         self.simulate_logging(execution_id='id1')
 
-        entry = self.logging_service.find_history_entry('id1')
+        entry = self.logging_service.find_history_entry('id1', 'userX')
         self.assertIsNotNone(entry)
         self.validate_history_entry(entry, id='id1')
 
     def test_not_find_history_entry(self):
         self.simulate_logging(execution_id='id1')
 
-        entry = self.logging_service.find_history_entry('id2')
+        entry = self.logging_service.find_history_entry('id2', 'userX')
         self.assertIsNone(entry)
 
     def test_find_history_entry_after_restart(self):
         self.simulate_logging(execution_id='id1')
 
-        new_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
-        entry = new_service.find_history_entry('id1')
+        new_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), self.authorizer)
+        entry = new_service.find_history_entry('id1', 'userX')
         self.assertIsNotNone(entry)
         self.validate_history_entry(entry, id='id1')
 
@@ -294,22 +334,39 @@ class TestLoggingService(unittest.TestCase):
         start_time_with_tz = datetime.strptime('2018-04-03T18:25:22+0230', "%Y-%m-%dT%H:%M:%S%z")
         self.simulate_logging(execution_id='id1', start_time_millis=to_millis(start_time_with_tz))
 
-        entry = self.logging_service.find_history_entry('id1')
+        entry = self.logging_service.find_history_entry('id1', 'userX')
         self.assertEqual(entry.start_time, start_time_with_tz)
         self.assertEqual(entry.start_time.utcoffset(), timedelta(hours=0, minutes=0))
 
     def test_entry_with_user_id_name_different(self):
         self.simulate_logging(execution_id='id1', user_name='userX', user_id='192.168.2.12')
 
-        entry = self.logging_service.find_history_entry('id1')
+        entry = self.logging_service.find_history_entry('id1', '192.168.2.12')
         self.validate_history_entry(entry, id='id1', user_name='userX', user_id='192.168.2.12')
 
     def test_find_entry_when_windows_line_seperator(self):
         self.simulate_logging(execution_id='id1', user_name='userX', user_id='192.168.2.12')
         _replace_line_separators(self.get_log_files(), '\n', '\r\n')
 
-        entry = self.logging_service.find_history_entry('id1')
+        entry = self.logging_service.find_history_entry('id1', '192.168.2.12')
         self.validate_history_entry(entry, id='id1', user_name='userX', user_id='192.168.2.12')
+
+    def test_find_entry_when_another_user(self):
+        self.simulate_logging(execution_id='id1')
+
+        self.assertRaises(AccessProhibitedException, self.logging_service.find_history_entry, 'id1', 'user_a')
+
+    def test_find_entry_when_another_user_and_has_full_access(self):
+        self.simulate_logging(execution_id='id1')
+
+        entry = self.logging_service.find_history_entry('id1', 'power_user')
+        self.validate_history_entry(entry, id='id1', user_name='userX')
+
+    def test_find_entry_when_another_user_and_no_entry(self):
+        self.simulate_logging(execution_id='id1')
+
+        entry = self.logging_service.find_history_entry('id2', 'userA')
+        self.assertIsNone(entry)
 
     def test_find_log_when_windows_line_seperator(self):
         self.simulate_logging(execution_id='id1', log_lines=['hello', 'wonderful', 'world'])
@@ -418,10 +475,16 @@ class TestLoggingService(unittest.TestCase):
 
         return files
 
+    def _get_entries_sorted(self, user_id, system_call=None):
+        entries = self.logging_service.get_history_entries(user_id, system_call=system_call)
+        entries.sort(key=lambda entry: entry.id)
+        return entries
+
     def setUp(self):
         test_utils.setup()
 
-        self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
+        self.authorizer = Authorizer([], [], ['power_user'], EmptyGroupProvider())
+        self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), self.authorizer)
 
     def tearDown(self):
         test_utils.cleanup()
@@ -438,7 +501,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
         executor = self.executor_service.get_active_executor(execution_id)
         executor.process_wrapper.finish(0)
 
-        entry = self.logging_service.find_history_entry(execution_id)
+        entry = self.logging_service.find_history_entry(execution_id, 'userX')
         self.assertIsNotNone(entry)
 
     def test_logging_values(self):
@@ -462,7 +525,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         wait_observable_close_notification(executor.get_anonymized_output_stream(), 2)
 
-        entry = self.logging_service.find_history_entry(execution_id)
+        entry = self.logging_service.find_history_entry(execution_id, 'userX')
         self.assertIsNotNone(entry)
         self.assertEqual('userX', entry.user_id)
         self.assertEqual('sandy', entry.user_name)
@@ -490,7 +553,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         wait_observable_close_notification(executor.get_anonymized_output_stream(), 2)
 
-        entry = self.logging_service.find_history_entry(execution_id)
+        entry = self.logging_service.find_history_entry(execution_id, 'userX')
         self.assertEqual(14, entry.exit_code)
 
     def setUp(self):
@@ -498,7 +561,8 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         executor._process_creator = _MockProcessWrapper
 
-        self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator())
+        authorizer = Authorizer([], [], [], EmptyGroupProvider())
+        self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), authorizer)
         self.executor_service = ExecutionService(_IdGeneratorMock())
 
         self.controller = ExecutionLoggingController(self.executor_service, self.logging_service)

@@ -248,8 +248,8 @@ class ExecutionServiceTest(unittest.TestCase):
         self.exec_services = []
         self.processes = {}
 
-        def create_process(executor, command, working_directory):
-            wrapper = _MockProcessWrapper(executor, command, working_directory)
+        def create_process(executor, command, working_directory, env_variables):
+            wrapper = _MockProcessWrapper(executor, command, working_directory, env_variables)
             self.processes[self.get_last_id()] = wrapper
             return wrapper
 

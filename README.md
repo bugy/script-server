@@ -8,8 +8,8 @@ For system administrators it's a possibility to share their scripts with users, 
 
 No script modifications are needed - you add a configuration for each script to the script-server and it takes care of proper UI, validation, execution, etc.  
 
-Example of the user interface during script execution:
-![Example of user interface](https://cloud.githubusercontent.com/assets/1275813/26519407/f0318706-42c0-11e7-8328-34ded505839c.png)
+
+[DEMO server](https://script-server.net)
 
 ## Features
 - Interactive output/input web console
@@ -27,7 +27,7 @@ The features can be configured [per-script](https://github.com/bugy/script-serve
 ## Requirements
 ### Server-side
 Python 3.4 or higher with the following modules:
-* Tornado 4/5
+* Tornado 4 / 5 / 6
 * typing *(for python 3.4 only)*
 
 Some features can require additional modules. Such requirements are specified in a corresponding feature description.
@@ -108,3 +108,6 @@ If you like the project and think you could help with making it better, there ar
 
 Any contribution would be of great help and I will highly appreciate it! 
 If you have any questions, please create a new issue, or concact me via buggygm@gmail.com
+
+## Special thanks
+![JetBrains logo](https://github.com/JetBrains/logos/blob/master/web/jetbrains/jetbrains.svg)

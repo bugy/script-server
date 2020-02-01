@@ -16,7 +16,7 @@ temp_folder = 'tests_temp'
 _original_env = {}
 
 
-def create_file(filepath, overwrite=False, text=None):
+def create_file(filepath, overwrite=False, text='test text'):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
@@ -28,9 +28,6 @@ def create_file(filepath, overwrite=False, text=None):
     file_path = os.path.join(folder, filename)
     if os.path.exists(file_path) and not overwrite:
         raise Exception('File ' + file_path + ' already exists')
-
-    if text is None:
-        text = 'test text'
 
     file_utils.write_file(file_path, text)
 
@@ -126,6 +123,7 @@ def create_script_param_config(
         required=None,
         secure=None,
         param=None,
+        env_var=None,
         no_value=None,
         constant=None,
         multiselect_separator=None,
@@ -157,6 +155,9 @@ def create_script_param_config(
 
     if param is not None:
         conf['param'] = param
+
+    if env_var is not None:
+        conf['env_var'] = env_var
 
     if no_value is not None:
         conf['no_value'] = no_value
@@ -202,7 +203,8 @@ def create_config_model(name, *,
                         parameters=None,
                         parameter_values=None,
                         script_command='ls',
-                        output_files=None):
+                        output_files=None,
+                        requires_terminal=None):
     result_config = {}
 
     if config:
@@ -219,6 +221,9 @@ def create_config_model(name, *,
     if output_files is not None:
         result_config['output_files'] = output_files
 
+    if requires_terminal is not None:
+        result_config['requires_terminal'] = requires_terminal
+
     result_config['script_path'] = script_command
 
     return ConfigModel(result_config, path, username, audit_name, parameter_values=parameter_values)
@@ -232,6 +237,7 @@ def create_parameter_model(name=None,
                            required=None,
                            secure=None,
                            param=None,
+                           env_var=None,
                            no_value=None,
                            constant=None,
                            multiselect_separator=None,
@@ -253,6 +259,7 @@ def create_parameter_model(name=None,
         required=required,
         secure=secure,
         param=param,
+        env_var=env_var,
         no_value=no_value,
         constant=constant,
         multiselect_separator=multiselect_separator,
@@ -358,8 +365,8 @@ def wait_observable_close_notification(observable, timeout):
 
 
 class _MockProcessWrapper(ProcessWrapper):
-    def __init__(self, executor, command, working_directory):
-        super().__init__(command, working_directory)
+    def __init__(self, executor, command, working_directory, env_variables):
+        super().__init__(command, working_directory, env_variables)
 
         self.exit_code = None
         self.finished = False
