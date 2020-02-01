@@ -68,7 +68,7 @@ def create_version_file():
 
     npm_version = get_npm_version()
     if current_branch == 'stable':
-        last_tag = process_utils.invoke('git describe --abbrev=0 --tags').strip()
+        last_tag = process_utils.invoke('git describe --exclude dev --abbrev=0 --tags').strip()
         last_tag_version = parse_semver_str(last_tag)
         if (last_tag_version[0] == npm_version[0]) and (last_tag_version[1] == npm_version[1]):
             new_version = [last_tag_version[0], last_tag_version[1], last_tag_version[2] + 1]
