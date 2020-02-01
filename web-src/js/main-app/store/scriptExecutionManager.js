@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {deepCloneObject, forEachKeyValue, isEmptyArray, isNull} from '../../common';
+import {deepCloneObject, forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '../../common';
 import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
 import * as _ from 'lodash';
 
@@ -143,7 +143,7 @@ export default {
                 .catch(error => {
                     const status = _.get(error, 'response.status');
                     let data = _.get(error, 'response.data');
-                    if (isNull(error.response)) {
+                    if (isNull(error.response) || isEmptyString(data)) {
                         data = 'Connection error. Please contact the system administrator';
                     }
 
