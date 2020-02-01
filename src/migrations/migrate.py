@@ -259,8 +259,11 @@ def __introduce_access_config(context):
         for i in range(len(output_files)):
             output_file = output_files[i]
 
+            if not isinstance(output_file, str):
+                continue
+
             for param_name in parameter_names:
-                output_file = re.sub('\$\$\$' + param_name, '${' + param_name + '}', output_file)
+                output_file = re.sub('\\$\\$\\$' + param_name, '${' + param_name + '}', output_file)
 
             if output_file != output_files[i]:
                 output_files[i] = output_file
