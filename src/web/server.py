@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+import functools
 import json
 import logging.config
 import os
@@ -18,6 +19,7 @@ import tornado.httpserver as httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+from tornado import gen
 
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
@@ -245,9 +247,13 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
 
     @check_authorization
     @inject_user
+    @gen.coroutine
     def open(self, user, config_name):
         try:
-            self.config_model = self.application.config_service.load_config_model(config_name, user)
+            load_config_future = tornado.ioloop.IOLoop.current().run_in_executor(executor=None, func=functools.partial(
+                self.application.config_service.load_config_model, config_name, user))
+
+            self.config_model = yield load_config_future
             active_config_models[self.config_id] = {'model': self.config_model, 'user_id': user.user_id}
         except ConfigNotAllowedException:
             self.close(code=403, reason='Access to the script is denied')
