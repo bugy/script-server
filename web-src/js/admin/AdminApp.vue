@@ -1,6 +1,9 @@
 <template>
     <div class="admin-page">
         <div class="page-title teal z-depth-1">
+            <a class="btn-flat left home-button" href="index.html">
+                <i class="material-icons white-text">home</i>
+            </a>
             <ul class="tabs tabs-fixed-width" ref="tabs">
                 <li class="tab">
                     <router-link to="/logs">Logs</router-link>
@@ -19,8 +22,8 @@
     import Vue from 'vue';
     import Vuex, {mapActions, mapState} from 'vuex';
     import executions from '../history/executions-module';
-    import scripts from './scripts-config/scripts-module';
     import scriptConfig from './scripts-config/script-config-module';
+    import scripts from './scripts-config/scripts-module';
 
     Vue.use(Vuex);
 
@@ -129,5 +132,16 @@
     .page-content {
         flex: 1 1 0;
         overflow-y: auto;
+    }
+
+    .home-button {
+        height: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .home-button i {
+        font-size: 1.8em;
+        line-height: 1.8em;
     }
 </style>
