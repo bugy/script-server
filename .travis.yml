@@ -57,8 +57,9 @@ deploy:
   name: $(unzip -qc build/script-server.zip version.txt)
   api_key: "$GITHUB_TOKEN"
   file: build/script-server.zip
+  skip_cleanup: true
   on:
-    branch: master
+    branch: stable
 - provider: script
   script: tools/deploy_docker.sh
   skip_cleanup: true
