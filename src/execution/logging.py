@@ -367,7 +367,7 @@ class LogNameCreator:
         if not filename.lower().endswith('.log'):
             filename += '.log'
 
-        filename = filename.replace(" ", "_")
+        filename = filename.replace(" ", "_").replace("/", "_")
 
         return filename
 
