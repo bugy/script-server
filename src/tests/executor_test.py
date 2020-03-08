@@ -12,6 +12,12 @@ from tests.test_utils import _MockProcessWrapper, create_config_model, create_sc
 BUFFER_FLUSH_WAIT_TIME = (executor.TIME_BUFFER_MS * 1.5) / 1000.0
 
 
+def parse_env_variables(output):
+    lines = [line for line in output.split('\n') if line and ('=' in line)]
+    variables = {line.split('=', 2)[0]: line.split('=', 2)[1] for line in lines}
+    return variables
+
+
 class TestScriptExecutor(unittest.TestCase):
     def test_start_without_values(self):
         self.create_executor(create_config_model('config_x'), {})
@@ -65,7 +71,7 @@ class TestScriptExecutor(unittest.TestCase):
         data = read_until_closed(self.executor.get_raw_output_stream(), 100)
         output = ''.join(data)
 
-        variables = {line.split('=', 2)[0]: line.split('=', 2)[1] for line in output.split('\n') if line}
+        variables = parse_env_variables(output)
         self.assertEqual('918273', variables.get('PARAM_ID'))
         self.assertEqual('UserX', variables.get('My_Name'))
         self.assertEqual('true', variables.get('PARAM_VERBOSE'))
@@ -91,7 +97,7 @@ class TestScriptExecutor(unittest.TestCase):
         data = read_until_closed(self.executor.get_raw_output_stream(), 100)
         output = ''.join(data)
 
-        variables = {line.split('=', 2)[0]: line.split('=', 2)[1] for line in output.split('\n') if line}
+        variables = parse_env_variables(output)
         self.assertEqual('918273', variables.get('PARAM_ID'))
         self.assertEqual('UserX', variables.get('My_Name'))
         self.assertEqual('true', variables.get('PARAM_VERBOSE'))
