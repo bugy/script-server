@@ -3,10 +3,10 @@ from unittest import TestCase, mock
 
 from parameterized import parameterized_class
 
-import test_utils
 from auth.auth_base import AuthRejectedError
 from auth.auth_basic import BasicAuthAuthenticator, _HtpasswdVerifier, _BuiltItVerifier
 from model.server_conf import InvalidServerConfigException
+from tests import test_utils
 from utils import os_utils
 
 htpasswd_content = """
