@@ -4,7 +4,7 @@ import unittest
 from config.constants import FILE_TYPE_FILE, FILE_TYPE_DIR
 from model import model_helper
 from model.model_helper import read_list, read_dict, fill_parameter_values, resolve_env_vars, \
-    InvalidFileException, read_bool_from_config, InvalidValueException, InvalidValueTypeException
+    InvalidFileException, read_bool_from_config, InvalidValueException, InvalidValueTypeException, read_str_from_config
 from tests import test_utils
 from tests.test_utils import create_parameter_model, set_env_value
 
@@ -314,3 +314,33 @@ class TestReadIntFromConfig(unittest.TestCase):
     def test_default_value_when_empty_string(self):
         value = model_helper.read_int_from_config('my_key', {'my_key': ' '}, default=9999)
         self.assertEqual(9999, value)
+
+
+class TestReadStrFromConfig(unittest.TestCase):
+    def test_normal_text(self):
+        value = read_str_from_config({'key1': 'xyz'}, 'key1')
+        self.assertEquals('xyz', value)
+
+    def test_none_value_no_default(self):
+        value = read_str_from_config({'key1': None}, 'key1')
+        self.assertIsNone(value)
+
+    def test_none_value_with_default(self):
+        value = read_str_from_config({'key1': None}, 'key1', default='abc')
+        self.assertEquals('abc', value)
+
+    def test_no_key_no_default(self):
+        value = read_str_from_config({'key1': 'xyz'}, 'key2')
+        self.assertIsNone(value)
+
+    def test_no_key_with_default(self):
+        value = read_str_from_config({'key1': 'xyz'}, 'key2', default='abc')
+        self.assertEquals('abc', value)
+
+    def test_text_with_whitespaces(self):
+        value = read_str_from_config({'key1': '  xyz  \n'}, 'key1')
+        self.assertEquals('  xyz  \n', value)
+
+    def test_text_when_int(self):
+        self.assertRaisesRegex(InvalidValueTypeException, 'Invalid key1 value: string expected, but was: 5',
+                               read_str_from_config, {'key1': 5}, 'key1')

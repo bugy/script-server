@@ -2,6 +2,9 @@ import json
 import os
 import unittest
 
+from auth.auth_basic import BasicAuthAuthenticator
+from auth.auth_google_oauth import GoogleOauthAuthenticator
+from auth.auth_ldap import LdapAuthenticator
 from auth.authorization import ANY_USER
 from model import server_conf
 from model.server_conf import _prepare_allowed_users
@@ -180,6 +183,54 @@ class TestSimpleConfigs(unittest.TestCase):
     def test_enable_script_titles_default(self):
         config = _from_json({})
         self.assertIs(True, config.enable_script_titles)
+
+
+class TestAuthConfig(unittest.TestCase):
+    def test_google_oauth(self):
+        config = _from_json({'auth': {'type': 'google_oauth',
+                                      'client_id': '1234',
+                                      'secret': 'abcd'},
+                             'access': {
+                                 'allowed_users': []
+                             }})
+        self.assertIsInstance(config.authenticator, GoogleOauthAuthenticator)
+        self.assertEquals('1234', config.authenticator.client_id)
+        self.assertEquals('abcd', config.authenticator.secret)
+
+    def test_google_oauth_without_allowed_users(self):
+        with self.assertRaisesRegex(Exception, 'access.allowed_users field is mandatory for google_oauth'):
+            _from_json({'auth': {'type': 'google_oauth',
+                                 'client_id': '1234',
+                                 'secret': 'abcd'}})
+
+    def test_ldap(self):
+        config = _from_json({'auth': {'type': 'ldap',
+                                      'url': 'http://test-ldap.net',
+                                      'username_pattern': '|$username|',
+                                      'base_dn': 'dc=test',
+                                      'version': 3}})
+        self.assertIsInstance(config.authenticator, LdapAuthenticator)
+        self.assertEquals('http://test-ldap.net', config.authenticator.url)
+        self.assertEquals('|xyz|', config.authenticator.username_template.substitute(username='xyz'))
+        self.assertEquals('dc=test', config.authenticator._base_dn)
+        self.assertEquals(3, config.authenticator.version)
+
+    def test_basic_auth(self):
+        file = test_utils.create_file('some-path', text='user1:1yL79Q78yczsM')
+        config = _from_json({'auth': {'type': 'basic_auth',
+                                      'htpasswd_path': file}})
+        self.assertIsInstance(config.authenticator, BasicAuthAuthenticator)
+
+        authenticated = config.authenticator.verifier.verify('user1', 'aaa')
+        self.assertTrue(authenticated)
+
+    def setUp(self) -> None:
+        super().setUp()
+        test_utils.setup()
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        test_utils.cleanup()
 
 
 def _from_json(content):

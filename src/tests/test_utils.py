@@ -16,7 +16,7 @@ temp_folder = 'tests_temp'
 _original_env = {}
 
 
-def create_file(filepath, overwrite=False, text='test text'):
+def create_file(filepath, *, overwrite=False, text='test text'):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
@@ -362,6 +362,17 @@ def wait_observable_close_notification(observable, timeout):
     close_condition = threading.Event()
     observable.subscribe_on_close(lambda: close_condition.set())
     close_condition.wait(timeout)
+
+
+def mock_request_handler(arguments: dict):
+    request_handler = mock_object()
+
+    def get_argument(arg_name):
+        return arguments.get(arg_name)
+
+    request_handler.get_argument = get_argument
+
+    return request_handler
 
 
 class _MockProcessWrapper(ProcessWrapper):

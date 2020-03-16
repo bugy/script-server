@@ -64,9 +64,12 @@ target/
 
 conf/runners
 conf/conf.json
+conf/.htpasswd
 logs
 .idea
 temp
 /web
 web-src/node_modules
 web-src/package-lock.json
+
+venv/

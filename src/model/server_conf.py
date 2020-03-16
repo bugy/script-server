@@ -147,6 +147,9 @@ def create_authenticator(auth_object, temp_folder):
     elif auth_type == 'google_oauth':
         from auth.auth_google_oauth import GoogleOauthAuthenticator
         authenticator = GoogleOauthAuthenticator(auth_object)
+    elif auth_type == 'basic_auth':
+        from auth.auth_basic import BasicAuthAuthenticator
+        authenticator = BasicAuthAuthenticator(auth_object)
     else:
         raise Exception(auth_type + ' auth is not supported')
 
@@ -206,3 +209,8 @@ def _parse_history_users(json_object):
         return [ANY_USER]
 
     return full_history_users
+
+
+class InvalidServerConfigException(Exception):
+    def __init__(self, message) -> None:
+        super().__init__(message)

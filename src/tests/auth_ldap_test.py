@@ -5,7 +5,7 @@ from ldap3.utils.dn import safe_dn
 
 from auth.auth_ldap import LdapAuthenticator
 from tests import test_utils
-from tests.test_utils import mock_object
+from tests.test_utils import mock_request_handler
 
 
 class _LdapAuthenticatorMockWrapper:
@@ -275,15 +275,4 @@ class TestGroupsPersistence(unittest.TestCase):
 
 
 def _mock_request_handler(username, password):
-    request_handler = mock_object()
-
-    def get_argument(arg_name):
-        if arg_name == 'username':
-            return username
-        elif arg_name == 'password':
-            return password
-        else:
-            return None
-
-    request_handler.get_argument = get_argument
-    return request_handler
+    return mock_request_handler({'username': username, 'password': password})
