@@ -234,20 +234,8 @@ def __introduce_access_config(context):
 
 
 @_migration('migrate_output_files_parameters_substitution')
-def __introduce_access_config(context):
-    conf_folder = os.path.join(context.conf_folder, 'runners')
-
-    if not os.path.exists(conf_folder):
-        return
-
-    conf_files = [os.path.join(conf_folder, file)
-                  for file in os.listdir(conf_folder)
-                  if file.lower().endswith('.json')]
-
-    for conf_file in conf_files:
-        content = file_utils.read_file(conf_file)
-        json_object = json.loads(content, object_pairs_hook=OrderedDict)
-
+def __migrate_output_files_parameters_substitution(context):
+    for (conf_file, json_object, content) in _load_runner_files(context.conf_folder):
         if ('output_files' not in json_object) or ('parameters' not in json_object):
             continue
 
@@ -282,6 +270,30 @@ def _write_json(file_path, json_object, old_content):
         indent = 4
     with open(file_path, 'w') as fp:
         json.dump(json_object, fp, indent=indent)
+
+
+def _load_runner_files(conf_folder):
+    runners_folder = os.path.join(conf_folder, 'runners')
+
+    if not os.path.exists(runners_folder):
+        return
+
+    conf_files = [os.path.join(runners_folder, file)
+                  for file in os.listdir(runners_folder)
+                  if file.lower().endswith('.json')]
+
+    result = []
+
+    for conf_file in conf_files:
+        content = file_utils.read_file(conf_file)
+        try:
+            json_object = json.loads(content, object_pairs_hook=OrderedDict)
+            result.append((conf_file, json_object, content))
+        except Exception:
+            LOGGER.exception('Failed to load file for migration: ' + conf_file)
+            continue
+
+    return result
 
 
 def migrate(temp_folder, conf_folder, conf_file, log_folder):
