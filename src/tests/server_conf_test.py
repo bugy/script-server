@@ -215,9 +215,9 @@ class TestAuthConfig(unittest.TestCase):
         self.assertEquals('dc=test', config.authenticator._base_dn)
         self.assertEquals(3, config.authenticator.version)
 
-    def test_basic_auth(self):
+    def test_htpasswd_auth(self):
         file = test_utils.create_file('some-path', text='user1:1yL79Q78yczsM')
-        config = _from_json({'auth': {'type': 'basic_auth',
+        config = _from_json({'auth': {'type': 'htpasswd',
                                       'htpasswd_path': file}})
         self.assertIsInstance(config.authenticator, BasicAuthAuthenticator)
 

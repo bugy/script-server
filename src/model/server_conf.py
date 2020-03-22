@@ -147,7 +147,7 @@ def create_authenticator(auth_object, temp_folder):
     elif auth_type == 'google_oauth':
         from auth.auth_google_oauth import GoogleOauthAuthenticator
         authenticator = GoogleOauthAuthenticator(auth_object)
-    elif auth_type == 'basic_auth':
+    elif auth_type == 'htpasswd':
         from auth.auth_basic import BasicAuthAuthenticator
         authenticator = BasicAuthAuthenticator(auth_object)
     else:
