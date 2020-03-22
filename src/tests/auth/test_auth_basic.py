@@ -4,7 +4,7 @@ from unittest import TestCase, mock
 from parameterized import parameterized_class
 
 from auth.auth_base import AuthRejectedError
-from auth.auth_basic import BasicAuthAuthenticator, _HtpasswdVerifier, _BuiltItVerifier
+from auth.auth_htpasswd import HtpasswdAuthenticator, _HtpasswdVerifier, _BuiltItVerifier
 from model.server_conf import InvalidServerConfigException
 from tests import test_utils
 from utils import os_utils
@@ -54,7 +54,7 @@ crypt_users = {
 @parameterized_class(('verifier'), [
     ('htpasswd',),
     ('built_in',)])
-class TestBasicAuthAuthenticator(TestCase):
+class TestHtpasswdAuthenticator(TestCase):
     def test_authenticate_success(self):
         authenticator = self._create_authenticator({'htpasswd_path': self.file_path})
 
@@ -132,20 +132,20 @@ class TestBasicAuthAuthenticator(TestCase):
             self._assert_rejected(username, password, authenticator)
 
     def test_missing_htpasswd_path_config(self):
-        self.assertRaisesRegex(Exception, 'is required attribute', BasicAuthAuthenticator, {})
+        self.assertRaisesRegex(Exception, 'is required attribute', HtpasswdAuthenticator, {})
 
     def test_htpasswd_file_not_exist(self):
-        self.assertRaisesRegex(InvalidServerConfigException, 'htpasswd path does not exist', BasicAuthAuthenticator,
+        self.assertRaisesRegex(InvalidServerConfigException, 'htpasswd path does not exist', HtpasswdAuthenticator,
                                {'htpasswd_path': 'some/path'})
 
     def test_missing_bcrypt_and_htpasswd(self):
-        with mock.patch('auth.auth_basic.process_utils.invoke') as invoke_mock:
+        with mock.patch('auth.auth_htpasswd.process_utils.invoke') as invoke_mock:
             invoke_mock.side_effect = FileNotFoundError('Program not found')
 
             with mock.patch.dict(sys.modules, {'bcrypt': None}):
                 self.assertRaisesRegex(InvalidServerConfigException,
                                        'Please either install htpasswd utility or python bcrypt package',
-                                       BasicAuthAuthenticator, {'htpasswd_path': self.file_path})
+                                       HtpasswdAuthenticator, {'htpasswd_path': self.file_path})
 
     def _assert_authenticated(self, username, password, authenticator):
         try:
@@ -173,15 +173,15 @@ class TestBasicAuthAuthenticator(TestCase):
     def _create_authenticator(self, config):
         if self.verifier == 'htpasswd':
             with mock.patch.dict(sys.modules, {'bcrypt': None}):
-                authenticator = BasicAuthAuthenticator(config)
+                authenticator = HtpasswdAuthenticator(config)
 
             self.assertIsInstance(authenticator.verifier, _HtpasswdVerifier)
             return authenticator
 
         elif self.verifier == 'built_in':
-            with mock.patch('auth.auth_basic.process_utils.invoke') as invoke_mock:
+            with mock.patch('auth.auth_htpasswd.process_utils.invoke') as invoke_mock:
                 invoke_mock.side_effect = FileNotFoundError('Program not found')
-                authenticator = BasicAuthAuthenticator(config)
+                authenticator = HtpasswdAuthenticator(config)
 
             self.assertIsInstance(authenticator.verifier, _BuiltItVerifier)
             return authenticator

@@ -9,7 +9,7 @@ from utils import process_utils, encryption_utils, os_utils
 from utils.process_utils import ExecutionException
 from utils.string_utils import is_blank
 
-LOGGER = logging.getLogger('script_server.BasicAuthAuthenticator')
+LOGGER = logging.getLogger('script_server.HtpasswdAuthenticator')
 
 
 def _select_verifier(htpasswd_path):
@@ -21,11 +21,11 @@ def _select_verifier(htpasswd_path):
     return _BuiltItVerifier(htpasswd_path)
 
 
-class BasicAuthAuthenticator(auth_base.Authenticator):
+class HtpasswdAuthenticator(auth_base.Authenticator):
     def __init__(self, params_dict):
         super().__init__()
 
-        htpasswd_path = model_helper.read_obligatory(params_dict, 'htpasswd_path', ' for Basic auth')
+        htpasswd_path = model_helper.read_obligatory(params_dict, 'htpasswd_path', ' for htpasswd auth')
         if not os.path.exists(htpasswd_path):
             raise InvalidServerConfigException('htpasswd path does not exist: ' + htpasswd_path)
 

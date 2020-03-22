@@ -2,8 +2,8 @@ import json
 import os
 import unittest
 
-from auth.auth_basic import BasicAuthAuthenticator
 from auth.auth_google_oauth import GoogleOauthAuthenticator
+from auth.auth_htpasswd import HtpasswdAuthenticator
 from auth.auth_ldap import LdapAuthenticator
 from auth.authorization import ANY_USER
 from model import server_conf
@@ -219,7 +219,7 @@ class TestAuthConfig(unittest.TestCase):
         file = test_utils.create_file('some-path', text='user1:1yL79Q78yczsM')
         config = _from_json({'auth': {'type': 'htpasswd',
                                       'htpasswd_path': file}})
-        self.assertIsInstance(config.authenticator, BasicAuthAuthenticator)
+        self.assertIsInstance(config.authenticator, HtpasswdAuthenticator)
 
         authenticated = config.authenticator.verifier.verify('user1', 'aaa')
         self.assertTrue(authenticated)
