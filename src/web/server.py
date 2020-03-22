@@ -839,7 +839,7 @@ def intercept_stop_when_running_scripts(io_loop, execution_service):
 
         if can_stop:
             LOGGER.info('Stopping server on interrupt')
-            io_loop.add_callback(io_loop.stop)
+            io_loop.add_callback_from_signal(io_loop.stop)
 
     signal.signal(signal.SIGINT, signal_handler)
 
