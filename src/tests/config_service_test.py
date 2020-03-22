@@ -31,6 +31,19 @@ class ConfigServiceTest(unittest.TestCase):
         conf_names = [config.name for config in configs]
         self.assertCountEqual(['conf_x', 'conf_y', 'A B C'], conf_names)
 
+    def test_list_configs_with_groups(self):
+        _create_script_config_file('conf_x', group='g1')
+        _create_script_config_file('conf_y')
+        _create_script_config_file('A B C', group=' ')
+
+        configs = self.config_service.list_configs(self.user)
+        configs_dicts = [{'name': c.name, 'group': c.group} for c in configs]
+        self.assertCountEqual([
+            {'name': 'conf_x', 'group': 'g1'},
+            {'name': 'conf_y', 'group': None},
+            {'name': 'A B C', 'group': None}],
+            configs_dicts)
+
     def test_list_configs_when_no(self):
         configs = self.config_service.list_configs(self.user)
         self.assertEqual([], configs)
@@ -92,26 +105,26 @@ class ConfigServiceAuthTest(unittest.TestCase):
         _create_script_config_file('a1')
         _create_script_config_file('c2')
 
-        self.assert_list_configs(self.user1, ['a1', 'c2'])
+        self.assert_list_config_names(self.user1, ['a1', 'c2'])
 
     def test_list_configs_when_user_allowed(self):
         _create_script_config_file('a1', allowed_users=['user1'])
         _create_script_config_file('c2', allowed_users=['user1'])
 
-        self.assert_list_configs(self.user1, ['a1', 'c2'])
+        self.assert_list_config_names(self.user1, ['a1', 'c2'])
 
     def test_list_configs_when_one_not_allowed(self):
         _create_script_config_file('a1', allowed_users=['XYZ'])
         _create_script_config_file('b2')
         _create_script_config_file('c3', allowed_users=['user1'])
 
-        self.assert_list_configs(self.user1, ['b2', 'c3'])
+        self.assert_list_config_names(self.user1, ['b2', 'c3'])
 
     def test_list_configs_when_none_allowed(self):
         _create_script_config_file('a1', allowed_users=['XYZ'])
         _create_script_config_file('b2', allowed_users=['ABC'])
 
-        self.assert_list_configs(self.user1, [])
+        self.assert_list_config_names(self.user1, [])
 
     def test_load_config_when_user_allowed(self):
         _create_script_config_file('my_script', allowed_users=['ABC', 'user1', 'qwerty'])
@@ -125,7 +138,7 @@ class ConfigServiceAuthTest(unittest.TestCase):
 
         self.assertRaises(ConfigNotAllowedException, self.config_service.load_config_model, 'my_script', self.user1)
 
-    def assert_list_configs(self, user, expected_names):
+    def assert_list_config_names(self, user, expected_names):
         configs = self.config_service.list_configs(user)
         conf_names = [config.name for config in configs]
         self.assertCountEqual(expected_names, conf_names)

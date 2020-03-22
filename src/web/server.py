@@ -195,9 +195,9 @@ class GetScripts(BaseRequestHandler):
     def get(self, user):
         configs = self.application.config_service.list_configs(user)
 
-        names = [conf.name for conf in configs]
+        scripts = [{'name': conf.name, 'group': conf.group} for conf in configs]
 
-        self.write(json.dumps(names))
+        self.write(json.dumps({'scripts': scripts}))
 
 
 class AdminUpdateScriptEndpoint(BaseRequestHandler):

@@ -2,6 +2,7 @@
     <form class="script-config-form col">
         <div class="row">
             <TextField :config="nameField" class="col s6" v-model="newName"/>
+            <TextField :config="groupField" class="col s5 offset-s1" v-model="group"/>
         </div>
         <div class="row">
             <TextField :config="scriptPathField" class="col s6" v-model="scriptPath"/>
@@ -33,13 +34,14 @@
     import _ from 'lodash';
     import {forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '../../common';
     import CheckBox from '../../components/checkbox'
+    import ChipsList from '../../components/ChipsList';
     import TextArea from '../../components/TextArea';
     import TextField from '../../components/textfield'
-    import ChipsList from '../../components/ChipsList';
     import {
         allowAllField,
         bashFormattingField,
         descriptionField,
+        groupField,
         includeScriptField,
         nameField,
         requiresTerminalField,
@@ -62,6 +64,7 @@
             return {
                 configCopy: null,
                 newName: null,
+                group: null,
                 scriptPath: null,
                 description: null,
                 workingDirectory: null,
@@ -71,6 +74,7 @@
                 allowedUsers: [],
                 allowAllUsers: true,
                 nameField,
+                groupField,
                 scriptPathField,
                 workDirField,
                 descriptionField,
@@ -84,6 +88,7 @@
         mounted: function () {
             const simpleFields = {
                 'newName': 'name',
+                'group': 'group',
                 'scriptPath': 'script_path',
                 'description': 'description',
                 'workingDirectory': 'working_directory',
@@ -108,6 +113,7 @@
                 immediate: true,
                 handler(config) {
                     this.newName = config.name;
+                    this.group = config.group;
                     this.scriptPath = config['script_path'];
                     this.description = config['description'];
                     this.workingDirectory = config['working_directory'];

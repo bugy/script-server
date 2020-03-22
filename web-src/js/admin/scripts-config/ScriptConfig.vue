@@ -33,11 +33,11 @@
         },
 
         methods: {
-            ...mapActions('script-config', ['init', 'save'])
+            ...mapActions('scriptConfig', ['init', 'save'])
         },
 
         computed: {
-            ...mapState('script-config', {
+            ...mapState('scriptConfig', {
                 scriptConfig: 'scriptConfig',
                 loadingError: 'error'
             })

@@ -341,6 +341,22 @@ class TestReadStrFromConfig(unittest.TestCase):
         value = read_str_from_config({'key1': '  xyz  \n'}, 'key1')
         self.assertEquals('  xyz  \n', value)
 
+    def test_text_when_blank_to_none_and_none(self):
+        value = read_str_from_config({'key1': None}, 'key1', blank_to_none=True)
+        self.assertIsNone(value)
+
+    def test_text_when_blank_to_none_and_empty(self):
+        value = read_str_from_config({'key1': ''}, 'key1', blank_to_none=True)
+        self.assertIsNone(value)
+
+    def test_text_when_blank_to_none_and_blank(self):
+        value = read_str_from_config({'key1': ' \t \n'}, 'key1', blank_to_none=True)
+        self.assertIsNone(value)
+
+    def test_text_when_blank_to_none_and_blank_and_default(self):
+        value = read_str_from_config({'key1': ' \t \n'}, 'key1', blank_to_none=True, default='abc')
+        self.assertEquals('abc', value)
+
     def test_text_when_int(self):
         self.assertRaisesRegex(InvalidValueTypeException, 'Invalid key1 value: string expected, but was: 5',
                                read_str_from_config, {'key1': 5}, 'key1')

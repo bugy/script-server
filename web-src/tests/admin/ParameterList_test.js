@@ -10,7 +10,7 @@ import {setValueByUser} from './ParameterConfigForm_test';
 
 chaiConfig.truncateThreshold = 0;
 
-describe('Test ScriptParamList 2', function () {
+describe('Test ScriptParamList', function () {
     let list;
     let errors;
 

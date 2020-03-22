@@ -34,7 +34,7 @@
         modules: {
             'history': executions(),
             scripts: scripts,
-            'script-config': scriptConfig
+            scriptConfig: scriptConfig
         },
         actions: {
             setSubheader({commit}, subheader) {

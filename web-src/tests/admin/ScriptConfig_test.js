@@ -1,0 +1,103 @@
+'use strict';
+
+import {createLocalVue, mount} from '@vue/test-utils';
+import {assert, config as chaiConfig} from 'chai';
+import Vuex from 'vuex';
+import ScriptConfig from '../../js/admin/scripts-config/ScriptConfig';
+import ScriptConfigForm from '../../js/admin/scripts-config/ScriptConfigForm';
+import {vueTicks} from '../test_utils';
+import {findField, setValueByUser} from './ParameterConfigForm_test';
+
+
+chaiConfig.truncateThreshold = 0;
+
+const localVue = createLocalVue();
+localVue.use(Vuex);
+
+describe('Test ScriptConfig', function () {
+    let store;
+    let configComponent;
+
+    beforeEach(async function () {
+        store = new Vuex.Store({
+            modules: {
+                scriptConfig: {
+                    namespaced: true,
+                    state: {
+                        scriptName: 'test_script',
+                        scriptConfig: {'name': 'test_script'}
+                    },
+                    actions: {
+                        init({commit, state}, scriptName) {
+
+                        },
+
+                        save({dispatch, state}) {
+
+                        }
+                    }
+                }
+            }
+        });
+
+        configComponent = mount(ScriptConfig, {
+            store,
+            localVue,
+            attachToDocument: true,
+            propsData: {scriptName: 'script1'}
+        });
+
+        await vueTicks();
+    });
+
+    afterEach(async function () {
+        await vueTicks();
+
+        configComponent.destroy();
+    });
+
+    const _findField = (expectedName, failOnMissing = true) => {
+        const form = configComponent.find(ScriptConfigForm);
+        return findField(form.vm, expectedName, failOnMissing);
+    };
+
+    async function _setValueByUser(fieldName, value) {
+        const form = configComponent.find(ScriptConfigForm);
+        await setValueByUser(form.vm, fieldName, value);
+    }
+
+    describe('Test show config', function () {
+        it('Test show simple values', async function () {
+            store.state.scriptConfig.scriptConfig = {
+                'name': 's1',
+                'group': 'important',
+                'script_path': 'ping',
+                'description': 'some desc',
+                'working_directory': '/home',
+                'requires_terminal': true,
+                'include': 'script.json',
+                'bash_formatting': false
+            };
+
+            await vueTicks();
+
+            assert.equal('s1', _findField('Script name').value);
+            assert.equal('important', _findField('Group').value);
+            assert.equal('ping', _findField('Script path').value);
+            assert.equal('some desc', _findField('Description').value);
+            assert.equal('/home', _findField('Working directory').value);
+            assert.equal(true, _findField('Requires terminal').value);
+            assert.equal('script.json', _findField('Include config').value);
+            assert.equal(false, _findField('Bash formatting').value);
+        });
+    });
+
+    describe('Test edit config', function () {
+        it('Test edit group', async function () {
+            await _setValueByUser('Group', 'xyz');
+
+            assert.equal('xyz', store.state.scriptConfig.scriptConfig.group);
+        });
+    });
+
+});

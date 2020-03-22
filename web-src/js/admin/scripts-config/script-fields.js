@@ -2,6 +2,10 @@ export const nameField = {
     name: 'Script name',
     required: true
 };
+export const groupField = {
+    name: 'Group',
+    description: 'Aggregates scripts from the same group into the same category on UI'
+};
 export const scriptPathField = {
     name: 'Script path',
     required: true

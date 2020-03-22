@@ -2,9 +2,9 @@
 
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import ChipsList from '../../js/components/ChipsList';
 import ParameterConfigForm from '../../js/admin/scripts-config/ParameterConfigForm';
 import {isBlankString, isNull, setInputValue} from '../../js/common';
+import ChipsList from '../../js/components/ChipsList';
 import Combobox from '../../js/components/combobox';
 import TextArea from '../../js/components/TextArea';
 import {setChipListValue, vueTicks} from '../test_utils';
@@ -26,7 +26,7 @@ export async function setValueByUser(form, parameterName, value) {
     await vueTicks();
 }
 
-const findField = (form, expectedName, failOnMissing = true) => {
+export const findField = (form, expectedName, failOnMissing = true) => {
     for (const child of form.$children) {
         let fieldName;
         if (child.$options._componentTag === ChipsList.name) {

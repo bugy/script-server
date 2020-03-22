@@ -20,9 +20,10 @@ export default {
             });
 
             axios.get('scripts')
-                .then(({data: scripts}) => {
-                    scripts.sort(function (name1, name2) {
-                        return name1.toLowerCase().localeCompare(name2.toLowerCase());
+                .then(({data}) => {
+                    const {scripts} = data;
+                    scripts.sort(function (script1, script2) {
+                        return script1.name.toLowerCase().localeCompare(script2.name.toLowerCase());
                     });
 
                     commit('SET_SCRIPTS', scripts);
@@ -44,9 +45,9 @@ export default {
             let newSelectedScript = null;
 
             for (const script of state.scripts) {
-                const scriptHash = scriptNameToHash(script);
+                const scriptHash = scriptNameToHash(script.name);
                 if (scriptHash === encodedScriptName) {
-                    newSelectedScript = script;
+                    newSelectedScript = script.name;
                     break;
                 }
             }

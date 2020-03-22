@@ -4,6 +4,7 @@ import re
 
 import utils.env_utils as env_utils
 from config.constants import FILE_TYPE_DIR, FILE_TYPE_FILE
+from utils.string_utils import is_blank
 
 ENV_VAR_PREFIX = '$$'
 SECURE_MASK = '*' * 6
@@ -134,7 +135,7 @@ def read_int_from_config(key, config_obj, *, default=None):
     raise InvalidValueTypeException('Invalid %s value: integer expected, but was: %s' % (key, repr(value)))
 
 
-def read_str_from_config(config_obj, key, *, default=None):
+def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False):
     """
     Reads string value from a config by the key
     If the value is missing, returns specified default value
@@ -143,9 +144,14 @@ def read_str_from_config(config_obj, key, *, default=None):
     :param config_obj: where to read value from
     :param key: key to read value from
     :param default: default value, if config value is missing
+    :param blank_to_none: if value is blank, treat it as null
     :return: config_obj[key] if non None, default otherwise
     """
     value = config_obj.get(key)
+
+    if blank_to_none and isinstance(value, str) and is_blank(value):
+        value = None
+
     if value is None:
         return default
 

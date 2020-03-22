@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+
+export const axiosInstance = axios.create();
+
 export default {
     state: {
         scripts: [],
@@ -10,14 +13,16 @@ export default {
         init({commit}) {
             commit('SET_LOADING', true);
 
-            axios.get('scripts').then(({data: scripts}) => {
-                scripts.sort(function (name1, name2) {
+            axiosInstance.get('scripts').then(({data}) => {
+                const {scripts} = data;
+                let scriptNames = scripts.map(s => s.name);
+                scriptNames.sort(function (name1, name2) {
                     return name1.toLowerCase().localeCompare(name2.toLowerCase());
                 });
 
-                commit('SET_SCRIPTS', scripts);
+                commit('SET_SCRIPTS', scriptNames);
                 commit('SET_LOADING', false);
-            });
+            })
         }
     },
     mutations: {

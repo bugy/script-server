@@ -77,12 +77,13 @@ export function setChipListValue(chipListComponent, value) {
     }
 }
 
-export function createVue(component, properties) {
+export function createVue(component, properties, store = null) {
     document.body.insertAdjacentHTML('afterbegin', '<div id="top-level-element"></div>');
     const topLevelElement = document.getElementById('top-level-element');
 
     const ComponentClass = Vue.extend(component);
     const vm = new ComponentClass({
+        store,
         propsData: properties
     }).$mount(topLevelElement);
 

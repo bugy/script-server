@@ -6,7 +6,8 @@ from collections import OrderedDict
 
 from auth.authorization import ANY_USER
 from model import parameter_config
-from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException
+from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
+    read_str_from_config
 from model.parameter_config import ParameterModel
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
 from utils import file_utils
@@ -19,6 +20,7 @@ class ShortConfig(object):
     def __init__(self):
         self.name = None
         self.allowed_users = []
+        self.group = None
 
 
 @observable_fields(
@@ -235,6 +237,7 @@ def read_short(file_path, json_object):
 
     config.name = _read_name(file_path, json_object)
     config.allowed_users = json_object.get('allowed_users')
+    config.group = read_str_from_config(json_object, 'group', blank_to_none=True)
 
     hidden = read_bool_from_config('hidden', json_object, default=False)
     if hidden:

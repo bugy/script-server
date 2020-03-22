@@ -1,39 +1,21 @@
 <template>
-    <div class="scripts-list collection">
-        <router-link :to="'/' + script.hash"
-                     class="collection-item waves-effect waves-teal"
-                     v-bind:class="{ active: script.active}"
-                     v-for="script in scriptDescriptors">
-            {{ script.name }}
-
-            <div :class="script.state" class="menu-item-state">
-                <i class="material-icons check-icon">check</i>
-                <div class="preloader-wrapper active">
-                    <div class="spinner-layer">
-                        <div class="circle-clipper left">
-                            <div class="circle"></div>
-                        </div>
-                        <div class="gap-patch">
-                            <div class="circle"></div>
-                        </div>
-                        <div class="circle-clipper right">
-                            <div class="circle"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </router-link>
+    <div class="scripts-list collection" ref="scriptList">
+        <template v-for="item in items">
+            <ScriptListGroup v-if="item.isGroup" :group="item" :key="item.name" @group-clicked="groupClicked($event)"/>
+            <ScriptListItem v-else :script="item" :key="item.name"/>
+        </template>
     </div>
 </template>
 
 <script>
     import {mapState} from 'vuex';
-    import {forEachKeyValue, isEmptyString} from '../../common';
-    import {scriptNameToHash} from '../model_helper';
+    import {isBlankString, isEmptyString, isNull, removeElement} from '../../common';
+    import ScriptListGroup from './ScriptListGroup';
+    import ScriptListItem from './ScriptListItem';
 
     export default {
         name: 'ScriptsList',
-
+        components: {ScriptListGroup, ScriptListItem},
         props: {
             searchText: {
                 type: String,
@@ -41,41 +23,69 @@
             }
         },
 
-        computed: {
-            ...mapState('scripts', {
-                scripts: 'scripts',
-                selectedScript: 'selectedScript'
-            }),
+        data: function () {
+            return {
+                activeGroup: null
+            }
+        },
 
-            scriptDescriptors() {
-                return this.scripts
-                    .map(scriptName => {
-                        return {
-                            name: scriptName,
-                            state: this.getState(scriptName),
-                            active: this.selectedScript === scriptName,
-                            hash: this.toHash(scriptName)
-                        }
-                    })
-                    .filter(d =>
-                        isEmptyString(this.searchText) || (d.name.toLowerCase().includes(this.searchText.toLowerCase())))
+        computed: {
+            ...mapState('scripts', ['scripts', 'selectedScript']),
+
+            items() {
+                let groups = this.scripts.filter(script => !isBlankString(script.group))
+                    .map(script => script.group)
+                    .filter((v, i, a) => a.indexOf(v) === i) // unique elements
+                    .map(group => ({name: group, isGroup: true, scripts: [], isActive: this.activeGroup === group}));
+
+                let foundScripts = this.scripts
+                    .filter(script =>
+                        isEmptyString(this.searchText) || (script.name.toLowerCase().includes(this.searchText.toLowerCase())));
+
+                for (const script of foundScripts.slice()) {
+                    if (isBlankString(script.group)) {
+                        continue;
+                    }
+                    let foundGroup = groups.find(g => g.name === script.group);
+                    foundGroup.scripts.push(script);
+                    removeElement(foundScripts, script);
+                }
+
+                const result = foundScripts.concat(groups);
+                result.sort((o1, o2) => o1.name.toLowerCase().localeCompare(o2.name.toLowerCase()));
+
+                return result;
             }
         },
         methods: {
-            toHash: scriptNameToHash,
-
-            getState(scriptName) {
-                let state = 'idle';
-
-                forEachKeyValue(this.$store.state.executions.executors, function (id, executor) {
-                    if (executor.state.scriptName !== scriptName) {
+            groupClicked(groupName) {
+                if (isNull(groupName) || (this.activeGroup === groupName)) {
+                    this.activeGroup = null;
+                    return;
+                }
+                this.activeGroup = groupName;
+            }
+        },
+        watch: {
+            selectedScript: {
+                immediate: true,
+                handler(selectedScript) {
+                    if (isNull(selectedScript)) {
                         return;
                     }
 
-                    state = executor.state.status;
-                });
+                    let foundScript = this.scripts.find(script => script.name === selectedScript);
+                    if (isNull(foundScript) || isNull(foundScript.group)) {
+                        return;
+                    }
 
-                return state;
+                    let group = this.items.find(item => item.isGroup && (item.name === foundScript.group));
+                    if (isNull(group) || group.isActive) {
+                        return;
+                    }
+
+                    this.activeGroup = group.name;
+                }
             }
         }
     }
@@ -89,65 +99,6 @@
         margin: 0;
 
         flex-grow: 1;
-    }
-
-    .scripts-list .collection-item {
-        border: none;
-        padding-right: 32px;
-    }
-
-    .scripts-list .collection-item .menu-item-state {
-        width: 24px;
-        height: 24px;
-        position: absolute;
-        right: 8px;
-        top: calc(50% - 12px);
-        display: none;
-    }
-
-    .scripts-list .collection-item .menu-item-state > .check-icon {
-        color: #26a69a;
-        display: none;
-        font-size: 24px;
-    }
-
-    .scripts-list .collection-item.active .menu-item-state > .check-icon {
-        color: white;
-    }
-
-    .scripts-list .collection-item .menu-item-state > .preloader-wrapper {
-        display: none;
-        width: 100%;
-        height: 100%;
-    }
-
-    .scripts-list .collection-item .menu-item-state.executing,
-    .scripts-list .collection-item .menu-item-state.finished {
-        display: inline;
-    }
-
-    .scripts-list .collection-item .menu-item-state.executing > .check-icon {
-        display: none;
-    }
-
-    .scripts-list .collection-item .menu-item-state.executing > .preloader-wrapper {
-        display: block;
-    }
-
-    .scripts-list .collection-item .menu-item-state.finished > .check-icon {
-        display: block;
-    }
-
-    .scripts-list .collection-item .menu-item-state.finished > .preloader-wrapper {
-        display: none;
-    }
-
-    .scripts-list .collection-item.active .preloader-wrapper .spinner-layer {
-        border-color: white;
-    }
-
-    .scripts-list .collection-item .preloader-wrapper .spinner-layer {
-        border-color: #26a69a;
     }
 
 </style>
