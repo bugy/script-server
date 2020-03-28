@@ -6,11 +6,14 @@
              'shadow-bottom': atTop && !atBottom,
              'shadow-top-bottom': !atTop && !atBottom}">
         </div>
+        <a class="copy-text-button btn-flat waves-effect btn-floating" @click="copyLogToClipboard">
+            <i class="material-icons">content_copy</i>
+        </a>
     </div>
 </template>
 
 <script>
-    import {isNull} from '../common';
+    import {copyToClipboard, isNull} from '../common';
     import {TerminalModel} from './terminal/terminal_model';
     import {Terminal} from './terminal/terminal_view';
 
@@ -115,6 +118,10 @@
 
             setInlineImage: function (output_path, download_url) {
                 this.terminalModel.setInlineImage(output_path, download_url);
+            },
+
+            copyLogToClipboard: function () {
+                copyToClipboard(this.terminal.element);
             }
         },
 
@@ -172,6 +179,16 @@
 
     .log-panel >>> .log-content img {
         max-width: 100%
+    }
+
+    .log-panel .copy-text-button {
+        position: absolute;
+        right: 12px;
+        bottom: 8px;
+    }
+
+    .log-panel .copy-text-button i {
+        color: #00000030;
     }
 
 </style>

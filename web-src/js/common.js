@@ -74,7 +74,7 @@ export function hasClass(element, clazz) {
     if (isNull(element.classList)) {
         return false;
     }
-    
+
     return element.classList.contains(clazz);
 }
 
@@ -541,4 +541,74 @@ export function toMap(elements, keyExtractor, valueExtractor) {
 
 export function deepCloneObject(obj) {
     return JSON.parse(JSON.stringify(obj));
+}
+
+// Reads the text, which user sees
+// Default innerText doesn't work (on Chrome/Firefox), because <br/> is treated as double new-line
+// So the idea is just select text and copy it
+function readUserVisibleText(elem) {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(elem);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const selectionString = selection.toString();
+    selection.removeAllRanges();
+    return selectionString;
+}
+
+export function copyToClipboard(elem) {
+    // if new Clipboard API is available, just use it
+    if (navigator.clipboard) {
+        const selectionString = readUserVisibleText(elem);
+        navigator.clipboard.writeText(selectionString);
+        return;
+    }
+
+    const targetId = '_hiddenCopyText_';
+    const isInput = elem.tagName === 'INPUT' || elem.tagName === 'TEXTAREA';
+
+    let origSelectionStart, origSelectionEnd;
+    let target;
+    if (isInput) {
+        target = elem;
+        origSelectionStart = elem.selectionStart;
+        origSelectionEnd = elem.selectionEnd;
+    } else {
+        target = document.getElementById(targetId);
+        if (!target) {
+            target = document.createElement('textarea');
+            target.style.position = 'absolute';
+            target.style.left = '9999px';
+            target.style.top = '0';
+            target.id = targetId;
+            document.body.appendChild(target);
+        }
+        target.value = readUserVisibleText(elem);
+    }
+
+    const currentFocus = document.activeElement;
+    target.focus();
+    target.setSelectionRange(0, target.value.length);
+
+    try {
+        document.execCommand('copy');
+    } catch (e) {
+        console.error(e);
+    }
+
+    if (currentFocus && typeof currentFocus.focus === 'function') {
+        currentFocus.focus();
+    }
+
+    if (isInput) {
+        elem.setSelectionRange(origSelectionStart, origSelectionEnd);
+    } else {
+        target.textContent = '';
+    }
+
+    document.body.removeChild(target);
+
+    // for mobiles, we need to scroll down to make URL bar disappear
+    elem.scrollIntoView();
 }
