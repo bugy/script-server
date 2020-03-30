@@ -1,7 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const VueLoaderPlugin = require('vue-loader/lib/plugin');
 
@@ -52,7 +52,7 @@ module.exports = {
                 {from: 'favicon.ico', to: 'favicon.ico'}
             ]),
             new MiniCssExtractPlugin({
-                filename: "[name]-deps.css"
+                filename: '[name]-deps.css'
             })
         ],
     module:
@@ -71,7 +71,8 @@ module.exports = {
                             presets: [
                                 ['@babel/preset-env', {
                                     'useBuiltIns': 'usage',
-                                    'targets': '> 0.25%, not dead'
+                                    'targets': '> 0.25%, not dead',
+                                    'corejs': '3'
                                 }]
                             ],
                             babelrc: false

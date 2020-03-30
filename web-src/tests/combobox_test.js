@@ -1,10 +1,10 @@
 'use strict';
 
 import {mount} from '@vue/test-utils';
-import {hasClass, isEmptyString} from '../js/common';
-import Combobox from '../js/components/combobox'
-import {setDeepProp, vueTicks, wrapVModel} from './test_utils';
 import {assert, config as chaiConfig} from 'chai';
+import {contains, hasClass, isEmptyString, setInputValue} from '../js/common';
+import Combobox from '../js/components/combobox'
+import {setDeepProp, timeout, triggerSingleClick, vueTicks, wrapVModel} from './test_utils';
 
 chaiConfig.truncateThreshold = 0;
 
@@ -37,6 +37,24 @@ describe('Test ComboBox', function () {
 
     after(function () {
     });
+
+    function assertListElements(combobox, expectedTexts) {
+        const listChildren = $(combobox.element).find('li');
+        assert.equal(expectedTexts.length, listChildren.length - 1);
+
+        for (let i = 0; i < expectedTexts.length; i++) {
+            const value = expectedTexts[i];
+            assert.equal(value, listChildren.get(i + 1).innerText);
+        }
+    }
+
+    async function openDropdown(combobox) {
+        const triggerInput = $(combobox.element).find('.dropdown-trigger').get(0);
+
+        triggerSingleClick(triggerInput);
+
+        await timeout(50);
+    }
 
     describe('Test config', function () {
 
@@ -300,6 +318,140 @@ describe('Test ComboBox', function () {
             await vueTicks();
 
             assert.equal('', this.comboBox.currentError);
+        });
+    });
+
+    function getSearchElement(comboBox) {
+        return getDropdownElement(comboBox).childNodes[0]
+    }
+
+    function getDropdownElement(combobox) {
+        return $(combobox.element).find('.dropdown-content').get(0);
+    }
+
+    describe('Test search', function () {
+        async function makeSearchable(combobox) {
+            const values = Array(20).fill(0).map((v, i) => 'Value ' + i);
+            setDeepProp(combobox, 'config.values', values);
+            await vueTicks();
+
+            combobox.vm.comboboxWrapper.dropdown.options.inDuration = 1;
+            combobox.vm.comboboxWrapper.dropdown.options.outDuration = 1;
+
+            return values;
+        }
+
+        function assertVisible(element, visible, message) {
+            const displayStyle = window.getComputedStyle(element).display;
+
+            if (visible) {
+                assert.notEqual(displayStyle, 'none', message);
+            } else {
+                assert.equal(displayStyle, 'none', message);
+            }
+        }
+
+        function assertVisibleItems(combobox, expectedVisible) {
+            const [header, ...listItems] = $(combobox.element).find('li').toArray();
+
+            const headerVisible = !hasClass(header, 'search-hidden');
+            assert.isTrue(headerVisible);
+
+            for (const listItem of listItems) {
+                const text = listItem.innerText;
+
+                const shouldBeVisible = contains(expectedVisible, text);
+                const visible = !hasClass(listItem, 'search-hidden');
+                assert.equal(visible, shouldBeVisible, 'Item "' + text + '" has wrong visibility');
+            }
+        }
+
+        it('Test show search field', async function () {
+            const values = await makeSearchable(this.comboBox);
+
+            const searchText = $(this.comboBox.element).find('.dropdown-content li').get(0).innerText.trim();
+            assert.equal('Search', searchText);
+            assertListElements(this.comboBox, values);
+        });
+
+        it('Test focus search field on open', async function () {
+            await makeSearchable(this.comboBox);
+
+            await openDropdown(this.comboBox);
+
+            const searchInput = $(getSearchElement(this.comboBox)).find('input').get(0);
+            assert.equal(searchInput, document.activeElement);
+        });
+
+        it('Test keep open on search click', async function () {
+            await makeSearchable(this.comboBox);
+
+            await openDropdown(this.comboBox);
+
+            const searchInput = $(getSearchElement(this.comboBox)).find('input').get(0);
+            triggerSingleClick(searchInput);
+
+            await timeout(50);
+
+            assertVisible(getDropdownElement(this.comboBox), true);
+        });
+
+        it('Test close on item click', async function () {
+            await makeSearchable(this.comboBox);
+
+            await openDropdown(this.comboBox);
+
+            const firstItem = getDropdownElement(this.comboBox).childNodes[1];
+            triggerSingleClick(firstItem);
+
+            await timeout(50);
+
+            assertVisible(getDropdownElement(this.comboBox), false);
+        });
+
+        it('Test filter on search', async function () {
+            await makeSearchable(this.comboBox);
+
+            await openDropdown(this.comboBox);
+
+            const inputField = $(getSearchElement(this.comboBox)).find('input').get(0);
+            setInputValue(inputField, '2', true);
+
+            await vueTicks();
+
+            assertVisibleItems(this.comboBox, ['Value 2', 'Value 12']);
+        });
+
+        it('Test filter on search second input', async function () {
+            await makeSearchable(this.comboBox);
+
+            await openDropdown(this.comboBox);
+
+            const inputField = $(getSearchElement(this.comboBox)).find('input').get(0);
+
+            setInputValue(inputField, '2', true);
+            await vueTicks();
+
+            setInputValue(inputField, '12', true);
+            await vueTicks();
+
+            assertVisibleItems(this.comboBox, ['Value 12']);
+        });
+
+        it('Test filter on search clear input', async function () {
+            const values = await makeSearchable(this.comboBox);
+
+            await openDropdown(this.comboBox);
+
+            const inputField = $(getSearchElement(this.comboBox)).find('input').get(0);
+
+            setInputValue(inputField, '2', true);
+            await vueTicks();
+
+            setInputValue(inputField, '', true);
+            await vueTicks();
+
+            assertVisibleItems(this.comboBox, values);
         });
     });
 });

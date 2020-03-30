@@ -49,7 +49,8 @@ module.exports = function (config) {
 
         // list of files / patterns to load in the browser
         files: [
-            'tests/index.js'
+            'tests/index.js',
+            'node_modules/materialize-css/dist/css/materialize.css'
         ],
 
 

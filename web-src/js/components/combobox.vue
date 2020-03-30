@@ -1,5 +1,5 @@
 <template>
-    <div class="input-field" :title="config.description" :data-error="error">
+    <div class="input-field combobox" :title="config.description" :data-error="error">
         <select
                 :id="config.name"
                 ref="selectField"
@@ -13,16 +13,19 @@
                     :selected="option.selected">{{ option.value }}</option>
         </select>
         <label :for="config.name">{{ config.name }}</label>
+
+        <ComboboxSearch ref="comboboxSearch" :comboboxWrapper="comboboxWrapper" v-if="searchEnabled"/>
     </div>
 </template>
 
 <script>
     import * as M from 'materialize-css';
     import {addClass, contains, findNeighbour, isEmptyString, isNull, removeClass} from '../common';
+    import ComboboxSearch from './terminal/ComboboxSearch';
 
     export default {
         name: 'Combobox',
-
+        components: {ComboboxSearch},
         props: {
             'config': Object,
             'value': [String, Array],
@@ -39,6 +42,12 @@
                 anythingSelected: false,
                 error: '',
                 comboboxWrapper: null
+            }
+        },
+
+        computed: {
+            searchEnabled() {
+                return !this.disabled && !this.config.multiselect && (this.options.length > 10);
             }
         },
 
@@ -192,19 +201,26 @@
 
             rebuildCombobox() {
                 this.comboboxWrapper = M.FormSelect.init($(this.$refs.selectField),
-                    {dropdownOptions: {constrainWidth: false, dropdownContainer: this.dropdownContainer}})[0];
+                    {
+                        dropdownOptions: {
+                            constrainWidth: false,
+                            dropdownContainer: this.dropdownContainer
+                        }
+                    })[0];
 
-                $(this.$refs.selectField).siblings('ul').children('li').each(function () {
-                    var text = $(this).children('span:first-child').text();
+                const contentSelector = $(this.$refs.selectField).siblings('.dropdown-content');
+
+                contentSelector.children('li').each(function () {
+                    const text = $(this).children('span:first-child').text();
                     if (text) {
                         this.title = text;
                     }
                 });
 
-                $(this.$refs.selectField).siblings('ul').children('li.disabled')
-                    .each(function () {
-                        $(this).attr('tabindex', -1)
-                    });
+                const header = contentSelector.children('li.disabled');
+                header.each(function () {
+                    $(this).attr('tabindex', -1)
+                });
 
                 this.updateComboboxValue();
             },
@@ -243,4 +259,15 @@
     }
 </script>
 
+<style scoped>
+    .combobox >>> .search-hidden {
+        display: none;
+    }
+
+    .main-app-content .combobox >>> .select-dropdown.dropdown-content .combobox-search-header {
+        background-color: white;
+        position: sticky;
+        top: 0;
+    }
+</style>
 
