@@ -3,7 +3,7 @@ sudo: required
 dist: xenial
 language: node_js
 node_js:
-- '6'
+- '11'
 cache:
   directories:
   - web-src/node_modules
