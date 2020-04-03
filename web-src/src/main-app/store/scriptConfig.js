@@ -1,5 +1,4 @@
-import axios from 'axios';
-import Vue from 'vue';
+import {ReactiveWebSocket} from '@/common/connections/rxWebsocket';
 import {
     arraysEqual,
     contains,
@@ -14,9 +13,11 @@ import {
     removeElement,
     SocketClosedError,
     toDict
-} from '../../common';
-import {ReactiveWebSocket} from '../../connections/rxWebsocket';
-import {isComboboxParameter, preprocessParameter} from '../model_helper';
+} from '@/common/utils/common';
+import axios from 'axios';
+import Vue from 'vue';
+import {toQueryArgs} from '../../common/utils/common';
+import {isComboboxParameter, preprocessParameter} from '../utils/model_helper';
 
 const internalState = {
     websocket: null,
@@ -261,7 +262,7 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
 
             if (eventType === 'parameterRemoved') {
                 commit('REMOVE_PARAMETER', data);
-                return;
+
             }
         },
 
@@ -355,7 +356,7 @@ function loadFiles(scriptConfig, parameterName, path) {
     const encodedScript = encodeURIComponent(scriptConfig.name);
     const encodedParameter = encodeURIComponent(parameterName);
     const url = `scripts/${encodedScript}/${encodedParameter}/list-files`;
-    const param = $.param({'path': path, 'id': scriptConfig.id}, true);
+    const param = toQueryArgs({'path': path, 'id': scriptConfig.id});
     const full_url = url + '?' + param;
 
     return axios.get(full_url)

@@ -5,7 +5,7 @@
 </template>
 
 <script>
-    import ExecutionsLogPage from '../../history/executions-log-page';
+    import ExecutionsLogPage from '@/common/components/history/executions-log-page';
 
     export default {
         name: 'AppHistoryPanel',

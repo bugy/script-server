@@ -19,9 +19,10 @@
 </template>
 
 <script>
+    import {addClass, contains, findNeighbour, isEmptyString, isNull, removeClass} from '@/common/utils/common';
     import * as M from 'materialize-css';
-    import {addClass, contains, findNeighbour, isEmptyString, isNull, removeClass} from '../common';
-    import ComboboxSearch from './terminal/ComboboxSearch';
+    import {hasClass} from '../utils/common';
+    import ComboboxSearch from './ComboboxSearch';
 
     export default {
         name: 'Combobox',
@@ -96,15 +97,17 @@
 
         mounted: function () {
             // for some reason subscription in template (i.e. @change="..." doesn't work for select input)
-            $(this.$refs.selectField).on('change', function () {
-                var value;
+            this.$refs.selectField.onchange = () => {
+                let value;
                 if (this.config.multiselect) {
-                    value = $(this.$refs.selectField).val();
+                    value = Array.from(this.$refs.selectField.selectedOptions)
+                        .filter(o => !o.disabled)
+                        .map(o => o.value)
                 } else {
                     value = this.$refs.selectField.value;
                 }
                 this.emitValueChange(value);
-            }.bind(this));
+            };
 
             this.rebuildCombobox();
 
@@ -167,11 +170,11 @@
             },
 
             _selectValue(value) {
-                var selectedValues = this.asArray(value);
+                const selectedValues = this.asArray(value);
 
                 this.anythingSelected = false;
 
-                var existingSelectedValues = new Set();
+                const existingSelectedValues = new Set();
 
                 for (var i = 0; i < this.options.length; i++) {
                     var option = this.options[i];
@@ -200,27 +203,29 @@
             },
 
             rebuildCombobox() {
-                this.comboboxWrapper = M.FormSelect.init($(this.$refs.selectField),
+                this.comboboxWrapper = M.FormSelect.init(this.$refs.selectField,
                     {
                         dropdownOptions: {
                             constrainWidth: false,
                             dropdownContainer: this.dropdownContainer
                         }
-                    })[0];
+                    });
 
-                const contentSelector = $(this.$refs.selectField).siblings('.dropdown-content');
+                const dropdownContent = this.$refs.selectField.parentNode.getElementsByClassName('dropdown-content')[0];
 
-                contentSelector.children('li').each(function () {
-                    const text = $(this).children('span:first-child').text();
+                const listItems = Array.from(dropdownContent.childNodes)
+                    .filter(c => c.tagName === 'LI');
+
+                listItems.forEach(item => {
+                    const text = item.getElementsByTagName('span')[0].innerText;
                     if (text) {
-                        this.title = text;
+                        item.title = text;
                     }
                 });
 
-                const header = contentSelector.children('li.disabled');
-                header.each(function () {
-                    $(this).attr('tabindex', -1)
-                });
+                listItems.filter(item => hasClass(item, 'disabled'))
+                    .forEach(headerItem => headerItem.setAttribute('tabindex', -1));
+
 
                 this.updateComboboxValue();
             },

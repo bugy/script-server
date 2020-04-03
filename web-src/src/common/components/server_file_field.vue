@@ -28,8 +28,8 @@
 </template>
 
 <script>
+    import {addClass, arraysEqual, getTextWidth, isEmptyArray, isNull, removeClass} from '@/common/utils/common';
     import * as M from 'materialize-css';
-    import {addClass, arraysEqual, getTextWidth, isEmptyArray, isNull, removeClass} from '../common';
     import FileDialog from './file_dialog'
 
     export default {

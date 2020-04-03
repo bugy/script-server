@@ -60,11 +60,12 @@
                     displayLength: 8000
                 });
 
-                $(toast.el).find('button').click(() => {
+                const undoButton = toast.el.getElementsByTagName('BUTTON')[0];
+                undoButton.onclick = () => {
                     toast.dismiss();
                     const insertPosition = Math.min(index, this.parameters.length);
                     this.parameters.splice(insertPosition, 0, param);
-                });
+                };
             },
 
             moveUp(param) {
@@ -124,7 +125,7 @@
             },
 
             scrollToNewParam() {
-                const parameterElements = $(this.$refs.parametersPanel).children('li');
+                const parameterElements = this.$refs.parametersPanel.getElementsByTagName('li');
                 const newParamElement = parameterElements[parameterElements.length - 2];
 
                 newParamElement.scrollIntoView();

@@ -11,8 +11,11 @@
 </template>
 
 <script>
-    const defaultImageSrc = 'images/console.png';
-    const cookieImageSrc = 'images/cookie.png';
+    import ConsoleImage from '@/assets/console.png'
+    import CookieImage from '@/assets/cookie.png'
+
+    const defaultImageSrc = ConsoleImage;
+    const cookieImageSrc = CookieImage;
 
     export default {
         name: 'AppWelcomePanel',

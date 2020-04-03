@@ -13,7 +13,7 @@
 </template>
 
 <script>
-    import {copyToClipboard, isNull} from '../common';
+    import {copyToClipboard, isNull} from '@/common/utils/common';
     import {TerminalModel} from './terminal/terminal_model';
     import {Terminal} from './terminal/terminal_view';
 

@@ -8,8 +8,8 @@
 </template>
 
 <script>
+    import {isBlankString, isEmptyString, isNull, removeElement} from '@/common/utils/common';
     import {mapState} from 'vuex';
-    import {isBlankString, isEmptyString, isNull, removeElement} from '../../common';
     import ScriptListGroup from './ScriptListGroup';
     import ScriptListItem from './ScriptListItem';
 

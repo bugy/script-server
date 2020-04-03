@@ -25,9 +25,9 @@
 </template>
 
 <script>
+    import {forEachKeyValue} from '@/common/utils/common';
     import {mapState} from 'vuex';
-    import {forEachKeyValue} from '../../common';
-    import {scriptNameToHash} from '../model_helper';
+    import {scriptNameToHash} from '../../utils/model_helper';
 
     export default {
         name: 'ScriptListItem',

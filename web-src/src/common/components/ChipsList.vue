@@ -6,8 +6,8 @@
 </template>
 
 <script>
+    import {isNull} from '@/common/utils/common';
     import * as M from 'materialize-css';
-    import {isNull} from '../common';
 
     export default {
         name: 'ChipsList',

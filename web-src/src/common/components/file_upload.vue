@@ -19,7 +19,7 @@
 </template>
 
 <script>
-    import {isNull} from '../common';
+    import {isNull} from '@/common/utils/common';
 
     export default {
         props: {

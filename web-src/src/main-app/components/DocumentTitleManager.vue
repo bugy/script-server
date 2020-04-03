@@ -3,8 +3,8 @@
 </template>
 
 <script>
+    import {isNull} from '@/common/utils/common';
     import {mapState} from 'vuex';
-    import {isNull} from '../common';
 
     const defaultTitle = document.title;
 

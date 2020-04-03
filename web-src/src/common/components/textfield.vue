@@ -13,7 +13,7 @@
 </template>
 
 <script>
-    import {isBlankString, isEmptyString, isNull} from '../common';
+    import {isBlankString, isEmptyString, isNull} from '@/common/utils/common';
 
     export default {
         props: {
@@ -34,10 +34,10 @@
 
         computed: {
             fieldType() {
-                if (this.config.type === 'int') {
-                    return 'number';
-                } else if (this.config.secure) {
+                if (this.config.secure) {
                     return 'password';
+                } else if (this.config.type === 'int') {
+                    return 'number';
                 }
 
                 return 'text';

@@ -1,8 +1,8 @@
+import {isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
 import axios from 'axios';
 import Vue from 'vue';
-import {isEmptyObject, isEmptyString, isNull} from '../../common';
-import {scriptNameToHash} from '../model_helper';
-import router from '../router';
+import router from '../router/router';
+import {scriptNameToHash} from '../utils/model_helper';
 
 export default {
     namespaced: true,

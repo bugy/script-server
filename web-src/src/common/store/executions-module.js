@@ -1,5 +1,5 @@
+import {isEmptyString, isNull, logError} from '@/common/utils/common';
 import axios from 'axios';
-import {isEmptyString, isNull, logError} from '../common';
 
 export const axiosInstance = axios.create();
 

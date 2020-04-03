@@ -14,13 +14,13 @@
 </template>
 
 <script>
+    import Checkbox from '@/common/components/checkbox'
+    import Combobox from '@/common/components/combobox'
+    import FileUpload from '@/common/components/file_upload'
+    import ServerFileField from '@/common/components/server_file_field'
+    import Textfield from '@/common/components/textfield'
     import {mapActions, mapState} from 'vuex'
-    import Checkbox from '../../components/checkbox'
-    import Combobox from '../../components/combobox'
-    import FileUpload from '../../components/file_upload'
-    import ServerFileField from '../../components/server_file_field'
-    import Textfield from '../../components/textfield'
-    import {comboboxTypes, isRecursiveFileParameter} from '../model_helper'
+    import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
 
     export default {
         name: 'script-parameters-view',

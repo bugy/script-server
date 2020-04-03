@@ -1,5 +1,5 @@
 <template xmlns:v-slot="http://www.w3.org/1999/XSL/Transform">
-    <div>
+    <div id="main-app">
         <AppLayout ref="appLayout">
             <template v-slot:sidebar>
                 <MainAppSidebar/>
@@ -17,14 +17,15 @@
 </template>
 
 <script>
-    import {mapActions, mapState} from 'vuex';
-    import {isEmptyString} from '../common';
-    import AppLayout from '../components/AppLayout';
-    import AppWelcomePanel from './AppWelcomePanel';
-    import DocumentTitleManager from './DocumentTitleManager';
-    import FaviconManager from './FaviconManager';
-    import MainAppContent from './scripts/MainAppContent';
-    import MainAppSidebar from './MainAppSidebar';
+    import '@/assets/css/index.css';
+    import AppLayout from '@/common/components/AppLayout';
+    import {isEmptyString} from '@/common/utils/common';
+    import {mapActions} from 'vuex';
+    import AppWelcomePanel from './components/AppWelcomePanel';
+    import DocumentTitleManager from './components/DocumentTitleManager';
+    import FaviconManager from './components/FaviconManager';
+    import MainAppSidebar from './components/MainAppSidebar';
+    import MainAppContent from './components/scripts/MainAppContent';
 
     export default {
         name: 'App',

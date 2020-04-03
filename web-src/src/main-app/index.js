@@ -1,18 +1,13 @@
-import Vue from 'vue';
+import '@/common/style_imports'
+import Vue from 'vue'
+import MainApp from './MainApp.vue';
+import router from './router/router'
+import store from './store'
 
-import './connections/rxWebsocket.js';
-import MainApp from './main-app/MainApp.vue';
-import router from './main-app/router';
-import store from './main-app/store'
-import './style_imports.js';
+Vue.config.productionTip = false;
 
-window.onload = onLoad;
-
-function onLoad() {
-    new Vue({
-        el: '#index-page',
-        store,
-        router,
-        render: h => h(MainApp)
-    });
-}
+new Vue({
+    router,
+    store,
+    render: h => h(MainApp)
+}).$mount('#app');

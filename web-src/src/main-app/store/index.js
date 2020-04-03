@@ -1,8 +1,9 @@
+import historyModule from '@/common/store/executions-module';
+import {isNull, logError} from '@/common/utils/common';
 import axios from 'axios';
+import * as _ from 'lodash';
 import Vue from 'vue'
 import Vuex from 'vuex'
-import {isNull, logError} from '../../common';
-import historyModule from '../../history/executions-module';
 import authModule from './auth';
 
 import scriptConfigModule from './scriptConfig';
@@ -10,7 +11,6 @@ import scriptExecutionManagerModule from './scriptExecutionManager';
 import scriptsModule from './scripts';
 import scriptSetupModule from './scriptSetup';
 import serverConfigModule from './serverConfig';
-import * as _ from 'lodash';
 
 
 Vue.use(Vuex);

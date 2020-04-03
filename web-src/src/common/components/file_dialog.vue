@@ -26,7 +26,7 @@
         </div>
         <div class="file-dialog-content" tabindex="0" ref="contentPanel">
             <div class="loading-field" v-if="loading">Loading...</div>
-            <ul class="collection" v-else-if="!error">
+            <ul class="collection" ref="filesList" v-else-if="!error">
                 <li class="collection-item"
                     :class="{ active: file === selectedFile }"
                     v-for="file in files"
@@ -60,7 +60,7 @@
         logError,
         scrollToElement,
         stringComparator
-    } from '../common';
+    } from '@/common/utils/common';
 
     export default {
         name: "file_dialog",
@@ -156,12 +156,12 @@
                 }
 
                 this.$nextTick(() => {
-                    const activeElement = $(this.$el).find('.file-dialog-content .active');
-                    if (activeElement.length === 0) {
+                    const activeElements = this.$refs.filesList.getElementsByClassName('active');
+                    if (activeElements.length === 0) {
                         return;
                     }
 
-                    scrollToElement(activeElement.get(0), true);
+                    scrollToElement(activeElements[0], true);
                 });
             },
 
@@ -377,12 +377,15 @@
     }
 
     .file-dialog-content .collection-item {
-        background: none;
         border: none;
         vertical-align: middle;
         display: flex;
         align-items: center;
         cursor: pointer;
+    }
+
+    .file-dialog-content .collection-item:not(.active) {
+        background: none;
     }
 
     .file-dialog-content .collection-item:not(.active):hover {

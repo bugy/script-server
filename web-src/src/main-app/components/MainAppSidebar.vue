@@ -12,7 +12,7 @@
                     <i class="material-icons">settings</i>
                 </a>
                 <a href="https://github.com/bugy/script-server" target="_blank" v-else>
-                    <img src="../../images/github.png">
+                    <img :src="githubIcon">
                 </a>
             </div>
         </div>
@@ -31,8 +31,9 @@
 </template>
 
 <script>
+    import GithubIcon from '@/assets/github.png'
+    import LogoutButton from '@/assets/logout.png'
     import {mapActions, mapState} from 'vuex';
-    import LogoutButton from '../../images/logout.png'
     import ScriptsList from './scripts/ScriptsList'
     import SearchPanel from './SearchPanel';
 
@@ -46,7 +47,8 @@
         data() {
             return {
                 searchText: '',
-                logoutIcon: LogoutButton
+                logoutIcon: LogoutButton,
+                githubIcon: GithubIcon
             }
         },
 

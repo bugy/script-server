@@ -12,10 +12,10 @@
 </template>
 
 <script>
+    import {isNull} from '@/common/utils/common';
     import {mapActions, mapState} from 'vuex';
-    import {isNull} from '../common';
-    import LogPanel from '../components/log_panel';
-    import ReadOnlyField from '../components/readonly-field';
+    import LogPanel from '../log_panel';
+    import ReadOnlyField from '../readonly-field';
 
     export default {
         name: 'execution-details',

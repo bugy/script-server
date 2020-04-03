@@ -1,7 +1,7 @@
+import {deepCloneObject, forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
 import axios from 'axios';
-import {deepCloneObject, forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '../../common';
-import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
 import * as _ from 'lodash';
+import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
 
 export default {
     namespaced: true,
@@ -106,7 +106,7 @@ export default {
         startExecution({rootState, commit}) {
             const store = this;
 
-            const parameterValues = $.extend({}, rootState.scriptSetup.parameterValues);
+            const parameterValues = _.cloneDeep(rootState.scriptSetup.parameterValues);
             const scriptName = rootState.scriptConfig.scriptConfig.name;
 
             var formData = new FormData();

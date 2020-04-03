@@ -6,7 +6,7 @@ import {
     isWebsocketClosed,
     isWebsocketOpen,
     SocketClosedError
-} from '../common';
+} from '@/common/utils/common';
 
 let i = 0;
 

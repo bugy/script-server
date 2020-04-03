@@ -34,7 +34,7 @@
                :href="file.url"
                target="_blank">
                 {{ file.filename }}
-                <img src="../../../images/file_download.png">
+                <img :src="downloadIcon">
             </a>
         </div>
         <div class="script-input-panel input-field" v-if="inputPromptText" v-show="!hideExecutionControls">
@@ -49,16 +49,12 @@
 
 <script>
 
+    import FileDownloadIcon from '@/assets/file_download.png'
+    import LogPanel from '@/common/components/log_panel'
+    import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
     import marked from 'marked';
     import {mapActions, mapState} from 'vuex'
-    import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '../../common';
-    import LogPanel from '../../components/log_panel'
-    import {
-        STATUS_DISCONNECTED,
-        STATUS_ERROR,
-        STATUS_EXECUTING,
-        STATUS_FINISHED
-    } from '../store/scriptExecutor';
+    import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
     import ScriptParametersView from './script-parameters-view'
 
     export default {
@@ -68,7 +64,8 @@
                 everStarted: false,
                 errors: [],
                 nextLogIndex: 0,
-                lastInlineImages: {}
+                lastInlineImages: {},
+                downloadIcon: FileDownloadIcon
             }
         },
 

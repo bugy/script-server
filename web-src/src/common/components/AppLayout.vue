@@ -19,7 +19,7 @@
 </template>
 
 <script>
-    import {hasClass, isNull} from '../common';
+    import {hasClass, isNull} from '@/common/utils/common';
 
     export default {
         name: 'AppLayout',

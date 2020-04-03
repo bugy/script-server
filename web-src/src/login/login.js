@@ -1,14 +1,14 @@
-import * as M from 'materialize-css';
+import '@/common/style_imports.js';
 import {
-    addClass,
     callHttp,
     contains,
     createTemplateElement,
     getQueryParameter,
     getUnparameterizedUrl,
-    guid
-} from './common';
-import './style_imports.js';
+    guid,
+    toQueryArgs
+} from '@/common/utils/common';
+import * as M from 'materialize-css';
 
 var NEXT_URL_KEY = 'next';
 var OAUTH_RESPONSE_KEY = 'code';
@@ -37,7 +37,7 @@ function setupCredentials(loginContainer) {
 
     M.updateTextFields();
 
-    var form = $(loginContainer).find('.login-form').get(0);
+    const form = loginContainer.getElementsByClassName('login-form')[0];
     form.action = loginUrl;
     form.method = loginMethod;
 
@@ -97,7 +97,7 @@ function processCurrentOauthState() {
 
         var previousLocation = getUnparameterizedUrl();
         if (nextUrl) {
-            previousLocation += '?' + $.param({'next': nextUrl});
+            previousLocation += '?' + toQueryArgs({'next': nextUrl});
         }
         if (urlFragment) {
             previousLocation += urlFragment;
@@ -123,6 +123,10 @@ function processCurrentOauthState() {
         formData.append(OAUTH_RESPONSE_KEY, oauthResponseCode);
         sendLoginRequest(formData);
     }
+}
+
+function getLoginButton() {
+    return document.getElementsByClassName('login-button')[0];
 }
 
 function sendLoginRequest(formData) {
@@ -154,18 +158,22 @@ function sendLoginRequest(formData) {
     };
 
     var onError = function (errorCode, errorText) {
-        $('input.login-button').removeAttr('disabled');
+        const loginButton = getLoginButton();
+        loginButton.removeAttribute('disabled');
 
         if (contains([400, 401, 403, 500], errorCode)) {
             showError(errorText);
 
         } else {
-            showError("Unknown error occurred. Please contact the administrator");
+            showError('Unknown error occurred. Please contact the administrator');
         }
     };
 
     showInfo('Verifying credentials...');
-    $('input.login-button').attr("disabled", "disabled");
+
+    const loginButton = getLoginButton();
+    loginButton.setAttribute('disabled', 'disabled');
+
     request = callHttp(loginUrl, formData, loginMethod, onSuccess, onError);
 }
 
@@ -183,7 +191,7 @@ function hideError() {
 }
 
 function showInfo(text) {
-    const label = $('.login-info-label');
+    const label = document.getElementsByClassName('login-info-label')[0];
     label.text(text);
 
     if (text) {

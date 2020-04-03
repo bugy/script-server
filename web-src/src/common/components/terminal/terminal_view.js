@@ -1,4 +1,4 @@
-import {destroyChildren, forEachKeyValue, isNull} from '../../common';
+import {destroyChildren, forEachKeyValue, isNull} from '@/common/utils/common';
 
 const lineElementTemplate = document.createElement('div');
 

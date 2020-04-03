@@ -15,7 +15,7 @@
 </template>
 
 <script>
-    import {isBlankString, isNull} from '../common';
+    import {isBlankString, isNull} from '@/common/utils/common';
 
     export default {
         name: 'TextArea',

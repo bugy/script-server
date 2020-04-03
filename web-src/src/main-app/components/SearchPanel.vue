@@ -18,9 +18,9 @@
 </template>
 
 <script>
-    import {setInputValue} from '../common';
-    import ClearIcon from '../../images/clear.png'
-    import SearchIcon from '../../images/search.png'
+    import ClearIcon from '@/assets/clear.png'
+    import SearchIcon from '@/assets/search.png'
+    import {setInputValue} from '@/common/utils/common';
 
     export default {
         name: 'SearchPanel',

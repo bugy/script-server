@@ -89,10 +89,10 @@ input[type=checkbox]:not(.browser-default) + span {
     margin: auto;
 
     border-top: 50px solid;
-    -moz-border-image: url("../images/titleBackground.jpg") 300;
-    -webkit-border-image: url("../images/titleBackground.jpg") 300;
-    -o-border-image: url("../images/titleBackground.jpg") 300;
-    border-image: url("../images/titleBackground.jpg") 300;
+    -moz-border-image: url("../titleBackground.jpg") 300;
+    -webkit-border-image: url("../titleBackground.jpg") 300;
+    -o-border-image: url("../titleBackground.jpg") 300;
+    border-image: url("../titleBackground.jpg") 300;
 }
 
 #login-panel .login-form .input-field {
@@ -152,7 +152,7 @@ input[type=checkbox]:not(.browser-default) + span {
     box-shadow: 0 1px 3px -1px #202020;
     border: none;
 
-    background-image: url('../images/g-logo-plain.png');
+    background-image: url('../g-logo-plain.png');
     background-color: white;
     background-position-y: 50%;
     background-position-x: -4px;
@@ -162,7 +162,7 @@ input[type=checkbox]:not(.browser-default) + span {
 
 #login-google_oauth-button:active {
     background-color: #EEE;
-    background-image: url('../images/g-logo-plain-pressed.png');
+    background-image: url('../g-logo-plain-pressed.png');
 }
 
 #login-google_oauth-button[disabled] {
@@ -198,6 +198,6 @@ input[type=checkbox]:not(.browser-default) + span {
 }
 
 .main-content-header {
-    background: url('../images/titleBackground.jpg') no-repeat center;
+    background: url('../titleBackground.jpg') no-repeat center;
     background-size: cover;
 }

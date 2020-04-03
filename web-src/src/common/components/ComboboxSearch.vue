@@ -12,7 +12,16 @@
 </template>
 
 <script>
-    import {addClass, destroyChildren, hasClass, isEmptyString, isNull, removeClass, uuidv4} from '../../common';
+    import {
+        addClass,
+        destroyChildren,
+        hasClass,
+        isEmptyString,
+        isNull,
+        removeClass,
+        uuidv4
+    } from '@/common/utils/common';
+    import {closestByClass} from '../utils/common';
 
     export default {
         name: 'ComboboxSearch',
@@ -75,13 +84,12 @@
                     comboboxWrapper.dropdown.dropdownEl.style.maxHeight = null;
                 });
 
-                $(comboboxWrapper.dropdown.dropdownEl).find('.disabled').each(function () {
-                    destroyChildren(this);
-
-                    this.appendChild(searchElement);
-
-                    addClass(this, 'combobox-search-header');
-                });
+                const headerItems = comboboxWrapper.dropdown.dropdownEl.getElementsByClassName('disabled');
+                for (const headerItem of headerItems) {
+                    destroyChildren(headerItem);
+                    headerItem.appendChild(searchElement);
+                    addClass(headerItem, 'combobox-search-header');
+                }
 
                 this.executeSearch(this.value);
 
@@ -106,17 +114,18 @@
             executeSearch(searchString) {
                 searchString = searchString.toLowerCase();
 
-                $(this.comboboxWrapper.dropdown.dropdownEl).children('li').each(function () {
-                    const keepElement = this.textContent.toLowerCase().includes(searchString)
-                        || hasClass(this, 'disabled')
-                        || hasClass(this, 'selected');
+                const items = this.comboboxWrapper.dropdown.dropdownEl.getElementsByTagName('li');
+                for (const item of items) {
+                    const keepElement = item.textContent.toLowerCase().includes(searchString)
+                        || hasClass(item, 'disabled')
+                        || hasClass(item, 'selected');
 
                     if (keepElement) {
-                        removeClass(this, 'search-hidden');
+                        removeClass(item, 'search-hidden');
                     } else {
-                        addClass(this, 'search-hidden');
+                        addClass(item, 'search-hidden');
                     }
-                });
+                }
             },
 
             // when user inputs a letter, combobox focuses an element starting with this letter
@@ -144,8 +153,8 @@
         comboboxWrapper.dropdown.options.closeOnClick = false;
 
         const autoclose = (e) => {
-            const closest = $(e.target).closest('.input-field');
-            if (closest.hasClass('combobox-search')) {
+            const closest = closestByClass(e.target, 'input-field');
+            if (!isNull(closest) && hasClass(closest, 'combobox-search')) {
                 return;
             }
 

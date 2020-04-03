@@ -10,7 +10,7 @@
 </template>
 
 <script>
-    import {toBoolean} from '../common';
+    import {toBoolean} from '@/common/utils/common';
 
     export default {
         props: {

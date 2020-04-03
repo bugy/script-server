@@ -1,4 +1,4 @@
-import {arraysEqual, contains, isEmptyArray, isNull, removeElement} from '../../common';
+import {arraysEqual, contains, isEmptyArray, isNull, removeElement} from '@/common/utils/common';
 
 const DIGITS = new Set(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 

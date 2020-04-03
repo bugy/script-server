@@ -7,8 +7,8 @@
 
 <script>
     import {mapActions, mapState} from 'vuex';
+    import PageProgress from '../PageProgress';
     import ExecutionsLogTable from './executions-log-table'
-    import PageProgress from '../components/PageProgress';
 
     export default {
         name: 'executions-log',

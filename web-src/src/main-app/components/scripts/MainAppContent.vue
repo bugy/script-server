@@ -19,9 +19,9 @@
 </template>
 
 <script>
+    import {isEmptyString} from '@/common/utils/common';
     import {mapState} from 'vuex';
-    import {isEmptyString} from '../../common';
-    import {NOT_FOUND_ERROR_PREFIX} from '../store/scriptConfig';
+    import {NOT_FOUND_ERROR_PREFIX} from '../../store/scriptConfig';
     import ScriptView from './script-view';
 
     export default {

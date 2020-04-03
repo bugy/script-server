@@ -1,5 +1,5 @@
+import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
 import Vue from 'vue';
-import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '../../common';
 
 export default {
     namespaced: true,

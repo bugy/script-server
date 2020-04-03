@@ -3,7 +3,7 @@
 </template>
 
 <script>
-    import {forEachKeyValue} from '../common';
+    import {forEachKeyValue} from '@/common/utils/common';
     import {setDefaultFavicon, setExecutingFavicon} from './favicon_manager';
 
     export default {

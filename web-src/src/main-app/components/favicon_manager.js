@@ -1,4 +1,4 @@
-import {isNull} from '../common';
+import {isNull} from '@/common/utils/common';
 
 export const defaultFavicon = createDefaultFavicon();
 export let executingFavicon;

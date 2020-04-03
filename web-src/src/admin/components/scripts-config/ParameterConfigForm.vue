@@ -69,10 +69,10 @@
     import Vue from 'vue';
     import {forEachKeyValue, isEmptyString} from '../../common';
     import Checkbox from '../../components/checkbox';
+    import ChipsList from '../../components/ChipsList';
     import Combobox from '../../components/combobox';
     import TextArea from '../../components/TextArea';
     import Textfield from '../../components/textfield';
-    import ChipsList from '../../components/ChipsList';
     import {
         allowedValuesFromScriptField,
         allowedValuesScriptField,
@@ -171,7 +171,7 @@
                 fileType: null,
                 fileExtensions: null,
                 nameField,
-                argField: $.extend({}, argField),
+                argField: Object.assign({}, argField),
                 envVarField,
                 typeField,
                 noValueField,
@@ -179,10 +179,10 @@
                 secureField,
                 descriptionField,
                 minField,
-                maxField: $.extend({}, maxField),
+                maxField: Object.assign({}, maxField),
                 allowedValuesScriptField,
                 allowedValuesFromScriptField,
-                defaultValueField: $.extend({}, defaultValueField),
+                defaultValueField: Object.assign({}, defaultValueField),
                 constantField,
                 multipleArgumentsField,
                 separatorField,

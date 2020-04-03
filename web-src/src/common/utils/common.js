@@ -83,7 +83,7 @@ export function removeClass(element, clazz) {
 }
 
 export function callHttp(url, object, method, asyncHandler, onError) {
-    method = method || "GET";
+    method = method || 'GET';
 
     var xhttp = new XMLHttpRequest();
 
@@ -131,7 +131,7 @@ export function callHttp(url, object, method, asyncHandler, onError) {
             return xhttp.responseText;
 
         } else {
-            var message = "Couldn't execute request.";
+            var message = 'Couldn\'t execute request.';
             if (!isNull(xhttp.responseText) && (xhttp.responseText.length > 0)) {
                 message = xhttp.responseText;
             }
@@ -252,16 +252,6 @@ export function guid(length) {
 
 export function logError(error) {
     (console.error || console.log).call(console, error.stack || error);
-}
-
-export function createTemplateElement(templateName) {
-    var template = $('#' + templateName).html().trim();
-    var element = $.parseHTML(template)[0];
-
-    var clazz = templateName.replace(/-template$/g, '');
-    addClass(element, clazz);
-
-    return element;
 }
 
 export function readQueryParameters() {
@@ -385,10 +375,6 @@ export function arraysEqual(arr1, arr2) {
 export function setInputValue(inputField, value, triggerEvent) {
     if (isNull(triggerEvent)) {
         triggerEvent = false;
-    }
-
-    if (inputField instanceof jQuery) {
-        inputField = inputField.get(0);
     }
 
     if (inputField.type === 'checkbox') {
@@ -617,4 +603,34 @@ export function uuidv4() {
     return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
         (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
     );
+}
+
+export function closestByClass(element, className) {
+    if (className.startsWith('.')) {
+        className = className.substring(0, className.length - 1);
+    }
+
+    let current = element;
+    while (current != null) {
+        if (hasClass(current, className)) {
+            return current;
+        }
+        current = current.parentNode;
+    }
+
+    return current;
+}
+
+export function toQueryArgs(obj) {
+    const searchParams = new URLSearchParams();
+    forEachKeyValue(obj, (key, value) => {
+        if (Array.isArray(value)) {
+            for (const arrayElement of value) {
+                searchParams.append(key, arrayElement);
+            }
+        } else {
+            searchParams.append(key, value);
+        }
+    });
+    return searchParams.toString()
 }

@@ -1,6 +1,6 @@
+import {getWebsocketUrl, isNull, isWebsocketClosed} from '@/common/utils/common';
 import axios from 'axios';
 import Vue from 'vue';
-import {getWebsocketUrl, isNull, isWebsocketClosed} from '../../common';
 
 export const STATUS_INITIALIZING = 'initializing';
 export const STATUS_EXECUTING = 'executing';

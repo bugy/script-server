@@ -1,6 +1,7 @@
+import {contains, forEachKeyValue, isEmptyArray, isEmptyValue} from '@/common/utils/common';
 import axios from 'axios';
-import {contains, forEachKeyValue, isEmptyArray, isEmptyValue} from '../../common';
-import router from '../router'
+import {cloneDeep} from 'lodash'
+import router from '../router/router'
 
 const allowedEmptyValuesInParam = ['name'];
 
@@ -55,7 +56,7 @@ export default {
         },
 
         save({dispatch, state}) {
-            const config = $.extend({}, state.scriptConfig);
+            const config = cloneDeep(state.scriptConfig);
             const oldName = state.scriptName;
 
             removeEmptyValues(config);
