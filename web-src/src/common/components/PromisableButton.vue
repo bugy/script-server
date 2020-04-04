@@ -21,6 +21,7 @@
 </template>
 
 <script>
+    import '@/common/materializecss/imports/spinner'
     import {isEmptyString} from '@/common/utils/common';
 
     export default {

@@ -19,8 +19,8 @@
 </template>
 
 <script>
+    import '@/common/materializecss/imports/select';
     import {addClass, contains, findNeighbour, isEmptyString, isNull, removeClass} from '@/common/utils/common';
-    import * as M from 'materialize-css';
     import {hasClass} from '../utils/common';
     import ComboboxSearch from './ComboboxSearch';
 

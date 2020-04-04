@@ -1,3 +1,4 @@
+import '@/common/materializecss/imports/input-fields';
 import '@/common/style_imports.js';
 import {
     callHttp,
@@ -8,7 +9,6 @@ import {
     guid,
     toQueryArgs
 } from '@/common/utils/common';
-import * as M from 'materialize-css';
 
 var NEXT_URL_KEY = 'next';
 var OAUTH_RESPONSE_KEY = 'code';

@@ -13,6 +13,7 @@
 </template>
 
 <script>
+    import '@/common/materializecss/imports/input-fields';
     import {isBlankString, isEmptyString, isNull} from '@/common/utils/common';
 
     export default {

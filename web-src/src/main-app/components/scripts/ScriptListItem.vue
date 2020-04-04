@@ -25,6 +25,7 @@
 </template>
 
 <script>
+    import '@/common/materializecss/imports/spinner'
     import {forEachKeyValue} from '@/common/utils/common';
     import {mapState} from 'vuex';
     import {scriptNameToHash} from '../../utils/model_helper';

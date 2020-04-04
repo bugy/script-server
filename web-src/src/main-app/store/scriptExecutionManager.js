@@ -1,6 +1,6 @@
 import {deepCloneObject, forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
 import axios from 'axios';
-import * as _ from 'lodash';
+import clone from 'lodash.clone';
 import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
 
 export default {
@@ -106,7 +106,7 @@ export default {
         startExecution({rootState, commit}) {
             const store = this;
 
-            const parameterValues = _.cloneDeep(rootState.scriptSetup.parameterValues);
+            const parameterValues = clone(rootState.scriptSetup.parameterValues);
             const scriptName = rootState.scriptConfig.scriptConfig.name;
 
             var formData = new FormData();
