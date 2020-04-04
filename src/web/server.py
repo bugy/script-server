@@ -907,7 +907,8 @@ def init(server_config: ServerConfig,
         "cookie_secret": secret,
         "login_url": "/login.html",
         'websocket_ping_interval': 30,
-        'websocket_ping_timeout': 300
+        'websocket_ping_timeout': 300,
+        'compress_response': True
     }
 
     application = tornado.web.Application(handlers, **settings)
