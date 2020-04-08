@@ -19,11 +19,11 @@
 </template>
 
 <script>
+    import executions from '@/common/store/executions-module';
     import Vue from 'vue';
     import Vuex, {mapActions, mapState} from 'vuex';
-    import executions from '../history/executions-module';
-    import scriptConfig from './scripts-config/script-config-module';
-    import scripts from './scripts-config/scripts-module';
+    import scriptConfig from './store/script-config-module';
+    import scripts from './store/scripts-module';
 
     Vue.use(Vuex);
 

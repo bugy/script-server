@@ -17,8 +17,8 @@
 </template>
 
 <script>
+    import PromisableButton from '@/common/components/PromisableButton';
     import {mapActions, mapState} from 'vuex';
-    import PromisableButton from '../../components/PromisableButton';
     import ParameterConfigForm from './ParameterConfigForm';
     import ScriptConfigForm from './ScriptConfigForm';
     import ScriptParamList from './ScriptParamList';

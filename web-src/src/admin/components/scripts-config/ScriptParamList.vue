@@ -13,7 +13,9 @@
 </template>
 
 <script>
-    import {guid} from '../../common'
+    import '@/common/materializecss/imports/collapsible'
+    import '@/common/materializecss/imports/toast'
+    import {guid} from '@/common/utils/common'
     import ParamListItem from './ParamListItem';
 
     export default {

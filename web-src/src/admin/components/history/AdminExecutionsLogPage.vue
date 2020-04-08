@@ -3,8 +3,8 @@
 </template>
 
 <script>
+    import ExecutionsLogPage from '@/common/components/history/executions-log-page';
     import {mapActions, mapState} from 'vuex';
-    import ExecutionsLogPage from '../../history/executions-log-page';
 
     export default {
         name: 'AdminExecutionsLogPage',

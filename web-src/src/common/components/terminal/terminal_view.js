@@ -1,3 +1,4 @@
+import '@/assets/css/bash_styles.css';
 import {destroyChildren, forEachKeyValue, isNull} from '@/common/utils/common';
 
 const lineElementTemplate = document.createElement('div');

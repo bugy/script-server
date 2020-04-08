@@ -31,12 +31,12 @@
 </template>
 
 <script>
-    import _ from 'lodash';
-    import {forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '../../common';
-    import CheckBox from '../../components/checkbox'
-    import ChipsList from '../../components/ChipsList';
-    import TextArea from '../../components/TextArea';
-    import TextField from '../../components/textfield'
+    import CheckBox from '@/common/components/checkbox';
+    import ChipsList from '@/common/components/ChipsList';
+    import TextArea from '@/common/components/TextArea';
+    import TextField from '@/common/components/textfield'
+    import {forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
+    import get from 'lodash/get';
     import {
         allowAllField,
         bashFormattingField,
@@ -117,10 +117,10 @@
                     this.scriptPath = config['script_path'];
                     this.description = config['description'];
                     this.workingDirectory = config['working_directory'];
-                    this.requiresTerminal = _.get(config, 'requires_terminal', true);
+                    this.requiresTerminal = get(config, 'requires_terminal', true);
                     this.includeScript = config['include'];
-                    this.bashFormatting = _.get(config, 'bash_formatting', true);
-                    let allowedUsers = _.get(config, 'allowed_users');
+                    this.bashFormatting = get(config, 'bash_formatting', true);
+                    let allowedUsers = get(config, 'allowed_users');
                     if (isNull(allowedUsers)) {
                         allowedUsers = [];
                     }

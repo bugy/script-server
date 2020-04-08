@@ -17,9 +17,9 @@
 </template>
 
 <script>
+    import PageProgress from '@/common/components/PageProgress';
     import {mapActions, mapState} from 'vuex';
-    import PageProgress from '../../components/PageProgress';
-    import {NEW_SCRIPT} from './script-config-module';
+    import {NEW_SCRIPT} from '../../store/script-config-module';
 
     export default {
         name: 'ScriptsList',

@@ -1,17 +1,13 @@
+import '@/common/materializecss/imports/tabs'
+import '@/common/style_imports';
 import Vue from 'vue';
-import AdminApp from './admin/AdminApp';
-import router from './admin/router';
-import './style_imports';
-
-document.addEventListener('DOMContentLoaded', function () {
-
-    //noinspection JSAnnotator
-    new Vue({
-        router,
-        el: '#admin-page',
-        render: h => h(AdminApp)
-    });
-
-}, false);
+import AdminApp from './AdminApp';
+import './AdminApp';
+import router from './router/router';
 
 
+//noinspection JSAnnotator
+new Vue({
+    router,
+    render: h => h(AdminApp)
+}).$mount('#admin-page');

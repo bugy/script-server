@@ -66,13 +66,14 @@
 </template>
 
 <script>
+    import Checkbox from '@/common/components/checkbox';
+    import ChipsList from '@/common/components/ChipsList';
+    import Combobox from '@/common/components/combobox';
+    import TextArea from '@/common/components/TextArea';
+    import Textfield from '@/common/components/textfield';
+    import {forEachKeyValue, isEmptyString} from '@/common/utils/common';
+    import get from 'lodash/get';
     import Vue from 'vue';
-    import {forEachKeyValue, isEmptyString} from '../../common';
-    import Checkbox from '../../components/checkbox';
-    import ChipsList from '../../components/ChipsList';
-    import Combobox from '../../components/combobox';
-    import TextArea from '../../components/TextArea';
-    import Textfield from '../../components/textfield';
     import {
         allowedValuesFromScriptField,
         allowedValuesScriptField,
@@ -202,20 +203,20 @@
                         this.arg = config['param'];
                         this.envVar = config['env_var'];
                         this.type = config['type'];
-                        this.noValue = _.get(config, 'no_value', false);
-                        this.required = _.get(config, 'required', false);
+                        this.noValue = get(config, 'no_value', false);
+                        this.required = get(config, 'required', false);
                         this.min = config['min'];
                         this.max = config['max'];
-                        this.constant = !!_.get(config, 'constant', false);
-                        this.secure = !!_.get(config, 'secure', false);
-                        this.multipleArguments = !!_.get(config, 'multiple_arguments', false);
-                        this.separator = _.get(config, 'separator', ',');
+                        this.constant = !!get(config, 'constant', false);
+                        this.secure = !!get(config, 'secure', false);
+                        this.multipleArguments = !!get(config, 'multiple_arguments', false);
+                        this.separator = get(config, 'separator', ',');
                         this.fileDir = config['file_dir'];
-                        this.recursive = !!_.get(config, 'file_recursive', false);
-                        this.fileType = _.get(config, 'file_type', 'any');
-                        this.fileExtensions = _.get(config, 'file_extensions', []);
+                        this.recursive = !!get(config, 'file_recursive', false);
+                        this.fileType = get(config, 'file_type', 'any');
+                        this.fileExtensions = get(config, 'file_extensions', []);
 
-                        const defaultValue = _.get(config, 'default', '');
+                        const defaultValue = get(config, 'default', '');
                         if (this.isRecursiveFile()) {
                             if (Array.isArray(defaultValue)) {
                                 this.defaultValue = defaultValue.join('/');
@@ -230,7 +231,7 @@
                             this.defaultValue = defaultValue.toString();
                         }
 
-                        const allowedValues = _.get(config, 'values', []);
+                        const allowedValues = get(config, 'values', []);
                         if (Array.isArray(allowedValues) || !allowedValues['script']) {
                             this.allowedValues = allowedValues;
                             this.allowedValuesFromScript = false;

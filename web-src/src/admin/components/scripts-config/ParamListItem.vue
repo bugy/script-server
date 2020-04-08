@@ -23,7 +23,7 @@
 </template>
 
 <script>
-    import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '../../common';
+    import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
     import ParameterConfigForm from './ParameterConfigForm';
 
     export default {

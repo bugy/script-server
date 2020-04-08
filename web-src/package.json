@@ -36,6 +36,8 @@
     "http-proxy-middleware": "^1.0.3",
     "jquery": "^3.4.1",
     "mock-socket": "^9.0.2",
+    "node-sass": "^4.13.1",
+    "sass-loader": "^8.0.2",
     "sinon": "^7.5.0",
     "vue-template-compiler": "^2.6.11"
   },
