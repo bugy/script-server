@@ -11,7 +11,6 @@ import urllib
 import uuid
 from itertools import chain
 from urllib.parse import urlencode
-from urllib.parse import urlparse
 
 import tornado.concurrent
 import tornado.escape
@@ -48,6 +47,29 @@ LOGGER = logging.getLogger('web_server')
 
 active_config_models = {}
 
+webpack_prefixed_extensions = ['.css', '.js.map', '.js', '.jpg', '.woff', '.woff2']
+
+
+def remove_webpack_suffixes(request_path):
+    if request_path.endswith('.js.map'):
+        extension_start = len(request_path) - 7
+    else:
+        extension_start = request_path.rfind('.')
+
+    extension = request_path[extension_start:]
+
+    if extension not in webpack_prefixed_extensions:
+        return request_path
+
+    if extension_start < 0:
+        return request_path
+
+    prefix_start = request_path.rfind('.', 0, extension_start)
+    if prefix_start < 0:
+        return request_path
+
+    return request_path[:prefix_start] + extension
+
 
 def is_allowed_during_login(request_path, login_url, request_handler):
     if request_handler.request.method != 'GET':
@@ -58,33 +80,22 @@ def is_allowed_during_login(request_path, login_url, request_handler):
 
     if request_path == login_url:
         return True
+    request_path = remove_webpack_suffixes(request_path)
 
-    login_resources = ['/login.js',
-                       '/login.js.map',
-                       '/css/index.css',
-                       '/login-deps.css',
-                       '/login-deps.css.map',
+    login_resources = ['/js/login.js',
+                       '/js/login.js.map',
+                       '/js/chunk-login-vendors.js',
+                       '/js/chunk-login-vendors.js.map',
+                       '/favicon.ico',
+                       '/css/login.css',
+                       '/css/chunk-login-vendors.css',
                        '/fonts/roboto-latin-500.woff2',
                        '/fonts/roboto-latin-500.woff',
                        '/fonts/roboto-latin-400.woff2',
                        '/fonts/roboto-latin-400.woff',
-                       '/images/titleBackground.jpg',
-                       '/images/g-logo-plain.png',
-                       '/images/g-logo-plain-pressed.png']
+                       '/img/titleBackground.jpg']
 
-    if request_path not in login_resources:
-        return False
-
-    referer = request_handler.request.headers.get('Referer')
-    if referer:
-        referer = urlparse(referer).path
-    else:
-        return False
-
-    allowed_referrers = [login_url, '/login-deps.css', '/css/index.css']
-    for allowed_referrer in allowed_referrers:
-        if referer.endswith(allowed_referrer):
-            return True
+    return request_path in login_resources
 
 
 # In case of REST requests we don't redirect explicitly, but reply with Unauthorized code.
@@ -183,6 +194,7 @@ class BaseStaticHandler(tornado.web.StaticFileHandler):
 
 
 class GetServerConf(BaseRequestHandler):
+    @check_authorization
     def get(self):
         self.write(external_model.server_conf_to_external(
             self.application.server_config,

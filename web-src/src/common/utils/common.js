@@ -254,6 +254,19 @@ export function logError(error) {
     (console.error || console.log).call(console, error.stack || error);
 }
 
+export function createTemplateElement(templateName) {
+    const templateContent = document.getElementById(templateName).innerHTML.trim();
+
+    const template = document.createElement('template');
+    template.innerHTML = templateContent;
+    const element = template.content.childNodes[0];
+
+    const clazz = templateName.replace(/-template$/g, '');
+    addClass(element, clazz);
+
+    return element;
+}
+
 export function readQueryParameters() {
     var argString = window.location.search;
     if (!argString || argString.length <= 1) {

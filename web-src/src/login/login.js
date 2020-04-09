@@ -1,12 +1,17 @@
+import '@/assets/css/index.css';
+import '@/common/materializecss/imports/cards';
 import '@/common/materializecss/imports/input-fields';
+import '@/common/style_imports';
 import '@/common/style_imports.js';
 import {
+    addClass,
     callHttp,
     contains,
     createTemplateElement,
     getQueryParameter,
     getUnparameterizedUrl,
     guid,
+    removeClass,
     toQueryArgs
 } from '@/common/utils/common';
 
@@ -65,14 +70,14 @@ function setupGoogleOAuth(loginContainer, authConfig) {
 
         saveState(localState);
 
-        var queryArgs = {
+        const queryArgs = {
             'redirect_uri': getUnparameterizedUrl(),
             'state': token,
             'client_id': authConfig['client_id'],
             'scope': authConfig['oauth_scope'],
             'response_type': OAUTH_RESPONSE_KEY
         };
-        var query = $.param(queryArgs);
+        const query = toQueryArgs(queryArgs);
         window.location = authConfig['oauth_url'] + '?' + query;
     };
 
@@ -142,7 +147,7 @@ function sendLoginRequest(formData) {
     var onSuccess = function () {
         hideError();
         hideInfo();
-        $('input.login-button').removeAttr('disabled');
+        getLoginButton().removeAttribute('disabled');
 
         var redirect = request.getResponseHeader('Location');
         if (!redirect) {
@@ -178,11 +183,11 @@ function sendLoginRequest(formData) {
 }
 
 function showError(text) {
-    const label = $('.login-info-label');
-    label.text(text);
+    const label = document.getElementsByClassName('login-info-label')[0];
+    label.innerText = text;
 
     if (text) {
-        label.addClass('error');
+        addClass(label, 'error');
     }
 }
 
@@ -192,10 +197,10 @@ function hideError() {
 
 function showInfo(text) {
     const label = document.getElementsByClassName('login-info-label')[0];
-    label.text(text);
+    label.innerText = text;
 
     if (text) {
-        label.removeClass('error');
+        removeClass(label, 'error');
     }
 }
 

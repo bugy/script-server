@@ -275,4 +275,4 @@ class TestGroupsPersistence(unittest.TestCase):
 
 
 def _mock_request_handler(username, password):
-    return mock_request_handler({'username': username, 'password': password})
+    return mock_request_handler(arguments={'username': username, 'password': password})

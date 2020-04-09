@@ -31,6 +31,11 @@ module.exports = {
             entry: 'src/admin/admin.js',
             template: 'public/admin.html',
             chunks: ['chunk-admin-vendors', 'admin']
+        },
+        login: {
+            entry: 'src/login/login.js',
+            template: 'public/login.html',
+            chunks: ['chunk-login-vendors', 'login']
         }
     },
 
