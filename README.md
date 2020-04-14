@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/bugy/script-server.svg?branch=master)](https://travis-ci.org/bugy/script-server)
+[![Build Status](https://travis-ci.org/bugy/script-server.svg?branch=master)](https://travis-ci.org/bugy/script-server) [![Gitter](https://badges.gitter.im/script-server/community.svg)](https://gitter.im/script-server/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 # script-server
 Script-server is a Web UI for scripts.  
@@ -113,6 +113,11 @@ If you like the project and think you could help with making it better, there ar
 Any contribution would be of great help and I will highly appreciate it! 
 If you have any questions, please create a new issue, or contact me via buggygm@gmail.com
 
+## Asking questions
+If you have any questions, feel free to:
+- Ask in gitter: https://gitter.im/script-server/community
+- or [create a ticket](https://github.com/bugy/script-server/issues/new)
+- or contact me via email: buggygm@gmail.com (for some non-shareable questions)
 
 ## Special thanks
 ![JetBrains logo](https://github.com/JetBrains/logos/blob/master/web/jetbrains/jetbrains.svg)
