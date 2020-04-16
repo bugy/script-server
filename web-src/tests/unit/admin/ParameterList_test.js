@@ -1,9 +1,9 @@
 'use strict';
 
+import ParamListItem from '@/admin/components/scripts-config/ParamListItem';
+import ScriptParamList from '@/admin/components/scripts-config/ScriptParamList';
+import {hasClass} from '@/common/utils/common';
 import {assert, config as chaiConfig} from 'chai';
-import ParamListItem from '../../js/admin/scripts-config/ParamListItem';
-import ScriptParamList from '../../js/admin/scripts-config/ScriptParamList';
-import {hasClass} from '../../js/common';
 import {createVue, timeout, triggerSingleClick, vueTicks} from '../test_utils';
 import {setValueByUser} from './ParameterConfigForm_test';
 

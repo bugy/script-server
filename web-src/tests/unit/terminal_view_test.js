@@ -1,9 +1,9 @@
 'use strict';
 
+import {TerminalModel} from '@/common/components/terminal/terminal_model';
+import {Terminal} from '@/common/components/terminal/terminal_view';
+import {removeElement} from '@/common/utils/common';
 import {assert, config as chaiConfig} from 'chai';
-import {removeElement} from '../js/common';
-import {TerminalModel} from '../js/components/terminal/terminal_model';
-import {Terminal} from '../js/components/terminal/terminal_view';
 import {clearScreen, clearScreenDown, clearScreenUp, format, moveCursorUp, moveToPosition} from './terminal_test_utils';
 
 chaiConfig.truncateThreshold = 0;

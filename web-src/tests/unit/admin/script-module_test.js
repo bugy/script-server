@@ -1,9 +1,9 @@
 'use strict';
+import scripts, {axiosInstance} from '@/admin/store/scripts-module'
 import {createLocalVue} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import scripts, {axiosInstance} from '../../js/admin/scripts-config/scripts-module'
 
 chaiConfig.truncateThreshold = 0;
 

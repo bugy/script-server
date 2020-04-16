@@ -1,10 +1,10 @@
 'use strict';
 
+import Textfield from '@/common/components/textfield'
+import {isEmptyString, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import {isEmptyString, setInputValue} from '../js/common';
-import Textfield from '../js/components/textfield'
-import {mergeDeepProps, setDeepProp, vueTicks, wrapVModel} from './test_utils';
+import {setDeepProp, vueTicks, wrapVModel} from './test_utils';
 
 chaiConfig.truncateThreshold = 0;
 

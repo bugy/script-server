@@ -1,10 +1,10 @@
 'use strict';
+import ExecutionDetails from '@/common/components/history/execution-details'
+import historyModule, {axiosInstance} from '@/common/store/executions-module';
 import {createLocalVue, mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import ExecutionDetails from '../../js/history/execution-details'
-import historyModule, {axiosInstance} from '../../js/history/executions-module';
 import {vueTicks} from '../test_utils';
 
 

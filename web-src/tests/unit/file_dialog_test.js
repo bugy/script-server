@@ -1,9 +1,9 @@
 'use strict';
 
+import FileDialog from '@/common/components/file_dialog'
+import {hasClass, isEmptyArray, toMap} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import {hasClass, isEmptyArray, toMap} from '../js/common';
-import FileDialog from '../js/components/file_dialog'
 import {triggerDoubleClick, triggerKeyEvent, triggerSingleClick, vueTicks} from './test_utils';
 
 chaiConfig.truncateThreshold = 0;

@@ -1,12 +1,12 @@
 'use strict';
 
+import {hasClass, isBlankString} from '@/common/utils/common';
+import ScriptsList from '@/main-app/components/scripts/ScriptsList';
+import router from '@/main-app/router/router';
 import {createLocalVue, mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import VueRouter from 'vue-router';
 import Vuex from 'vuex';
-import {hasClass, isBlankString} from '../../../js/common';
-import router from '../../../js/main-app/router';
-import ScriptsList from '../../../js/main-app/scripts/ScriptsList';
 import {triggerSingleClick, vueTicks} from '../../test_utils';
 
 

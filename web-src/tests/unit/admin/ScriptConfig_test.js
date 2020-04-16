@@ -1,10 +1,10 @@
 'use strict';
 
+import ScriptConfig from '@/admin/components/scripts-config/ScriptConfig';
+import ScriptConfigForm from '@/admin/components/scripts-config/ScriptConfigForm';
 import {createLocalVue, mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import ScriptConfig from '../../js/admin/scripts-config/ScriptConfig';
-import ScriptConfigForm from '../../js/admin/scripts-config/ScriptConfigForm';
 import {vueTicks} from '../test_utils';
 import {findField, setValueByUser} from './ParameterConfigForm_test';
 

@@ -1,7 +1,7 @@
+import scriptSetup from '@/main-app/store/scriptSetup';
 import {createLocalVue} from '@vue/test-utils';
 import {assert} from 'chai';
 import Vuex from 'vuex';
-import scriptSetup from '../js/main-app/store/scriptSetup';
 
 
 const localVue = createLocalVue();
@@ -19,7 +19,7 @@ function createStore(sentData) {
                     }
                 }
             }
-        },
+        }
     });
 }
 

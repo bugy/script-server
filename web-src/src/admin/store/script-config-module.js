@@ -1,6 +1,6 @@
 import {contains, forEachKeyValue, isEmptyArray, isEmptyValue} from '@/common/utils/common';
 import axios from 'axios';
-import clone from 'lodash.clone';
+import clone from 'lodash/clone';
 import router from '../router/router'
 
 const allowedEmptyValuesInParam = ['name'];

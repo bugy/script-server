@@ -1,5 +1,5 @@
+import {isNull} from '@/common/utils/common';
 import Vue from 'vue';
-import {isNull} from '../js/common';
 
 export async function vueTicks(count) {
     if (isNull(count)) {
@@ -38,7 +38,7 @@ export function setDeepProp(wrapper, key, value) {
     }
 
     const rootKey = keys[0];
-    const newRootElement = $.extend(true, {}, wrapper.props(rootKey));
+    const newRootElement = Object.assign({}, wrapper.props(rootKey));
 
     let currentElement = newRootElement;
     for (let i = 1; i < keys.length - 1; i++) {

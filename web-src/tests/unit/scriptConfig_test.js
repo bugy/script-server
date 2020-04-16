@@ -1,8 +1,8 @@
+import {clearArray, removeElement, SocketClosedError} from '@/common/utils/common';
+import scriptConfig, {__RewireAPI__ as SocketRewireAPI} from '@/main-app/store/scriptConfig';
 import {createLocalVue} from '@vue/test-utils';
 import {assert} from 'chai';
 import Vuex from 'vuex';
-import {clearArray, removeElement, SocketClosedError} from '../js/common';
-import scriptConfig, {__RewireAPI__ as SocketRewireAPI} from '../js/main-app/store/scriptConfig';
 import {timeout} from './test_utils'
 
 
@@ -309,7 +309,7 @@ describe('Test scriptConfig module', function () {
 
         const assertAllowedValues = (parameterName, expectedValues) => {
             const param = store.state.scriptConfig.parameters.find(p => p.name === parameterName);
-            assert.exists(param, "Couldn't find parameter for name: " + parameterName);
+            assert.exists(param, 'Couldn\'t find parameter for name: ' + parameterName);
 
             assert.deepEqual(param.values, expectedValues);
         };

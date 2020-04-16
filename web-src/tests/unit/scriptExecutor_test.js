@@ -1,3 +1,4 @@
+import scriptExecutor, {__RewireAPI__ as ExecutorRewireAPI} from '@/main-app/store/scriptExecutor';
 import {createLocalVue} from '@vue/test-utils';
 
 import axios from 'axios';
@@ -6,7 +7,6 @@ import {assert} from 'chai';
 import {Server, WebSocket} from 'mock-socket';
 import * as sinon from 'sinon';
 import Vuex from 'vuex';
-import scriptExecutor, {__RewireAPI__ as ExecutorRewireAPI} from '../js/main-app/store/scriptExecutor';
 import {timeout} from './test_utils'
 
 const axiosMock = new MockAdapter(axios);

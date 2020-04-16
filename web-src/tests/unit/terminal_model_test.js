@@ -1,9 +1,9 @@
 'use strict';
 
+import {Style, StyledRange, TerminalModel} from '@/common/components/terminal/terminal_model';
+import {clearArray, isNull} from '@/common/utils/common';
 import {assert, config as chaiConfig, expect} from 'chai';
 import * as sinon from 'sinon';
-import {clearArray, isNull} from '../js/common';
-import {Style, StyledRange, TerminalModel} from '../js/components/terminal/terminal_model';
 import {
     clearFullLine,
     clearLine,

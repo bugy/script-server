@@ -141,9 +141,11 @@
                 if (this.config.multiselect) {
                     if (!Array.isArray(this.value)) {
                         if (contains(allowedValues, this.value)) {
-                            return false;
+                            newValue = [this.value];
+                        } else {
+                            newValue = [];
                         }
-                        newValue = [this.value];
+
                     } else {
                         newValue = [];
                         for (var i = 0; i < this.value.length; i++) {

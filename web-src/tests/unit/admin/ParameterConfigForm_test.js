@@ -1,12 +1,12 @@
 'use strict';
 
+import ParameterConfigForm from '@/admin/components/scripts-config/ParameterConfigForm';
+import ChipsList from '@/common/components/ChipsList';
+import Combobox from '@/common/components/combobox';
+import TextArea from '@/common/components/TextArea';
+import {isBlankString, isNull, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import ParameterConfigForm from '../../js/admin/scripts-config/ParameterConfigForm';
-import {isBlankString, isNull, setInputValue} from '../../js/common';
-import ChipsList from '../../js/components/ChipsList';
-import Combobox from '../../js/components/combobox';
-import TextArea from '../../js/components/TextArea';
 import {setChipListValue, vueTicks} from '../test_utils';
 
 chaiConfig.truncateThreshold = 0;
@@ -423,7 +423,7 @@ describe('Test ParameterConfigForm', function () {
 
             await _setValueByUser('Min', 5);
 
-            assertOutputValue('min', "5");
+            assertOutputValue('min', '5');
         });
 
         it('Test update max', async function () {
@@ -431,7 +431,7 @@ describe('Test ParameterConfigForm', function () {
 
             await _setValueByUser('Max', 5);
 
-            assertOutputValue('max', "5");
+            assertOutputValue('max', '5');
         });
 
         it('Test update constant', async function () {

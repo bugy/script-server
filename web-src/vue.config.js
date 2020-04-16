@@ -51,11 +51,7 @@ module.exports = {
         }
     },
 
-    configureWebpack: {
-        // webpack removes "class Component" during tree-shaking. Even if it's imported somewhere
-        // so we explicitly load it
-        plugins: [new webpack.ProvidePlugin({Component: 'exports-loader?Component!materialize-css/js/component.js'})]
-    },
+    configureWebpack: {},
 
     chainWebpack: config => {
         const options = module.exports;
@@ -77,6 +73,24 @@ module.exports = {
                         enforce: true
                     }))
                 }
-            })
+            });
+    },
+
+    pluginOptions: {
+        karma: {
+            files: ['tests/unit/index.js'],
+            customLaunchers: {
+                ChromeHeadless: {
+                    base: 'Chrome',
+                    flags: [
+                        '--headless',
+                        '--disable-gpu',
+                        '--no-sandbox',
+                        '--remote-debugging-port=9222'
+                    ]
+                }
+            },
+            browsers: ['Chrome', 'Firefox']
+        }
     }
 };

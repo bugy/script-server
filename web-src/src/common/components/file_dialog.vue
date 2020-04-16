@@ -63,7 +63,7 @@
     } from '@/common/utils/common';
 
     export default {
-        name: "file_dialog",
+        name: 'file_dialog',
         props: {
             onClose: {
                 type: Function
@@ -156,7 +156,12 @@
                 }
 
                 this.$nextTick(() => {
-                    const activeElements = this.$refs.filesList.getElementsByClassName('active');
+                    const filesList = this.$refs.filesList;
+                    if (isNull(filesList)) {
+                        return;
+                    }
+
+                    const activeElements = filesList.getElementsByClassName('active');
                     if (activeElements.length === 0) {
                         return;
                     }

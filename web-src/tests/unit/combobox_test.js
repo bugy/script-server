@@ -1,20 +1,16 @@
 'use strict';
 
+import Combobox from '@/common/components/combobox'
+import {contains} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {assert, config as chaiConfig} from 'chai';
-import {contains, hasClass, isEmptyString, setInputValue} from '../js/common';
-import Combobox from '../js/components/combobox'
 import {setDeepProp, timeout, triggerSingleClick, vueTicks, wrapVModel} from './test_utils';
 
-chaiConfig.truncateThreshold = 0;
 
 describe('Test ComboBox', function () {
+    let comboBox;
 
-    before(function () {
-
-    });
-    beforeEach(function () {
-        this.comboBox = mount(Combobox, {
+    beforeEach(async function () {
+        comboBox = mount(Combobox, {
             attachToDocument: true,
             propsData: {
                 config: {
@@ -27,113 +23,105 @@ describe('Test ComboBox', function () {
                 value: 'Value B'
             }
         });
-        wrapVModel(this.comboBox);
+        comboBox.vm.$parent.$forceUpdate();
+        await comboBox.vm.$nextTick();
+
+        wrapVModel(comboBox);
     });
 
     afterEach(async function () {
         await vueTicks();
-        this.comboBox.destroy();
+        comboBox.destroy();
     });
 
-    after(function () {
-    });
+    function assertListElements(expectedTexts, searchHeader = false) {
+        const listChildren = comboBox.findAll('li');
+        expect(listChildren).toHaveLength(expectedTexts.length + 1);
 
-    function assertListElements(combobox, expectedTexts) {
-        const listChildren = $(combobox.element).find('li');
-        assert.equal(expectedTexts.length, listChildren.length - 1);
+        const headerText = listChildren.at(0).text();
+        if (!searchHeader) {
+            expect(headerText).toBe('Choose your option');
+        } else {
+            expect(headerText.trim()).toBe('Search');
+        }
 
         for (let i = 0; i < expectedTexts.length; i++) {
             const value = expectedTexts[i];
-            assert.equal(value, listChildren.get(i + 1).innerText);
+            expect(listChildren.at(i + 1).text()).toBe(value);
         }
     }
 
-    async function openDropdown(combobox) {
-        const triggerInput = $(combobox.element).find('.dropdown-trigger').get(0);
-
-        triggerSingleClick(triggerInput);
+    async function openDropdown() {
+        comboBox.get('.dropdown-trigger').trigger('click');
 
         await timeout(50);
+    }
+
+    function findSelectedOptions() {
+        return comboBox.findAll('option').filter(option => option.element.selected);
     }
 
     describe('Test config', function () {
 
         it('Test initial name', function () {
-            assert.equal('List param X', this.comboBox.find('select').element.id);
-            assert.equal('List param X', this.comboBox.find('label').element.innerText);
+            expect(comboBox.get('select').attributes('id')).toBe('List param X');
+            expect(comboBox.get('label').text()).toBe('List param X');
         });
 
         it('Test change name', async function () {
-            setDeepProp(this.comboBox, 'config.name', 'testName1');
+            setDeepProp(comboBox, 'config.name', 'testName1');
 
             await vueTicks();
 
-            assert.equal('testName1', this.comboBox.find('select').element.id);
-            assert.equal('testName1', this.comboBox.find('label').element.innerText);
+            expect(comboBox.get('select').attributes('id')).toBe('testName1');
+            expect(comboBox.get('label').text()).toBe('testName1');
         });
 
         it('Test initial required', function () {
-            assert.equal(false, this.comboBox.find('select').element.required);
+            expect(comboBox.get('select').attributes('required')).toBeFalsy();
         });
 
         it('Test change required', async function () {
-            setDeepProp(this.comboBox, 'config.required', true);
+            setDeepProp(comboBox, 'config.required', true);
 
             await vueTicks();
 
-            assert.equal(true, this.comboBox.find('select').element.required);
+            expect(comboBox.get('select').attributes('required')).toBe('required');
         });
 
         it('Test initial description', function () {
-            assert.equal('some param', this.comboBox.element.title);
+            expect(comboBox.element.title).toBe('some param');
         });
 
         it('Test change description', async function () {
-            setDeepProp(this.comboBox, 'config.description', 'My new desc');
+            setDeepProp(comboBox, 'config.description', 'My new desc');
 
             await vueTicks();
 
-            assert.equal('My new desc', this.comboBox.element.title);
+            expect(comboBox.element.title).toBe('My new desc');
         });
 
         it('Test initial multiselect', function () {
-            assert.notExists(this.comboBox.find('select').attributes('multiple'));
+            expect(comboBox.find('select').attributes('multiple')).toBeNil();
 
-            const listElement = $(this.comboBox.element).find('ul').get(0);
-            assert.equal(false, hasClass(listElement, 'multiple-select-dropdown'));
+            const listElement = comboBox.get('ul');
+            expect(listElement.classes()).not.toContain('multiple-select-dropdown');
         });
 
 
         it('Test initial allowed values', function () {
             const values = ['Value A', 'Value B', 'Value C'];
 
-            const listChildren = $(this.comboBox.element).find('li');
-
-            assert.equal(values.length, listChildren.length - 1);
-
-            assert.equal('Choose your option', listChildren.get(0).innerText);
-
-            for (let i = 0; i < values.length; i++) {
-                const value = values[i];
-                assert.equal(value, listChildren.get(i + 1).innerText);
-            }
+            assertListElements(values);
         });
 
         it('Test change allowed values', async function () {
             const values = ['val1', 'val2', 'hello', 'another option'];
-            setDeepProp(this.comboBox, 'config.values', values);
+            setDeepProp(comboBox, 'config.values', values);
 
             await vueTicks();
 
-            const listChildren = $(this.comboBox.element).find('li');
-            assert.equal(values.length, listChildren.length - 1);
-
-            assert.equal('Choose your option', listChildren.get(0).innerText);
-
-            for (let i = 0; i < values.length; i++) {
-                const value = values[i];
-                assert.equal(value, listChildren.get(i + 1).innerText);
-            }
+            assertListElements(values);
         });
     });
 
@@ -142,316 +130,306 @@ describe('Test ComboBox', function () {
         it('Test initial value', async function () {
             await vueTicks();
 
-            assert.equal(this.comboBox.vm.value, 'Value B');
+            expect(comboBox.vm.value).toBe('Value B');
 
-            const selectedOption = $(this.comboBox.element).find('.selected').text();
-            assert.equal(selectedOption, 'Value B');
+            const selectedOption = comboBox.find('.selected').text();
+            expect(selectedOption).toBe('Value B');
         });
 
         it('Test external value change', async function () {
-            this.comboBox.setProps({value: 'Value C'});
+            comboBox.setProps({value: 'Value C'});
 
             await vueTicks();
 
-            assert.equal(this.comboBox.vm.value, 'Value C');
+            expect(comboBox.vm.value).toBe('Value C');
 
-            const selectedOption = $(this.comboBox.element).find('.selected').text();
-            assert.equal(selectedOption, 'Value C');
+            const selectedOption = comboBox.get('.selected').text();
+            expect(selectedOption).toBe('Value C');
         });
 
         it('Test select another value', async function () {
-            const selectElement = $(this.comboBox.element).find('select');
-            selectElement.val('Value A');
-            selectElement.trigger('change');
+            comboBox.get('select').setValue('Value A');
 
             await vueTicks();
 
-            assert.equal(this.comboBox.vm.value, 'Value A');
+            expect(comboBox.vm.value).toBe('Value A');
 
-            const selectedOption = $(this.comboBox.element).find('.selected').text();
-            assert.equal(selectedOption, 'Value A');
+            const selectedOption = comboBox.get('.selected').text();
+            expect(selectedOption).toBe('Value A');
         });
 
         it('Test set unknown value', async function () {
-            this.comboBox.setProps({value: 'Xyz'});
+            comboBox.setProps({value: 'Xyz'});
 
             await vueTicks();
 
-            assert.isTrue(isEmptyString(this.comboBox.vm.value));
-            assert.equal(1, $(this.comboBox.element).find(':selected').length);
-        });
-
-        it('Test set unknown value', async function () {
-            this.comboBox.setProps({value: 'Xyz'});
-
-            await vueTicks();
-
-            assert.isTrue(isEmptyString(this.comboBox.vm.value));
-            assert.equal('Choose your option', $(this.comboBox.element).find('.selected').text());
+            expect(comboBox.vm.value).toBeNull();
+            expect(findSelectedOptions()).toHaveLength(1);
+            expect(comboBox.get('.selected').text()).toBe('Choose your option');
         });
 
         it('Test set multiselect single value', async function () {
-            setDeepProp(this.comboBox, 'config.multiselect', true);
+            setDeepProp(comboBox, 'config.multiselect', true);
             await vueTicks();
 
-            this.comboBox.setProps({value: 'Value A'});
+            comboBox.setProps({value: 'Value A'});
 
             await vueTicks();
-            assert.equal(['Value A'], this.comboBox.vm.value);
-            assert.equal('Value A', $(this.comboBox.element).find('.selected').text());
+            expect(comboBox.vm.value).toEqual(['Value A']);
+            expect(comboBox.get('.selected').text()).toBe('Value A');
         });
 
         it('Test set multiselect multiple values', async function () {
-            setDeepProp(this.comboBox, 'config.multiselect', true);
+            setDeepProp(comboBox, 'config.multiselect', true);
             await vueTicks();
 
-            this.comboBox.setProps({value: ['Value A', 'Value C']});
+            comboBox.setProps({value: ['Value A', 'Value C']});
 
             await vueTicks();
-            assert.deepEqual(['Value A', 'Value C'], this.comboBox.vm.value);
-            let selectedElements = $(this.comboBox.element).find(':selected');
-            assert.equal(2, selectedElements.length);
-            assert.equal('Value A', selectedElements.get(0).textContent);
-            assert.equal('Value C', selectedElements.get(1).textContent);
+            expect(comboBox.vm.value).toEqual(['Value A', 'Value C']);
+
+            const selectedElements = findSelectedOptions();
+            expect(selectedElements).toHaveLength(2);
+            expect(selectedElements.at(0).text()).toBe('Value A');
+            expect(selectedElements.at(1).text()).toBe('Value C');
         });
 
         it('Test set multiselect single unknown value', async function () {
-            setDeepProp(this.comboBox, 'config.multiselect', true);
+            setDeepProp(comboBox, 'config.multiselect', true);
             await vueTicks();
 
-            this.comboBox.setProps({value: ['Value X']});
+            comboBox.setProps({value: ['Value X']});
 
             await vueTicks();
-            assert.deepEqual([], this.comboBox.vm.value);
-            assert.equal('Choose your option', $(this.comboBox.element).find('.selected').text());
+            expect(comboBox.vm.value).toEqual([]);
+            expect(comboBox.get('.selected').text()).toBe('Choose your option');
         });
 
         it('Test set multiselect unknown value from multiple', async function () {
-            setDeepProp(this.comboBox, 'config.multiselect', true);
+            setDeepProp(comboBox, 'config.multiselect', true);
             await vueTicks();
 
-            this.comboBox.setProps({value: ['Value A', 'Value X']});
+            comboBox.setProps({value: ['Value A', 'Value X']});
 
             await vueTicks();
-            assert.deepEqual(['Value A'], this.comboBox.vm.value);
-            assert.equal('Value A', $(this.comboBox.element).find('.selected').text());
+            expect(comboBox.vm.value).toEqual(['Value A']);
+            expect(comboBox.get('.selected').text()).toBe('Value A');
         });
 
         it('Test select multiple values in multiselect', async function () {
-            setDeepProp(this.comboBox, 'config.multiselect', true);
+            setDeepProp(comboBox, 'config.multiselect', true);
             await vueTicks();
 
             const values = ['Value A', 'Value C'];
-            const selectElement = $(this.comboBox.element).find('select');
+            const selectElement = $(comboBox.get('select').element);
             selectElement.val(values);
             selectElement.trigger('change');
 
             await vueTicks();
 
-            assert.deepEqual(values, this.comboBox.vm.value);
-            let selectedElements = $(this.comboBox.element).find(':selected');
-            assert.equal(2, selectedElements.length);
-            assert.equal('Value A', selectedElements.get(0).textContent);
-            assert.equal('Value C', selectedElements.get(1).textContent);
+            expect(comboBox.vm.value).toEqual(values);
+
+            const selectedElements = findSelectedOptions();
+            expect(selectedElements).toHaveLength(2);
+            expect(selectedElements.at(0).text()).toBe('Value A');
+            expect(selectedElements.at(1).text()).toBe('Value C');
         });
 
         it('Test change allowed values with matching value', async function () {
-            setDeepProp(this.comboBox, 'config.values', ['val1', 'val2', 'hello', 'Value B', 'another option']);
+            setDeepProp(comboBox, 'config.values', ['val1', 'val2', 'hello', 'Value B', 'another option']);
 
             await vueTicks();
 
-            assert.equal('Value B', this.comboBox.vm.value);
-            assert.equal('Value B', $(this.comboBox.element).find('.selected').text());
+            expect(comboBox.vm.value).toBe('Value B');
+            expect(comboBox.get('.selected').text()).toBe('Value B');
         });
 
         it('Test change allowed values with unmatching value', async function () {
-            setDeepProp(this.comboBox, 'config.values', ['val1', 'val2', 'hello', 'another option']);
+            setDeepProp(comboBox, 'config.values', ['val1', 'val2', 'hello', 'another option']);
 
             await vueTicks();
 
-            assert.isTrue(isEmptyString(this.comboBox.vm.value));
-            assert.equal('Choose your option', $(this.comboBox.element).find('.selected').text());
+            expect(comboBox.vm.value).toBeNull();
+            expect(comboBox.get('.selected').text()).toBe('Choose your option');
         });
 
         it('Test change allowed values and then a value', async function () {
-            setDeepProp(this.comboBox, 'config.values', ['val1', 'val2', 'hello', 'another option']);
-            this.comboBox.setProps({value: 'val2'});
+            setDeepProp(comboBox, 'config.values', ['val1', 'val2', 'hello', 'another option']);
+            comboBox.setProps({value: 'val2'});
 
             await vueTicks();
 
-            assert.equal('val2', this.comboBox.vm.value);
-            assert.equal('val2', $(this.comboBox.element).find('.selected').text());
+            expect(comboBox.vm.value).toBe('val2');
+            expect(comboBox.get('.selected').text()).toBe('val2');
         });
     });
 
     describe('Test errors', function () {
         it('Test set external empty value when required', async function () {
-            setDeepProp(this.comboBox, 'config.required', true);
+            setDeepProp(comboBox, 'config.required', true);
             await vueTicks();
 
-            this.comboBox.setProps({value: ''});
+            comboBox.setProps({value: ''});
 
             await vueTicks();
 
-            assert.equal('required', this.comboBox.currentError);
+            expect(comboBox.currentError).toBe('required');
         });
 
         it('Test unselect combobox when required', async function () {
-            setDeepProp(this.comboBox, 'config.required', true);
+            setDeepProp(comboBox, 'config.required', true);
             await vueTicks();
 
-            const selectElement = $(this.comboBox.element).find('select');
-            selectElement.val('');
-            selectElement.trigger('change');
+            comboBox.get('select').setValue('');
 
             await vueTicks();
 
-            assert.equal('required', this.comboBox.currentError);
+            expect(comboBox.currentError).toBe('required');
         });
 
         it('Test set external value after empty', async function () {
-            setDeepProp(this.comboBox, 'config.required', true);
-            this.comboBox.setProps({value: ''});
+            setDeepProp(comboBox, 'config.required', true);
+            comboBox.setProps({value: ''});
             await vueTicks();
 
-            this.comboBox.setProps({value: 'Value A'});
+            comboBox.setProps({value: 'Value A'});
             await vueTicks();
 
-            assert.equal('', this.comboBox.currentError);
+            expect(comboBox.currentError).toBe('');
         });
     });
 
-    function getSearchElement(comboBox) {
-        return getDropdownElement(comboBox).childNodes[0]
+    function getSearchElement() {
+        return getDropdownElement().childNodes[0]
     }
 
-    function getDropdownElement(combobox) {
-        return $(combobox.element).find('.dropdown-content').get(0);
+    function getDropdownElement() {
+        return comboBox.get('.dropdown-content').element;
     }
 
     describe('Test search', function () {
-        async function makeSearchable(combobox) {
+        async function makeSearchable() {
             const values = Array(20).fill(0).map((v, i) => 'Value ' + i);
-            setDeepProp(combobox, 'config.values', values);
+            setDeepProp(comboBox, 'config.values', values);
             await vueTicks();
 
-            combobox.vm.comboboxWrapper.dropdown.options.inDuration = 1;
-            combobox.vm.comboboxWrapper.dropdown.options.outDuration = 1;
+            comboBox.vm.comboboxWrapper.dropdown.options.inDuration = 1;
+            comboBox.vm.comboboxWrapper.dropdown.options.outDuration = 1;
 
             return values;
         }
 
-        function assertVisible(element, visible, message) {
+        function assertVisible(element, visible) {
             const displayStyle = window.getComputedStyle(element).display;
 
             if (visible) {
-                assert.notEqual(displayStyle, 'none', message);
+                expect(displayStyle).not.toBe('none');
             } else {
-                assert.equal(displayStyle, 'none', message);
+                expect(displayStyle).toBe('none');
             }
         }
 
         function assertVisibleItems(combobox, expectedVisible) {
-            const [header, ...listItems] = $(combobox.element).find('li').toArray();
+            const [header, ...listItems] = combobox.findAll('li').wrappers;
 
-            const headerVisible = !hasClass(header, 'search-hidden');
-            assert.isTrue(headerVisible);
+            expect(header.classes()).not.toContain('search-hidden');
 
             for (const listItem of listItems) {
-                const text = listItem.innerText;
+                const text = listItem.text();
 
                 const shouldBeVisible = contains(expectedVisible, text);
-                const visible = !hasClass(listItem, 'search-hidden');
-                assert.equal(visible, shouldBeVisible, 'Item "' + text + '" has wrong visibility');
+                if (shouldBeVisible) {
+                    expect(listItem.classes()).not.toContain('search-hidden');
+                } else {
+                    expect(listItem.classes()).toContain('search-hidden');
+                }
             }
         }
 
         it('Test show search field', async function () {
-            const values = await makeSearchable(this.comboBox);
+            const values = await makeSearchable();
 
-            const searchText = $(this.comboBox.element).find('.dropdown-content li').get(0).innerText.trim();
-            assert.equal('Search', searchText);
-            assertListElements(this.comboBox, values);
+            assertListElements(values, true);
         });
 
         it('Test focus search field on open', async function () {
-            await makeSearchable(this.comboBox);
+            await makeSearchable();
 
-            await openDropdown(this.comboBox);
+            await openDropdown();
 
-            const searchInput = $(getSearchElement(this.comboBox)).find('input').get(0);
-            assert.equal(searchInput, document.activeElement);
+            const searchInput = comboBox.get('.dropdown-content input');
+            expect(document.activeElement).toBe(searchInput.element);
         });
 
         it('Test keep open on search click', async function () {
-            await makeSearchable(this.comboBox);
+            await makeSearchable();
 
-            await openDropdown(this.comboBox);
+            await openDropdown();
 
-            const searchInput = $(getSearchElement(this.comboBox)).find('input').get(0);
-            triggerSingleClick(searchInput);
+            const searchInput = comboBox.get('.dropdown-content input');
+            searchInput.trigger('click');
 
             await timeout(50);
 
-            assertVisible(getDropdownElement(this.comboBox), true);
+            assertVisible(getDropdownElement(), true);
         });
 
         it('Test close on item click', async function () {
-            await makeSearchable(this.comboBox);
+            await makeSearchable();
 
-            await openDropdown(this.comboBox);
+            await openDropdown();
 
-            const firstItem = getDropdownElement(this.comboBox).childNodes[1];
+            const firstItem = getDropdownElement().childNodes[1];
             triggerSingleClick(firstItem);
 
             await timeout(50);
 
-            assertVisible(getDropdownElement(this.comboBox), false);
+            assertVisible(getDropdownElement(), false);
         });
 
         it('Test filter on search', async function () {
-            await makeSearchable(this.comboBox);
+            await makeSearchable();
 
-            await openDropdown(this.comboBox);
+            await openDropdown();
 
-            const inputField = $(getSearchElement(this.comboBox)).find('input').get(0);
-            setInputValue(inputField, '2', true);
+            const searchInput = comboBox.get('.dropdown-content input');
+            searchInput.setValue('2');
 
             await vueTicks();
 
-            assertVisibleItems(this.comboBox, ['Value 2', 'Value 12']);
+            assertVisibleItems(comboBox, ['Value 2', 'Value 12']);
         });
 
         it('Test filter on search second input', async function () {
-            await makeSearchable(this.comboBox);
+            await makeSearchable();
 
-            await openDropdown(this.comboBox);
+            await openDropdown();
 
-            const inputField = $(getSearchElement(this.comboBox)).find('input').get(0);
+            const searchInput = comboBox.get('.dropdown-content input');
 
-            setInputValue(inputField, '2', true);
+            searchInput.setValue('2');
             await vueTicks();
 
-            setInputValue(inputField, '12', true);
+            searchInput.setValue('12');
             await vueTicks();
 
-            assertVisibleItems(this.comboBox, ['Value 12']);
+            assertVisibleItems(comboBox, ['Value 12']);
         });
 
         it('Test filter on search clear input', async function () {
-            const values = await makeSearchable(this.comboBox);
+            const values = await makeSearchable();
 
-            await openDropdown(this.comboBox);
+            await openDropdown();
 
-            const inputField = $(getSearchElement(this.comboBox)).find('input').get(0);
+            const searchInput = comboBox.get('.dropdown-content input');
 
-            setInputValue(inputField, '2', true);
+            searchInput.setValue('2');
             await vueTicks();
 
-            setInputValue(inputField, '', true);
+            searchInput.setValue('');
             await vueTicks();
 
-            assertVisibleItems(this.comboBox, values);
+            assertVisibleItems(comboBox, values);
         });
     });
 });

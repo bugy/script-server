@@ -1,8 +1,8 @@
 'use strict';
+import ScriptView from '@/main-app/components/scripts/script-view';
 import {createLocalVue, mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import ScriptView from '../js/main-app/scripts/script-view';
 
 chaiConfig.truncateThreshold = 0;
 
