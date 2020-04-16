@@ -14,8 +14,8 @@ from config.config_service import ConfigService
 from features.file_download_feature import FileDownloadFeature
 from files.user_file_storage import UserFileStorage
 from model.server_conf import ServerConfig
-from test_utils import mock_request_handler
 from tests import test_utils
+from tests.test_utils import mock_request_handler
 from utils import os_utils, env_utils
 from web import server
 from web.server import remove_webpack_suffixes, is_allowed_during_login
