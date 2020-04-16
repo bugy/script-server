@@ -44,7 +44,7 @@
     "node-sass": "^4.13.1",
     "sass-loader": "^8.0.2",
     "sinon": "^7.5.0",
-    "vue-cli-plugin-unit-karmajs": "git@github.com:bugy/vue-cli-plugin-unit-karmajs.git",
+    "vue-cli-plugin-unit-karmajs": "git+https://git@github.com/bugy/vue-cli-plugin-unit-karmajs.git",
     "vue-template-compiler": "^2.6.11"
   },
   "scripts": {
