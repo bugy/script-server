@@ -52,7 +52,6 @@
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
     "test:unit-ci": "vue-cli-service test:unit -b ChromeHeadless",
-    "test:e2e": "vue-cli-service test:e2e",
     "stryker": "stryker run tests/stryker.conf.js"
   },
   "browserslist": [

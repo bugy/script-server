@@ -57,11 +57,11 @@ For the usage please check [this ticket](https://github.com/bugy/script-server/i
 
 ### For development
 1. Clone/download the repository
-2. Run 'tools/init.py --dev --no-npm' script
+2. Run 'tools/init.py --no-npm' script
 
 `init.py` script should be run after pulling any new changes
 
-If you are making changes to web files, use `npm run build:dev` or `npm run start:dev`
+If you are making changes to web files, use `npm run build` or `npm run serve`
 
 
 ## Setup and run

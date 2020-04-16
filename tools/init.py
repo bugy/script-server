@@ -24,20 +24,19 @@ def download_web_files(project_path):
     print('Done')
 
 
-def build_web_files(prod, project_path):
+def build_web_files(project_path):
     print('Building web...')
-    npm_mode = 'prod' if prod else 'dev'
     work_dir = os.path.join(project_path, 'web-src')
     process_utils.invoke('npm install', work_dir)
-    process_utils.invoke('npm run build:' + npm_mode, work_dir)
+    process_utils.invoke('npm run build', work_dir)
     print('Done')
 
 
-def prepare_project(project_path, *, prod, download_web=False):
+def prepare_project(project_path, *, download_web=False):
     if download_web:
         download_web_files(project_path)
     else:
-        build_web_files(prod, project_path)
+        build_web_files(project_path)
 
     runners_conf = os.path.join(project_path, 'conf', 'runners')
     if not os.path.exists(runners_conf):
@@ -53,7 +52,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Initializes source code repo to make it runnable')
     parser.add_argument('--no-npm', action='store_true', default=False)
-    parser.add_argument('--dev', action='store_true', default=False)
     args = vars(parser.parse_args())
 
-    prepare_project(project_path, prod=not args['dev'], download_web=args['no_npm'])
+    prepare_project(project_path, download_web=args['no_npm'])
