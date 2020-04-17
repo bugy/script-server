@@ -18,8 +18,7 @@ LOGGER = logging.getLogger('script_server.audit_utils')
 def get_all_audit_names(request_handler):
     result = {}
 
-    auth = request_handler.application.auth
-    auth_username = auth.get_username(request_handler)
+    auth_username = request_handler.application.identification.identify_for_audit(request_handler)
     if auth_username:
         result[AUTH_USERNAME] = auth_username
 
