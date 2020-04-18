@@ -10,6 +10,7 @@ def mock_request_handler(ip=None, proxy_username=None, auth_username=None, proxi
 
     handler_mock.application = mock_object()
     handler_mock.application.auth = mock_object()
+    handler_mock.application.identification = IpBasedIdentification(['127.0.0.1'], None)
 
     handler_mock.application.auth.get_username = lambda x: auth_username
 
