@@ -13,6 +13,7 @@ def mock_request_handler(ip=None, x_forwarded_for=None, x_real_ip=None, saved_to
 
     handler_mock.application = mock_object()
     handler_mock.application.auth = TornadoAuth(None)
+    handler_mock.application.identification = IpBasedIdentification(['127.0.0.1'], user_header_name)
 
     handler_mock.request = mock_object()
     handler_mock.request.headers = {}
