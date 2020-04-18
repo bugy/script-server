@@ -3,7 +3,7 @@ import unittest
 
 from tests.test_utils import mock_object
 from utils import audit_utils, os_utils
-
+from auth.identification import IpBasedIdentification
 
 def mock_request_handler(ip=None, proxy_username=None, auth_username=None, proxied_ip=None):
     handler_mock = mock_object()
