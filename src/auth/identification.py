@@ -15,6 +15,10 @@ class Identification(metaclass=abc.ABCMeta):
     def identify(self, request_handler):
         pass
 
+    @abc.abstractmethod
+    def identify_for_audit(self, request_handler):
+        pass
+
 
 class AuthBasedIdentification(Identification):
     def __init__(self, authentication_provider) -> None:
@@ -24,8 +28,10 @@ class AuthBasedIdentification(Identification):
         current_user = self._authentication_provider.get_username(request_handler)
         if not current_user:
             raise Exception('Not authenticated')
-
         return current_user
+
+    def identify_for_audit(self, request_handler):
+        return self.identify(request_handler)
 
 
 class IpBasedIdentification(Identification):
@@ -68,6 +74,12 @@ class IpBasedIdentification(Identification):
         self._write_client_token(new_id, request_handler)
 
         return new_id
+
+    def identify_for_audit(self, request_handler):
+        remote_ip = request_handler.request.remote_ip
+        if (remote_ip in self._trusted_ips) and (self._user_header_name):
+            return request_handler.request.headers.get(self._user_header_name, None)
+        return None
 
     def _resolve_ip(self, request_handler):
         proxied_ip = tornado_utils.get_proxied_ip(request_handler)

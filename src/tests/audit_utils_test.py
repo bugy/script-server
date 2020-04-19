@@ -3,16 +3,15 @@ import unittest
 
 from tests.test_utils import mock_object
 from utils import audit_utils, os_utils
-
+from auth.identification import AuthBasedIdentification
 
 def mock_request_handler(ip=None, proxy_username=None, auth_username=None, proxied_ip=None):
     handler_mock = mock_object()
 
     handler_mock.application = mock_object()
-    handler_mock.application.auth = mock_object()
-
-    handler_mock.application.auth.get_username = lambda x: auth_username
-
+    
+    handler_mock.application.identification = mock_object()
+    handler_mock.application.identification.identify_for_audit = lambda x: auth_username
     handler_mock.request = mock_object()
     handler_mock.request.headers = {}
     if proxy_username:
