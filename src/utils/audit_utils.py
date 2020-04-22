@@ -3,6 +3,7 @@ import logging
 import socket
 import sys
 
+from utils.collection_utils import get_first_existing
 from utils.tornado_utils import get_proxied_ip
 
 HOSTNAME = 'hostname'
@@ -82,3 +83,7 @@ def find_basic_auth_username(request_handler):
     username = credentials.split(':')[0]
 
     return username
+
+
+def get_audit_username(all_audit_names):
+    return get_first_existing(all_audit_names, AUTH_USERNAME, PROXIED_USERNAME)

@@ -3,15 +3,17 @@ import unittest
 
 from tests.test_utils import mock_object
 from utils import audit_utils, os_utils
-from auth.identification import AuthBasedIdentification
+from utils.audit_utils import get_audit_username
+
 
 def mock_request_handler(ip=None, proxy_username=None, auth_username=None, proxied_ip=None):
     handler_mock = mock_object()
 
     handler_mock.application = mock_object()
-    
+
     handler_mock.application.identification = mock_object()
     handler_mock.application.identification.identify_for_audit = lambda x: auth_username
+
     handler_mock.request = mock_object()
     handler_mock.request.headers = {}
     if proxy_username:
@@ -128,3 +130,26 @@ class TestGetAllAuditNames(unittest.TestCase):
             'auth_username': 'ldap_user',
             'proxied_username': 'basic_username'},
             names)
+
+
+class TestGetAuditUsername(unittest.TestCase):
+    def test_auth_username(self):
+        username = get_audit_username({'auth_username': 'user_X', 'ip': '123'})
+        self.assertEqual('user_X', username)
+
+    def test_proxied_username(self):
+        username = get_audit_username({'proxied_username': 'Its me', 'hostname': '123'})
+        self.assertEqual('Its me', username)
+
+    def test_no_username(self):
+        username = get_audit_username({
+            'proxied_hostname': 'my host',
+            'hostname': 'localhost',
+            'ip': '123.456',
+            'proxied_ip': '987'})
+        self.assertIsNone(username)
+
+    def test_auth_username_and_proxied_username(self):
+        username = get_audit_username({'proxied_username': 'Its me', 'auth_username': 'user_X'})
+        self.assertEqual('user_X', username)
+
