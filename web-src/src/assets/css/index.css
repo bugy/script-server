@@ -74,12 +74,13 @@ input[type=checkbox]:not(.browser-default) + span {
 #login-panel {
     width: 300px;
     margin: auto;
+}
 
-    border-top: 50px solid;
-    -moz-border-image: url("../titleBackground.jpg") 300;
-    -webkit-border-image: url("../titleBackground.jpg") 300;
-    -o-border-image: url("../titleBackground.jpg") 300;
-    border-image: url("../titleBackground.jpg") 300;
+#login-panel .card-image {
+    height: 50px;
+    background: url('../titleBackground_login.jpg') no-repeat;
+    background-size: cover;
+    background-position-x: 28%;
 }
 
 #login-panel .login-form .input-field {
@@ -157,6 +158,6 @@ input[type=checkbox]:not(.browser-default) + span {
 }
 
 .main-content-header {
-    background: url('../titleBackground.jpg') no-repeat center;
+    background: url('../titleBackground_small.jpg') no-repeat;
     background-size: cover;
 }

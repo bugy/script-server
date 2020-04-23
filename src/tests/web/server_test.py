@@ -197,7 +197,7 @@ class LoginResourcesTest(TestCase):
         ('/js/login.be16f278.js.map'),
         ('/js/chunk-login-vendors.18e22e7f.js'),
         ('/js/chunk-login-vendors.18e22e7f.js.map'),
-        ('/img/titleBackground.a6c36d4c.jpg'),
+        ('/img/titleBackground_login.a6c36d4c.jpg'),
         ('/css/login.8e74be0f.css'),
         ('/fonts/roboto-latin-400.60fa3c06.woff'),
         ('/fonts/roboto-latin-400.479970ff.woff2'),

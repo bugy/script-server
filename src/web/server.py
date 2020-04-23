@@ -93,7 +93,7 @@ def is_allowed_during_login(request_path, login_url, request_handler):
                        '/fonts/roboto-latin-500.woff',
                        '/fonts/roboto-latin-400.woff2',
                        '/fonts/roboto-latin-400.woff',
-                       '/img/titleBackground.jpg']
+                       '/img/titleBackground_login.jpg']
 
     return request_path in login_resources
 
