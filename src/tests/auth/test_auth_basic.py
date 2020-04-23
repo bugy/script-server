@@ -202,4 +202,4 @@ class TestHtpasswdAuthenticator(TestCase):
 
 
 def _mock_request_handler(username, password):
-    return test_utils.mock_request_handler({'username': username, 'password': password})
+    return test_utils.mock_request_handler(arguments={'username': username, 'password': password})

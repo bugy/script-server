@@ -364,13 +364,22 @@ def wait_observable_close_notification(observable, timeout):
     close_condition.wait(timeout)
 
 
-def mock_request_handler(arguments: dict):
+def mock_request_handler(*, arguments: dict = None, method='GET', headers=None):
+    if headers is None:
+        headers = {}
+
     request_handler = mock_object()
 
     def get_argument(arg_name):
+        if arguments is None:
+            return None
         return arguments.get(arg_name)
 
     request_handler.get_argument = get_argument
+
+    request_handler.request = mock_object()
+    request_handler.request.method = method
+    request_handler.request.headers = headers
 
     return request_handler
 

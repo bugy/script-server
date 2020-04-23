@@ -32,7 +32,7 @@ before_script:
 - cd src
 - python3 -m unittest discover -s tests -p "*.py" -t .
 - cd ../web-src
-- npm run test
+- npm run test:unit-ci
 - cd ..
 script:
 - python3 tools/build.py

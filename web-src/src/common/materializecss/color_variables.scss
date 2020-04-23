@@ -1,0 +1,31 @@
+@import "materialize-css/sass/components/_color-variables.scss";
+
+$light-blue: (
+  "darken-1":   #039be5
+);
+
+$green: (
+  "base":       #4CAF50
+);
+
+$grey: (
+  "base":       #9e9e9e,
+  "lighten-2":  #e0e0e0,
+  "lighten-1":  #bdbdbd
+);
+
+$orange: (
+  "accent-2":    #ffab40
+);
+
+
+// override materialize css colors, because there are too many of them, and they are not used
+$colors: (
+  "materialize-red": $materialize-red,
+  "red": $red,
+  "teal": $teal,
+  "orange": $orange,
+  "grey": $grey,
+  "green": $green,
+  "light-blue": $light-blue
+);

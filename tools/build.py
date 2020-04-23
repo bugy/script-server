@@ -89,7 +89,7 @@ if os.path.exists(BUILD_FOLDER):
     shutil.rmtree(BUILD_FOLDER)
 os.mkdir(BUILD_FOLDER)
 
-init.prepare_project('', prod=True)
+init.prepare_project('')
 create_version_file()
 
 build_info = BuildInfo()
