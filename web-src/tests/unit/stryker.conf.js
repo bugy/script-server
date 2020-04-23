@@ -1,23 +1,23 @@
 module.exports = function (config) {
     config.set({
         testRunner: 'karma',
-        testFramework: 'mocha',
         karma: {
-            project: 'custom',
-            configFile: 'tests/karma.conf.js',
             config: {
-                basePath: null,
-                files: ['../../web/test_entry.js']
+                frameworks: ['mocha'],
+                files: ['dist/*.js']
             }
         },
-        tempDir: '/tmp',
-        mutate: ['js/components/terminal/terminal_model.js'],
+        tempDirName: '/tmp',
+        mutate: ['src/common/components/terminal/terminal_model.js'],
+        files: ['src/**/*.js', 'tests/unit/**/*.js'],
         mutator: 'javascript',
         coverageAnalysis: 'off',
+        logLevel: 'info',
         transpilers: ['webpack'],
         webpack: {
-            configFile: 'webpack.mutation.js'
+            configFile: 'tests/mutation/stryker.webpack.config.js'
         },
-        reporter: ['progress', 'clear-text', 'html']
+        reporter: ['progress', 'clear-text', 'html'],
+        htmlReporter: {baseDir: '/tmp/reports/stryker'}
     });
 };
