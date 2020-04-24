@@ -10,7 +10,7 @@ No script modifications are needed - you configure each script in Script server 
 
 [DEMO server](https://script-server.net/)
 
-[Admin interface screenshots](/bugy/script-server/wiki/Admin-interface)
+[Admin interface screenshots](https://github.com/bugy/script-server/wiki/Admin-interface)
 
 ## Features
 - Different types of script parameters (text, flag, dropdown, file upload, etc.)
