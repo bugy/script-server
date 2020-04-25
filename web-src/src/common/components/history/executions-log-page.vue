@@ -1,6 +1,6 @@
 <template>
     <div class="executions-log page section">
-        <router-view/>
+        <router-view :disableProgressIndicator="disableProgressIndicator"/>
     </div>
 </template>
 
@@ -9,7 +9,13 @@
     import ExecutionsLog from './executions-log';
 
     export default {
-        name: 'executions-log-page'
+        name: 'executions-log-page',
+        props: {
+            disableProgressIndicator: {
+                type: Boolean,
+                default: false
+            }
+        }
     }
 
     export const routerChildren = [

@@ -647,3 +647,15 @@ export function toQueryArgs(obj) {
     });
     return searchParams.toString()
 }
+
+export function randomInt(start, end) {
+    if (start > end) {
+        start++;
+        end++;
+    } else if (end === start) {
+        return start;
+    }
+
+    const random = Math.random() * (end - start);
+    return Math.floor(random) + start
+}

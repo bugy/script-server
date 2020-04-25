@@ -1,6 +1,6 @@
 <template>
     <div class="container">
-        <PageProgress v-if="loading"/>
+        <PageProgress v-if="loading && !disableProgressIndicator"/>
         <executions-log-table :rowClick="goToLog" :rows="executionRows" v-else/>
     </div>
 </template>
@@ -13,6 +13,12 @@
     export default {
         name: 'executions-log',
 
+        props: {
+            disableProgressIndicator: {
+                type: Boolean,
+                default: false
+            }
+        },
         components: {
             'executions-log-table': ExecutionsLogTable,
             PageProgress

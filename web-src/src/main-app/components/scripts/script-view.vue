@@ -1,5 +1,6 @@
 <template>
     <div :id="id" class="script-view">
+        <ScriptLoadingText :loading="loading" :script="selectedScript" v-if="loading"/>
         <p class="script-description" v-html="formattedDescription" v-show="scriptDescription"/>
         <ScriptParametersView ref="parametersView"/>
         <div class="actions-panel">
@@ -52,6 +53,7 @@
     import FileDownloadIcon from '@/assets/file_download.png'
     import LogPanel from '@/common/components/log_panel'
     import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
+    import ScriptLoadingText from '@/main-app/components/scripts/ScriptLoadingText';
     import marked from 'marked';
     import {mapActions, mapState} from 'vuex'
     import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
@@ -78,12 +80,15 @@
         },
 
         components: {
-            LogPanel, ScriptParametersView
+            ScriptLoadingText,
+            LogPanel,
+            ScriptParametersView
         },
 
         computed: {
             ...mapState('scriptConfig', {
-                scriptDescription: state => state.scriptConfig ? state.scriptConfig.description : ''
+                scriptDescription: state => state.scriptConfig ? state.scriptConfig.description : '',
+                loading: 'loading'
             }),
             ...mapState('scriptSetup', {
                 parameterErrors: 'errors'
@@ -91,6 +96,7 @@
             ...mapState('executions', {
                 currentExecutor: 'currentExecutor'
             }),
+            ...mapState('scripts', ['selectedScript']),
 
             hasErrors: function () {
                 return !isNull(this.errors) && (this.errors.length > 0);
@@ -123,6 +129,10 @@
 
             enableExecuteButton() {
                 if (this.hideExecutionControls) {
+                    return false;
+                }
+
+                if (this.loading) {
                     return false;
                 }
 
@@ -350,7 +360,8 @@
         flex: 0 0 content;
     }
 
-    .script-description {
+    .script-description,
+    .script-loading-text {
         margin: 15px 17px 0;
     }
 

@@ -20,7 +20,7 @@
 
 <script>
     import {isEmptyString} from '@/common/utils/common';
-    import {mapState} from 'vuex';
+    import {mapActions, mapState} from 'vuex';
     import {NOT_FOUND_ERROR_PREFIX} from '../../store/scriptConfig';
     import ScriptView from './script-view';
 
@@ -32,12 +32,22 @@
             showError() {
                 return !!(this.scriptLoadError || !this.authenticated);
             },
-            ...mapState('auth', ['authenticated']),
-            ...mapState('scriptConfig', {scriptLoadError: 'loadError'}),
-            ...mapState('scripts', ['selectedScript']),
-
             notFound() {
                 return !isEmptyString(this.scriptLoadError) && this.scriptLoadError.startsWith(NOT_FOUND_ERROR_PREFIX);
+            },
+            ...mapState('auth', ['authenticated']),
+            ...mapState('scriptConfig', {scriptLoadError: 'loadError', loading: 'loading'}),
+            ...mapState('scripts', ['selectedScript'])
+        },
+        methods: {
+            ...mapActions('page', ['setLoading'])
+        },
+        watch: {
+            loading: {
+                immediate: true,
+                handler(newValue) {
+                    this.setLoading(newValue);
+                }
             }
         }
     }

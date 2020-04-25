@@ -42,7 +42,8 @@ export default {
         loadError: null,
         parameters: [],
         sentValues: {},
-        forcedAllowedValues: {}
+        forcedAllowedValues: {},
+        loading: false
     },
     namespaced: true,
     actions: {
@@ -51,6 +52,7 @@ export default {
             commit('RESET_CONFIG');
 
             if (!isEmptyString(selectedScript)) {
+                commit('SET_LOADING', true);
                 reconnect(state, internalState, commit, dispatch, selectedScript);
             }
         },
@@ -114,12 +116,14 @@ export default {
             state.scriptConfig = null;
             state.parameters = [];
             state.loadError = null;
+            state.loading = false;
             state.sentValues = {};
             state.forcedAllowedValues = {};
         },
 
         SET_ERROR(state, error) {
             state.loadError = error;
+            state.loading = false;
         },
 
         UPDATE_SCRIPT_CONFIG(state, config) {
@@ -219,6 +223,10 @@ export default {
                     p.values = allowedValues;
                 }
             })
+        },
+
+        SET_LOADING(state, loading) {
+            state.loading = loading;
         }
     }
 }
@@ -246,6 +254,7 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
 
             if (eventType === 'initialConfig') {
                 commit('UPDATE_SCRIPT_CONFIG', data);
+                commit('SET_LOADING', false);
                 dispatch('resendValues');
                 return;
             }

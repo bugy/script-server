@@ -5,6 +5,7 @@ import get from 'lodash/get';
 import Vue from 'vue'
 import Vuex from 'vuex'
 import authModule from './auth';
+import pageModule from './page';
 
 import scriptConfigModule from './scriptConfig';
 import scriptExecutionManagerModule from './scriptExecutionManager';
@@ -23,7 +24,8 @@ const store = new Vuex.Store({
         scriptSetup: scriptSetupModule,
         executions: scriptExecutionManagerModule,
         auth: authModule,
-        history: historyModule()
+        history: historyModule(),
+        page: pageModule
     },
     actions: {
         init({dispatch}) {

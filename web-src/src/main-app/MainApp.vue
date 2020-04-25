@@ -1,6 +1,6 @@
 <template xmlns:v-slot="http://www.w3.org/1999/XSL/Transform">
     <div id="main-app">
-        <AppLayout ref="appLayout">
+        <AppLayout :loading="pageLoading" ref="appLayout">
             <template v-slot:sidebar>
                 <MainAppSidebar/>
             </template>
@@ -20,7 +20,7 @@
     import '@/assets/css/index.css';
     import AppLayout from '@/common/components/AppLayout';
     import {isEmptyString} from '@/common/utils/common';
-    import {mapActions} from 'vuex';
+    import {mapActions, mapState} from 'vuex';
     import AppWelcomePanel from './components/AppWelcomePanel';
     import DocumentTitleManager from './components/DocumentTitleManager';
     import FaviconManager from './components/FaviconManager';
@@ -41,6 +41,9 @@
             ...mapActions({
                 init: 'init'
             })
+        },
+        computed: {
+            ...mapState('page', ['pageLoading'])
         },
 
         created() {
