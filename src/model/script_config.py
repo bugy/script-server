@@ -163,6 +163,9 @@ class ConfigModel:
 
         self.output_files = config.get('output_files', [])
 
+        if not self.script_command:
+            raise Exception('No script_path is specified for ' + self.name)
+
     def _reload_parameters(self, old_included_config):
         original_parameters_names = {p.get('name') for p in self._original_config.get('parameters', [])}
 
