@@ -1,6 +1,7 @@
 import {deepCloneObject, forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
 import axios from 'axios';
 import clone from 'lodash/clone';
+import get from 'lodash/get';
 import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
 
 export default {
@@ -141,8 +142,8 @@ export default {
 
                 })
                 .catch(error => {
-                    const status = _.get(error, 'response.status');
-                    let data = _.get(error, 'response.data');
+                    const status = get(error, 'response.status');
+                    let data = get(error, 'response.data');
                     if (isNull(error.response) || isEmptyString(data)) {
                         data = 'Connection error. Please contact the system administrator';
                     }
