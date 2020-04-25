@@ -379,7 +379,7 @@ class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
         _create_script_config_file('ConfX', name='my conf x')
         config = self.config_service.load_config('my conf x', self.admin_user)
 
-        self.assertEqual(config, {'filename': 'ConfX.json', 'config': {'name': 'my conf x'}})
+        self.assertEqual(config, {'filename': 'ConfX.json', 'config': {'name': 'my conf x', 'script_path': 'echo 123'}})
 
     def test_load_config_when_non_admin(self):
         _create_script_config_file('ConfX')
@@ -396,7 +396,7 @@ def _create_script_config_file(filename, *, name=None, **kwargs):
     conf_folder = os.path.join(test_utils.temp_folder, 'runners')
     file_path = os.path.join(conf_folder, filename + '.json')
 
-    config = {}
+    config = {'script_path': 'echo 123'}
     if name is not None:
         config['name'] = name
 

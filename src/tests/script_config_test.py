@@ -289,7 +289,7 @@ class ParameterModelDependantValuesTest(unittest.TestCase):
 class ConfigModelIncludeTest(unittest.TestCase):
     def test_static_include_simple(self):
         included_path = test_utils.write_script_config({'script_path': 'ping google.com'}, 'included')
-        config_model = _create_config_model('main_conf', config={'include': included_path})
+        config_model = _create_config_model('main_conf', script_path=None, config={'include': included_path})
 
         self.assertEqual('ping google.com', config_model.script_command)
 
@@ -336,7 +336,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
             'script_path': 'ping google.com',
             'hidden': True},
             'included')
-        config_model = _create_config_model('main_conf', config={'include': included_path})
+        config_model = _create_config_model('main_conf', script_path=None, config={'include': included_path})
 
         self.assertEqual('ping google.com', config_model.script_command)
 
@@ -812,8 +812,12 @@ def _create_config_model(name, *,
                          path=None,
                          parameters=None,
                          parameter_values=None,
-                         working_dir=None):
+                         working_dir=None,
+                         script_path='echo 123'):
     result_config = {}
+
+    if script_path is not None:
+        result_config['script_path'] = script_path
 
     if config:
         result_config.update(config)
