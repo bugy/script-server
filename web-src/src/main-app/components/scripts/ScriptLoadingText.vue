@@ -54,7 +54,7 @@
                     }
 
                     if (this.counter === 30) {
-                        this.loadingDots += ' I give up :(';
+                        this.loadingDots += ' loading time is unknown';
                         return;
                     }
 
@@ -66,7 +66,7 @@
                                 continue;
                             }
 
-                            this.loadingDots += ' ' + phrase + ' ..'
+                            this.loadingDots += ' ' + phrase + ' ..';
                             return;
                         }
                     }
@@ -105,6 +105,8 @@
         'doing my best',
         'don\'t leave me',
         'thanks for waiting',
+        'Zzzzz',
+        '42',
         'I\'m still alive',
         'what a lovely weather today',
         'some bits got stuck',
