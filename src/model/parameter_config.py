@@ -92,13 +92,19 @@ class ParameterModel(object):
         self._reload_values()
 
     def _validate_config(self):
+        param_log_name = self._str_name()
+
         if self.constant and not self.default:
             message = 'Constant should have default value specified'
-            raise Exception('Failed to set parameter ' + self.name + ' to constant: ' + message)
+            raise Exception('Failed to set parameter "' + param_log_name + '" to constant: ' + message)
 
         if self.type == PARAM_TYPE_SERVER_FILE:
             if not self.file_dir:
-                raise Exception('Parameter ' + self.name + ' has missing config file_dir')
+                raise Exception('Parameter ' + param_log_name + ' has missing config file_dir')
+
+    def _str_name(self):
+        names = (name for name in (self.name, self.param, self.description) if name)
+        return next(names, 'unknown')
 
     def validate_parameter_dependencies(self, all_parameters):
         required_parameters = self.get_required_parameters()

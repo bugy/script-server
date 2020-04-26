@@ -98,6 +98,10 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertRaisesRegex(Exception, 'Constant should have default value specified',
                                _create_parameter_model, {'name': 'def_param', 'constant': 'true'})
 
+    def test_prohibit_constant_without_default_and_name(self):
+        self.assertRaisesRegex(Exception, 'Constant should have default value specified',
+                               _create_parameter_model, {'constant': 'true'})
+
     def test_values_from_script(self):
         parameter_model = _create_parameter_model({
             'name': 'def_param',
