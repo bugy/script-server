@@ -1,6 +1,6 @@
 'use strict';
 
-import {randomInt} from '@/common/utils/common';
+import {randomInt, trimTextNodes} from '@/common/utils/common';
 
 describe('Test common.js', function () {
 
@@ -85,6 +85,42 @@ describe('Test common.js', function () {
             }
 
             expect(values).toEqual(new Set([-13, -14, -15, -16]));
+        });
+    });
+
+    describe('test trimTextNodes', function () {
+
+        it('Test trim single text node', function () {
+            const div = document.createElement('div');
+            div.innerHTML = '  \n hello  world !\t '
+            trimTextNodes(div);
+
+            expect(div.innerHTML).toBe('hello  world !')
+        });
+
+        it('Test trim multiple text nodes', function () {
+            const div = document.createElement('div');
+            div.innerHTML = '  \n hello  world !\t '
+            div.appendChild(document.createTextNode(' another record '))
+            div.appendChild(document.createTextNode('+ one more  '))
+            trimTextNodes(div);
+
+            expect(div.innerHTML).toBe('hello  world !another record+ one more')
+        });
+
+        it('Test trim multiple text nodes with spans', function () {
+            const div = document.createElement('div');
+            div.innerHTML = '  \n hello  world !\t '
+
+            const child = document.createElement('span');
+            child.innerHTML = ' another record ';
+            div.appendChild(child)
+
+            div.appendChild(document.createTextNode(' + one more  '))
+
+            trimTextNodes(div);
+
+            expect(div.innerHTML).toBe('hello  world !<span> another record </span>+ one more')
         });
     });
 });

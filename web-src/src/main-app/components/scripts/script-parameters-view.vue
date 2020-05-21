@@ -67,13 +67,13 @@
 <style scoped>
     .script-parameters-panel >>> {
         margin-top: 15px;
-        margin-right: 24px;
+        margin-right: 0;
         display: flex;
         flex-wrap: wrap;
     }
 
     .script-parameters-panel >>> .parameter {
-        margin: 7px 0 20px 24px;
+        margin: 7px 24px 20px 0;
 
         flex-grow: 1;
         flex-shrink: 0;

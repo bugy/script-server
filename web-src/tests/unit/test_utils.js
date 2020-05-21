@@ -97,3 +97,5 @@ export function createVue(component, properties, store = null) {
 export function destroy(component) {
     component.destroy();
 }
+
+export const flushPromises = () => new Promise(resolve => setTimeout(resolve));

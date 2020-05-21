@@ -1,8 +1,10 @@
-import {deepCloneObject, forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
+import {forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
 import axios from 'axios';
 import clone from 'lodash/clone';
 import get from 'lodash/get';
 import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
+
+export const axiosInstance = axios.create();
 
 export default {
     namespaced: true,
@@ -21,6 +23,10 @@ export default {
         },
         REMOVE_EXECUTOR(state, executor) {
             delete state.executors[executor.state.id];
+
+            if (state.currentExecutor === executor) {
+                state.currentExecutor = null;
+            }
         }
     },
 
@@ -40,15 +46,19 @@ export default {
     },
 
     actions: {
-        init({state, commit}) {
+        init({state, commit, dispatch}) {
             const store = this;
 
-            axios.get('executions/active')
+            axiosInstance.get('executions/active')
                 .then(({data: activeExecutionIds}) => {
+                    activeExecutionIds.sort((a, b) => parseInt(a) - parseInt(b));
+
+                    const requests = [];
+
                     for (let i = 0; i < activeExecutionIds.length; i++) {
                         const executionId = activeExecutionIds[i];
 
-                        axios.get('executions/config/' + executionId)
+                        requests.push(axiosInstance.get('executions/config/' + executionId)
                             .then((({data: executionConfig}) => {
                                 const executor = scriptExecutor(executionId, executionConfig.scriptName, executionConfig.parameterValues);
 
@@ -56,22 +66,36 @@ export default {
                                 store.dispatch('executions/' + executionId + '/reconnect');
 
                                 commit('ADD_EXECUTOR', executor);
-                                if (isNull(state.currentExecutor) && store.state.scripts.selectedScript === executionConfig.scriptName) {
-                                    commit('SELECT_EXECUTOR', executor);
-                                    store.dispatch('scriptSetup/setParameterValues', {
-                                        values: deepCloneObject(executionConfig.parameterValues),
-                                        forceAllowedValues: true,
-                                        scriptName: executionConfig.scriptName
-                                    });
-                                }
-                            }));
+
+                                return executor;
+                            })));
                     }
-                });
+
+                    if (!isNull(state.currentExecutor) || isNull(store.state.scripts.selectedScript)) {
+                        return;
+                    }
+
+                    axios.all(requests)
+                        .then(axios.spread((...executors) => {
+                            if (!isNull(state.currentExecutor) || isNull(store.state.scripts.selectedScript)) {
+                                return;
+                            }
+
+                            const selectedScript = store.state.scripts.selectedScript;
+
+                            for (const executor of executors) {
+                                if (selectedScript === executor.state.scriptName) {
+                                    dispatch('selectExecutor', executor);
+                                    break;
+                                }
+                            }
+                        }))
+                        .catch(e => console.log(e));
+                })
+
         },
 
         selectScript({state, commit, dispatch}, {selectedScript}) {
-            const store = this;
-
             let selectedExecutor = null;
 
             if ((!isNull(state.currentExecutor))) {
@@ -82,9 +106,7 @@ export default {
                 });
 
                 for (const executor of executorsToRemove) {
-                    dispatch(executor.state.id + '/cleanup');
-                    store.unregisterModule(['executions', executor.state.id]);
-                    commit('REMOVE_EXECUTOR', executor)
+                    dispatch('_removeExecutor', executor);
                 }
             }
 
@@ -94,17 +116,10 @@ export default {
                 }
             });
 
-            commit('SELECT_EXECUTOR', selectedExecutor);
-            if (selectedExecutor) {
-                dispatch('scriptSetup/setParameterValues', {
-                    values: selectedExecutor.state.parameterValues,
-                    forceAllowedValues: true,
-                    scriptName: selectedScript
-                }, {root: true});
-            }
+            dispatch('selectExecutor', selectedExecutor);
         },
 
-        startExecution({rootState, commit}) {
+        startExecution({rootState, commit, dispatch}) {
             const store = this;
 
             const parameterValues = clone(rootState.scriptSetup.parameterValues);
@@ -128,9 +143,9 @@ export default {
             store.registerModule(['executions', 'temp'], executor);
             store.dispatch('executions/temp/setInitialising');
 
-            commit('SELECT_EXECUTOR', executor);
+            dispatch('selectExecutor', executor);
 
-            axios.post('executions/start', formData)
+            axiosInstance.post('executions/start', formData)
                 .then(({data: executionId}) => {
                     store.unregisterModule(['executions', 'temp']);
                     store.registerModule(['executions', executionId], executor);
@@ -193,6 +208,35 @@ export default {
                     reject();
                 }
             });
+        },
+
+        selectExecutor({commit, state, dispatch}, executor) {
+            const currentExecutor = state.currentExecutor;
+            if ((!isNull(currentExecutor))) {
+                if ((currentExecutor.state.scriptName === this.state.scripts.selectedScript)
+                    && (currentExecutor.state.status === STATUS_FINISHED)) {
+                    dispatch('_removeExecutor', currentExecutor);
+                }
+            }
+
+            commit('SELECT_EXECUTOR', executor);
+            if (executor) {
+                dispatch('scriptSetup/setParameterValues', {
+                    values: executor.state.parameterValues,
+                    forceAllowedValues: true,
+                    scriptName: executor.state.scriptName
+                }, {root: true});
+            }
+        },
+
+        _removeExecutor({dispatch, state, commit}, executor) {
+            if (!(executor.state.id in state.executors)) {
+                return;
+            }
+
+            dispatch(executor.state.id + '/cleanup');
+            this.unregisterModule(['executions', executor.state.id]);
+            commit('REMOVE_EXECUTOR', executor)
         }
     }
 }

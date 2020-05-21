@@ -1,10 +1,7 @@
 'use strict';
 import ScriptLoadingText, {__RewireAPI__ as CommonRewire} from '@/main-app/components/scripts/ScriptLoadingText';
 import {mount} from '@vue/test-utils';
-import {config as chaiConfig} from 'chai';
 import {timeout, vueTicks} from '../../../test_utils';
-
-chaiConfig.truncateThreshold = 0;
 
 const DEFAULT_DELAY = 10;
 

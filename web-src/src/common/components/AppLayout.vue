@@ -133,6 +133,8 @@
 
         display: flex;
         flex-direction: column;
+
+        width: 100vw;
     }
 
     .app-menu-button {
@@ -141,7 +143,6 @@
         float: left;
         position: relative;
         z-index: 1;
-        margin-right: 8px;
         margin-top: 12px;
         text-align: center;
     }
@@ -155,7 +156,46 @@
         line-height: 1;
     }
 
+    .content-header {
+        flex: 0 0 auto;
+        overflow: hidden;
+        width: 100%;
+
+        z-index: 1;
+
+        padding-left: 24px;
+
+        border-bottom: 1px solid #C8C8C8;
+        position: relative;
+
+        background: url('../../assets/titleBackground_small.jpg') no-repeat;
+        background-size: cover;
+    }
+
+    .content-header.drop-shadow {
+        box-shadow: 2px 2px 4px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    .content-header.borderless {
+        border-bottom: none;
+    }
+
+    .content-header .progress {
+        margin: 0;
+        bottom: 0;
+        position: absolute;
+        left: 0;
+    }
+
+    .content-panel {
+        flex: 1 1 0;
+    }
+
     @media (max-width: 992px) {
+        .content-header {
+            padding-left: 0;
+        }
+
         .app-sidebar {
             position: absolute;
             height: 100vh;
@@ -172,36 +212,15 @@
             opacity: 1;
             display: block;
             background-color: rgba(0, 0, 0, 0.4);
+            position: absolute;
+            z-index: 500;
+            width: 100%;
+            height: 100%;
         }
 
         .app-menu-button {
             display: block;
+            margin-right: 12px;
         }
-    }
-
-    .content-header {
-        flex: 0 0 auto;
-        z-index: 1;
-
-        border-bottom: 1px solid #C8C8C8;
-        position: relative;
-    }
-
-    .content-header.drop-shadow {
-        box-shadow: 2px 2px 4px 0 rgba(0, 0, 0, 0.3);
-    }
-
-    .content-header.borderless {
-        border-bottom: none;
-    }
-
-    .content-header .progress {
-        margin: 0;
-        bottom: 0;
-        position: absolute;
-    }
-
-    .content-panel {
-        flex: 1 1 0;
     }
 </style>

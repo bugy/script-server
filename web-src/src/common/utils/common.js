@@ -659,3 +659,11 @@ export function randomInt(start, end) {
     const random = Math.random() * (end - start);
     return Math.floor(random) + start
 }
+
+export function trimTextNodes(el) {
+    for (let node of el.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            node.data = node.data.trim();
+        }
+    }
+}

@@ -35,6 +35,13 @@ const store = new Vuex.Store({
             dispatch('executions/init');
         },
 
+        resetScript({dispatch, state}) {
+            const selectedScript = state.scripts.selectedScript
+
+            dispatch('scriptSetup/reset');
+            dispatch('scriptConfig/reloadScript', {selectedScript});
+        },
+
         logout({dispatch}) {
             dispatch('executions/stopAll')
                 .then(() => dispatch('auth/logout'))
@@ -48,8 +55,7 @@ const store = new Vuex.Store({
 });
 
 store.watch((state) => state.scripts.selectedScript, (selectedScript) => {
-    store.dispatch('scriptSetup/reset');
-    store.dispatch('scriptConfig/reloadScript', {selectedScript});
+    store.dispatch('resetScript');
     store.dispatch('executions/selectScript', {selectedScript});
 });
 

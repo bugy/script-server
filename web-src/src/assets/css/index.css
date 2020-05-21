@@ -156,8 +156,3 @@ input[type=checkbox]:not(.browser-default) + span {
 #login-google_oauth-button[disabled] {
     color: #B0B0B0;
 }
-
-.main-content-header {
-    background: url('../titleBackground_small.jpg') no-repeat;
-    background-size: cover;
-}

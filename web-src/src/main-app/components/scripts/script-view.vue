@@ -362,7 +362,7 @@
 
     .script-description,
     .script-loading-text {
-        margin: 15px 17px 0;
+        margin: 0;
     }
 
     .actions-panel {
@@ -372,7 +372,6 @@
     .button-execute {
         flex: 6 1 5em;
 
-        margin-left: 2%;
         margin-right: 0;
         margin-top: 6px;
     }
@@ -381,13 +380,12 @@
         flex: 1 0 5em;
 
         margin-left: 12px;
-        margin-right: 2%;
         margin-top: 6px;
     }
 
     .script-input-panel {
-        width: calc(100% - 24px);
-        margin: 18px 12px 0;
+        margin-top: 20px;
+        margin-bottom: 0;
     }
 
     .script-input-panel input[type=text] {
@@ -423,7 +421,7 @@
     }
 
     .files-download-panel {
-        margin: 12px 12px 0;
+        margin-top: 12px;
     }
 
     .files-download-panel a {
@@ -441,9 +439,6 @@
     }
 
     .script-view >>> .log-panel {
-        margin-right: 12px;
-        margin-left: 12px;
-        width: calc(100% - 24px);
         margin-top: 12px;
     }
 

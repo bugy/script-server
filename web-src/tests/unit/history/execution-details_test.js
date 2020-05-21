@@ -5,7 +5,7 @@ import {createLocalVue, mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import {vueTicks} from '../test_utils';
+import {flushPromises, vueTicks} from '../test_utils';
 
 
 chaiConfig.truncateThreshold = 0;
@@ -14,7 +14,6 @@ const localVue = createLocalVue();
 localVue.use(Vuex);
 
 const axiosMock = new MockAdapter(axiosInstance);
-const flushPromises = () => new Promise(resolve => setTimeout(resolve));
 
 
 function mockGetExecution(id, startTime, user, script, status, exitCode, command, log) {

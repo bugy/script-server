@@ -3,7 +3,7 @@
         <router-link :to="baseRoute" class="breadcrumb">
             <h3 class="header">History</h3>
         </router-link>
-        <router-link :to="$route.path" class="breadcrumb" v-if="selectedExecutionString">
+        <router-link :to="$route.path" class="breadcrumb execution-breadcrumb" v-if="selectedExecutionString">
             <h3 class="header">{{ selectedExecutionString }}</h3>
         </router-link>
     </div>
@@ -37,17 +37,30 @@
 
 <style scoped>
     .main-content-header {
-        padding: 0.9rem;
+        padding: 0;
+        height: 56px;
+        display: flex;
+        align-items: center;
     }
 
     .main-content-header h3 {
+        padding: 0;
         display: inline;
-        padding: 0 0.3rem;
     }
 
     .main-content-header h3,
     .main-content-header .breadcrumb:before {
         color: rgba(0, 0, 0, 0.87);
-        line-height: 25px;
+        line-height: 1.3em;
+        font-size: 1.3em;
+    }
+
+    .main-content-header .execution-breadcrumb {
+        color: rgba(0, 0, 0, 0.87);
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 </style>

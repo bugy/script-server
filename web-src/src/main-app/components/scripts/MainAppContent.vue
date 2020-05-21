@@ -58,7 +58,7 @@
         height: 100%;
 
         background: white;
-        padding-bottom: 12px;
+        padding: 16px 24px 12px;
 
         display: flex;
         flex-direction: column;
@@ -77,7 +77,6 @@
     }
 
     .error-panel {
-        margin-left: 17px;
         color: #F44336;
         margin-top: 17px;
     }
