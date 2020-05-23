@@ -153,6 +153,38 @@ class TestFillParameterValues(unittest.TestCase):
         result = fill_parameter_values(self.create_parameters('p1'), 'Value = ${xyz}', {'p1': '12345'})
         self.assertEqual('Value = ${xyz}', result)
 
+    def test_fill_when_server_file_recursive_and_one_level(self):
+        parameters = [create_parameter_model(
+            'p1',
+            type='server_file',
+            file_dir=test_utils.temp_folder,
+            file_recursive=True)]
+
+        result = fill_parameter_values(parameters, 'Value = ${p1}', {'p1': ['folder']})
+        expected_value = os.path.join(test_utils.temp_folder, 'folder')
+        self.assertEqual('Value = ' + expected_value, result)
+
+    def test_fill_when_server_file_recursive_and_multiple_levels(self):
+        parameters = [create_parameter_model(
+            'p1',
+            type='server_file',
+            file_dir=test_utils.temp_folder,
+            file_recursive=True)]
+
+        result = fill_parameter_values(parameters, 'Value = ${p1}', {'p1': ['folder', 'sub', 'log.txt']})
+        expected_value = os.path.join(test_utils.temp_folder, 'folder', 'sub', 'log.txt')
+        self.assertEqual('Value = ' + expected_value, result)
+
+    def test_fill_when_server_file_plain(self):
+        parameters = [create_parameter_model(
+            'p1',
+            type='server_file',
+            file_dir=test_utils.temp_folder,
+            file_recursive=True)]
+
+        result = fill_parameter_values(parameters, 'Value = ${p1}', {'p1': 'folder'})
+        self.assertEqual('Value = folder', result)
+
     def create_parameters(self, *names):
         result = []
         for name in names:
@@ -160,6 +192,14 @@ class TestFillParameterValues(unittest.TestCase):
             result.append(parameter)
 
         return result
+
+    def setUp(self) -> None:
+        super().setUp()
+        test_utils.setup()
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        test_utils.cleanup()
 
 
 class TestResolveEnvVars(unittest.TestCase):

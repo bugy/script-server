@@ -179,7 +179,8 @@ def fill_parameter_values(parameter_configs, template, values):
             value = ''
 
         if not isinstance(value, str):
-            value = str(value)
+            mapped_value = parameter_config.map_to_script(value)
+            value = parameter_config.to_script_args(mapped_value)
 
         result = result.replace('${' + parameter_name + '}', str(value))
 
