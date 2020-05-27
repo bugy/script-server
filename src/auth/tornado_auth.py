@@ -23,8 +23,10 @@ class TornadoAuth():
             return True
 
         username = self._get_current_user(request_handler)
+        if not username:
+            return False
 
-        return bool(username)
+        return self.authenticator.is_active(username)
 
     @staticmethod
     def _get_current_user(request_handler):
