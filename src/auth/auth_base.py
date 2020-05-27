@@ -16,6 +16,9 @@ class Authenticator(metaclass=abc.ABCMeta):
     def get_groups(self, user, known_groups=None):
         return []
 
+    def is_active(self, user):
+        return True
+
 
 class AuthRejectedError(Exception):
     """Credentials, provided by user, were rejected by the authentication mechanism (user is unknown to the server)"""
