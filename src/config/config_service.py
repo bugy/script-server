@@ -14,7 +14,7 @@ LOGGER = logging.getLogger('config_service')
 
 
 def _script_name_to_file_name(script_name):
-    escaped_whitespaces = re.sub('\\s', '_', script_name)
+    escaped_whitespaces = re.sub('[\\s/]+', '_', script_name).strip("_")
     filename = to_filename(escaped_whitespaces)
     return filename + '.json'
 
