@@ -40,8 +40,7 @@ else:
 LOGGER = logging.getLogger('main')
 
 
-def get_secret(temp_folder):
-    secret_file = os.path.join(temp_folder, 'secret.dat')
+def get_secret(secret_file):
     if os.path.exists(secret_file):
         secret = file_utils.read_file(secret_file, byte_content=True)
         if secret:
@@ -78,7 +77,7 @@ def main():
 
     server_config = server_conf.from_json(SERVER_CONF_PATH, TEMP_FOLDER)
 
-    secret = get_secret(TEMP_FOLDER)
+    secret = get_secret(server_config.secret_storage_file)
 
     tornado_client_config.initialize()
 
