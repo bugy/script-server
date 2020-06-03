@@ -239,7 +239,7 @@ def read_short(file_path, json_object):
     config = ShortConfig()
 
     config.name = _read_name(file_path, json_object)
-    config.allowed_users = json_object.get('allowed_users')
+    config. allowed_users= json_object.get('allowed_users')
     config.group = read_str_from_config(json_object, 'group', blank_to_none=True)
 
     hidden = read_bool_from_config('hidden', json_object, default=False)
@@ -249,6 +249,8 @@ def read_short(file_path, json_object):
     if config.allowed_users is None:
         config.allowed_users = ANY_USER
     elif (config.allowed_users == '*') or ('*' in config.allowed_users):
+        config.allowed_users = ANY_USER
+    elif not config.allowed_users:
         config.allowed_users = ANY_USER
 
     return config
