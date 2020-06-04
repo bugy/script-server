@@ -26,7 +26,11 @@ class TornadoAuth():
         if not username:
             return False
 
-        return self.authenticator.is_active(username)
+        active = self.authenticator.is_active(username, request_handler)
+        if not active:
+            self.logout(request_handler)
+
+        return active
 
     @staticmethod
     def _get_current_user(request_handler):
@@ -100,3 +104,5 @@ class TornadoAuth():
         LOGGER.info('Logging out ' + username)
 
         request_handler.clear_cookie('username')
+
+        self.authenticator.logout(username, request_handler)

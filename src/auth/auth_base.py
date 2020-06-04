@@ -16,8 +16,11 @@ class Authenticator(metaclass=abc.ABCMeta):
     def get_groups(self, user, known_groups=None):
         return []
 
-    def is_active(self, user):
+    def is_active(self, user, request_handler):
         return True
+
+    def logout(self, user, request_handler):
+        return None
 
 
 class AuthRejectedError(Exception):

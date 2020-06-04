@@ -212,9 +212,10 @@ class TestAuthConfig(unittest.TestCase):
                 "client_id": "1234",
                 "secret": "abcd",
                 "group_search": "script-server",
-                "ttl": 60,
+                "ttl": 120,
                 "dump": "/tmp/dump.json",
-                "session_expire_min": 60
+                "session_expire_min": 60,
+                "group_support": False
             },
             'access': {
                  'allowed_users': []
@@ -225,10 +226,29 @@ class TestAuthConfig(unittest.TestCase):
         self.assertEquals('abcd', config.authenticator.secret)
         self.assertEquals('https://gitlab', config.authenticator._GITLAB_PREFIX)
         self.assertEquals('script-server', config.authenticator.gitlab_group_search)
-        self.assertEquals(60, config.authenticator.gitlab_update)
+        self.assertEquals(120, config.authenticator.gitlab_update)
         self.assertEquals("/tmp/dump.json", config.authenticator.gitlab_dump)
         self.assertEquals(60*60, config.authenticator.session_expire)
+        self.assertEquals(False, config.authenticator.gitlab_group_support)
 
+    def test_gitlab_oauth_default(self):
+        config = _from_json({
+            'auth': {
+                "type": "gitlab",
+                "client_id": "1234",
+                "secret": "abcd",
+            },
+            'access': {
+                 'allowed_users': []
+            }})
+
+        self.assertIsInstance(config.authenticator, GitlabOAuthAuthenticator)
+        self.assertEquals('https://gitlab.com', config.authenticator._GITLAB_PREFIX)
+        self.assertIsNone(config.authenticator.gitlab_group_search)
+        self.assertIsNone(config.authenticator.gitlab_update)
+        self.assertIsNone(config.authenticator.gitlab_dump)
+        self.assertIsNone(config.authenticator.session_expire)
+        self.assertEquals(True, config.authenticator.gitlab_group_support)
 
     def test_ldap(self):
         config = _from_json({'auth': {'type': 'ldap',
