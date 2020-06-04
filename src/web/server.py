@@ -105,6 +105,13 @@ def check_authorization(func):
         auth = self.application.auth
         authorizer = self.application.authorizer
 
+        login_url = self.get_login_url()
+        request_path = self.request.path
+
+        login_resource = is_allowed_during_login(request_path, login_url, self)
+        if login_resource:
+            return func(self, *args, **kwargs)
+
         authenticated = auth.is_authenticated(self)
         access_allowed = authenticated and authorizer.is_allowed_in_app(_identify_user(self))
 
@@ -118,11 +125,7 @@ def check_authorization(func):
             else:
                 raise tornado.web.HTTPError(code, message)
 
-        login_url = self.get_login_url()
-        request_path = self.request.path
-
-        login_resource = is_allowed_during_login(request_path, login_url, self)
-        if (authenticated and access_allowed) or login_resource:
+        if authenticated and access_allowed:
             return func(self, *args, **kwargs)
 
         if not isinstance(self, tornado.web.StaticFileHandler):
@@ -171,7 +174,10 @@ def requires_admin_rights(func):
 
 
 def has_admin_rights(request_handler):
-    user_id = _identify_user(request_handler)
+    try:
+        user_id = _identify_user(request_handler)
+    except Exception:
+        return False
     return request_handler.application.authorizer.is_admin(user_id)
 
 
