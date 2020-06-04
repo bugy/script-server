@@ -129,7 +129,7 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
             stateStr = dumpFile.read()
             self.user_states = escape.json_decode(stateStr)
             dumpFile.close()
-            LOGGER.info("Readed state from file %s: " % self.gitlab_dump + stateStr)
+            LOGGER.info("Readed state from file %s: " % self.gitlab_dump + str(self.user_states))
 
         self.gitlab_group_search = params_dict.get('group_search')
 
@@ -167,8 +167,7 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
             return []
         now = time.time()
         if (self.user_states[user]['updated'] + self.gitlab_update) < now and not self.user_states[user]['updating']:
-            self.user_states[user]['updating'] = True
-            tornado.ioloop.IOLoop.current().spawn_callback(self.update_state, user)
+            self.do_update_groups(user)
         return self.user_states[user]['groups']
 
     def clean_expired_sessions(self):
@@ -185,6 +184,10 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
             dumpFile.write(escape.json_encode(self.user_states))
             dumpFile.close()
             LOGGER.debug("Dumped state to file %s" % self.gitlab_dump)
+
+    def do_update_groups(self, user):
+        self.user_states[user]['updating'] = True
+        tornado.ioloop.IOLoop.current().spawn_callback(self.update_state, user)
 
     @gen.coroutine
     def update_state(self, user):
