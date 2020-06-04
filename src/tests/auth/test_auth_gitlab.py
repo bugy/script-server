@@ -67,9 +67,9 @@ class TestAuthConfig(TestCase):
                 "client_id": "1234",
                 "secret": "abcd",
                 "group_search": "script-server",
-                "ttl": 80,
-                "dump": tmp[1],
-                "session_expire_min": 10
+                "auth_info_ttl": 80,
+                "state_dump_file": tmp[1],
+                "session_expire_minutes": 10
             },
             'access': {
                  'allowed_users': []
@@ -170,8 +170,8 @@ class TestAuthConfig(TestCase):
                 "client_id": "1234",
                 "secret": "abcd",
                 "group_search": "script-server",
-                "ttl": 80,
-                "session_expire_min": 1,
+                "auth_info_ttl": 80,
+                "session_expire_minutes": 1,
                 "group_support": False
             },
             'access': {

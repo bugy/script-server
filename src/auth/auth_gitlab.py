@@ -121,10 +121,10 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
 
         self.states = {}
         self.user_states = {}
-        self.gitlab_update = params_dict.get('ttl')
-        self.gitlab_dump = params_dict.get('dump')
+        self.gitlab_update = params_dict.get('auth_info_ttl')
+        self.gitlab_dump = params_dict.get('state_dump_file')
         self.gitlab_group_support = params_dict.get('group_support', True)
-        self.session_expire = int(params_dict.get('session_expire_min', 0)) * 60
+        self.session_expire = int(params_dict.get('session_expire_minutes', 0)) * 60
         now = time.time()
 
         if self.gitlab_dump and os.path.exists(self.gitlab_dump):

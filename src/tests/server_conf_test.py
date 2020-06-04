@@ -212,9 +212,9 @@ class TestAuthConfig(unittest.TestCase):
                 "client_id": "1234",
                 "secret": "abcd",
                 "group_search": "script-server",
-                "ttl": 120,
-                "dump": "/tmp/dump.json",
-                "session_expire_min": 60,
+                "auth_info_ttl": 120,
+                "state_dump_file": "/tmp/dump.json",
+                "session_expire_minutes": 60,
                 "group_support": False
             },
             'access': {
