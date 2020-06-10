@@ -15,6 +15,8 @@ from model import model_helper
 
 from typing import List, Any, Dict, cast, Iterable, Union, Optional
 
+from utils import file_utils
+
 LOGGER = logging.getLogger('script_server.GitlabAuthorizer')
 
 
@@ -58,6 +60,7 @@ class GitlabOAuth2Mixin(OAuth2Mixin):
             body=body,
             raise_error=False)
 
+        default_response_values = {"state": "unknown"}
         response_values = {}
         if response.body:
             response_values = escape.json_decode(response.body)
@@ -88,7 +91,7 @@ class GitlabOAuth2Mixin(OAuth2Mixin):
             LOGGER.error(error_message)
             raise AuthFailureError(error_message)
 
-        return {**response_values, **user}
+        return {**default_response_values, **response_values, **user}
 
     async def fetch_user(self, access_token):
         user = await self.oauth2_request(
@@ -115,9 +118,9 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         secret_value = model_helper.read_obligatory(params_dict, 'secret', ' for Gitlab OAuth')
         self.secret = model_helper.resolve_env_vars(secret_value, full_match=True)
 
-        gitlabPrefix = params_dict.get('url')
-        if not model_helper.is_empty(gitlabPrefix):
-            self._GITLAB_PREFIX = gitlabPrefix
+        gitlab_prefix = params_dict.get('url')
+        if not model_helper.is_empty(gitlab_prefix):
+            self._GITLAB_PREFIX = gitlab_prefix
 
         self.states = {}
         self.user_states = {}
@@ -128,15 +131,13 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         now = time.time()
 
         if self.gitlab_dump and os.path.exists(self.gitlab_dump):
-            dumpFile = open(self.gitlab_dump, "r")
-            stateStr = dumpFile.read()
-            self.user_states = escape.json_decode(stateStr)
-            dumpFile.close()
-            for userData in list(self.user_states.keys()):
+            state_str = file_utils.read_file(self.gitlab_dump)
+            self.user_states = escape.json_decode(state_str)
+            for user_data in list(self.user_states.keys()):
                 # force to update user from gitlab
-                self.user_states[userData]['updating'] = False
+                self.user_states[user_data]['updating'] = False
                 if self.gitlab_update:
-                    self.user_states[userData]['updated'] = now - self.gitlab_update - 1
+                    self.user_states[user_data]['updated'] = now - self.gitlab_update - 1
             LOGGER.info("Readed state from file %s: " % self.gitlab_dump + str(self.user_states))
 
         self.gitlab_group_search = params_dict.get('group_search')
@@ -152,40 +153,29 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
             LOGGER.error('Code is not specified')
             raise AuthBadRequestException('Missing authorization information. Please contact your administrator')
 
-        return self.validate_user(code, request_handler)
+        return self.read_user(code, request_handler)
 
-    def is_active(self, user, request_handler):
+    def validate_user(self, user, request_handler):
         access_token = request_handler.get_secure_cookie('token')
         if access_token is None:
             return False
         access_token = access_token.decode("utf-8")
 
+        self.clean_and_persist_sessions()
+
         if self.user_states.get(user) is None:
             LOGGER.debug("User %s not found in state" % user)
             return False
 
-        if self.user_states[user]['state'] is None or self.user_states[user]['state'] != "active":
-            LOGGER.info("User %s state inactive: " % user + str(self.user_states[user]))
-            del self.user_states[user]
-            self.dump_sessions_to_file()
-            return False
-
         now = time.time()
-        # check session ttl
-        if self.session_expire and (self.user_states[user]['visit'] + self.session_expire) < now:
-            del self.user_states[user]
-            LOGGER.info("User %s session expired, logged out" % user)
-            self.dump_sessions_to_file()
-            return False
-
         self.user_states[user]['visit'] = now
 
         # check gitlab response ttl, also check for stale updating (ttl*2)
         if self.gitlab_update is not None:
-            stale = (self.user_states[user]['updated'] + max(self.gitlab_update*2, 60)) < now
+            stale_update = (self.user_states[user]['updated'] + max(self.gitlab_update*2, 60)) < now
             ttl_expired = (self.user_states[user]['updated'] + self.gitlab_update) < now
             updating_now = self.user_states[user]['updating'] is True
-            if ttl_expired and (not updating_now or stale):
+            if ttl_expired and (not updating_now or stale_update):
                 if self.gitlab_group_support:
                     self.do_update_groups(user, access_token)
                 else:
@@ -203,31 +193,38 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
     def logout(self, user, request_handler):
         request_handler.clear_cookie('token')
 
-    def clean_expired_sessions(self):
+    def clean_sessions(self):
         now = time.time()
-        if self.session_expire:
-            for userData in list(self.user_states.keys()):
-                if (self.user_states[userData]['visit'] + self.session_expire) < now:
-                    LOGGER.debug("User %s session expired and removed" % userData)
-                    del self.user_states[userData]
+        for user_data in list(self.user_states.keys()):
+            if self.session_expire and (self.user_states[user_data]['visit'] + self.session_expire) < now:
+                LOGGER.info("User %s removed because session expired" % user_data)
+                del self.user_states[user_data]
+                continue
+            if self.user_states[user_data]['state'] is None or self.user_states[user_data]['state'] != "active":
+                LOGGER.info("User %s removed because state '%s' != 'active'" %
+                            (user_data, self.user_states[user_data]['state']))
+                del self.user_states[user_data]
+                continue
 
-    def dump_sessions_to_file(self):
+    def clean_and_persist_sessions(self):
+        self.clean_sessions()
         if self.gitlab_dump:
-            dumpFile = open(self.gitlab_dump, "w")
-            dumpFile.write(escape.json_encode(self.user_states))
-            dumpFile.close()
-            LOGGER.debug("Dumped state to file %s" % self.gitlab_dump)
+            self.persist_session()
+
+    def persist_session(self):
+        file_utils.write_file(self.gitlab_dump, escape.json_encode(self.user_states))
+        LOGGER.debug("Dumped state to file %s" % self.gitlab_dump)
 
     def do_update_user(self, user, access_token):
         self.user_states[user]['updating'] = True
-        tornado.ioloop.IOLoop.current().spawn_callback(self.update_user_state, user, access_token)
+        tornado.ioloop.IOLoop.current().spawn_callback(self.update_user, user, access_token)
 
     def do_update_groups(self, user, access_token):
         self.user_states[user]['updating'] = True
-        tornado.ioloop.IOLoop.current().spawn_callback(self.update_group_list, user, access_token)
+        tornado.ioloop.IOLoop.current().spawn_callback(self.update_groups, user, access_token)
 
     @gen.coroutine
-    def update_group_list(self, user, access_token):
+    def update_groups(self, user, access_token):
         group_list = yield self.read_groups(access_token)
         if group_list is None:
             LOGGER.error("Failed to refresh groups for %s" % user)
@@ -239,12 +236,10 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         self.user_states[user]['updating'] = False
         self.user_states[user]['updated'] = now
         self.user_states[user]['visit'] = now
-        self.clean_expired_sessions()
-        self.dump_sessions_to_file()
-        return
+        self.clean_and_persist_sessions()
 
     @gen.coroutine
-    def update_user_state(self, user, access_token):
+    def update_user(self, user, access_token):
         user_state = yield self.fetch_user(access_token)
         if user_state is None:
             LOGGER.error("Failed to fetch user %s" % user)
@@ -256,8 +251,7 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         self.user_states[user]['updating'] = False
         self.user_states[user]['updated'] = now
         self.user_states[user]['visit'] = now
-        self.clean_expired_sessions()
-        self.dump_sessions_to_file()
+        self.clean_and_persist_sessions()
         return
 
     @gen.coroutine
@@ -288,7 +282,7 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         return groups
 
     @gen.coroutine
-    def validate_user(self, code, request_handler):
+    def read_user(self, code, request_handler):
         user_response_future = self.get_authenticated_user(
             get_path_for_redirect(request_handler),
             self.client_id,
@@ -316,10 +310,8 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         user_response['visit'] = time.time()
         user_response['updating'] = False
         oauth_access_token = user_response.pop('access_token')
-        oauth_refresh_token = user_response.pop('refresh_token') # not used atm
         self.user_states[user_response['email']] = user_response
-        self.clean_expired_sessions()
-        self.dump_sessions_to_file()
+        self.clean_and_persist_sessions()
         request_handler.set_secure_cookie('token', oauth_access_token)
 
         return user_response['email']

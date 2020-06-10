@@ -26,7 +26,7 @@ class TornadoAuth():
         if not username:
             return False
 
-        active = self.authenticator.is_active(username, request_handler)
+        active = self.authenticator.validate_user(username, request_handler)
         if not active:
             self.logout(request_handler)
 
