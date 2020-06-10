@@ -135,7 +135,9 @@ def create_script_param_config(
         file_dir=None,
         file_recursive=None,
         file_type=None,
-        file_extensions=None):
+        file_extensions=None,
+        param_space=None,
+        repeat_arg=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -191,6 +193,12 @@ def create_script_param_config(
 
     if file_type is not None:
         conf['file_type'] = file_type
+
+    if param_space is not None:
+        conf['param_space'] = param_space
+
+    if repeat_arg is not None:
+        conf['repeat_arg'] = repeat_arg
 
     return conf
 

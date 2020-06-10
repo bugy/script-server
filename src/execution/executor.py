@@ -219,13 +219,34 @@ def build_command_args(param_values, config):
                     result.append(parameter.param)
 
             elif value:
-                if parameter.param:
-                    result.append(parameter.param)
+
+                def add_param_and_value(parameter_sh, value_sh):
+                    if parameter_sh.param:
+                        result.append(parameter_sh.param)
+                    if isinstance(value_sh, list):
+                        result.extend(value_sh)
+                    else:
+                        result.append(value_sh)
 
                 if isinstance(value, list):
-                    result.extend(value)
+                    if parameter.repeat_arg:
+                        for val in value:
+                            if parameter.param_space:
+                                add_param_and_value(parameter, val)
+                            else:
+                                result.append(parameter.param + str(val))
+                    else:
+                        if parameter.param_space:
+                            add_param_and_value(parameter, value)
+                        else:
+                            result.append(parameter.param + str(value[0]))
+                            if len(value) > 1:
+                                result.extend(value[1:])
                 else:
-                    result.append(value)
+                    if parameter.param_space:
+                        add_param_and_value(parameter, value)
+                    else:
+                        result.append(parameter.param + str(value))
 
     return result
 
