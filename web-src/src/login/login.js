@@ -57,40 +57,26 @@ function setupCredentials(loginContainer) {
 }
 
 function setupGoogleOAuth(loginContainer, authConfig) {
-    var credentialsTemplate = createTemplateElement('login-google_oauth-template');
-    loginContainer.appendChild(credentialsTemplate);
-
-    var oauthLoginButton = document.getElementById('login-google_oauth-button');
-    oauthLoginButton.onclick = function () {
-        var token = guid(32);
-
-        var localState = {
-            'token': token,
-            'urlFragment': window.location.hash
-        };
-        localState[NEXT_URL_KEY] = getQueryParameter(NEXT_URL_KEY);
-
-        saveState(localState);
-
-        const queryArgs = {
-            'redirect_uri': getUnparameterizedUrl(),
-            'state': token,
-            'client_id': authConfig['client_id'],
-            'scope': authConfig['oauth_scope'],
-            'response_type': OAUTH_RESPONSE_KEY
-        };
-        const query = toQueryArgs(queryArgs);
-        window.location = authConfig['oauth_url'] + '?' + query;
-    };
-
-    processCurrentOauthState();
+    setupOAuth(
+        loginContainer,
+        authConfig,
+        'login-google_oauth-template',
+        'login-google_oauth-button')
 }
 
 function setupGitlabOAuth(loginContainer, authConfig) {
-    var credentialsTemplate = createTemplateElement('login-gitlab-template');
+    setupOAuth(
+        loginContainer,
+        authConfig,
+        'login-gitlab-template',
+        'login-gitlab-button')
+}
+
+function setupOAuth(loginContainer, authConfig, templateName, buttonId) {
+    var credentialsTemplate = createTemplateElement(templateName);
     loginContainer.appendChild(credentialsTemplate);
 
-    var oauthLoginButton = document.getElementById('login-gitlab-button');
+    var oauthLoginButton = document.getElementById(buttonId);
     oauthLoginButton.onclick = function () {
         var token = guid(32);
 

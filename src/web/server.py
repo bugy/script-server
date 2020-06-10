@@ -174,10 +174,7 @@ def requires_admin_rights(func):
 
 
 def has_admin_rights(request_handler):
-    try:
-        user_id = _identify_user(request_handler)
-    except Exception:
-        return False
+    user_id = _identify_user(request_handler)
     return request_handler.application.authorizer.is_admin(user_id)
 
 
@@ -696,10 +693,15 @@ class AuthInfoHandler(BaseRequestHandler):
         if auth.is_enabled():
             username = auth.get_username(self)
 
+        try:
+            admin_rights = has_admin_rights(self)
+        except Exception:
+            admin_rights = False
+
         info = {
             'enabled': auth.is_enabled(),
             'username': username,
-            'admin': has_admin_rights(self)
+            'admin': admin_rights
         }
 
         self.write(info)

@@ -16,7 +16,7 @@ class Authenticator(metaclass=abc.ABCMeta):
     def get_groups(self, user, known_groups=None):
         return []
 
-    def is_active(self, user, request_handler):
+    def validate_user(self, user, request_handler):
         return True
 
     def logout(self, user, request_handler):
