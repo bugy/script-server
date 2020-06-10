@@ -161,7 +161,7 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
             return False
         access_token = access_token.decode("utf-8")
 
-        self.clean_and_persist_sessions()
+        self.validate_sessions()
 
         if self.user_states.get(user) is None:
             LOGGER.debug("User %s not found in state" % user)
@@ -195,20 +195,24 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
 
     def clean_sessions(self):
         now = time.time()
+        changed = False
         for user_data in list(self.user_states.keys()):
             if self.session_expire and (self.user_states[user_data]['visit'] + self.session_expire) < now:
                 LOGGER.info("User %s removed because session expired" % user_data)
                 del self.user_states[user_data]
+                changed = True
                 continue
             if self.user_states[user_data]['state'] is None or self.user_states[user_data]['state'] != "active":
                 LOGGER.info("User %s removed because state '%s' != 'active'" %
                             (user_data, self.user_states[user_data]['state']))
                 del self.user_states[user_data]
+                changed = True
                 continue
+        return changed
 
-    def clean_and_persist_sessions(self):
-        self.clean_sessions()
-        if self.gitlab_dump:
+    def validate_sessions(self, force_persist=False):
+        changed = self.clean_sessions()
+        if self.gitlab_dump and (changed or force_persist):
             self.persist_session()
 
     def persist_session(self):
@@ -236,7 +240,7 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         self.user_states[user]['updating'] = False
         self.user_states[user]['updated'] = now
         self.user_states[user]['visit'] = now
-        self.clean_and_persist_sessions()
+        self.validate_sessions(force_persist=True)
 
     @gen.coroutine
     def update_user(self, user, access_token):
@@ -251,7 +255,7 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         self.user_states[user]['updating'] = False
         self.user_states[user]['updated'] = now
         self.user_states[user]['visit'] = now
-        self.clean_and_persist_sessions()
+        self.validate_sessions(force_persist=True)
         return
 
     @gen.coroutine
@@ -311,7 +315,7 @@ class GitlabOAuthAuthenticator(auth_base.Authenticator, GitlabOAuth2Mixin):
         user_response['updating'] = False
         oauth_access_token = user_response.pop('access_token')
         self.user_states[user_response['email']] = user_response
-        self.clean_and_persist_sessions()
+        self.validate_sessions(force_persist=True)
         request_handler.set_secure_cookie('token', oauth_access_token)
 
         return user_response['email']
