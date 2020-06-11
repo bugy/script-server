@@ -16,8 +16,8 @@
         </div>
         <div class="row">
             <Textfield :config="envVarField" @error="handleError(envVarField, $event)" class="col s4" v-model="envVar"/>
-            <Checkbox :config="paramSpaceField" @error="handleError(paramSpaceField, $event)" class="col s3 offset-s1"
-                      v-model="paramSpace" v-if="!noValue" />
+            <Checkbox :config="repeatParamField" @error="handleError(repeatParamField, $event)" class="col s3 offset-s1"
+                      v-model="repeatParam" v-if="!noValue" />
         </div>
         <div class="row" v-if="selectedType !== 'file_upload' && !noValue">
             <Textfield :class="{s6: !isExtendedDefault, s8: isExtendedDefault}" :config="defaultValueField"
@@ -49,9 +49,9 @@
             <Checkbox :config="multipleArgumentsField" @error="handleError(multipleArgumentsField, $event)"
                       class="col s4"
                       v-model="multipleArguments"/>
-            <Checkbox :config="repeatArgField" @error="handleError(repeatArgField, $event)"
+            <Checkbox :config="sameArgParamField" @error="handleError(sameArgParamField, $event)"
                       class="col s3" v-if="multipleArguments"
-                      v-model="repeatArg"/>
+                      v-model="sameArgParam"/>
             <Textfield :config="separatorField" v-if="!multipleArguments"
                        @error="handleError(separatorField, $event)" class="col s3"
                        v-model="separator"/>
@@ -83,7 +83,7 @@
         allowedValuesFromScriptField,
         allowedValuesScriptField,
         argField,
-        paramSpaceField,
+        repeatParamField,
         constantField,
         defaultValueField,
         descriptionField,
@@ -93,7 +93,7 @@
         maxField,
         minField,
         multipleArgumentsField,
-        repeatArgField,
+        sameArgParamField,
         nameField,
         noValueField,
         recursiveField,
@@ -125,7 +125,7 @@
                 name: 'name',
                 description: 'description',
                 arg: 'param',
-                paramSpace: 'param_space',
+                repeatParam: 'repeat_param',
                 envVar: 'env_var',
                 type: 'type',
                 noValue: 'no_value',
@@ -135,7 +135,7 @@
                 min: 'min',
                 max: 'max',
                 multipleArguments: 'multiple_arguments',
-                repeatArg: 'repeat_arg',
+                sameArgParam: 'same_arg_param',
                 separator: 'separator',
                 fileDir: 'file_dir',
                 recursive: 'file_recursive',
@@ -161,7 +161,7 @@
             return {
                 name: null,
                 arg: null,
-                paramSpace: null,
+                repeatParam: null,
                 envVar: null,
                 type: null,
                 noValue: null,
@@ -176,7 +176,7 @@
                 constant: null,
                 secure: null,
                 multipleArguments: null,
-                repeatArg: null,
+                sameArgParam: null,
                 separator: null,
                 fileDir: null,
                 recursive: null,
@@ -184,7 +184,7 @@
                 fileExtensions: null,
                 nameField,
                 argField: Object.assign({}, argField),
-                paramSpaceField,
+                repeatParamField,
                 envVarField,
                 typeField,
                 noValueField,
@@ -198,7 +198,7 @@
                 defaultValueField: Object.assign({}, defaultValueField),
                 constantField,
                 multipleArgumentsField,
-                repeatArgField,
+                sameArgParamField,
                 separatorField,
                 fileDirField,
                 recursiveField,
@@ -214,7 +214,7 @@
                         this.name = config['name'];
                         this.description = config['description'];
                         this.arg = config['param'];
-                        this.paramSpace = !!get(config, 'param_space', true);
+                        this.repeatParam = !!get(config, 'repeat_param', true);
                         this.envVar = config['env_var'];
                         this.type = config['type'];
                         this.noValue = get(config, 'no_value', false);
@@ -224,7 +224,7 @@
                         this.constant = !!get(config, 'constant', false);
                         this.secure = !!get(config, 'secure', false);
                         this.multipleArguments = !!get(config, 'multiple_arguments', false);
-                        this.repeatArg = !!get(config, 'repeat_arg', false);
+                        this.sameArgParam = !!get(config, 'same_arg_param', false);
                         this.separator = get(config, 'separator', ',');
                         this.fileDir = config['file_dir'];
                         this.recursive = !!get(config, 'file_recursive', false);

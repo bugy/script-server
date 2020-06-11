@@ -210,13 +210,16 @@ def build_command_args(param_values, config):
 
     for parameter in config.parameters:
         name = parameter.name
+        option_name = parameter.param
+        if parameter.param is None:
+            option_name = ''
 
         if name in param_values:
             value = param_values[name]
 
             if parameter.no_value:
-                if value is True:
-                    result.append(parameter.param)
+                if value is True and option_name:
+                    result.append(option_name)
 
             elif value:
 
@@ -229,24 +232,24 @@ def build_command_args(param_values, config):
                         result.append(value_sh)
 
                 if isinstance(value, list):
-                    if parameter.repeat_arg:
+                    if parameter.same_arg_param:
                         for val in value:
-                            if parameter.param_space:
+                            if parameter.repeat_param:
                                 add_param_and_value(parameter, val)
                             else:
-                                result.append(parameter.param + str(val))
+                                result.append(option_name + str(val))
                     else:
-                        if parameter.param_space:
+                        if parameter.repeat_param:
                             add_param_and_value(parameter, value)
                         else:
-                            result.append(parameter.param + str(value[0]))
+                            result.append(option_name + str(value[0]))
                             if len(value) > 1:
                                 result.extend(value[1:])
                 else:
-                    if parameter.param_space:
+                    if parameter.repeat_param:
                         add_param_and_value(parameter, value)
                     else:
-                        result.append(parameter.param + str(value))
+                        result.append(option_name + str(value))
 
     return result
 
