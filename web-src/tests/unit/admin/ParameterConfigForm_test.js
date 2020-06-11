@@ -157,7 +157,6 @@ describe('Test ParameterConfigForm', function () {
                     env_var: 'My_Param',
                     no_value: true,
                     required: true,
-                    constant: false,
                     secure: true
                 }
             });
@@ -170,7 +169,7 @@ describe('Test ParameterConfigForm', function () {
             assert.equal('int', _findField('type').value);
             assert.equal(true, _findField('without value').value);
             assert.equal(true, _findField('required').value);
-            assert.equal(false, _findField('constant').value);
+            assert.isUndefined(_findField('constant', false));
             assert.equal(true, _findField('secret value').value);
             assert.equal('My_Param', _findField('env variable').value);
         });
@@ -191,12 +190,11 @@ describe('Test ParameterConfigForm', function () {
             assert.equal(1000, _findField('max').value);
         });
 
-        it('Test simple parameters when multiselect', async function () {
+        it('Test simple parameters when multiselect multiple_arguments', async function () {
             form.setProps({
                 value: {
                     type: 'multiselect',
                     multiple_arguments: true,
-                    separator: '.'
                 }
             });
 
@@ -204,6 +202,22 @@ describe('Test ParameterConfigForm', function () {
 
             assert.equal('multiselect', _findField('type').value);
             assert.equal(true, _findField('as multiple arguments').value);
+            assert.isUndefined(_findField('separator', false));
+        });
+
+        it('Test simple parameters when multiselect', async function () {
+            form.setProps({
+                value: {
+                    type: 'multiselect',
+                    multiple_arguments: false,
+                    separator: '.'
+                }
+            });
+
+            await vueTicks();
+
+            assert.equal('multiselect', _findField('type').value);
+            assert.equal(false, _findField('as multiple arguments').value);
             assert.equal('.', _findField('separator').value);
         });
 
