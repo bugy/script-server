@@ -32,6 +32,7 @@ class ServerConfig(object):
         self.max_request_size_mb = None
         self.callbacks_config = None
         self.user_header_name = None
+        self.secret_storage_file = None
 
     def get_port(self):
         return self.port
@@ -130,6 +131,8 @@ def from_json(conf_path, temp_folder):
     config.user_header_name = user_header_name
 
     config.max_request_size_mb = read_int_from_config('max_request_size', json_object, default=10)
+
+    config.secret_storage_file = json_object.get('secret_storage_file', os.path.join(temp_folder, 'secret.dat'))
 
     return config
 
