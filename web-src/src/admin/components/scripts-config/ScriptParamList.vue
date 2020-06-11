@@ -98,6 +98,7 @@
                 const newParameter = {
                     name: undefined,
                     param: undefined,
+                    repeat_param: undefined,
                     description: undefined,
                     default: undefined,
                     constant: undefined,
@@ -110,6 +111,7 @@
                     required: undefined,
                     secure: undefined,
                     multiple_arguments: undefined,
+                    same_arg_param: undefined,
                     separator: undefined,
                     file_recursive: undefined,
                     file_type: undefined
