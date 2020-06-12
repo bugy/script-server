@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import tornado.concurrent
@@ -54,7 +55,7 @@ class TornadoAuth():
 
         try:
             username = self.authenticator.authenticate(request_handler)
-            if isinstance(username, tornado.concurrent.Future):
+            if asyncio.iscoroutine(username):
                 username = yield username
 
         except auth_base.AuthRejectedError as e:

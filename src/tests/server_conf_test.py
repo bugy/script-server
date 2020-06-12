@@ -224,7 +224,7 @@ class TestAuthConfig(unittest.TestCase):
         self.assertIsInstance(config.authenticator, GitlabOAuthAuthenticator)
         self.assertEquals('1234', config.authenticator.client_id)
         self.assertEquals('abcd', config.authenticator.secret)
-        self.assertEquals('https://gitlab', config.authenticator._GITLAB_PREFIX)
+        self.assertEquals('https://gitlab', config.authenticator._GITLAB_HOST)
         self.assertEquals('script-server', config.authenticator.gitlab_group_search)
         self.assertEquals(120, config.authenticator.gitlab_update)
         self.assertEquals("/tmp/dump.json", config.authenticator.gitlab_dump)
@@ -243,7 +243,7 @@ class TestAuthConfig(unittest.TestCase):
             }})
 
         self.assertIsInstance(config.authenticator, GitlabOAuthAuthenticator)
-        self.assertEquals('https://gitlab.com', config.authenticator._GITLAB_PREFIX)
+        self.assertEquals('https://gitlab.com', config.authenticator._GITLAB_HOST)
         self.assertIsNone(config.authenticator.gitlab_group_search)
         self.assertIsNone(config.authenticator.gitlab_update)
         self.assertIsNone(config.authenticator.gitlab_dump)
