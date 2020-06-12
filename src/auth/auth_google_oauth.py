@@ -10,6 +10,8 @@ LOGGER = logging.getLogger('script_server.GoogleOauthAuthorizer')
 # noinspection PyProtectedMember
 class GoogleOauthAuthenticator(AbstractOauthAuthenticator):
     def __init__(self, params_dict):
+        params_dict['group_support'] = False
+
         super().__init__(tornado.auth.GoogleOAuth2Mixin._OAUTH_AUTHORIZE_URL,
                          tornado.auth.GoogleOAuth2Mixin._OAUTH_ACCESS_TOKEN_URL,
                          'email',
