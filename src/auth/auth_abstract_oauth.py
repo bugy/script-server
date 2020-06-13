@@ -33,7 +33,13 @@ class _UserState:
 _OauthUserInfo = namedtuple('_OauthUserInfo', ['email', 'enabled', 'oauth_response'])
 
 
-# noinspection PyProtectedMember
+def _start_timer(callback):
+    timer = threading.Timer(30, callback)
+    timer.setDaemon(True)
+    timer.start()
+    return timer
+
+
 class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta):
     def __init__(self, oauth_authorize_url, oauth_token_url, oauth_scope, params_dict):
         super().__init__()
@@ -214,7 +220,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
         if not ttl_expired:
             return
 
-        tornado.ioloop.IOLoop.current().spawn_callback(
+        tornado.ioloop.IOLoop.current().add_callback(
             self._do_update_user_auth_async,
             username,
             user_state,
@@ -236,7 +242,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
 
             user_info = await self.fetch_user_info(access_token)  # type: _OauthUserInfo
             if (not user_info) or (not user_info.email):
-                LOGGER.error('Failed to fetch user info: %s', str(user_info.oauth_response))
+                LOGGER.error('Failed to fetch user info: %s', str(user_info))
                 self._remove_user(username)
                 return
 
@@ -284,9 +290,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
             finally:
                 self._schedule_dump_task()
 
-        self.timer = threading.Timer(30, repeating_dump)
-        self.timer.setDaemon(True)
-        self.timer.start()
+        self.timer = _start_timer(repeating_dump)
 
     def _dump_state(self):
         if self.dump_file:
