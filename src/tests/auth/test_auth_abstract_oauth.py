@@ -3,7 +3,6 @@ import os
 import random
 import threading
 import time
-import unittest
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
@@ -17,9 +16,6 @@ from model.server_conf import InvalidServerConfigException
 from tests import test_utils
 from tests.test_utils import mock_object
 from utils import file_utils
-
-if __name__ == '__main__':
-    unittest.main()
 
 mock_time = Mock()
 mock_time.return_value = 10000.01

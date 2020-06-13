@@ -1,200 +1,113 @@
-import copy
-import json
-import os
-import tempfile
-import time
 import unittest
+from unittest.mock import patch
 
-from tornado import escape
+# noinspection PyProtectedMember
+from tornado.testing import AsyncTestCase, gen_test
 
+from auth.auth_abstract_oauth import _OauthUserInfo
 from auth.auth_gitlab import GitlabOAuthAuthenticator
-from model import server_conf
-from tests import test_utils
-from utils import file_utils
-from unittest import TestCase
-from unittest.mock import patch, Mock
-
-if __name__ == '__main__':
-    unittest.main()
-
-mock_time = Mock()
-mock_time.return_value = 10000.01
-mock_persist_session = Mock()
-mock_do_update_groups = Mock()
-mock_do_update_user = Mock()
-mock_request_handler = Mock(**{'get_secure_cookie.return_value': "12345".encode()})
 
 
-class TestAuthConfig(TestCase):
-    @patch('time.time', mock_time)
-    @patch('auth.auth_gitlab.GitlabOAuthAuthenticator.persist_session', mock_persist_session)
-    @patch('auth.auth_gitlab.GitlabOAuthAuthenticator.do_update_groups', mock_do_update_groups)
-    def test_gitlab_oauth(self):
-        now = time.time()
-        state = {
-            "user@test.com": {
-                "groups": ["testgroup"],
-                "updating": False,
-                "updated": now-10,
-                "visit": now-10,
-                "id": 1,
-                "username": "test",
-                "name": "John",
-                "email": "user@test.com",
-                "state": "active"
-            },
-            "nogroups@test.com": {
-                "groups": None,
-                "updating": True,
-                "updated": now-10,
-                "visit": now-10,
-                "id": 2,
-                "username": "nogroups",
-                "name": "John",
-                "email": "nogroups@test.com",
-                "state": "blocked"
-            }
-        }
+def create_config(*, url=None, group_search=None, group_support=None):
+    config = {
+        'client_id': '1234',
+        'secret': 'hello world?'
+    }
 
-        state_file = test_utils.create_file("gitlab_state.json", text=escape.json_encode(state))
+    if url is not None:
+        config['url'] = url
+    if group_search is not None:
+        config['group_search'] = group_search
+    if group_support is not None:
+        config['group_support'] = group_support
 
-        config = _from_json({
-            'auth': {
-                "type": "gitlab",
-                "url": "https://gitlab",
-                "client_id": "1234",
-                "secret": "abcd",
-                "group_search": "script-server",
-                "auth_info_ttl": 80,
-                "state_dump_file": state_file,
-                "session_expire_minutes": 10
-            },
-            'access': {
-                 'allowed_users': []
-            }})
-
-        self.assertIsInstance(config.authenticator, GitlabOAuthAuthenticator)
-        self.assertEqual(state_file, config.authenticator.gitlab_dump)
-        self.assertEqual("1234", config.authenticator._client_visible_config['client_id'])
-        self.assertEqual("https://gitlab/oauth/authorize", config.authenticator._client_visible_config['oauth_url'])
-        self.assertEqual("api", config.authenticator._client_visible_config['oauth_scope'])
-
-        assert_state = state.copy()
-        for key in list(assert_state.keys()):
-            assert_state[key]['updating'] = False
-            assert_state[key]['updated'] = 10000.01 - 80 - 1
-        self.assertDictEqual(assert_state, config.authenticator.user_states)
-        saved_state = copy.deepcopy(config.authenticator.user_states)
-
-        self.assertEqual(False, config.authenticator.validate_user("unknown@test.com", mock_request_handler))
-        self.assertEqual(False, config.authenticator.validate_user("nogroups@test.com", mock_request_handler))
-        self.assertListEqual([], config.authenticator.get_groups("unknown@test.com"))
-        self.assertListEqual([], config.authenticator.get_groups("nogroups@test.com"))
-
-        self.assertEqual(True, config.authenticator.validate_user("user@test.com", mock_request_handler))
-        self.assertEqual(time.time(), config.authenticator.user_states["user@test.com"]["visit"], "visit updated")
-        self.assertEqual(True, mock_do_update_groups.called, "state just loaded, gitlab updating")
-        mock_do_update_groups.reset_mock()
-
-        config.authenticator.user_states["user@test.com"]["updating"] = True
-        self.assertEqual(True, config.authenticator.validate_user("user@test.com", mock_request_handler))
-        self.assertEqual(False, mock_do_update_groups.called, "do not call parallel updated")
-        mock_do_update_groups.reset_mock()
-
-        mock_time.return_value = 10000.01 + 80*2 + 1  # stale request
-        self.assertEqual(True, config.authenticator.validate_user("user@test.com", mock_request_handler))
-        self.assertEqual(True, mock_do_update_groups.called, "parallel but stale")
-        mock_do_update_groups.reset_mock()
-        config.authenticator.user_states = copy.deepcopy(saved_state)
-        mock_time.return_value = 10000.01
-
-        config.authenticator.user_states["user@test.com"]['updated'] = now  # gitlab info updated
-        config.authenticator.user_states["user@test.com"]['updating'] = False
-        self.assertEqual(True, config.authenticator.validate_user("user@test.com", mock_request_handler))
-        self.assertEqual(False, mock_do_update_groups.called, "do not update gitlab because ttl not expired")
-        mock_do_update_groups.reset_mock()
-
-        mock_time.return_value = 10000.01 + 81
-        self.assertEqual(True, config.authenticator.validate_user("user@test.com", mock_request_handler))
-        self.assertEqual(True, mock_do_update_groups.called, "ttl expired")
-        mock_do_update_groups.reset_mock()
-        config.authenticator.user_states = copy.deepcopy(saved_state)
-        mock_time.return_value = 10000.01
-
-        # session expire test
-        mock_time.return_value = 10000.01 + 601
-        self.assertEqual(False, config.authenticator.validate_user("user@test.com", mock_request_handler), "shoud be expired")
-        self.assertEqual(True, mock_persist_session.called, "dump state to file")
-        mock_persist_session.reset_mock()
-        self.assertIsNone(config.authenticator.user_states.get("user@test.com"), "removed from state")
-        self.assertListEqual([], config.authenticator.get_groups("user@test.com"))
-        config.authenticator.user_states = copy.deepcopy(saved_state)
-        mock_time.return_value = 10000.01
-
-        # test clean expire
-        mock_time.return_value = 10000.01 + 601
-        config.authenticator.clean_sessions()
-        self.assertIsNone(config.authenticator.user_states.get("user@test.com"))
-        config.authenticator.user_states = copy.deepcopy(saved_state)
-        mock_time.return_value = 10000.01
-
-    @patch('time.time', mock_time)
-    @patch('auth.auth_gitlab.GitlabOAuthAuthenticator.do_update_user', mock_do_update_user)
-    @patch('auth.auth_gitlab.GitlabOAuthAuthenticator.do_update_groups', mock_do_update_groups)
-    def test_gitlab_oauth_user_read_scope(self):
-        now = time.time()
-
-        state = {
-            "user@test.com": {
-                "groups": ["testgroup"],
-                "updating": False,
-                "updated": 0,
-                "visit": now-10,
-                "id": 1,
-                "username": "test",
-                "name": "John",
-                "email": "user@test.com",
-                "state": "active"
-            }
-        }
-
-        config = _from_json({
-            'auth': {
-                "type": "gitlab",
-                "url": "https://gitlab",
-                "client_id": "1234",
-                "secret": "abcd",
-                "group_search": "script-server",
-                "auth_info_ttl": 80,
-                "session_expire_minutes": 1,
-                "group_support": False
-            },
-            'access': {
-                 'allowed_users': []
-            }})
-
-        self.assertIsInstance(config.authenticator, GitlabOAuthAuthenticator)
-        self.assertEqual("read_user", config.authenticator._client_visible_config['oauth_scope'])
-        config.authenticator.user_states = state
-        self.assertEqual(True, config.authenticator.validate_user("user@test.com", mock_request_handler))
-        self.assertEqual(False, mock_do_update_groups.called, "update==0, gitlab updating but not groups")
-        self.assertEqual(True, mock_do_update_user.called, "update==0, gitlab updating only user")
-        mock_do_update_groups.reset_mock()
-        mock_do_update_user.reset_mock()
-
-        config.authenticator.gitlab_update = None
-        self.assertEqual(True, config.authenticator.validate_user("user@test.com", mock_request_handler))
-        self.assertEqual(False, mock_do_update_groups.called, "gitab update disabled")
-        self.assertEqual(False, mock_do_update_user.called, "gitab update disabled")
-        mock_do_update_groups.reset_mock()
-        mock_do_update_user.reset_mock()
-
-    def tearDown(self):
-        test_utils.cleanup()
+    return config
 
 
-def _from_json(content):
-    json_obj = json.dumps(content)
-    conf_path = os.path.join(test_utils.temp_folder, 'conf.json')
-    file_utils.write_file(conf_path, json_obj)
-    return server_conf.from_json(conf_path, test_utils.temp_folder)
+class TestAuthConfig(unittest.TestCase):
+    def test_client_visible_config(self):
+        authenticator = GitlabOAuthAuthenticator(create_config(url='https://my.gitlab.host'))
+
+        client_visible_config = authenticator._client_visible_config
+        self.assertEqual('1234', client_visible_config['client_id'])
+        self.assertEqual('https://my.gitlab.host/oauth/authorize', client_visible_config['oauth_url'])
+        self.assertEqual('api', client_visible_config['oauth_scope'])
+
+    def test_client_visible_config_when_groups_disabled(self):
+        authenticator = GitlabOAuthAuthenticator(create_config(group_support=False))
+
+        client_visible_config = authenticator._client_visible_config
+        self.assertEqual('read_user', client_visible_config['oauth_scope'])
+
+    def test_client_visible_config_when_default_url(self):
+        authenticator = GitlabOAuthAuthenticator(create_config())
+
+        client_visible_config = authenticator._client_visible_config
+        self.assertEqual('https://gitlab.com/oauth/authorize', client_visible_config['oauth_url'])
+
+
+class TestFetchUserInfo(AsyncTestCase):
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @gen_test
+    def test_fetch_user_info(self, mock_request):
+        response = {'email': 'me@gmail.com', 'state': 'active'}
+        mock_request.return_value = response
+
+        authenticator = GitlabOAuthAuthenticator(create_config(url='https://my.gitlab.host'))
+
+        user_info = yield authenticator.fetch_user_info('my_token_2')
+        self.assertEqual(_OauthUserInfo('me@gmail.com', True, response), user_info)
+
+        mock_request.assert_called_with('https://my.gitlab.host/api/v4/user', 'my_token_2')
+
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @gen_test
+    def test_fetch_user_info_when_no_response(self, mock_request):
+        mock_request.return_value = None
+
+        authenticator = GitlabOAuthAuthenticator(create_config())
+
+        user_info = yield authenticator.fetch_user_info('my_token_2')
+        self.assertEqual(None, user_info)
+
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @gen_test
+    def test_fetch_user_info_when_not_active(self, mock_request):
+        response = {'email': 'me@gmail.com', 'state': 'something'}
+        mock_request.return_value = response
+
+        authenticator = GitlabOAuthAuthenticator(create_config())
+
+        user_info = yield authenticator.fetch_user_info('my_token_2')
+        self.assertEqual(_OauthUserInfo('me@gmail.com', False, response), user_info)
+
+
+class TestFetchUserGroups(AsyncTestCase):
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @gen_test
+    def test_fetch_user_info(self, mock_request):
+        response = [{'full_path': 'group1'}, {'full_path': 'group2'}, {'something': 'group3'}]
+        mock_request.return_value = response
+
+        authenticator = GitlabOAuthAuthenticator(create_config(url='https://my.gitlab.host'))
+
+        groups = yield authenticator.fetch_user_groups('my_token_2')
+        self.assertEqual(['group1', 'group2'], groups)
+
+        mock_request.assert_called_with('https://my.gitlab.host/api/v4/groups',
+                                        access_token='my_token_2',
+                                        all_available='false',
+                                        per_page=100)
+
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @gen_test
+    def test_fetch_user_info_when_search(self, mock_request):
+        authenticator = GitlabOAuthAuthenticator(create_config(url='https://my.gitlab.host', group_search='abc'))
+
+        yield authenticator.fetch_user_groups('my_token_2')
+
+        mock_request.assert_called_with('https://my.gitlab.host/api/v4/groups',
+                                        access_token='my_token_2',
+                                        all_available='false',
+                                        per_page=100,
+                                        search='abc')

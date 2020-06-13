@@ -3,7 +3,6 @@ import logging
 from tornado.auth import OAuth2Mixin
 
 from auth.auth_abstract_oauth import AbstractOauthAuthenticator, _OauthUserInfo
-from auth.auth_base import AuthFailureError
 
 LOGGER = logging.getLogger('script_server.GitlabAuthorizer')
 
@@ -17,12 +16,12 @@ _OAUTH_GITLAB_GROUPS = '%s/api/v4/groups'
 class GitlabOAuthAuthenticator(AbstractOauthAuthenticator, OAuth2Mixin):
     def __init__(self, params_dict):
         self.gitlab_host = params_dict.get('url', 'https://gitlab.com')
-        self.gitlab_group_support = params_dict.get('group_support', True)
+        gitlab_group_support = params_dict.get('group_support', True)
 
         super().__init__(
             _OAUTH_AUTHORIZE_URL % self.gitlab_host,
             _OAUTH_ACCESS_TOKEN_URL % self.gitlab_host,
-            'api' if self.gitlab_group_support else 'read_user',
+            'api' if gitlab_group_support else 'read_user',
             params_dict)
 
         self.gitlab_group_search = params_dict.get('group_search')
@@ -61,10 +60,5 @@ class GitlabOAuthAuthenticator(AbstractOauthAuthenticator, OAuth2Mixin):
         for group in group_list:
             if group.get('full_path'):
                 groups.append(group['full_path'])
-
-        if groups is None:
-            error_message = 'Cant read user groups'
-            LOGGER.error(error_message)
-            raise AuthFailureError(error_message)
 
         return groups
