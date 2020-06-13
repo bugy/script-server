@@ -4,8 +4,10 @@ from unittest.mock import patch
 # noinspection PyProtectedMember
 from tornado.testing import AsyncTestCase, gen_test
 
+# noinspection PyProtectedMember
 from auth.auth_abstract_oauth import _OauthUserInfo
 from auth.auth_gitlab import GitlabOAuthAuthenticator
+from tests.test_utils import AsyncMock
 
 
 def create_config(*, url=None, group_search=None, group_support=None):
@@ -47,7 +49,7 @@ class TestAuthConfig(unittest.TestCase):
 
 
 class TestFetchUserInfo(AsyncTestCase):
-    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request', new_callable=AsyncMock)
     @gen_test
     def test_fetch_user_info(self, mock_request):
         response = {'email': 'me@gmail.com', 'state': 'active'}
@@ -60,7 +62,7 @@ class TestFetchUserInfo(AsyncTestCase):
 
         mock_request.assert_called_with('https://my.gitlab.host/api/v4/user', 'my_token_2')
 
-    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request', new_callable=AsyncMock)
     @gen_test
     def test_fetch_user_info_when_no_response(self, mock_request):
         mock_request.return_value = None
@@ -70,7 +72,7 @@ class TestFetchUserInfo(AsyncTestCase):
         user_info = yield authenticator.fetch_user_info('my_token_2')
         self.assertEqual(None, user_info)
 
-    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request', new_callable=AsyncMock)
     @gen_test
     def test_fetch_user_info_when_not_active(self, mock_request):
         response = {'email': 'me@gmail.com', 'state': 'something'}
@@ -83,9 +85,9 @@ class TestFetchUserInfo(AsyncTestCase):
 
 
 class TestFetchUserGroups(AsyncTestCase):
-    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request', new_callable=AsyncMock)
     @gen_test
-    def test_fetch_user_info(self, mock_request):
+    def test_fetch_user_groups(self, mock_request):
         response = [{'full_path': 'group1'}, {'full_path': 'group2'}, {'something': 'group3'}]
         mock_request.return_value = response
 
@@ -99,9 +101,11 @@ class TestFetchUserGroups(AsyncTestCase):
                                         all_available='false',
                                         per_page=100)
 
-    @patch('tornado.auth.OAuth2Mixin.oauth2_request')
+    @patch('tornado.auth.OAuth2Mixin.oauth2_request', new_callable=AsyncMock)
     @gen_test
-    def test_fetch_user_info_when_search(self, mock_request):
+    def test_fetch_user_groups_when_search(self, mock_request):
+        mock_request.return_value = []
+
         authenticator = GitlabOAuthAuthenticator(create_config(url='https://my.gitlab.host', group_search='abc'))
 
         yield authenticator.fetch_user_groups('my_token_2')

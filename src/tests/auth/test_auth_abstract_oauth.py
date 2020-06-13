@@ -566,6 +566,7 @@ class TestDump(_OauthTestCase):
         self.assertTrue(os.path.exists(dump_file))
         file_content = file_utils.read_file(dump_file)
         restored_dump = json.loads(file_content)
+        restored_dump.sort(key=lambda state: state['username'])
         self.assertEqual(expected_value, restored_dump)
 
     def wait_dump(self):
