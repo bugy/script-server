@@ -26,10 +26,12 @@ from web.client import tornado_client_config
 parser = argparse.ArgumentParser(description='Launch script-server.')
 parser.add_argument('-d', '--config-dir', default='conf')
 parser.add_argument('-f', '--config-file', default='conf.json')
+parser.add_argument('-l', '--log-folder', default='logs')
+parser.add_argument('-t', '--tmp-folder', default='temp')
 args = vars(parser.parse_args())
 
-TEMP_FOLDER = 'temp'
-LOG_FOLDER = 'logs'
+TEMP_FOLDER = args['tmp_folder']
+LOG_FOLDER = args['log_folder']
 
 CONFIG_FOLDER = args['config_dir']
 if os.path.isabs(args['config_file']):
