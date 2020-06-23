@@ -67,7 +67,7 @@ class ParameterModel(object):
         self.repeat_param = read_bool_from_config('repeat_param', config, default=True)
         self.env_var = config.get('env_var')
         self.no_value = read_bool_from_config('no_value', config, default=False)
-        self.description = resolve_default(config.get('description'), self._username, self._audit_name, self._working_dir)
+        self.description = replace_auth_vars(config.get('description'), self._username, self._audit_name)
         self.required = read_bool_from_config('required', config, default=False)
         self.min = config.get('min')
         self.max = config.get('max')
@@ -75,7 +75,7 @@ class ParameterModel(object):
         self.separator = config.get('separator', ',')
         self.multiple_arguments = read_bool_from_config('multiple_arguments', config, default=False)
         self.same_arg_param = read_bool_from_config('same_arg_param', config, default=False)
-        self.default = resolve_default(config.get('default'), self._username, self._audit_name, self._working_dir)
+        self.default = _resolve_default(config.get('default'), self._username, self._audit_name, self._working_dir)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
         self.file_extensions = _resolve_file_extensions(config, 'file_extensions')
@@ -180,7 +180,7 @@ class ParameterModel(object):
             return ConstValuesProvider(values_config)
 
         elif 'script' in values_config:
-            script = resolve_default(values_config['script'], self._username, self._audit_name, self._working_dir)
+            script = replace_auth_vars(values_config['script'], self._username, self._audit_name)
 
             if '${' not in script:
                 return ScriptValuesProvider(script)
@@ -400,7 +400,7 @@ class ParameterModel(object):
         return os.path.normpath(os.path.join(self._list_files_dir, *child_path))
 
 
-def resolve_default(default, username, audit_name, working_dir):
+def _resolve_default(default, username, audit_name, working_dir):
     if not default:
         return default
 

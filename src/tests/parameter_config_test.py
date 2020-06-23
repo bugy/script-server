@@ -277,7 +277,7 @@ class TestDefaultValue(unittest.TestCase):
 
     @staticmethod
     def resolve_default(value, *, username=None, audit_name=None, working_dir=None):
-        return parameter_config.resolve_default(value, username, audit_name, working_dir)
+        return parameter_config._resolve_default(value, username, audit_name, working_dir)
 
     def setUp(self):
         test_utils.setup()
