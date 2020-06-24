@@ -190,7 +190,7 @@ def fill_parameter_values(parameter_configs, template, values):
 def replace_auth_vars(text, username, audit_name):
     result = text
     if not result:
-        return
+        return result
         
     if not username:
         username = ''
