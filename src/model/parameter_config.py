@@ -67,7 +67,7 @@ class ParameterModel(object):
         self.repeat_param = read_bool_from_config('repeat_param', config, default=True)
         self.env_var = config.get('env_var')
         self.no_value = read_bool_from_config('no_value', config, default=False)
-        self.description = config.get('description')
+        self.description = replace_auth_vars(config.get('description'), self._username, self._audit_name)
         self.required = read_bool_from_config('required', config, default=False)
         self.min = config.get('min')
         self.max = config.get('max')
@@ -180,7 +180,7 @@ class ParameterModel(object):
             return ConstValuesProvider(values_config)
 
         elif 'script' in values_config:
-            script = values_config['script']
+            script = replace_auth_vars(values_config['script'], self._username, self._audit_name)
 
             if '${' not in script:
                 return ScriptValuesProvider(script)

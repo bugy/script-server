@@ -7,7 +7,7 @@ from collections import OrderedDict
 from auth.authorization import ANY_USER
 from model import parameter_config
 from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
-    read_str_from_config
+    read_str_from_config, replace_auth_vars
 from model.parameter_config import ParameterModel
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
 from utils import file_utils
@@ -152,7 +152,7 @@ class ConfigModel:
             config = merge_dicts(self._original_config, self._included_config, ignored_keys=['parameters'])
 
         self.script_command = config.get('script_path')
-        self.description = config.get('description')
+        self.description = replace_auth_vars(config.get('description'), self._username, self._audit_name)
         self.working_directory = config.get('working_directory')
 
         required_terminal = read_bool_from_config('requires_terminal', config, default=self._pty_enabled_default)
