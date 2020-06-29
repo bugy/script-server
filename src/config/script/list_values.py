@@ -52,6 +52,46 @@ class ScriptValuesProvider(ValuesProvider):
     def get_values(self, parameter_values):
         return self._values
 
+class DependantValuesProvider(ValuesProvider):
+    def __init__(self, variable_name, values_conditions, parameters_supplier) -> None:
+        self._values_conditions = values_conditions
+        self._required_parameters = set()
+        self._var_name = variable_name
+        self._availible_values = set()
+        self._possible_values = set()
+
+        if not isinstance(self._values_conditions, dict):
+            raise Exception(f"The given value of {self._var_name} isn't acceptable (dictionary) type\n\t{self._values_conditions}")
+        
+        try:
+            for e in self._values_conditions:
+                self._possible_values.add(e)
+                for key in self._values_conditions[e]:
+                    self._required_parameters.add(key)
+
+        except Exception as ex:
+            raise Exception(f"Exception {ex} during process{self._var_name}")
+
+    def get_required_parameters(self):
+        return self._required_parameters
+
+    def get_values(self, parameter_values):
+        self._availible_values = set()
+        deny_values = set()
+
+        for e in self._values_conditions:
+            for key in self._values_conditions[e]:
+                pvalue = parameter_values.get(key)                
+                if not is_empty(pvalue):
+                    if not(pvalue in self._values_conditions[e][key] ):
+                        deny_values.add(e)
+        
+        self._availible_values = self._possible_values.difference(deny_values)
+        return list(self._availible_values)
+
+    def map_value(self, user_value):
+        return user_value if user_value in self._availible_values else None
+
 
 class DependantScriptValuesProvider(ValuesProvider):
 

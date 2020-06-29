@@ -3,9 +3,9 @@ import os
 from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
-from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR
+from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR, PARAM_TYPE_LIST, PARAM_TYPE_DEPENDANT_LIST
 from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
-    DependantScriptValuesProvider, NoneValuesProvider, FilesProvider
+    DependantScriptValuesProvider, NoneValuesProvider, FilesProvider, DependantValuesProvider
 from model import model_helper
 from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SECURE_MASK, \
     normalize_extension, read_bool_from_config, InvalidValueException
@@ -170,7 +170,7 @@ class ParameterModel(object):
         if self._is_plain_server_file():
             return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions)
 
-        if (type != 'list') and (type != PARAM_TYPE_MULTISELECT):
+        if (type not in  [PARAM_TYPE_MULTISELECT, PARAM_TYPE_LIST, PARAM_TYPE_DEPENDANT_LIST]):
             return NoneValuesProvider()
 
         if is_empty(values_config):
@@ -178,6 +178,9 @@ class ParameterModel(object):
 
         if isinstance(values_config, list):
             return ConstValuesProvider(values_config)
+
+        if PARAM_TYPE_DEPENDANT_LIST in values_config:
+            return DependantValuesProvider(self.name , values_config[PARAM_TYPE_DEPENDANT_LIST], self._parameters_supplier)
 
         elif 'script' in values_config:
             script = values_config['script']
@@ -313,7 +316,7 @@ class ParameterModel(object):
 
         allowed_values = self.values
 
-        if (self.type == 'list') or (self._is_plain_server_file()):
+        if (self.type == PARAM_TYPE_LIST) or (self._is_plain_server_file()):
             if value not in allowed_values:
                 return 'has value ' + value_string \
                        + ', but should be in ' + repr(allowed_values)

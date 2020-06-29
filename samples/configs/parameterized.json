@@ -31,10 +31,33 @@
       "type": "list",
       "description": "Parameter Five",
       "values": [
-        "val1",
-        "val3",
-        "some long value"
+        "Cats",
+        "Dogs",
+        "Rats",
+        "Squirrel"
       ]
+    },
+    {
+      "name": "Dependant List",
+      "param": "--dependant_list",
+      "type": "list",
+      "description": "The avalible values depends on other variables",
+      "values": {
+        "dependant_list": {
+          "puppy food": {
+            "Simple List":["Cats", "Dogs"]
+          },
+          "aduld dogs food": {
+            "Simple List":[ "Dogs"]
+          },
+          "small animal wheel": {
+            "Simple List":[ "Rats", "Squirrel"],
+            "Very long list": ["some quite long line",
+              "short",
+              "a bit longer"]
+          }
+        }
+      }
     },
     {
       "name": "File upload",
