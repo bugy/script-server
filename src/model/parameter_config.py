@@ -88,6 +88,8 @@ class ParameterModel(object):
 
         self._validate_config()
 
+        self._setbyuser = False
+
         values_provider = self._create_values_provider(
             config.get('values'),
             self.type,
@@ -161,7 +163,15 @@ class ParameterModel(object):
             return
 
         values = values_provider.get_values(self._parameter_values)
-        self.values = values
+        if (self.type in ["text"]) :
+            if (not is_empty(values) and (not self._setbyuser)):
+                self.default = values[0]
+                self.values = values
+            else:
+                self.default = ""
+                self.values = []
+        else:
+            self.values = values
 
     def _create_values_provider(self, values_config, type, constant):
         if constant:
@@ -170,29 +180,42 @@ class ParameterModel(object):
         if self._is_plain_server_file():
             return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions)
 
-        if (type not in  [PARAM_TYPE_MULTISELECT, PARAM_TYPE_LIST, PARAM_TYPE_DEPENDANT_LIST]):
+        if (type in  [PARAM_TYPE_MULTISELECT, PARAM_TYPE_LIST]):
+#            return NoneValuesProvider()
+
+            if is_empty(values_config):
+                return EmptyValuesProvider()
+
+            if isinstance(values_config, list):
+                return ConstValuesProvider(values_config)
+
+            if PARAM_TYPE_DEPENDANT_LIST in values_config:
+                return DependantValuesProvider(self.name , values_config[PARAM_TYPE_DEPENDANT_LIST], self._parameters_supplier)
+
+            if 'script' in values_config:
+                script = values_config['script']
+
+                if '${' not in script:
+                    return ScriptValuesProvider(script)
+
+                return DependantScriptValuesProvider(script, self._parameters_supplier)
+
+        elif (type in ["text"]):
+            if is_empty(values_config):
+                return NoneValuesProvider()
+
+            if 'script' in values_config:
+                script = values_config['script']
+
+                if '${' not in script:
+                    return ScriptValuesProvider(script)
+
+                return DependantScriptValuesProvider(script, self._parameters_supplier)
+        else:
             return NoneValuesProvider()
 
-        if is_empty(values_config):
-            return EmptyValuesProvider()
-
-        if isinstance(values_config, list):
-            return ConstValuesProvider(values_config)
-
-        if PARAM_TYPE_DEPENDANT_LIST in values_config:
-            return DependantValuesProvider(self.name , values_config[PARAM_TYPE_DEPENDANT_LIST], self._parameters_supplier)
-
-        elif 'script' in values_config:
-            script = values_config['script']
-
-            if '${' not in script:
-                return ScriptValuesProvider(script)
-
-            return DependantScriptValuesProvider(script, self._parameters_supplier)
-
-        else:
-            message = 'Unsupported "values" format for ' + self.name
-            raise Exception(message)
+        message = 'Unsupported "values" format for ' + self.name
+        raise Exception(message)
 
     def get_required_parameters(self):
         if not self._values_provider:
@@ -280,6 +303,8 @@ class ParameterModel(object):
             return None
 
         if self.type == 'text':
+            if (not self._setbyuser) and (self.default != value):
+                self._setbyuser = True
             return None
 
         if self.type == 'file_upload':

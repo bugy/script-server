@@ -64,6 +64,26 @@
         },
 
         watch: {
+            'config.values': {
+                immediate: true,
+                handler(newOptionValues) {
+                    if (isNull(newOptionValues) || (newOptionValues.length === 0)) {
+                        var value = "";
+                    } else{
+                        var value = newOptionValues[0]
+                    }
+
+                    if (this.$refs.textField) {
+                        this.value = value
+                        this.$nextTick(function () {
+                            if (this.$refs.textField) {
+                                this._doValidation(this.value);
+                            }
+                        }.bind(this));
+                    }
+                }
+            },
+
             'value': {
                 immediate: true,
                 handler(newValue) {

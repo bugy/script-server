@@ -45,10 +45,10 @@
       "values": {
         "dependant_list": {
           "puppy food": {
-            "Simple List":["Cats", "Dogs"]
+            "Simple List": ["Cats", "Dogs"]
           },
           "aduld dogs food": {
-            "Simple List":[ "Dogs"]
+            "Simple List": [ "Dogs"]
           },
           "small animal wheel": {
             "Simple List":[ "Rats", "Squirrel"],
