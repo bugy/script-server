@@ -88,7 +88,7 @@ class ParameterModel(object):
 
         self._validate_config()
 
-        self._setbyuser = False
+        self._changed_by_user = False
 
         values_provider = self._create_values_provider(
             config.get('values'),
@@ -162,15 +162,17 @@ class ParameterModel(object):
             self.values = None
             return
 
-        values = values_provider.get_values(self._parameter_values)
-        if (self.type in ["text"]) :
-            if (not is_empty(values) and (not self._setbyuser)):
-                self.default = values[0]
-                self.values = values
-            else:
-                self.default = ""
-                self.values = []
+        if (self.type in ('ip', 'ip4', 'ip6', "text", "int")) :
+            if not isinstance(values_provider, NoneValuesProvider):
+                values = values_provider.get_values(self._parameter_values)
+                if (not is_empty(values) and (not self._changed_by_user)):
+                    self.default = values[0]
+                    self.values = values
+                else:
+                    self.default = ""
+                    self.values = []
         else:
+            values = values_provider.get_values(self._parameter_values)
             self.values = values
 
     def _create_values_provider(self, values_config, type, constant):
@@ -181,7 +183,6 @@ class ParameterModel(object):
             return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions)
 
         if (type in  [PARAM_TYPE_MULTISELECT, PARAM_TYPE_LIST]):
-#            return NoneValuesProvider()
 
             if is_empty(values_config):
                 return EmptyValuesProvider()
@@ -303,8 +304,8 @@ class ParameterModel(object):
             return None
 
         if self.type == 'text':
-            if (not self._setbyuser) and (self.default != value):
-                self._setbyuser = True
+            if (not self._changed_by_user) and (self.default != value):
+                self._changed_by_user = True
             return None
 
         if self.type == 'file_upload':
