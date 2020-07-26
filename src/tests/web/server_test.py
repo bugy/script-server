@@ -112,6 +112,7 @@ class ServerTest(TestCase):
                     authorizer,
                     None,
                     None,
+                    None,
                     ConfigService(authorizer, self.conf_folder),
                     None,
                     None,

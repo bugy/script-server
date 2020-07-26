@@ -96,7 +96,7 @@ class ParameterModel(object):
         self._reload_values()
 
     def _validate_config(self):
-        param_log_name = self._str_name()
+        param_log_name = self.str_name()
 
         if self.constant and not self.default:
             message = 'Constant should have default value specified'
@@ -106,7 +106,7 @@ class ParameterModel(object):
             if not self.file_dir:
                 raise Exception('Parameter ' + param_log_name + ' has missing config file_dir')
 
-    def _str_name(self):
+    def str_name(self):
         names = (name for name in (self.name, self.param, self.description) if name)
         return next(names, 'unknown')
 

@@ -1,0 +1,15 @@
+.input-field:after {
+    content: attr(data-error);
+    color: #F44336;
+    font-size: 0.9em;
+    display: block;
+    position: absolute;
+    top: 1.7em;
+    left: 0.8em;
+}
+
+.input-field input[type="text"]:invalid,
+.input-field input[type="number"]:invalid {
+    border-bottom: 1px solid #e51c23;
+    box-shadow: 0 1px 0 0 #e51c23;
+}

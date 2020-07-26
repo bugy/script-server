@@ -172,9 +172,9 @@ def split_all(path):
 
 def to_filename(txt):
     if os_utils.is_win():
-        return txt.replace(':', '-')
+        return re.sub('[<>:"/\\\\|?*]', '_', txt)
 
-    return txt
+    return txt.replace('/', '_')
 
 
 def create_unique_filename(preferred_path, retries=9999999):

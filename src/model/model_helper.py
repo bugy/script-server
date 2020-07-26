@@ -1,9 +1,11 @@
 import logging
 import os
 import re
+from datetime import datetime
 
 import utils.env_utils as env_utils
 from config.constants import FILE_TYPE_DIR, FILE_TYPE_FILE
+from utils import date_utils
 from utils.string_utils import is_blank
 
 ENV_VAR_PREFIX = '$$'
@@ -106,6 +108,20 @@ def read_bool_from_config(key, config_obj, *, default=None):
     raise Exception('"' + key + '" field should be true or false')
 
 
+def read_datetime_from_config(key, config_obj, *, default=None):
+    value = config_obj.get(key)
+    if value is None:
+        return default
+
+    if isinstance(value, datetime):
+        return value
+
+    if isinstance(value, str):
+        return date_utils.parse_iso_datetime(value)
+
+    raise InvalidValueTypeException('"' + key + '" field should be a datetime, but was ' + repr(value))
+
+
 def read_bool(value):
     if isinstance(value, bool):
         return value
@@ -191,7 +207,7 @@ def replace_auth_vars(text, username, audit_name):
     result = text
     if not result:
         return result
-        
+
     if not username:
         username = ''
     if not audit_name:
@@ -246,6 +262,9 @@ class InvalidValueException(Exception):
     def __init__(self, param_name, validation_error) -> None:
         super().__init__(validation_error)
         self.param_name = param_name
+
+    def get_user_message(self):
+        return 'Invalid value for "' + self.param_name + '": ' + str(self)
 
 
 class InvalidValueTypeException(Exception):

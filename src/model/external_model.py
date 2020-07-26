@@ -23,6 +23,7 @@ def config_to_external(config, id):
         'id': id,
         'name': config.name,
         'description': config.description,
+        'schedulable': config.schedulable,
         'parameters': parameters
     }
 
@@ -111,4 +112,14 @@ def server_conf_to_external(server_config, server_version):
         'title': server_config.title,
         'enableScriptTitles': server_config.enable_script_titles,
         'version': server_version
+    }
+
+
+def parse_external_schedule(external_schedule):
+    return {
+        'repeatable': external_schedule.get('repeatable'),
+        'start_datetime': external_schedule.get('startDatetime'),
+        'repeat_unit': external_schedule.get('repeatUnit'),
+        'repeat_period': external_schedule.get('repeatPeriod'),
+        'weekdays': external_schedule.get('weekDays')
     }

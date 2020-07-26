@@ -30,6 +30,7 @@ class ShortConfig(object):
     'working_directory',
     'ansi_enabled',
     'output_files',
+    'schedulable',
     '_included_config')
 class ConfigModel:
 
@@ -51,6 +52,7 @@ class ConfigModel:
 
         self._username = username
         self._audit_name = audit_name
+        self.schedulable = False
 
         self.parameters = ObservableList()
         self.parameter_values = ObservableDict()
@@ -62,6 +64,8 @@ class ConfigModel:
         self._included_config_prop.bind(self._included_config_path, self._path_to_json)
 
         self._reload_config()
+
+        self.parameters.subscribe(self)
 
         self._init_parameters(username, audit_name)
 
@@ -163,6 +167,9 @@ class ConfigModel:
 
         self.output_files = config.get('output_files', [])
 
+        if config.get('scheduling'):
+            self.schedulable = read_bool_from_config('enabled', config.get('scheduling'), default=False)
+
         if not self.script_command:
             raise Exception('No script_path is specified for ' + self.name)
 
@@ -203,6 +210,15 @@ class ConfigModel:
             if parameter.name == param_name:
                 return parameter
         return None
+
+    def on_add(self, parameter, index):
+        if self.schedulable and parameter.secure:
+            LOGGER.warning(
+                'Disabling schedulable functionality, because parameter ' + parameter.str_name() + ' is secure')
+            self.schedulable = False
+
+    def on_remove(self, parameter):
+        pass
 
     def _validate_parameter_configs(self):
         for parameter in self.parameters:

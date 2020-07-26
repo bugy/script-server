@@ -1,23 +1,23 @@
 <template>
-    <div class="promisable-button">
-        <a @click="onClick" class="save-button waves-effect waves-teal btn-flat">
-            <i :title="error" class="material-icons" v-if="error">warning</i>
-            <div class="preloader-wrapper small active" v-if="inProgress">
-                <div class="spinner-layer">
-                    <div class="circle-clipper left">
-                        <div class="circle"></div>
-                    </div>
-                    <div class="gap-patch">
-                        <div class="circle"></div>
-                    </div>
-                    <div class="circle-clipper right">
-                        <div class="circle"></div>
-                    </div>
+    <a :disabled="!enabled" @click="onClick"
+       class="save-button waves-effect waves-teal btn-flat promisable-button">
+
+        <i :title="error" class="material-icons" v-if="error">warning</i>
+        <div :style="preloaderStyle" class="preloader-wrapper small active" v-if="inProgress">
+            <div class="spinner-layer">
+                <div class="circle-clipper left">
+                    <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                    <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                    <div class="circle"></div>
                 </div>
             </div>
-            {{ title }}
-        </a>
-    </div>
+        </div>
+        {{ title }}
+    </a>
 </template>
 
 <script>
@@ -31,7 +31,12 @@
                 type: String,
                 default: 'Save'
             },
-            click: Function
+            click: Function,
+            preloaderStyle: {
+                type: Object,
+                default: {}
+            },
+            enabled: true
         },
 
         data() {
@@ -64,7 +69,7 @@
 </script>
 
 <style scoped>
-    .promisable-button > a {
+    a.promisable-button {
         display: flex;
         align-items: center;
         justify-content: center;

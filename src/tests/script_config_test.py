@@ -34,7 +34,8 @@ class ConfigModelInitTest(unittest.TestCase):
             'working_directory': working_directory,
             'requires_terminal': requires_terminal,
             'bash_formatting': bash_formatting,
-            'output_files': output_files})
+            'output_files': output_files,
+            'scheduling': {'enabled': True}})
 
         self.assertEqual(name, config_model.name)
         self.assertEqual(script_path, config_model.script_command)
@@ -43,6 +44,7 @@ class ConfigModelInitTest(unittest.TestCase):
         self.assertEqual(requires_terminal, config_model.requires_terminal)
         self.assertEqual(bash_formatting, config_model.ansi_enabled)
         self.assertEqual(output_files, config_model.output_files)
+        self.assertTrue(config_model.schedulable)
 
     def test_create_with_parameter(self):
         config_model = _create_config_model('conf_p_1', parameters=[create_script_param_config('param1')])
@@ -803,6 +805,43 @@ class GetSortedConfigTest(unittest.TestCase):
             ]),
         ])
         self.assertEqual(expected, config)
+
+
+class SchedulableConfigTest(unittest.TestCase):
+    def test_create_with_schedulable_false(self):
+        config_model = _create_config_model('some-name', config={
+            'scheduling': {'enabled': False}})
+        self.assertFalse(config_model.schedulable)
+
+    def test_create_with_schedulable_default(self):
+        config_model = _create_config_model('some-name', config={})
+        self.assertFalse(config_model.schedulable)
+
+    def test_create_with_schedulable_true_and_secure_parameter(self):
+        config_model = _create_config_model('some-name', config={
+            'scheduling': {'enabled': True},
+            'parameters': [{'name': 'p1', 'secure': True}]
+        })
+        self.assertFalse(config_model.schedulable)
+
+    def test_create_with_schedulable_true_and_included_secure_parameter(self):
+        config_model = _create_config_model('some-name', config={
+            'scheduling': {'enabled': True},
+            'include': '${p1}',
+            'parameters': [{'name': 'p1', 'secure': False}]
+        })
+        another_path = test_utils.write_script_config(
+            {'parameters': [{'name': 'p2', 'secure': True}]},
+            'another_config')
+
+        self.assertTrue(config_model.schedulable)
+
+        config_model.set_param_value('p1', another_path)
+
+        self.assertFalse(config_model.schedulable)
+
+    def tearDown(self) -> None:
+        test_utils.cleanup()
 
 
 def _create_config_model(name, *,

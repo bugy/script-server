@@ -6,8 +6,8 @@ import re
 import shutil
 import threading
 
-from utils import file_utils
-from utils.date_utils import get_current_millis, datetime_now, ms_to_datetime
+from utils import file_utils, date_utils
+from utils.date_utils import get_current_millis, ms_to_datetime
 
 LOGGER = logging.getLogger('script_server.user_file_storage')
 
@@ -55,7 +55,7 @@ class UserFileStorage:
 
                         millis = int(timed_folder)
                         folder_date = ms_to_datetime(millis)
-                        now = datetime_now()
+                        now = date_utils.now()
 
                         if (now - folder_date) > datetime.timedelta(milliseconds=lifetime_ms):
                             folder_path = os.path.join(parent_folder, user_folder, timed_folder)
