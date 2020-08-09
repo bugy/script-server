@@ -150,6 +150,9 @@ def create_authenticator(auth_object, temp_folder):
     elif auth_type == 'google_oauth':
         from auth.auth_google_oauth import GoogleOauthAuthenticator
         authenticator = GoogleOauthAuthenticator(auth_object)
+    elif auth_type == 'gitlab':
+        from auth.auth_gitlab import GitlabOAuthAuthenticator
+        authenticator = GitlabOAuthAuthenticator(auth_object)
     elif auth_type == 'htpasswd':
         from auth.auth_htpasswd import HtpasswdAuthenticator
         authenticator = HtpasswdAuthenticator(auth_object)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import tornado.concurrent
@@ -23,8 +24,14 @@ class TornadoAuth():
             return True
 
         username = self._get_current_user(request_handler)
+        if not username:
+            return False
 
-        return bool(username)
+        active = self.authenticator.validate_user(username, request_handler)
+        if not active:
+            self.logout(request_handler)
+
+        return active
 
     @staticmethod
     def _get_current_user(request_handler):
@@ -48,7 +55,7 @@ class TornadoAuth():
 
         try:
             username = self.authenticator.authenticate(request_handler)
-            if isinstance(username, tornado.concurrent.Future):
+            if asyncio.iscoroutine(username):
                 username = yield username
 
         except auth_base.AuthRejectedError as e:
@@ -98,3 +105,5 @@ class TornadoAuth():
         LOGGER.info('Logging out ' + username)
 
         request_handler.clear_cookie('username')
+
+        self.authenticator.logout(username, request_handler)

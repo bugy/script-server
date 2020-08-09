@@ -6,6 +6,7 @@ import threading
 import uuid
 from copy import copy
 from unittest.case import TestCase
+from unittest.mock import MagicMock
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
@@ -488,3 +489,8 @@ class _IdGeneratorMock:
         self._next_id += 1
         self.generated_ids.append(id)
         return id
+
+
+class AsyncMock(MagicMock):
+    async def __call__(self, *args, **kwargs):
+        return super(AsyncMock, self).__call__(*args, **kwargs)

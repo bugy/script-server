@@ -2,6 +2,7 @@ import json
 import os
 import unittest
 
+from auth.auth_gitlab import GitlabOAuthAuthenticator
 from auth.auth_google_oauth import GoogleOauthAuthenticator
 from auth.auth_htpasswd import HtpasswdAuthenticator
 from auth.auth_ldap import LdapAuthenticator
@@ -202,6 +203,19 @@ class TestAuthConfig(unittest.TestCase):
             _from_json({'auth': {'type': 'google_oauth',
                                  'client_id': '1234',
                                  'secret': 'abcd'}})
+
+    def test_gitlab_oauth(self):
+        config = _from_json({
+            'auth': {
+                'type': 'gitlab',
+                'client_id': '1234',
+                'secret': 'abcd',
+            },
+            'access': {
+                'allowed_users': []
+            }})
+
+        self.assertIsInstance(config.authenticator, GitlabOAuthAuthenticator)
 
     def test_ldap(self):
         config = _from_json({'auth': {'type': 'ldap',
