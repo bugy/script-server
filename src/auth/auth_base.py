@@ -5,6 +5,7 @@ class Authenticator(metaclass=abc.ABCMeta):
     def __init__(self) -> None:
         self._client_visible_config = {}
         self.auth_type = None
+        self.auth_expiration_days = 30
 
     @abc.abstractmethod
     def authenticate(self, request_handler):

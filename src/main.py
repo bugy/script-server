@@ -18,6 +18,7 @@ from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
 from files.user_file_storage import UserFileStorage
 from model import server_conf
+from scheduling.schedule_service import ScheduleService
 from utils import tool_utils, file_utils
 from utils.tool_utils import InvalidWebBuildException
 from web import server
@@ -26,10 +27,12 @@ from web.client import tornado_client_config
 parser = argparse.ArgumentParser(description='Launch script-server.')
 parser.add_argument('-d', '--config-dir', default='conf')
 parser.add_argument('-f', '--config-file', default='conf.json')
+parser.add_argument('-l', '--log-folder', default='logs')
+parser.add_argument('-t', '--tmp-folder', default='temp')
 args = vars(parser.parse_args())
 
-TEMP_FOLDER = 'temp'
-LOG_FOLDER = 'logs'
+TEMP_FOLDER = args['tmp_folder']
+LOG_FOLDER = args['log_folder']
 
 CONFIG_FOLDER = args['config_dir']
 if os.path.isabs(args['config_file']):
@@ -120,11 +123,14 @@ def main():
     executions_callback_feature = ExecutionsCallbackFeature(execution_service, server_config.callbacks_config)
     executions_callback_feature.start()
 
+    schedule_service = ScheduleService(config_service, execution_service, CONFIG_FOLDER)
+
     server.init(
         server_config,
         server_config.authenticator,
         authorizer,
         execution_service,
+        schedule_service,
         execution_logging_service,
         config_service,
         alerts_service,

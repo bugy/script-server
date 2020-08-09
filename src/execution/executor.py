@@ -210,22 +210,46 @@ def build_command_args(param_values, config):
 
     for parameter in config.parameters:
         name = parameter.name
+        option_name = parameter.param
+        if parameter.param is None:
+            option_name = ''
 
         if name in param_values:
             value = param_values[name]
 
             if parameter.no_value:
-                if value is True:
-                    result.append(parameter.param)
+                if value is True and option_name:
+                    result.append(option_name)
 
             elif value:
-                if parameter.param:
-                    result.append(parameter.param)
+
+                def add_param_and_value(parameter_sh, value_sh):
+                    if parameter_sh.param:
+                        result.append(parameter_sh.param)
+                    if isinstance(value_sh, list):
+                        result.extend(value_sh)
+                    else:
+                        result.append(value_sh)
 
                 if isinstance(value, list):
-                    result.extend(value)
+                    if parameter.same_arg_param:
+                        for val in value:
+                            if parameter.repeat_param:
+                                add_param_and_value(parameter, val)
+                            else:
+                                result.append(option_name + str(val))
+                    else:
+                        if parameter.repeat_param:
+                            add_param_and_value(parameter, value)
+                        else:
+                            result.append(option_name + str(value[0]))
+                            if len(value) > 1:
+                                result.extend(value[1:])
                 else:
-                    result.append(value)
+                    if parameter.repeat_param:
+                        add_param_and_value(parameter, value)
+                    else:
+                        result.append(option_name + str(value))
 
     return result
 

@@ -35,6 +35,7 @@ from model.model_helper import is_empty, InvalidFileException, AccessProhibitedE
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
 from model.server_conf import ServerConfig
+from scheduling.schedule_service import ScheduleService, UnavailableScriptException, InvalidScheduleException
 from utils import audit_utils, tornado_utils, os_utils, env_utils
 from utils import file_utils as file_utils
 from utils.audit_utils import get_audit_name_from_request
@@ -436,8 +437,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
 
 @tornado.web.stream_request_body
-class ScriptExecute(BaseRequestHandler):
-
+class StreamUploadRequestHandler(BaseRequestHandler):
     def __init__(self, application, request, **kwargs):
         super().__init__(application, request, **kwargs)
 
@@ -459,6 +459,11 @@ class ScriptExecute(BaseRequestHandler):
 
     def data_received(self, chunk):
         self.form_reader.read(chunk)
+
+
+class ScriptExecute(StreamUploadRequestHandler):
+    def __init__(self, application, request, **kwargs):
+        super().__init__(application, request, **kwargs)
 
     @inject_user
     def post(self, user):
@@ -808,6 +813,39 @@ class GetLongHistoryEntryHandler(BaseRequestHandler):
         self.write(json.dumps(long_log))
 
 
+@tornado.web.stream_request_body
+class AddSchedule(StreamUploadRequestHandler):
+
+    def __init__(self, application, request, **kwargs):
+        super().__init__(application, request, **kwargs)
+
+    @inject_user
+    def post(self, user):
+        arguments = self.form_reader.values
+        execution_info = external_model.to_execution_info(arguments)
+        parameter_values = execution_info.param_values
+
+        if self.form_reader.files:
+            for key, value in self.form_reader.files.items():
+                parameter_values[key] = value.path
+
+        schedule_config = json.loads(parameter_values['__schedule_config'])
+        del parameter_values['__schedule_config']
+
+        try:
+            id = self.application.schedule_service.create_job(
+                execution_info.script,
+                parameter_values,
+                external_model.parse_external_schedule(schedule_config),
+                user)
+        except (UnavailableScriptException, InvalidScheduleException) as e:
+            raise tornado.web.HTTPError(422, reason=str(e))
+        except InvalidValueException as e:
+            raise tornado.web.HTTPError(422, reason=e.get_user_message())
+
+        self.write(json.dumps({'id': id}))
+
+
 def wrap_to_server_event(event_type, data):
     return json.dumps({
         "event": event_type,
@@ -871,6 +909,7 @@ def init(server_config: ServerConfig,
          authenticator,
          authorizer,
          execution_service: ExecutionService,
+         schedule_service: ScheduleService,
          execution_logging_service: ExecutionLoggingService,
          config_service: ConfigService,
          alerts_service: AlertsService,
@@ -908,6 +947,7 @@ def init(server_config: ServerConfig,
                 (r'/executions/status/(.*)', GetExecutionStatus),
                 (r'/history/execution_log/short', GetShortHistoryEntriesHandler),
                 (r'/history/execution_log/long/(.*)', GetLongHistoryEntryHandler),
+                (r'/schedule', AddSchedule),
                 (r'/auth/info', AuthInfoHandler),
                 (r'/result_files/(.*)',
                  DownloadResultFile,
@@ -942,6 +982,7 @@ def init(server_config: ServerConfig,
     application.file_download_feature = file_download_feature
     application.file_upload_feature = file_upload_feature
     application.execution_service = execution_service
+    application.schedule_service = schedule_service
     application.execution_logging_service = execution_logging_service
     application.config_service = config_service
     application.alerts_service = alerts_service

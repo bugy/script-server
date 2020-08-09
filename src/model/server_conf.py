@@ -159,6 +159,8 @@ def create_authenticator(auth_object, temp_folder):
     else:
         raise Exception(auth_type + ' auth is not supported')
 
+    authenticator.auth_expiration_days = float(auth_object.get('expiration_days', 30)) 
+
     authenticator.auth_type = auth_type
 
     return authenticator

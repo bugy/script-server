@@ -4,6 +4,8 @@ import shutil
 import stat
 import threading
 import uuid
+from copy import copy
+from unittest.case import TestCase
 from unittest.mock import MagicMock
 
 import utils.file_utils as file_utils
@@ -136,7 +138,9 @@ def create_script_param_config(
         file_dir=None,
         file_recursive=None,
         file_type=None,
-        file_extensions=None):
+        file_extensions=None,
+        repeat_param=None,
+        same_arg_param=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -193,6 +197,12 @@ def create_script_param_config(
     if file_type is not None:
         conf['file_type'] = file_type
 
+    if repeat_param is not None:
+        conf['repeat_param'] = repeat_param
+
+    if same_arg_param is not None:
+        conf['same_arg_param'] = same_arg_param
+
     return conf
 
 
@@ -205,7 +215,8 @@ def create_config_model(name, *,
                         parameter_values=None,
                         script_command='ls',
                         output_files=None,
-                        requires_terminal=None):
+                        requires_terminal=None,
+                        schedulable=True):
     result_config = {}
 
     if config:
@@ -224,6 +235,9 @@ def create_config_model(name, *,
 
     if requires_terminal is not None:
         result_config['requires_terminal'] = requires_terminal
+
+    if schedulable is not None:
+        result_config['scheduling'] = {'enabled': schedulable}
 
     result_config['script_path'] = script_command
 
@@ -383,6 +397,13 @@ def mock_request_handler(*, arguments: dict = None, method='GET', headers=None):
     request_handler.request.headers = headers
 
     return request_handler
+
+
+def assert_dir_files(expected_files, dir_path, test_case: TestCase):
+    expected_files_sorted = sorted(copy(expected_files))
+    actual_files = sorted(os.listdir(dir_path))
+
+    test_case.assertSequenceEqual(expected_files_sorted, actual_files)
 
 
 class _MockProcessWrapper(ProcessWrapper):
