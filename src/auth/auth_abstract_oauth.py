@@ -107,6 +107,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
 
         if self.group_support:
             user_groups = await self.fetch_user_groups(access_token)
+            LOGGER.info('Loaded groups for ' + user_email + ': ' + str(user_groups))
             user_state.groups = user_groups
 
         now = time.time()
@@ -255,6 +256,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
             if self.group_support:
                 try:
                     user_groups = await self.fetch_user_groups(access_token)
+                    LOGGER.info('Updated groups for ' + username + ': ' + str(user_groups))
                     user_state.groups = user_groups
                 except AuthFailureError:
                     LOGGER.error('Failed to fetch user %s groups', username)
