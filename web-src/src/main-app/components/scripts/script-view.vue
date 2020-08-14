@@ -5,7 +5,7 @@
         <ScriptParametersView ref="parametersView"/>
         <div class="actions-panel">
             <button class="button-execute btn"
-                    :disabled="!enableExecuteButton"
+                    :disabled="!enableExecuteButton || scheduleMode"
                     v-bind:class="{ disabled: !enableExecuteButton }"
                     @click="executeScript">
                 Execute
@@ -19,6 +19,8 @@
                     @click="stopScript">
                 {{stopButtonLabel}}
             </button>
+            <div class="button-gap" v-if="schedulable"></div>
+            <ScheduleButton :disabled="!enableScheduleButton" @click="openSchedule" v-if="schedulable"/>
         </div>
         <LogPanel ref="logPanel" v-show="showLog && !hasErrors && !hideExecutionControls"/>
         <div class="validation-panel" v-if="hasErrors" v-show="!hideExecutionControls">
@@ -27,7 +29,7 @@
                 <li v-for="error in errors">{{ error }}</li>
             </ul>
         </div>
-        <div class="files-download-panel" v-if="downloadableFiles && (downloadableFiles.length > 0)"
+        <div class="files-download-panel" v-if="downloadableFiles && (downloadableFiles.length > 0) && !scheduleMode"
              v-show="!hideExecutionControls">
             <a v-for="file in downloadableFiles"
                class="waves-effect waves-teal btn-flat"
@@ -45,6 +47,10 @@
                    ref="inputField"
                    v-on:keyup="inputKeyUpHandler">
         </div>
+        <ScriptViewScheduleHolder :scriptConfigComponentsHeight="scriptConfigComponentsHeight"
+                                  @close="scheduleMode = false"
+                                  ref="scheduleHolder"
+                                  v-if="!hideExecutionControls"/>
     </div>
 </template>
 
@@ -53,11 +59,13 @@
     import FileDownloadIcon from '@/assets/file_download.png'
     import LogPanel from '@/common/components/log_panel'
     import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
+    import ScheduleButton from '@/main-app/components/scripts/ScheduleButton';
     import ScriptLoadingText from '@/main-app/components/scripts/ScriptLoadingText';
     import marked from 'marked';
     import {mapActions, mapState} from 'vuex'
     import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
     import ScriptParametersView from './script-parameters-view'
+    import ScriptViewScheduleHolder from "@/main-app/components/scripts/ScriptViewScheduleHolder";
 
     export default {
         data: function () {
@@ -67,7 +75,9 @@
                 errors: [],
                 nextLogIndex: 0,
                 lastInlineImages: {},
-                downloadIcon: FileDownloadIcon
+                downloadIcon: FileDownloadIcon,
+                scheduleMode: false,
+                scriptConfigComponentsHeight: 0
             }
         },
 
@@ -82,13 +92,16 @@
         components: {
             ScriptLoadingText,
             LogPanel,
-            ScriptParametersView
+            ScriptParametersView,
+            ScheduleButton,
+            ScriptViewScheduleHolder
         },
 
         computed: {
             ...mapState('scriptConfig', {
                 scriptDescription: state => state.scriptConfig ? state.scriptConfig.description : '',
-                loading: 'loading'
+                loading: 'loading',
+                scriptConfig: 'scriptConfig'
             }),
             ...mapState('scriptSetup', {
                 parameterErrors: 'errors'
@@ -128,6 +141,28 @@
             },
 
             enableExecuteButton() {
+                if (this.scheduleMode) {
+                    return false;
+                }
+
+                if (this.hideExecutionControls) {
+                    return false;
+                }
+
+                if (this.loading) {
+                    return false;
+                }
+
+                if (isNull(this.currentExecutor)) {
+                    return true;
+                }
+
+                return this.currentExecutor.state.status === STATUS_FINISHED
+                    || this.currentExecutor.state.status === STATUS_DISCONNECTED
+                    || this.currentExecutor.state.status === STATUS_ERROR;
+            },
+
+            enableScheduleButton() {
                 if (this.hideExecutionControls) {
                     return false;
                 }
@@ -168,7 +203,7 @@
             },
 
             showLog() {
-                return !isNull(this.currentExecutor);
+                return !isNull(this.currentExecutor) && !this.scheduleMode;
             },
 
             downloadableFiles() {
@@ -209,6 +244,10 @@
 
             killEnabledTimeout() {
                 return isNull(this.currentExecutor) ? null : this.currentExecutor.state.killTimeoutSec;
+            },
+
+            schedulable() {
+                return this.scriptConfig && this.scriptConfig.schedulable;
             }
         },
 
@@ -223,7 +262,7 @@
                 }
             },
 
-            executeScript: function () {
+            validatePreExecution: function () {
                 this.errors = [];
 
                 const errors = this.parameterErrors;
@@ -231,10 +270,27 @@
                     forEachKeyValue(errors, (paramName, error) => {
                         this.errors.push(paramName + ': ' + error);
                     });
+                    return false;
+                }
+
+                return true;
+            },
+
+            executeScript: function () {
+                if (!this.validatePreExecution()) {
                     return;
                 }
 
                 this.startExecution();
+            },
+
+            openSchedule: function () {
+                if (!this.validatePreExecution()) {
+                    return;
+                }
+
+                this.$refs.scheduleHolder.open();
+                this.scheduleMode = true;
             },
 
             ...mapActions('executions', {
@@ -332,6 +388,25 @@
 
                     this.lastInlineImages = deepCloneObject(newValue);
                 }
+            },
+
+            scriptConfig: {
+                immediate: true,
+                handler() {
+                    this.$nextTick(() => {
+                        // 200 is a rough height for headers,buttons, description, etc.
+                        const otherElemsHeight = 200;
+
+                        if (isNull(this.$refs.parametersView)) {
+                            this.scriptConfigComponentsHeight = otherElemsHeight;
+                            return;
+                        }
+
+                        const paramHeight = this.$refs.parametersView.$el.clientHeight;
+
+                        this.scriptConfigComponentsHeight = paramHeight + otherElemsHeight;
+                    })
+                }
             }
         }
     }
@@ -366,21 +441,26 @@
     }
 
     .actions-panel {
+        margin-top: 8px;
         display: flex;
     }
 
-    .button-execute {
-        flex: 6 1 5em;
+    .actions-panel > .button-gap {
+        flex: 3 1 1px;
+    }
 
-        margin-right: 0;
-        margin-top: 6px;
+    .button-execute {
+        flex: 4 1 312px;
     }
 
     .button-stop {
-        flex: 1 0 5em;
+        margin-left: 16px;
+        flex: 1 1 104px;
+    }
 
-        margin-left: 12px;
-        margin-top: 6px;
+    .schedule-button {
+        margin-left: 32px;
+        flex: 1 0 auto;
     }
 
     .script-input-panel {
@@ -409,11 +489,16 @@
         overflow-y: auto;
         flex: 1;
 
-        margin: 17px 12px 7px;
+        margin: 20px 0 8px;
+    }
+
+    .validation-panel .header {
+        padding-left: 0;
     }
 
     .validation-errors-list {
-        margin-left: 17px;
+        margin-left: 12px;
+        margin-top: 8px;
     }
 
     .validation-errors-list li {

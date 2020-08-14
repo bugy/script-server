@@ -3,6 +3,7 @@ import axios from 'axios';
 import clone from 'lodash/clone';
 import get from 'lodash/get';
 import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
+import {parametersToFormData} from "@/main-app/store/mainStoreHelper";
 
 export const axiosInstance = axios.create();
 
@@ -125,19 +126,8 @@ export default {
             const parameterValues = clone(rootState.scriptSetup.parameterValues);
             const scriptName = rootState.scriptConfig.scriptConfig.name;
 
-            var formData = new FormData();
+            const formData = parametersToFormData(parameterValues);
             formData.append('__script_name', scriptName);
-
-            forEachKeyValue(parameterValues, function (parameter, value) {
-                if (Array.isArray(value)) {
-                    for (let i = 0; i < value.length; i++) {
-                        const valueElement = value[i];
-                        formData.append(parameter, valueElement);
-                    }
-                } else if (!isNull(value)) {
-                    formData.append(parameter, value);
-                }
-            });
 
             const executor = scriptExecutor(null, scriptName, parameterValues);
             store.registerModule(['executions', 'temp'], executor);

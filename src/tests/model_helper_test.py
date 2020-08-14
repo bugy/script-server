@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import datetime, timezone
 
 from config.constants import FILE_TYPE_FILE, FILE_TYPE_DIR
 from model import model_helper
@@ -400,3 +401,39 @@ class TestReadStrFromConfig(unittest.TestCase):
     def test_text_when_int(self):
         self.assertRaisesRegex(InvalidValueTypeException, 'Invalid key1 value: string expected, but was: 5',
                                read_str_from_config, {'key1': 5}, 'key1')
+
+
+class TestReadDatetime(unittest.TestCase):
+    def test_datetime_value(self):
+        value = datetime.now()
+        actual_value = model_helper.read_datetime_from_config('p1', {'p1': value})
+        self.assertEqual(value, actual_value)
+
+    def test_string_value(self):
+        actual_value = model_helper.read_datetime_from_config('p1', {'p1': '2020-07-10T15:30:59.123456Z'})
+        expected_value = datetime(2020, 7, 10, 15, 30, 59, 123456, tzinfo=timezone.utc)
+        self.assertEqual(expected_value, actual_value)
+
+    def test_string_value_when_bad_format(self):
+        self.assertRaisesRegex(
+            ValueError,
+            'does not match format',
+            model_helper.read_datetime_from_config,
+            'p1', {'p1': '15:30:59 2020-07-10'})
+
+    def test_default_value_when_missing_key(self):
+        value = datetime.now()
+        actual_value = model_helper.read_datetime_from_config('p1', {'another_key': 'abc'}, default=value)
+        self.assertEqual(value, actual_value)
+
+    def test_default_value_when_value_none(self):
+        value = datetime.now()
+        actual_value = model_helper.read_datetime_from_config('p1', {'p1': None}, default=value)
+        self.assertEqual(value, actual_value)
+
+    def test_int_value(self):
+        self.assertRaisesRegex(
+            InvalidValueTypeException,
+            'should be a datetime',
+            model_helper.read_datetime_from_config,
+            'p1', {'p1': 12345})

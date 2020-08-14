@@ -5,6 +5,7 @@ import get from 'lodash/get';
 import Vue from 'vue'
 import Vuex from 'vuex'
 import authModule from './auth';
+import scheduleModule from './scriptSchedule';
 import pageModule from './page';
 
 import scriptConfigModule from './scriptConfig';
@@ -25,7 +26,8 @@ const store = new Vuex.Store({
         executions: scriptExecutionManagerModule,
         auth: authModule,
         history: historyModule(),
-        page: pageModule
+        page: pageModule,
+        scriptSchedule: scheduleModule
     },
     actions: {
         init({dispatch}) {

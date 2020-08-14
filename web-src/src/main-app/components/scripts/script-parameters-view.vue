@@ -102,22 +102,6 @@
         padding-left: 28px;
     }
 
-    .script-parameters-panel >>> input[type="text"]:invalid,
-    .script-parameters-panel >>> input[type="number"]:invalid {
-        border-bottom: 1px solid #e51c23;
-        box-shadow: 0 1px 0 0 #e51c23;
-    }
-
-    .script-parameters-panel >>> .input-field:after {
-        content: attr(data-error);
-        color: #F44336;
-        font-size: 0.9rem;
-        display: block;
-        position: absolute;
-        top: 23px;
-        left: 0.75rem;
-    }
-
     .script-parameters-panel >>> .input-field .select-wrapper + label {
         transform: scale(0.8);
         top: -18px;

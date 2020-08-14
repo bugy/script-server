@@ -67,7 +67,7 @@ class ParameterModel(object):
         self.repeat_param = read_bool_from_config('repeat_param', config, default=True)
         self.env_var = config.get('env_var')
         self.no_value = read_bool_from_config('no_value', config, default=False)
-        self.description = config.get('description')
+        self.description = replace_auth_vars(config.get('description'), self._username, self._audit_name)
         self.required = read_bool_from_config('required', config, default=False)
         self.min = config.get('min')
         self.max = config.get('max')
@@ -98,7 +98,7 @@ class ParameterModel(object):
         self._reload_values()
 
     def _validate_config(self):
-        param_log_name = self._str_name()
+        param_log_name = self.str_name()
 
         if self.constant and not self.default:
             message = 'Constant should have default value specified'
@@ -108,7 +108,7 @@ class ParameterModel(object):
             if not self.file_dir:
                 raise Exception('Parameter ' + param_log_name + ' has missing config file_dir')
 
-    def _str_name(self):
+    def str_name(self):
         names = (name for name in (self.name, self.param, self.description) if name)
         return next(names, 'unknown')
 
@@ -194,8 +194,7 @@ class ParameterModel(object):
                 return DependantValuesProvider(self.name , values_config[PARAM_TYPE_DEPENDANT_LIST], self._parameters_supplier)
 
             if 'script' in values_config:
-                script = values_config['script']
-
+                script = replace_auth_vars(values_config['script'], self._username, self._audit_name)
                 if '${' not in script:
                     return ScriptValuesProvider(script)
 

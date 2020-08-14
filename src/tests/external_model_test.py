@@ -3,7 +3,8 @@ import unittest
 from datetime import datetime, timezone
 
 from execution.logging import HistoryEntry
-from model.external_model import to_short_execution_log, to_long_execution_log, server_conf_to_external
+from model.external_model import to_short_execution_log, to_long_execution_log, server_conf_to_external, \
+    parse_external_schedule
 from model.server_conf import ServerConfig
 
 
@@ -163,3 +164,43 @@ class TestServerConf(unittest.TestCase):
         self.assertIsNone(external_config.get('title'))
         self.assertIsNone(external_config.get('enableScriptTitles'))
         self.assertIsNone(external_config.get('version'))
+
+
+class TestParseExternalSchedule(unittest.TestCase):
+    def test_parse_full_config(self):
+        parsed = parse_external_schedule(
+            {'repeatable': False, 'startDatetime': '2020-12-30', 'repeatUnit': 'days', 'repeatPeriod': 5,
+             'weekDays': ['monday', 'Tuesday']})
+
+        self.assertDictEqual({
+            'repeatable': False,
+            'start_datetime': '2020-12-30',
+            'repeat_unit': 'days',
+            'repeat_period': 5,
+            'weekdays': ['monday', 'Tuesday']},
+            parsed)
+
+    def test_parse_partial_config(self):
+        parsed = parse_external_schedule(
+            {'repeatable': False, 'startDatetime': '2020-12-30'})
+
+        self.assertDictEqual({
+            'repeatable': False,
+            'start_datetime': '2020-12-30',
+            'repeat_unit': None,
+            'repeat_period': None,
+            'weekdays': None},
+            parsed)
+
+    def test_parse_unknown_field(self):
+        parsed = parse_external_schedule(
+            {'repeatable': False,
+             'startDatetime': '2020-12-30',
+             'anotherField': 'abc'})
+
+        self.assertDictEqual({
+            'repeatable': False,
+            'start_datetime': '2020-12-30',
+            'repeat_unit': None,
+            'repeat_period': None,
+            'weekdays': None}, parsed)

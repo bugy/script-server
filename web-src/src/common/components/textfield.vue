@@ -17,6 +17,7 @@
     import {isBlankString, isEmptyString, isNull} from '@/common/utils/common';
 
     export default {
+        name: 'Textfield',
         props: {
             'value': [String, Number],
             'config': Object,

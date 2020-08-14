@@ -18,3 +18,13 @@ class User:
             return self.audit_names.get(AUTH_USERNAME)
 
         return str(self.audit_names)
+
+    def as_serializable_dict(self):
+        return {
+            'user_id': self.user_id,
+            'audit_names': self.audit_names
+        }
+
+
+def from_serialized_dict(dict):
+    return User(dict['user_id'], dict['audit_names'])

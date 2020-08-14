@@ -156,3 +156,40 @@ input[type=checkbox]:not(.browser-default) + span {
 #login-google_oauth-button[disabled] {
     color: #B0B0B0;
 }
+
+
+#login-panel .login-gitlab .login-info-label {
+    margin-top: 16px;
+}
+
+#login-gitlab-button {
+    height: 40px;
+    width: 188px;
+    padding-left: 34px;
+    margin: auto;
+    margin-top: 34px;
+    display: block;
+
+    font-size: 14px;
+    font-weight: 500;
+    color: #757575;
+
+    border-radius: 2px;
+    box-shadow: 0 1px 3px -1px #202020;
+    border: none;
+
+    background-image: url('../gitlab-icon-rgb.png');
+    background-color: white;
+    background-position-y: 50%;
+    background-position-x: -4px;
+    background-size: 48px;
+    background-repeat: no-repeat;
+}
+
+#login-gitlab-button:active {
+    background-color: #EEE;
+}
+
+#login-gitlab-button[disabled] {
+    color: #B0B0B0;
+}

@@ -34,20 +34,25 @@ describe('Test ComboBox', function () {
         comboBox.destroy();
     });
 
-    function assertListElements(expectedTexts, searchHeader = false) {
+    function assertListElements(expectedTexts, searchHeader = false, showHeader = true) {
         const listChildren = comboBox.findAll('li');
-        expect(listChildren).toHaveLength(expectedTexts.length + 1);
+
+        const extraChildrenCount = showHeader ? 1 : 0;
+
+        expect(listChildren).toHaveLength(expectedTexts.length + extraChildrenCount);
 
         const headerText = listChildren.at(0).text();
         if (!searchHeader) {
-            expect(headerText).toBe('Choose your option');
+            if (showHeader) {
+                expect(headerText).toBe('Choose your option');
+            }
         } else {
             expect(headerText.trim()).toBe('Search');
         }
 
         for (let i = 0; i < expectedTexts.length; i++) {
             const value = expectedTexts[i];
-            expect(listChildren.at(i + 1).text()).toBe(value);
+            expect(listChildren.at(i + extraChildrenCount).text()).toBe(value);
         }
     }
 
@@ -122,6 +127,13 @@ describe('Test ComboBox', function () {
             await vueTicks();
 
             assertListElements(values);
+        });
+
+        it('Test hide header', async function () {
+            comboBox.setProps({showHeader: false})
+            await vueTicks();
+
+            assertListElements(['Value A', 'Value B', 'Value C'], false, false);
         });
     });
 

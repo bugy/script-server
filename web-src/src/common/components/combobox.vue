@@ -7,7 +7,7 @@
                 :required="config.required"
                 :multiple="config.multiselect"
                 :disabled="disabled || (options.length === 0)">
-            <option :selected="!anythingSelected" value="" disabled>Choose your option</option>
+            <option :selected="!anythingSelected" disabled v-if="showHeader" value="">Choose your option</option>
             <option v-for="option in options"
                     :value="option.value"
                     :selected="option.selected">{{ option.value }}</option>
@@ -34,7 +34,11 @@
                 type: Boolean,
                 default: false
             },
-            dropdownContainer: null
+            dropdownContainer: null,
+            showHeader: {
+                type: Boolean,
+                default: true
+            }
         },
 
         data: function () {
@@ -91,6 +95,10 @@
             },
 
             disabled() {
+                this.$nextTick(() => this.rebuildCombobox());
+            },
+
+            showHeader() {
                 this.$nextTick(() => this.rebuildCombobox());
             }
         },
@@ -278,4 +286,3 @@
         z-index: 1;
     }
 </style>
-

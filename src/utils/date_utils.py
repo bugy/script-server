@@ -1,3 +1,4 @@
+import calendar
 import sys
 import time
 from datetime import datetime, timezone
@@ -24,10 +25,6 @@ def sec_to_datetime(time_seconds):
     return datetime.fromtimestamp(time_seconds, tz=timezone.utc)
 
 
-def datetime_now():
-    return datetime.now(tz=timezone.utc)
-
-
 def astimezone(datetime_value, new_timezone):
     if (datetime_value.tzinfo is not None) or (sys.version_info >= (3, 6)):
         return datetime_value.astimezone(new_timezone)
@@ -47,3 +44,41 @@ def days_to_ms(days):
 
 def ms_to_days(ms):
     return float(ms) / MS_IN_DAY
+
+
+def parse_iso_datetime(date_str):
+    return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
+
+
+def to_iso_string(datetime_value: datetime):
+    if datetime_value.tzinfo is not None:
+        datetime_value = datetime_value.astimezone(timezone.utc)
+
+    return datetime_value.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+
+def is_past(dt: datetime):
+    return now(tz=dt.tzinfo) > dt
+
+
+def seconds_between(start: datetime, end: datetime):
+    delta = end - start
+    return delta.total_seconds()
+
+
+def add_months(datetime_value: datetime, months):
+    month = datetime_value.month - 1 + months
+    year = datetime_value.year + month // 12
+    month = month % 12 + 1
+    day = min(datetime_value.day, calendar.monthrange(year, month)[1])
+    return datetime_value.replace(year=year, month=month, day=day)
+
+
+_mocked_now = None
+
+
+def now(tz=timezone.utc):
+    if _mocked_now is not None:
+        return _mocked_now
+
+    return datetime.now(tz)

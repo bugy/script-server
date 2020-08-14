@@ -18,6 +18,7 @@ from features.file_download_feature import FileDownloadFeature
 from features.file_upload_feature import FileUploadFeature
 from files.user_file_storage import UserFileStorage
 from model import server_conf
+from scheduling.schedule_service import ScheduleService
 from utils import tool_utils, file_utils
 from utils.tool_utils import InvalidWebBuildException
 from web import server
@@ -122,11 +123,14 @@ def main():
     executions_callback_feature = ExecutionsCallbackFeature(execution_service, server_config.callbacks_config)
     executions_callback_feature.start()
 
+    schedule_service = ScheduleService(config_service, execution_service, CONFIG_FOLDER)
+
     server.init(
         server_config,
         server_config.authenticator,
         authorizer,
         execution_service,
+        schedule_service,
         execution_logging_service,
         config_service,
         alerts_service,
