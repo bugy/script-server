@@ -21,23 +21,26 @@
 </template>
 
 <script>
-    import '@/common/materializecss/imports/spinner'
-    import {isEmptyString} from '@/common/utils/common';
+import '@/common/materializecss/imports/spinner'
+import {isEmptyString} from '@/common/utils/common';
 
-    export default {
-        name: 'PromisableButton',
-        props: {
-            title: {
-                type: String,
-                default: 'Save'
-            },
-            click: Function,
-            preloaderStyle: {
-                type: Object,
-                default: {}
-            },
-            enabled: true
-        },
+export default {
+  name: 'PromisableButton',
+  props: {
+    title: {
+      type: String,
+      default: 'Save'
+    },
+    click: Function,
+    preloaderStyle: {
+      type: Object,
+      default: () => {
+      }
+    },
+    enabled: {
+      default: true
+    }
+  },
 
         data() {
             return {

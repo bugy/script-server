@@ -10,20 +10,23 @@
 </template>
 
 <script>
-    import {isNull, uuidv4} from "@/common/utils/common";
-    import '@/common/materializecss/imports/datepicker'
+import {isNull, uuidv4} from "@/common/utils/common";
+import '@/common/materializecss/imports/datepicker'
 
-    export default {
-        name: "DatePicker",
-        props: {
-            label: {
-                type: String
-            },
-            value: {
-                type: Date
-            },
-            showHeaderInModal: true
-        },
+export default {
+  name: "DatePicker",
+  props: {
+    label: {
+      type: String
+    },
+    value: {
+      type: Date
+    },
+    showHeaderInModal: {
+      type: Boolean,
+      default: true
+    }
+  },
         data() {
             return {
                 id: null
