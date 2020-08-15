@@ -14,35 +14,35 @@
 </template>
 
 <script>
-    import Checkbox from '@/common/components/checkbox'
-    import Combobox from '@/common/components/combobox'
-    import FileUpload from '@/common/components/file_upload'
-    import ServerFileField from '@/common/components/server_file_field'
-    import Textfield from '@/common/components/textfield'
-    import {mapActions, mapState} from 'vuex'
-    import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
+import Checkbox from '@/common/components/checkbox'
+import Combobox from '@/common/components/combobox'
+import FileUpload from '@/common/components/file_upload'
+import ServerFileField from '@/common/components/server_file_field'
+import Textfield from '@/common/components/textfield'
+import {mapActions, mapState} from 'vuex'
+import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
 
-    export default {
-        name: 'script-parameters-view',
+export default {
+  name: 'script-parameters-view',
 
-        computed: {
-            ...mapState('scriptConfig', {
-                parameters: 'parameters'
-            }),
-            ...mapState('scriptSetup', {
-                parameterValues: 'parameterValues'
-            })
-        },
+  computed: {
+    ...mapState('scriptConfig', {
+      parameters: 'parameters'
+    }),
+    ...mapState('scriptSetup', {
+      parameterValues: 'parameterValues'
+    })
+  },
 
-        methods: {
-            ...mapActions('scriptSetup', {
-                setParameterValueInStore: 'setParameterValue',
-                setParameterErrorInStore: 'setParameterError'
-            }),
-            getComponentType(parameter) {
-                if (parameter.withoutValue) {
-                    return Checkbox;
-                } else if (isRecursiveFileParameter(parameter)) {
+  methods: {
+    ...mapActions('scriptSetup', {
+      setParameterValueInStore: 'setParameterValue',
+      setParameterErrorInStore: 'setParameterError'
+    }),
+    getComponentType(parameter) {
+      if (parameter.withoutValue) {
+        return Checkbox;
+      } else if (isRecursiveFileParameter(parameter)) {
                     return ServerFileField;
                 } else if (comboboxTypes.includes(parameter.type)) {
                     return Combobox;
@@ -99,20 +99,25 @@
     }
 
     .script-parameters-panel >>> .input-field input[type=checkbox] + span {
-        padding-left: 28px;
+      padding-left: 28px;
     }
 
     .script-parameters-panel >>> .input-field .select-wrapper + label {
-        transform: scale(0.8);
-        top: -18px;
+      transform: scale(0.8);
+      top: -18px;
+    }
+
+    .script-parameters-panel >>> .input-field:after {
+      top: 1.7em;
+      left: 0.1em;
     }
 
     .script-parameters-panel >>> .dropdown-content {
-        max-width: 50vw;
-        min-width: 100%;
-        white-space: nowrap;
+      max-width: 50vw;
+      min-width: 100%;
+      white-space: nowrap;
 
-        margin-bottom: 0;
+      margin-bottom: 0;
     }
 
     .script-parameters-panel >>> .dropdown-content > li > span {

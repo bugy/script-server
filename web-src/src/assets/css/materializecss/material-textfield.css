@@ -4,8 +4,8 @@
     font-size: 0.9em;
     display: block;
     position: absolute;
-    top: 1.7em;
-    left: 0.8em;
+    top: 3.6em;
+    left: 0.9em;
 }
 
 .input-field input[type="text"]:invalid,
