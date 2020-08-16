@@ -12,6 +12,7 @@ export default {
         reset({commit, dispatch}) {
             commit('SET_ERRORS', {});
             commit('SET_VALUES', {});
+            commit('SET_LAST_PREDEFINED_SCRIPT', null);
             dispatch('scriptConfig/setForcedAllowedValues', {}, {root: true})
         },
 
