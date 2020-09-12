@@ -1,4 +1,4 @@
-import {forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
+import {isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
 import axios from 'axios';
 import clone from 'lodash/clone';
 import get from 'lodash/get';
@@ -99,23 +99,14 @@ export default {
         selectScript({state, commit, dispatch}, {selectedScript}) {
             let selectedExecutor = null;
 
-            if ((!isNull(state.currentExecutor))) {
-                const previousScriptName = state.currentExecutor.state.scriptName;
-
-                const executorsToRemove = Object.values(state.executors).filter(function (executor) {
-                    return (executor.state.scriptName === previousScriptName) && executor.state.status === STATUS_FINISHED;
-                });
-
-                for (const executor of executorsToRemove) {
-                    dispatch('_removeExecutor', executor);
-                }
-            }
-
-            forEachKeyValue(state.executors, (key, value) => {
-                if (value.state.scriptName === selectedScript) {
-                    selectedExecutor = value;
-                }
+            const matchingExecutors = Object.values(state.executors).filter(function (executor) {
+                return (executor.state.scriptName === selectedScript);
             });
+
+            if (!isEmptyArray(matchingExecutors)) {
+                matchingExecutors.sort((a, b) => parseInt(a.state.id) - parseInt(b.state.id));
+                selectedExecutor = matchingExecutors[0];
+            }
 
             dispatch('selectExecutor', selectedExecutor);
         },
@@ -203,8 +194,11 @@ export default {
         selectExecutor({commit, state, dispatch}, executor) {
             const currentExecutor = state.currentExecutor;
             if ((!isNull(currentExecutor))) {
-                if ((currentExecutor.state.scriptName === this.state.scripts.selectedScript)
-                    && (currentExecutor.state.status === STATUS_FINISHED)) {
+                if (executor && (executor.state.id === currentExecutor.state.id)) {
+                    return;
+                }
+
+                if (currentExecutor.state.status === STATUS_FINISHED) {
                     dispatch('_removeExecutor', currentExecutor);
                 }
             }
@@ -224,7 +218,6 @@ export default {
                 return;
             }
 
-            dispatch(executor.state.id + '/cleanup');
             this.unregisterModule(['executions', executor.state.id]);
             commit('REMOVE_EXECUTOR', executor)
         }

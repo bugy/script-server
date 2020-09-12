@@ -111,15 +111,12 @@ export default (id, scriptName, parameterValues) => {
                 commit('ADD_LOG_CHUNK', log);
             },
 
-            cleanup() {
-                if (isSocketActive()) {
-                    internalState.websocket.close();
-                }
+            cleanup({state}) {
+                axios.post('executions/cleanup/' + state.id);
             },
 
             abort({dispatch}) {
-                return dispatch('stopExecution')
-                    .finally(() => dispatch('cleanup'));
+                return dispatch('stopExecution');
             },
 
             setStatus({commit, state}, status) {
@@ -236,7 +233,6 @@ function attachToWebsocket(internalState, state, commit, dispatch) {
                 .then(({data: status}) => {
                     if (status === 'finished') {
                         dispatch('setStatus', STATUS_FINISHED);
-                        axios.post('executions/cleanup/' + executionId);
                     } else {
                         dispatch('setStatus', STATUS_DISCONNECTED);
                     }
@@ -248,7 +244,6 @@ function attachToWebsocket(internalState, state, commit, dispatch) {
 
         } else {
             dispatch('setStatus', STATUS_FINISHED);
-            axios.post('executions/cleanup/' + executionId);
         }
     });
 

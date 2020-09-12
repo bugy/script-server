@@ -68,6 +68,12 @@ describe('Test scriptExecutionManager', function () {
         store = createStore();
     });
 
+    async function setupInitialExecutors(executions) {
+        mockActiveExecutions(executions);
+        await store.dispatch('executions/init');
+        await flushPromises();
+    }
+
     function assertExecution(id, expectedName, parameterValues) {
         const executor = store.state.executions.executors[id];
         expect(executor).not.toBeNil();
@@ -146,19 +152,13 @@ describe('Test scriptExecutionManager', function () {
 
     describe('Test selectExecutor', function () {
 
-        async function setup(executions) {
-            mockActiveExecutions(executions);
-            await store.dispatch('executions/init');
-            await flushPromises();
-        }
-
         async function selectExecutor(id) {
             const executor = store.state.executions.executors[id];
             await store.dispatch('executions/selectExecutor', executor);
         }
 
         it('Test selectExecutor', async function () {
-            await setup([{id: 123, scriptName: 'abc', parameterValues: {'p1': 1}}])
+            await setupInitialExecutors([{id: 123, scriptName: 'abc', parameterValues: {'p1': 1}}])
             await selectExecutor(123);
 
             assertSelectedExecutor(123);
@@ -167,7 +167,7 @@ describe('Test scriptExecutionManager', function () {
         it('Test selectExecutor when another selected', async function () {
             store.state.scripts.selectedScript = 'abc';
 
-            await setup([
+            await setupInitialExecutors([
                 {id: 123, scriptName: 'abc', parameterValues: {'p1': 1}},
                 {id: 456, scriptName: 'def', parameterValues: {'p2': 'hello'}}])
             await selectExecutor(456);
@@ -178,7 +178,7 @@ describe('Test scriptExecutionManager', function () {
         it('Test selectExecutor null', async function () {
             store.state.scripts.selectedScript = 'abc';
 
-            await setup([
+            await setupInitialExecutors([
                 {id: 123, scriptName: 'abc'},
                 {id: 456, scriptName: 'def'}])
             await selectExecutor(null);
@@ -189,7 +189,7 @@ describe('Test scriptExecutionManager', function () {
         it('Test selectExecutor check remove current if finished', async function () {
             store.state.scripts.selectedScript = 'abc';
 
-            await setup([
+            await setupInitialExecutors([
                 {id: 123, scriptName: 'abc'},
                 {id: 456, scriptName: 'def'}])
 
@@ -201,20 +201,69 @@ describe('Test scriptExecutionManager', function () {
             expect(store.state.executions[123]).toBeNil();
         });
 
-        it('Test selectExecutor check remove current if finished when another script selected', async function () {
+        it('Test selectExecutor when the same', async function () {
             store.state.scripts.selectedScript = 'abc';
 
-            await setup([
+            await setupInitialExecutors([
                 {id: 123, scriptName: 'abc'},
                 {id: 456, scriptName: 'def'}])
 
-            store.state.scripts.selectedScript = 'def';
             store.dispatch('executions/123/setFinished')
 
-            await selectExecutor(456);
+            await selectExecutor(123);
 
             expect(store.state.executions.executors[123]).not.toBeNil();
             expect(store.state.executions[123]).not.toBeNil();
+            assertSelectedExecutor(123);
+        });
+    });
+
+    describe('Test selectScript', function () {
+
+        async function selectScript(name) {
+            await store.dispatch('executions/selectScript', {selectedScript: name});
+        }
+
+        it('Test selectScript when no executors', async function () {
+            await selectScript('abc');
+
+            assertSelectedExecutor(null);
+        });
+
+        it('Test selectScript when one executor with the same name', async function () {
+            await setupInitialExecutors([{id: 123, scriptName: 'abc'}])
+            await selectScript('abc');
+
+            assertSelectedExecutor(123);
+        });
+
+        it('Test selectScript when one executor with another name', async function () {
+            await setupInitialExecutors([{id: 123, scriptName: 'DEF'}])
+            await selectScript('abc');
+
+            assertSelectedExecutor(null);
+        });
+
+        it('Test selectScript when multiple executors with different names', async function () {
+            await setupInitialExecutors([
+                {id: 123, scriptName: 'abc'},
+                {id: 456, scriptName: 'DEF'},
+                {id: 789, scriptName: 'xyz'}])
+
+            await selectScript('DEF');
+
+            assertSelectedExecutor(456);
+        });
+
+        it('Test selectScript when multiple executors with the same name', async function () {
+            await setupInitialExecutors([
+                {id: "10", scriptName: 'abc'},
+                {id: "2", scriptName: 'abc'},
+                {id: "9", scriptName: 'abc'}])
+
+            await selectScript('abc');
+
+            assertSelectedExecutor("2");
         });
     });
 

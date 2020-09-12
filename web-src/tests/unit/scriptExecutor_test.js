@@ -31,14 +31,6 @@ function mockStopEndpoint(id) {
     return spy;
 }
 
-function spyCleanup(id) {
-    const spy = sinon.spy(function () {
-        return [200];
-    });
-    axiosMock.onPost('executions/cleanup/' + id).reply(spy);
-    return spy;
-}
-
 function mockExecutionStatus(id, status) {
     const spy = sinon.spy(function () {
         if (status instanceof Error) {
@@ -109,36 +101,27 @@ describe('Test scriptExecutor module', function () {
         });
 
         it('Test socket closed on finish', async function () {
-            const spy = spyCleanup(123);
-
             await mockSocketClose(1000, 'xyz');
 
             assert.equal('finished', store.state.scriptExecutor.status);
-            assert.isTrue(spy.calledOnce);
         });
 
         it('Test socket closed on disconnect when finished', async function () {
-            const spy = spyCleanup(123);
             await mockSocketClose(1006, 'finished');
 
             assert.equal('finished', store.state.scriptExecutor.status);
-            assert.isTrue(spy.calledOnce);
         });
 
         it('Test socket closed on disconnect when executing', async function () {
-            const spy = spyCleanup(123);
             await mockSocketClose(1006, 'executing');
 
             assert.equal('disconnected', store.state.scriptExecutor.status);
-            assert.isTrue(spy.notCalled);
         });
 
         it('Test socket closed on disconnect when get status error', async function () {
-            const spy = spyCleanup(123);
             await mockSocketClose(1006, new Error('test message'));
 
             assert.equal('error', store.state.scriptExecutor.status);
-            assert.isTrue(spy.notCalled);
         });
     });
 

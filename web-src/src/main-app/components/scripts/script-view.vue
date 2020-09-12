@@ -407,6 +407,14 @@
                         this.scriptConfigComponentsHeight = paramHeight + otherElemsHeight;
                     })
                 }
+            },
+
+            status: {
+                handler(newStatus) {
+                    if (newStatus === STATUS_FINISHED) {
+                        this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/cleanup');
+                    }
+                }
             }
         }
     }
