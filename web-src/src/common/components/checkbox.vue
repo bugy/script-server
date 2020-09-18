@@ -15,8 +15,7 @@
     export default {
         props: {
             'value': {
-                type: [Boolean, String, Number],
-                default: false
+                type: [Boolean, String, Number]
             },
             'config': Object
         },
@@ -34,6 +33,19 @@
         methods: {
             emitValueChange() {
                 this.$emit('input', this.$refs.checkbox.checked);
+            }
+        },
+
+        watch: {
+            value: {
+                immediate: true,
+                handler() {
+                    this.$nextTick(() => {
+                        if (this.value !== this.boolValue) {
+                            this.emitValueChange();
+                        }
+                    });
+                }
             }
         }
     }
