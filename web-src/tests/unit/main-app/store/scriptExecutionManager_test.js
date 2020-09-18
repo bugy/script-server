@@ -57,8 +57,8 @@ function mockActiveExecutions(executions) {
     }
 }
 
-function mockStartResponse(id) {
-    axiosMock.onPost('executions/start').reply(200, id);
+function mockStartResponse(id, status = 200) {
+    axiosMock.onPost('executions/start').reply(status, id);
 }
 
 describe('Test scriptExecutionManager', function () {
@@ -147,6 +147,27 @@ describe('Test scriptExecutionManager', function () {
             await flushPromises();
 
             assertSelectedExecutor(12);
+        });
+
+        it('Test startExecution twice, when first is error', async function () {
+            store.state.scripts.selectedScript = 'abc';
+
+            mockStartResponse(null, 500);
+
+            await store.dispatch('executions/startExecution');
+            await flushPromises();
+
+            const currentExecutor = store.state.executions.currentExecutor;
+            expect(currentExecutor).not.toBeNil();
+            expect(currentExecutor.state.id).toBeNil();
+            expect(currentExecutor.state.scriptName).toEqual('abc');
+
+            mockStartResponse(123);
+
+            await store.dispatch('executions/startExecution');
+            await flushPromises();
+
+            assertSelectedExecutor(123);
         });
     });
 

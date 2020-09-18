@@ -193,8 +193,10 @@ export default {
 
         selectExecutor({commit, state, dispatch}, executor) {
             const currentExecutor = state.currentExecutor;
-            if ((!isNull(currentExecutor))) {
-                if (executor && (executor.state.id === currentExecutor.state.id)) {
+            if (!isNull(currentExecutor)) {
+                // Don't remove finished executor automatically, if it was cleaned up
+                // unless id is null, meaning it was an error
+                if (executor && !isNull(executor.state.id) && (executor.state.id === currentExecutor.state.id)) {
                     return;
                 }
 
