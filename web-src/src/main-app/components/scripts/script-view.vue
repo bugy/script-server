@@ -17,7 +17,7 @@
                     'red lighten-1': !killEnabled,
                     'grey darken-4': killEnabled}"
                     @click="stopScript">
-                {{stopButtonLabel}}
+                {{ stopButtonLabel }}
             </button>
             <div class="button-gap" v-if="schedulable"></div>
             <ScheduleButton :disabled="!enableScheduleButton" @click="openSchedule" v-if="schedulable"/>
@@ -347,23 +347,32 @@
             },
 
             logChunks: {
+                immediate: true,
                 handler(newValue, oldValue) {
-                    if (isNull(newValue)) {
-                        this.setLog('');
-                        this.nextLogIndex = 0;
+                    const updateLog = () => {
+                        if (isNull(newValue)) {
+                            this.setLog('');
+                            this.nextLogIndex = 0;
 
-                        return;
+                            return;
+                        }
+
+                        if (newValue !== oldValue) {
+                            this.setLog('');
+                            this.nextLogIndex = 0;
+                        }
+
+                        for (; this.nextLogIndex < newValue.length; this.nextLogIndex++) {
+                            const logChunk = newValue[this.nextLogIndex];
+
+                            this.appendLog(logChunk);
+                        }
                     }
 
-                    if (newValue !== oldValue) {
-                        this.setLog('');
-                        this.nextLogIndex = 0;
-                    }
-
-                    for (; this.nextLogIndex < newValue.length; this.nextLogIndex++) {
-                        const logChunk = newValue[this.nextLogIndex];
-
-                        this.appendLog(logChunk);
+                    if (isNull(this.$refs.logPanel)) {
+                        this.$nextTick(updateLog);
+                    } else {
+                        updateLog();
                     }
                 }
             },
