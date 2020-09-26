@@ -209,7 +209,9 @@ class GetScripts(BaseRequestHandler):
     @check_authorization
     @inject_user
     def get(self, user):
-        configs = self.application.config_service.list_configs(user)
+        mode = self.get_query_argument('mode', default=None)
+
+        configs = self.application.config_service.list_configs(user, mode)
 
         scripts = [{'name': conf.name, 'group': conf.group} for conf in configs]
 

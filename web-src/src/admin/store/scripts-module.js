@@ -13,7 +13,7 @@ export default {
         init({commit}) {
             commit('SET_LOADING', true);
 
-            axiosInstance.get('scripts').then(({data}) => {
+            axiosInstance.get('scripts', {params: {mode: 'edit'}}).then(({data}) => {
                 const {scripts} = data;
                 let scriptNames = scripts.map(s => s.name);
                 scriptNames.sort(function (name1, name2) {

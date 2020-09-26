@@ -126,6 +126,27 @@ class ConfigServiceAuthTest(unittest.TestCase):
 
         self.assert_list_config_names(self.user1, [])
 
+    def test_list_configs_when_edit_mode_and_admin(self):
+        _create_script_config_file('a1', allowed_users=['adm_user'])
+        _create_script_config_file('c2', allowed_users=['adm_user'])
+
+        self.assert_list_config_names(self.admin_user, ['a1', 'c2'], mode='edit')
+
+    def test_list_configs_when_edit_mode_and_admin_without_allowance(self):
+        _create_script_config_file('a1', allowed_users=['user1'])
+        _create_script_config_file('c2', allowed_users=['adm_user'])
+
+        self.assert_list_config_names(self.admin_user, ['a1', 'c2'], mode='edit')
+
+    def test_list_configs_when_edit_mode_and_non_admin(self):
+        _create_script_config_file('a1', allowed_users=['user1'])
+        _create_script_config_file('c2', allowed_users=['user1'])
+
+        self.assertRaises(AdminAccessRequiredException,
+                          self.config_service.list_configs,
+                          self.user1,
+                          'edit')
+
     def test_load_config_when_user_allowed(self):
         _create_script_config_file('my_script', allowed_users=['ABC', 'user1', 'qwerty'])
 
@@ -138,8 +159,8 @@ class ConfigServiceAuthTest(unittest.TestCase):
 
         self.assertRaises(ConfigNotAllowedException, self.config_service.load_config_model, 'my_script', self.user1)
 
-    def assert_list_config_names(self, user, expected_names):
-        configs = self.config_service.list_configs(user)
+    def assert_list_config_names(self, user, expected_names, mode=None):
+        configs = self.config_service.list_configs(user, mode)
         conf_names = [config.name for config in configs]
         self.assertCountEqual(expected_names, conf_names)
 
@@ -151,8 +172,9 @@ class ConfigServiceAuthTest(unittest.TestCase):
         super().setUp()
         test_utils.setup()
 
-        authorizer = Authorizer([], [], [], EmptyGroupProvider())
+        authorizer = Authorizer([], ['adm_user'], [], EmptyGroupProvider())
         self.user1 = User('user1', {})
+        self.admin_user = User('adm_user', {})
         self.config_service = ConfigService(authorizer, test_utils.temp_folder)
 
 
