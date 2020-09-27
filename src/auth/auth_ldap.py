@@ -5,6 +5,7 @@ from string import Template
 
 from ldap3 import Connection, SIMPLE
 from ldap3.core.exceptions import LDAPAttributeError
+from ldap3.utils.conv import escape_filter_chars
 
 from auth import auth_base
 from model import model_helper
@@ -38,19 +39,21 @@ def _resolve_base_dn(full_username):
         return ''
 
 
-def _search(dn, search_filter, attributes, connection):
-    success = connection.search(dn, search_filter, attributes=attributes)
+def _search(dn, search_request, attributes, connection):
+    search_string = search_request.as_search_string()
+
+    success = connection.search(dn, search_string, attributes=attributes)
     if not success:
         if connection.last_error:
             LOGGER.warning('ldap search failed: ' + connection.last_error
-                           + '. dn:' + dn + ', filter: ' + search_filter)
+                           + '. dn:' + dn + ', filter: ' + search_string)
         return None
 
     return connection.entries
 
 
-def _load_multiple_entries_values(dn, search_filter, attribute_name, connection):
-    entries = _search(dn, search_filter, [attribute_name], connection)
+def _load_multiple_entries_values(dn, search_request, attribute_name, connection):
+    entries = _search(dn, search_request, [attribute_name], connection)
     if entries is None:
         return []
 
@@ -174,12 +177,13 @@ class LdapAuthenticator(auth_base.Authenticator):
 
         result = set()
 
-        result.update(_load_multiple_entries_values(base_dn, '(member=%s)' % user_dn, 'cn', connection))
+        result.update(
+            _load_multiple_entries_values(base_dn, SearchRequest('(member=%s)', user_dn), 'cn', connection))
 
         if user_uid:
             result.update(_load_multiple_entries_values(
                 base_dn,
-                '(&(objectClass=posixGroup)(memberUid=%s))' % user_uid,
+                SearchRequest('(&(objectClass=posixGroup)(memberUid=%s))', user_uid),
                 'cn',
                 connection))
 
@@ -191,23 +195,23 @@ class LdapAuthenticator(auth_base.Authenticator):
         username_lower = full_username.lower()
         if ',dc=' in username_lower:
             base_dn = username_lower
-            search_filter = '(objectClass=*)'
+            search_request = SearchRequest('(objectClass=*)')
         elif '@' in full_username:
-            search_filter = '(userPrincipalName=%s)' % full_username
+            search_request = SearchRequest('(userPrincipalName=%s)', full_username)
         elif '\\' in full_username:
             username_index = full_username.rfind('\\') + 1
             username = full_username[username_index:]
-            search_filter = '(sAMAccountName=%s)' % username
+            search_request = SearchRequest('(sAMAccountName=%s)', username)
         else:
             LOGGER.warning('Unsupported username pattern for ' + full_username)
             return full_username, None
 
-        entries = _search(base_dn, search_filter, ['uid'], connection)
+        entries = _search(base_dn, search_request, ['uid'], connection)
         if not entries:
             return full_username, None
 
         if len(entries) > 1:
-            LOGGER.warning('More than one user found by filter: ' + search_filter)
+            LOGGER.warning('More than one user found by filter: ' + str(search_request))
             return full_username, None
 
         entry = entries[0]
@@ -225,3 +229,15 @@ class LdapAuthenticator(auth_base.Authenticator):
 
         new_groups_content = json.dumps(self._user_groups, indent=2)
         file_utils.write_file(self._groups_file, new_groups_content)
+
+
+class SearchRequest:
+    def __init__(self, template, *variables) -> None:
+        escaped_vars = [escape_filter_chars(var) for var in variables]
+        self.search_string = template % tuple(escaped_vars)
+
+    def as_search_string(self):
+        return self.search_string
+
+    def __str__(self) -> str:
+        return self.as_search_string()
