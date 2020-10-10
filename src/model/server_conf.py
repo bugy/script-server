@@ -6,6 +6,7 @@ import utils.file_utils as file_utils
 from auth.authorization import ANY_USER
 from model import model_helper
 from model.model_helper import read_list, read_int_from_config, read_bool_from_config
+from model.trusted_ips import TrustedIpValidator
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('server_conf')
@@ -25,7 +26,7 @@ class ServerConfig(object):
         self.admin_config = None
         self.title = None
         self.enable_script_titles = None
-        self.trusted_ips = []
+        self.ip_validator = TrustedIpValidator([])
         self.user_groups = None
         self.admin_users = []
         self.full_history_users = []
@@ -113,11 +114,11 @@ def from_json(conf_path, temp_folder):
         def_admins = def_trusted_ips
 
     if access_config:
-        config.trusted_ips = strip(read_list(access_config, 'trusted_ips', default=def_trusted_ips))
+        trusted_ips = strip(read_list(access_config, 'trusted_ips', default=def_trusted_ips))
         admin_users = _parse_admin_users(access_config, default_admins=def_admins)
         full_history_users = _parse_history_users(access_config)
     else:
-        config.trusted_ips = def_trusted_ips
+        trusted_ips = def_trusted_ips
         admin_users = def_admins
         full_history_users = []
 
@@ -129,6 +130,7 @@ def from_json(conf_path, temp_folder):
     config.admin_users = admin_users
     config.full_history_users = full_history_users
     config.user_header_name = user_header_name
+    config.ip_validator = TrustedIpValidator(trusted_ips)
 
     config.max_request_size_mb = read_int_from_config('max_request_size', json_object, default=10)
 

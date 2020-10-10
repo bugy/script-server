@@ -4,6 +4,7 @@ import uuid
 
 import tornado.websocket
 
+from model.trusted_ips import TrustedIpValidator
 from utils import tornado_utils, date_utils, audit_utils
 from utils.date_utils import days_to_ms
 
@@ -39,13 +40,13 @@ class IpBasedIdentification(Identification):
     COOKIE_KEY = 'client_id_token'
     EMPTY_TOKEN = (None, None)
 
-    def __init__(self, trusted_ips, user_header_name) -> None:
-        self._trusted_ips = set(trusted_ips)
+    def __init__(self, ip_validator: TrustedIpValidator, user_header_name) -> None:
+        self._ip_validator = ip_validator
         self._user_header_name = user_header_name
 
     def identify(self, request_handler):
         remote_ip = request_handler.request.remote_ip
-        new_trusted = remote_ip in self._trusted_ips
+        new_trusted = self._ip_validator.is_trusted(remote_ip)
 
         if new_trusted:
             if request_handler.get_cookie(self.COOKIE_KEY):
@@ -77,7 +78,7 @@ class IpBasedIdentification(Identification):
 
     def identify_for_audit(self, request_handler):
         remote_ip = request_handler.request.remote_ip
-        if (remote_ip in self._trusted_ips) and (self._user_header_name):
+        if self._ip_validator.is_trusted(remote_ip) and (self._user_header_name):
             return request_handler.request.headers.get(self._user_header_name, None)
         return None
 
