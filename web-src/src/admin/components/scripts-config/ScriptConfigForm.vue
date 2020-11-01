@@ -22,6 +22,16 @@
         </div>
 
         <div class="row">
+            <div v-if="allowAllAdmins" class="input-field col s9">
+                <input id="admin_users_disabled" disabled type="text" value="Any admin">
+                <label class="active" for="admin_users_disabled">Admin users</label>
+            </div>
+            <ChipsList v-else v-model="adminUsers" class="col s9" title="Admin users"/>
+            <CheckBox v-model="allowAllAdmins" :config="allowAllAdminsField"
+                      class="col s2 offset-s1 checkbox-field"/>
+        </div>
+
+        <div class="row">
             <CheckBox :config="bashFormattingField" class="col s3 checkbox-field" v-model="bashFormatting"/>
             <CheckBox :config="requiresTerminalField" class="col s3 checkbox-field"
                       v-model="requiresTerminal"/>
@@ -48,6 +58,7 @@
         scriptPathField,
         workDirField
     } from './script-fields';
+    import {allowAllAdminsField} from "@/admin/components/scripts-config/script-fields";
 
     export default {
         name: 'ScriptConfigForm',
@@ -73,12 +84,15 @@
                 bashFormatting: null,
                 allowedUsers: [],
                 allowAllUsers: true,
+                adminUsers: [],
+                allowAllAdmins: true,
                 nameField,
                 groupField,
                 scriptPathField,
                 workDirField,
                 descriptionField,
                 allowAllField,
+                allowAllAdminsField,
                 bashFormattingField,
                 requiresTerminalField,
                 includeScriptField
@@ -120,12 +134,15 @@
                     this.requiresTerminal = get(config, 'requires_terminal', true);
                     this.includeScript = config['include'];
                     this.bashFormatting = get(config, 'bash_formatting', true);
-                    let allowedUsers = get(config, 'allowed_users');
-                    if (isNull(allowedUsers)) {
-                        allowedUsers = [];
-                    }
-                    this.allowedUsers = allowedUsers.filter(u => u !== '*');
-                    this.allowAllUsers = isNull(config['allowed_users']) || allowedUsers.includes('*');
+                    this.updateAccessFieldInVm(config,
+                        'allowedUsers',
+                        'allowAllUsers',
+                        'allowed_users')
+
+                    this.updateAccessFieldInVm(config,
+                        'adminUsers',
+                        'allowAllAdmins',
+                        'admin_users')
                 }
             },
             allowAllUsers() {
@@ -133,25 +150,48 @@
             },
             allowedUsers() {
                 this.updateAllowedUsers();
+            },
+            allowAllAdmins() {
+                this.updateAdminUsers();
+            },
+            adminUsers() {
+                this.updateAdminUsers();
             }
         },
 
         methods: {
             updateAllowedUsers() {
-                if (this.allowAllUsers) {
-                    if (isEmptyArray(this.allowedUsers)) {
-                        this.$delete(this.value, 'allowed_users');
-                    } else {
-                        if (this.allowedUsers.includes('*')) {
-                            this.value['allowed_users'] = this.allowedUsers;
-                        } else {
-                            this.value['allowed_users'] = [...this.allowedUsers, '*'];
-                        }
-                    }
+                this.updateAccessFieldInValue(this.allowAllUsers, 'allowedUsers', 'allowed_users');
+            },
+            updateAdminUsers() {
+                this.updateAccessFieldInValue(this.allowAllAdmins, 'adminUsers', 'admin_users');
+            },
+            updateAccessFieldInValue(allowAll, vmPropertyName, valuePropertyName) {
+                const newValue = this[vmPropertyName];
+
+                if (isEmptyArray(newValue)) {
+                    this.$delete(this.value, valuePropertyName);
                 } else {
-                    this.value['allowed_users'] = this.allowedUsers;
+                    if (allowAll) {
+                        if (newValue.includes('*')) {
+                            this.value[valuePropertyName] = newValue;
+                        } else {
+                            this.value[valuePropertyName] = [...newValue, '*'];
+                        }
+                    } else {
+                        this.value[valuePropertyName] = newValue;
+                    }
                 }
-            }
+            },
+            updateAccessFieldInVm(config, vmPropertyName, vmAllowAllPropertyName, valuePropertyName) {
+                let users = get(config, valuePropertyName);
+                if (isNull(users)) {
+                    users = [];
+                }
+                this[vmPropertyName] = users.filter(u => u !== '*');
+                this[vmAllowAllPropertyName] = isNull(config[valuePropertyName]) || users.includes('*');
+            },
+
         }
     }
 </script>

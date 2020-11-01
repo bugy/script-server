@@ -100,4 +100,28 @@ describe('Test ScriptConfig', function () {
         });
     });
 
+    describe('Test edit allowed_users', function () {
+        it('Test edit allowed_users manually', async function () {
+            await _setValueByUser('Allow all', false);
+            await _setValueByUser('Allowed users', ['user A', 'user B']);
+
+            expect(store.state.scriptConfig.scriptConfig.allowed_users).toEqual(['user A', 'user B'])
+        });
+    });
+
+    describe('Test edit admin_users', function () {
+        it('Test edit admin_users manually', async function () {
+            await _setValueByUser('Any admin', false);
+            await _setValueByUser('Admin users', ['user A', 'user B']);
+
+            expect(store.state.scriptConfig.scriptConfig.admin_users).toEqual(['user A', 'user B'])
+        });
+
+        it('Test set any admin = false without any user, manually', async function () {
+            await _setValueByUser('Any admin', false);
+
+            expect(store.state.scriptConfig.scriptConfig.admin_users).toBeNil()
+        });
+    });
+
 });

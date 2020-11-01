@@ -49,6 +49,9 @@ class ConfigService:
         if config_object.get('name') is None:
             config_object['name'] = short_config.name
 
+        if not self._can_edit_script(user, short_config):
+            raise ConfigNotAllowedException(str(user) + ' has no admin access to ' + short_config.name)
+
         return {'config': config_object, 'filename': os.path.basename(path)}
 
     def create_config(self, user, config):
@@ -84,6 +87,9 @@ class ConfigService:
         if (found_config_path is not None) and (os.path.basename(found_config_path) != filename):
             raise InvalidConfigException('Another script found with the same name: ' + name)
 
+        if (short_config is not None) and not self._can_edit_script(user, short_config):
+            raise ConfigNotAllowedException(str(user) + ' is not allowed to modify ' + short_config.name)
+
         LOGGER.info('Updating script config "' + name + '" in ' + original_file_path)
         self._save_config(config, original_file_path)
 
@@ -105,6 +111,9 @@ class ConfigService:
                 short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
+                    return None
+
+                if edit_mode and (not conf_service._can_edit_script(user, short_config)):
                     return None
 
                 if (not edit_mode) and (not conf_service._can_access_script(user, short_config)):
@@ -196,14 +205,17 @@ class ConfigService:
     def _can_access_script(self, user, short_config):
         return self._authorizer.is_allowed(user.user_id, short_config.allowed_users)
 
+    def _can_edit_script(self, user, short_config):
+        return self._authorizer.is_allowed(user.user_id, short_config.admin_users)
+
     def _check_admin_access(self, user):
         if not self._authorizer.is_admin(user.user_id):
             raise AdminAccessRequiredException('Admin access to scripts is prohibited for ' + str(user))
 
 
 class ConfigNotAllowedException(Exception):
-    def __init__(self):
-        pass
+    def __init__(self, message=None):
+        super().__init__(message)
 
 
 class AdminAccessRequiredException(Exception):

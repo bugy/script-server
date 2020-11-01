@@ -19,6 +19,9 @@ export const workDirField = {
 export const allowAllField = {
     name: 'Allow all'
 };
+export const allowAllAdminsField = {
+    name: 'Any admin'
+};
 export const bashFormattingField = {
     name: 'Bash formatting',
     description: 'Enable ANSI escape sequences for text formatting and cursor moves'

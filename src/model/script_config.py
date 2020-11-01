@@ -20,6 +20,7 @@ class ShortConfig(object):
     def __init__(self):
         self.name = None
         self.allowed_users = []
+        self.admin_users = []
         self.group = None
 
 
@@ -256,6 +257,7 @@ def read_short(file_path, json_object):
 
     config.name = _read_name(file_path, json_object)
     config.allowed_users = json_object.get('allowed_users')
+    config.admin_users = json_object.get('admin_users')
     config.group = read_str_from_config(json_object, 'group', blank_to_none=True)
 
     hidden = read_bool_from_config('hidden', json_object, default=False)
@@ -266,6 +268,11 @@ def read_short(file_path, json_object):
         config.allowed_users = ANY_USER
     elif (config.allowed_users == '*') or ('*' in config.allowed_users):
         config.allowed_users = ANY_USER
+
+    if config.admin_users is None:
+        config.admin_users = ANY_USER
+    elif (config.admin_users == '*') or ('*' in config.admin_users):
+        config.admin_users = ANY_USER
 
     return config
 
@@ -352,7 +359,15 @@ class _TemplateProperty:
 
 
 def get_sorted_config(config):
-    key_order = ['name', 'script_path', 'working_directory', 'hidden', 'description', 'allowed_users', 'include',
+    key_order = ['name', 'script_path',
+                 'working_directory',
+                 'hidden',
+                 'description',
+                 'group',
+                 'allowed_users',
+                 'admin_users',
+                 'schedulable',
+                 'include',
                  'output_files', 'requires_terminal', 'bash_formatting', 'parameters']
 
     def get_order(key):

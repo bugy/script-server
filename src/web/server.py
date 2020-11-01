@@ -241,13 +241,22 @@ class AdminUpdateScriptEndpoint(BaseRequestHandler):
             self.application.config_service.update_config(user, config, filename)
         except (InvalidConfigException, InvalidFileException) as e:
             raise tornado.web.HTTPError(422, str(e))
+        except ConfigNotAllowedException:
+            LOGGER.warning('Admin access to the script "' + config['name'] + '" is denied for ' + user.get_audit_name())
+            respond_error(self, 403, 'Access to the script is denied')
+            return
 
 
 class AdminGetScriptEndpoint(BaseRequestHandler):
     @requires_admin_rights
     @inject_user
     def get(self, user, script_name):
-        config = self.application.config_service.load_config(script_name, user)
+        try:
+            config = self.application.config_service.load_config(script_name, user)
+        except ConfigNotAllowedException:
+            LOGGER.warning('Admin access to the script "' + script_name + '" is denied for ' + user.get_audit_name())
+            respond_error(self, 403, 'Access to the script is denied')
+            return
 
         if config is None:
             raise tornado.web.HTTPError(404, str('Failed to find config for name: ' + script_name))
