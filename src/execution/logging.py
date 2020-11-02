@@ -190,8 +190,8 @@ class ExecutionLoggingService:
             LOGGER.warning('find_history_entry: cannot parse file for %s', execution_id)
 
         elif not self._can_access_entry(entry, user_id):
-            message = 'User ' + user_id + ' has not access to execution #' + str(execution_id)
-            LOGGER.warning('%s. Original user: %s', message, execution_id)
+            message = 'User ' + user_id + ' has no access to execution #' + str(execution_id)
+            LOGGER.warning('%s. Original user: %s', message, entry.user_id)
             raise AccessProhibitedException(message)
 
         return entry
@@ -350,7 +350,7 @@ class LogNameCreator:
 
         date_string = ms_to_datetime(start_time).strftime(self._date_format)
 
-        username = get_first_existing(all_audit_names, audit_utils.AUTH_USERNAME, audit_utils.PROXIED_USERNAME)
+        username = audit_utils.get_audit_username(all_audit_names)
 
         mapping = {
             'ID': execution_id,
@@ -367,7 +367,7 @@ class LogNameCreator:
         if not filename.lower().endswith('.log'):
             filename += '.log'
 
-        filename = filename.replace(" ", "_")
+        filename = filename.replace(" ", "_").replace("/", "_")
 
         return filename
 

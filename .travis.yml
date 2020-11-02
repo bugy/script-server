@@ -3,7 +3,7 @@ sudo: required
 dist: xenial
 language: node_js
 node_js:
-- '6'
+- '11'
 cache:
   directories:
   - web-src/node_modules
@@ -19,10 +19,10 @@ env:
   # DOCKER_PASSWORD
   - secure: S22ffhnZOs1yFdBwJO9+uzy9DB3e7ehLWbj47U1zavsMKMDyDw0lkOIy8PMERFh4roBoM5dG95RIVbfNbrPXQxnY5Og2w7RTTv3eeHGdYzh+34Dppfk8mhEAhn3NL98sOe6is/5sEDvZ2ykPFLvoJmyV15V7Wvtuy1Zx+0lyZ0R0tX6sVJUWDlClHspCuSIKK+iptL5yLu4TtvX9Wks/c3kH6GIXYIJIeC63D+RRhuetbtGKND/RtFkq5IDP9qMZNXUAT/Mb8hrsk9HntFgl79dG2ChvBpDE8/LqjYDBiFTiUAtJfBhC0pVB3WaEwGTU/hWe8WTjl29JIkGcoaeT7+wncJ72lEPJoO60YWSdtWfTlNlUiN27AcxGqk39MDhB5NAbuJpKvcFLMmWFY2uJefrR6XVEXBZ+9yAwzuZmj0GYFOQTuczAqncyj/3BuOEqfIkkQ5BLAS5BUuzSEbHOjwasqbTVcWM1H3cv2ZYATXQQN8KhcZ5c5lxy8eD0NXHKvBFlS3HOXOXn3P6PqGgFHzjL+yyHMvzIXBJY4jEr8FIH16dwbXDqb4gi4lrrCZHDeIhVKsmLSUJjhmiKeP7dWcfUOGMxzLRmqA8r58TXcN3OvBrqNN63nUSG+Wb6XxmzLwE4PrlBy0fTRymG8WXrdE/Z2lglBhc8J3A8ER9c46s=
 before_install:
-- sudo apt-get -y install python3-pip python3-setuptools
+- sudo apt-get -y install python3-pip python3-setuptools apache2-utils
 install:
 - sudo pip3 install -r requirements.txt
-- sudo pip3 install ldap3 parameterized
+- sudo pip3 install ldap3 parameterized bcrypt
 - sudo pip3 install requests --upgrade
 - sudo pip3 install pyasn1 --upgrade
 - cd web-src
@@ -32,7 +32,7 @@ before_script:
 - cd src
 - python3 -m unittest discover -s tests -p "*.py" -t .
 - cd ../web-src
-- npm run test
+- npm run test:unit-ci
 - cd ..
 script:
 - python3 tools/build.py

@@ -1,0 +1,4 @@
+.dropdown-content {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}

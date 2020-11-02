@@ -11,7 +11,6 @@ import urllib
 import uuid
 from itertools import chain
 from urllib.parse import urlencode
-from urllib.parse import urlparse
 
 import tornado.concurrent
 import tornado.escape
@@ -36,6 +35,7 @@ from model.model_helper import is_empty, InvalidFileException, AccessProhibitedE
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
 from model.server_conf import ServerConfig
+from scheduling.schedule_service import ScheduleService, UnavailableScriptException, InvalidScheduleException
 from utils import audit_utils, tornado_utils, os_utils, env_utils
 from utils import file_utils as file_utils
 from utils.audit_utils import get_audit_name_from_request
@@ -48,6 +48,29 @@ LOGGER = logging.getLogger('web_server')
 
 active_config_models = {}
 
+webpack_prefixed_extensions = ['.css', '.js.map', '.js', '.jpg', '.woff', '.woff2']
+
+
+def remove_webpack_suffixes(request_path):
+    if request_path.endswith('.js.map'):
+        extension_start = len(request_path) - 7
+    else:
+        extension_start = request_path.rfind('.')
+
+    extension = request_path[extension_start:]
+
+    if extension not in webpack_prefixed_extensions:
+        return request_path
+
+    if extension_start < 0:
+        return request_path
+
+    prefix_start = request_path.rfind('.', 0, extension_start)
+    if prefix_start < 0:
+        return request_path
+
+    return request_path[:prefix_start] + extension
+
 
 def is_allowed_during_login(request_path, login_url, request_handler):
     if request_handler.request.method != 'GET':
@@ -58,33 +81,22 @@ def is_allowed_during_login(request_path, login_url, request_handler):
 
     if request_path == login_url:
         return True
+    request_path = remove_webpack_suffixes(request_path)
 
-    login_resources = ['/login.js',
-                       '/login.js.map',
-                       '/css/index.css',
-                       '/login-deps.css',
-                       '/login-deps.css.map',
+    login_resources = ['/js/login.js',
+                       '/js/login.js.map',
+                       '/js/chunk-login-vendors.js',
+                       '/js/chunk-login-vendors.js.map',
+                       '/favicon.ico',
+                       '/css/login.css',
+                       '/css/chunk-login-vendors.css',
                        '/fonts/roboto-latin-500.woff2',
                        '/fonts/roboto-latin-500.woff',
                        '/fonts/roboto-latin-400.woff2',
                        '/fonts/roboto-latin-400.woff',
-                       '/images/titleBackground.jpg',
-                       '/images/g-logo-plain.png',
-                       '/images/g-logo-plain-pressed.png']
+                       '/img/titleBackground_login.jpg']
 
-    if request_path not in login_resources:
-        return False
-
-    referer = request_handler.request.headers.get('Referer')
-    if referer:
-        referer = urlparse(referer).path
-    else:
-        return False
-
-    allowed_referrers = [login_url, '/login-deps.css', '/css/index.css']
-    for allowed_referrer in allowed_referrers:
-        if referer.endswith(allowed_referrer):
-            return True
+    return request_path in login_resources
 
 
 # In case of REST requests we don't redirect explicitly, but reply with Unauthorized code.
@@ -93,6 +105,13 @@ def check_authorization(func):
     def wrapper(self, *args, **kwargs):
         auth = self.application.auth
         authorizer = self.application.authorizer
+
+        login_url = self.get_login_url()
+        request_path = self.request.path
+
+        login_resource = is_allowed_during_login(request_path, login_url, self)
+        if login_resource:
+            return func(self, *args, **kwargs)
 
         authenticated = auth.is_authenticated(self)
         access_allowed = authenticated and authorizer.is_allowed_in_app(_identify_user(self))
@@ -107,11 +126,7 @@ def check_authorization(func):
             else:
                 raise tornado.web.HTTPError(code, message)
 
-        login_url = self.get_login_url()
-        request_path = self.request.path
-
-        login_resource = is_allowed_during_login(request_path, login_url, self)
-        if (authenticated and access_allowed) or login_resource:
+        if authenticated and access_allowed:
             return func(self, *args, **kwargs)
 
         if not isinstance(self, tornado.web.StaticFileHandler):
@@ -183,6 +198,7 @@ class BaseStaticHandler(tornado.web.StaticFileHandler):
 
 
 class GetServerConf(BaseRequestHandler):
+    @check_authorization
     def get(self):
         self.write(external_model.server_conf_to_external(
             self.application.server_config,
@@ -193,11 +209,13 @@ class GetScripts(BaseRequestHandler):
     @check_authorization
     @inject_user
     def get(self, user):
-        configs = self.application.config_service.list_configs(user)
+        mode = self.get_query_argument('mode', default=None)
 
-        names = [conf.name for conf in configs]
+        configs = self.application.config_service.list_configs(user, mode)
 
-        self.write(json.dumps(names))
+        scripts = [{'name': conf.name, 'group': conf.group} for conf in configs]
+
+        self.write(json.dumps({'scripts': scripts}))
 
 
 class AdminUpdateScriptEndpoint(BaseRequestHandler):
@@ -223,13 +241,22 @@ class AdminUpdateScriptEndpoint(BaseRequestHandler):
             self.application.config_service.update_config(user, config, filename)
         except (InvalidConfigException, InvalidFileException) as e:
             raise tornado.web.HTTPError(422, str(e))
+        except ConfigNotAllowedException:
+            LOGGER.warning('Admin access to the script "' + config['name'] + '" is denied for ' + user.get_audit_name())
+            respond_error(self, 403, 'Access to the script is denied')
+            return
 
 
 class AdminGetScriptEndpoint(BaseRequestHandler):
     @requires_admin_rights
     @inject_user
     def get(self, user, script_name):
-        config = self.application.config_service.load_config(script_name, user)
+        try:
+            config = self.application.config_service.load_config(script_name, user)
+        except ConfigNotAllowedException:
+            LOGGER.warning('Admin access to the script "' + script_name + '" is denied for ' + user.get_audit_name())
+            respond_error(self, 403, 'Access to the script is denied')
+            return
 
         if config is None:
             raise tornado.web.HTTPError(404, str('Failed to find config for name: ' + script_name))
@@ -421,8 +448,7 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
 
 @tornado.web.stream_request_body
-class ScriptExecute(BaseRequestHandler):
-
+class StreamUploadRequestHandler(BaseRequestHandler):
     def __init__(self, application, request, **kwargs):
         super().__init__(application, request, **kwargs)
 
@@ -444,6 +470,11 @@ class ScriptExecute(BaseRequestHandler):
 
     def data_received(self, chunk):
         self.form_reader.read(chunk)
+
+
+class ScriptExecute(StreamUploadRequestHandler):
+    def __init__(self, application, request, **kwargs):
+        super().__init__(application, request, **kwargs)
 
     @inject_user
     def post(self, user):
@@ -678,10 +709,15 @@ class AuthInfoHandler(BaseRequestHandler):
         if auth.is_enabled():
             username = auth.get_username(self)
 
+        try:
+            admin_rights = has_admin_rights(self)
+        except Exception:
+            admin_rights = False
+
         info = {
             'enabled': auth.is_enabled(),
             'username': username,
-            'admin': has_admin_rights(self)
+            'admin': admin_rights
         }
 
         self.write(info)
@@ -788,6 +824,39 @@ class GetLongHistoryEntryHandler(BaseRequestHandler):
         self.write(json.dumps(long_log))
 
 
+@tornado.web.stream_request_body
+class AddSchedule(StreamUploadRequestHandler):
+
+    def __init__(self, application, request, **kwargs):
+        super().__init__(application, request, **kwargs)
+
+    @inject_user
+    def post(self, user):
+        arguments = self.form_reader.values
+        execution_info = external_model.to_execution_info(arguments)
+        parameter_values = execution_info.param_values
+
+        if self.form_reader.files:
+            for key, value in self.form_reader.files.items():
+                parameter_values[key] = value.path
+
+        schedule_config = json.loads(parameter_values['__schedule_config'])
+        del parameter_values['__schedule_config']
+
+        try:
+            id = self.application.schedule_service.create_job(
+                execution_info.script,
+                parameter_values,
+                external_model.parse_external_schedule(schedule_config),
+                user)
+        except (UnavailableScriptException, InvalidScheduleException) as e:
+            raise tornado.web.HTTPError(422, reason=str(e))
+        except InvalidValueException as e:
+            raise tornado.web.HTTPError(422, reason=e.get_user_message())
+
+        self.write(json.dumps({'id': id}))
+
+
 def wrap_to_server_event(event_type, data):
     return json.dumps({
         "event": event_type,
@@ -839,7 +908,7 @@ def intercept_stop_when_running_scripts(io_loop, execution_service):
 
         if can_stop:
             LOGGER.info('Stopping server on interrupt')
-            io_loop.add_callback(io_loop.stop)
+            io_loop.add_callback_from_signal(io_loop.stop)
 
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -851,6 +920,7 @@ def init(server_config: ServerConfig,
          authenticator,
          authorizer,
          execution_service: ExecutionService,
+         schedule_service: ScheduleService,
          execution_logging_service: ExecutionLoggingService,
          config_service: ConfigService,
          alerts_service: AlertsService,
@@ -870,7 +940,7 @@ def init(server_config: ServerConfig,
     if auth.is_enabled():
         identification = AuthBasedIdentification(auth)
     else:
-        identification = IpBasedIdentification(server_config.trusted_ips, server_config.user_header_name)
+        identification = IpBasedIdentification(server_config.ip_validator, server_config.user_header_name)
 
     downloads_folder = file_download_feature.get_result_files_folder()
 
@@ -888,6 +958,7 @@ def init(server_config: ServerConfig,
                 (r'/executions/status/(.*)', GetExecutionStatus),
                 (r'/history/execution_log/short', GetShortHistoryEntriesHandler),
                 (r'/history/execution_log/long/(.*)', GetLongHistoryEntryHandler),
+                (r'/schedule', AddSchedule),
                 (r'/auth/info', AuthInfoHandler),
                 (r'/result_files/(.*)',
                  DownloadResultFile,
@@ -907,7 +978,8 @@ def init(server_config: ServerConfig,
         "cookie_secret": secret,
         "login_url": "/login.html",
         'websocket_ping_interval': 30,
-        'websocket_ping_timeout': 300
+        'websocket_ping_timeout': 300,
+        'compress_response': True
     }
 
     application = tornado.web.Application(handlers, **settings)
@@ -921,6 +993,7 @@ def init(server_config: ServerConfig,
     application.file_download_feature = file_download_feature
     application.file_upload_feature = file_upload_feature
     application.execution_service = execution_service
+    application.schedule_service = schedule_service
     application.execution_logging_service = execution_logging_service
     application.config_service = config_service
     application.alerts_service = alerts_service

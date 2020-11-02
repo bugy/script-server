@@ -1,0 +1,37 @@
+dn: ou=People,dc=script-server,dc=net
+objectClass: organizationalUnit
+ou: People
+
+dn: uid=user1,ou=People,dc=script-server,dc=net
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: John Smith
+sn: Smith
+uid: user1
+uidNumber: 1000
+gidNumber: 1000
+homeDirectory: /home/user1
+userPassword: qwerty
+
+dn: uid=user with space,ou=People,dc=script-server,dc=net
+objectClass: inetOrgPerson
+cn: user with space
+sn: Uws
+uid: user with space
+userPassword: 123 456
+
+dn: uid=user (with brackets),ou=People,dc=script-server,dc=net
+objectClass: inetOrgPerson
+cn: user with brackets
+sn: UwB
+uid: user (with brackets)
+userPassword: 666
+
+dn: cn=all_users,dc=script-server,dc=net
+objectClass: posixGroup
+cn: all_users
+description: All users group
+gidNumber: 10000
+memberUid: user1
+memberUid: user with space
+memberUid: user (with brackets)

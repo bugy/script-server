@@ -14,7 +14,7 @@ LOGGER = logging.getLogger('config_service')
 
 
 def _script_name_to_file_name(script_name):
-    escaped_whitespaces = re.sub('\\s', '_', script_name)
+    escaped_whitespaces = re.sub('[\\s/]+', '_', script_name).strip("_")
     filename = to_filename(escaped_whitespaces)
     return filename + '.json'
 
@@ -48,6 +48,9 @@ class ConfigService:
 
         if config_object.get('name') is None:
             config_object['name'] = short_config.name
+
+        if not self._can_edit_script(user, short_config):
+            raise ConfigNotAllowedException(str(user) + ' has no admin access to ' + short_config.name)
 
         return {'config': config_object, 'filename': os.path.basename(path)}
 
@@ -84,6 +87,9 @@ class ConfigService:
         if (found_config_path is not None) and (os.path.basename(found_config_path) != filename):
             raise InvalidConfigException('Another script found with the same name: ' + name)
 
+        if (short_config is not None) and not self._can_edit_script(user, short_config):
+            raise ConfigNotAllowedException(str(user) + ' is not allowed to modify ' + short_config.name)
+
         LOGGER.info('Updating script config "' + name + '" in ' + original_file_path)
         self._save_config(config, original_file_path)
 
@@ -92,7 +98,11 @@ class ConfigService:
         config_json = json.dumps(sorted_config, indent=2)
         file_utils.write_file(path, config_json)
 
-    def list_configs(self, user):
+    def list_configs(self, user, mode=None):
+        edit_mode = mode == 'edit'
+        if edit_mode:
+            self._check_admin_access(user)
+
         conf_service = self
 
         def load_script(path, content):
@@ -103,7 +113,10 @@ class ConfigService:
                 if short_config is None:
                     return None
 
-                if not conf_service._can_access_script(user, short_config):
+                if edit_mode and (not conf_service._can_edit_script(user, short_config)):
+                    return None
+
+                if (not edit_mode) and (not conf_service._can_access_script(user, short_config)):
                     return None
 
                 return short_config
@@ -192,14 +205,17 @@ class ConfigService:
     def _can_access_script(self, user, short_config):
         return self._authorizer.is_allowed(user.user_id, short_config.allowed_users)
 
+    def _can_edit_script(self, user, short_config):
+        return self._authorizer.is_allowed(user.user_id, short_config.admin_users)
+
     def _check_admin_access(self, user):
         if not self._authorizer.is_admin(user.user_id):
-            raise AdminAccessRequiredException('Access to script is prohibited for ' + str(user))
+            raise AdminAccessRequiredException('Admin access to scripts is prohibited for ' + str(user))
 
 
 class ConfigNotAllowedException(Exception):
-    def __init__(self):
-        pass
+    def __init__(self, message=None):
+        super().__init__(message)
 
 
 class AdminAccessRequiredException(Exception):

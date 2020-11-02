@@ -31,6 +31,19 @@ class ConfigServiceTest(unittest.TestCase):
         conf_names = [config.name for config in configs]
         self.assertCountEqual(['conf_x', 'conf_y', 'A B C'], conf_names)
 
+    def test_list_configs_with_groups(self):
+        _create_script_config_file('conf_x', group='g1')
+        _create_script_config_file('conf_y')
+        _create_script_config_file('A B C', group=' ')
+
+        configs = self.config_service.list_configs(self.user)
+        configs_dicts = [{'name': c.name, 'group': c.group} for c in configs]
+        self.assertCountEqual([
+            {'name': 'conf_x', 'group': 'g1'},
+            {'name': 'conf_y', 'group': None},
+            {'name': 'A B C', 'group': None}],
+            configs_dicts)
+
     def test_list_configs_when_no(self):
         configs = self.config_service.list_configs(self.user)
         self.assertEqual([], configs)
@@ -92,26 +105,53 @@ class ConfigServiceAuthTest(unittest.TestCase):
         _create_script_config_file('a1')
         _create_script_config_file('c2')
 
-        self.assert_list_configs(self.user1, ['a1', 'c2'])
+        self.assert_list_config_names(self.user1, ['a1', 'c2'])
 
     def test_list_configs_when_user_allowed(self):
         _create_script_config_file('a1', allowed_users=['user1'])
         _create_script_config_file('c2', allowed_users=['user1'])
 
-        self.assert_list_configs(self.user1, ['a1', 'c2'])
+        self.assert_list_config_names(self.user1, ['a1', 'c2'])
 
     def test_list_configs_when_one_not_allowed(self):
         _create_script_config_file('a1', allowed_users=['XYZ'])
         _create_script_config_file('b2')
         _create_script_config_file('c3', allowed_users=['user1'])
 
-        self.assert_list_configs(self.user1, ['b2', 'c3'])
+        self.assert_list_config_names(self.user1, ['b2', 'c3'])
 
     def test_list_configs_when_none_allowed(self):
         _create_script_config_file('a1', allowed_users=['XYZ'])
         _create_script_config_file('b2', allowed_users=['ABC'])
 
-        self.assert_list_configs(self.user1, [])
+        self.assert_list_config_names(self.user1, [])
+
+    def test_list_configs_when_edit_mode_and_admin(self):
+        _create_script_config_file('a1', allowed_users=['adm_user'])
+        _create_script_config_file('c2', allowed_users=['adm_user'])
+
+        self.assert_list_config_names(self.admin_user, ['a1', 'c2'], mode='edit')
+
+    def test_list_configs_when_edit_mode_and_admin_without_allowance(self):
+        _create_script_config_file('a1', allowed_users=['user1'])
+        _create_script_config_file('c2', allowed_users=['adm_user'])
+
+        self.assert_list_config_names(self.admin_user, ['a1', 'c2'], mode='edit')
+
+    def test_list_configs_when_edit_mode_and_admin_not_in_admin_users(self):
+        _create_script_config_file('a1', admin_users=['user1'])
+        _create_script_config_file('c2', admin_users=['adm_user'])
+
+        self.assert_list_config_names(self.admin_user, ['c2'], mode='edit')
+
+    def test_list_configs_when_edit_mode_and_non_admin(self):
+        _create_script_config_file('a1', allowed_users=['user1'])
+        _create_script_config_file('c2', allowed_users=['user1'])
+
+        self.assertRaises(AdminAccessRequiredException,
+                          self.config_service.list_configs,
+                          self.user1,
+                          'edit')
 
     def test_load_config_when_user_allowed(self):
         _create_script_config_file('my_script', allowed_users=['ABC', 'user1', 'qwerty'])
@@ -125,8 +165,8 @@ class ConfigServiceAuthTest(unittest.TestCase):
 
         self.assertRaises(ConfigNotAllowedException, self.config_service.load_config_model, 'my_script', self.user1)
 
-    def assert_list_configs(self, user, expected_names):
-        configs = self.config_service.list_configs(user)
+    def assert_list_config_names(self, user, expected_names, mode=None):
+        configs = self.config_service.list_configs(user, mode)
         conf_names = [config.name for config in configs]
         self.assertCountEqual(expected_names, conf_names)
 
@@ -138,8 +178,9 @@ class ConfigServiceAuthTest(unittest.TestCase):
         super().setUp()
         test_utils.setup()
 
-        authorizer = Authorizer([], [], [], EmptyGroupProvider())
+        authorizer = Authorizer([], ['adm_user'], [], EmptyGroupProvider())
         self.user1 = User('user1', {})
+        self.admin_user = User('adm_user', {})
         self.config_service = ConfigService(authorizer, test_utils.temp_folder)
 
 
@@ -230,6 +271,14 @@ class ConfigServiceCreateConfigTest(unittest.TestCase):
                                                            ('include', 'included'),
                                                            ('requires_terminal', False),
                                                            ('parameters', [{'name': 'param1'}])]))
+
+    def test_create_config_with_admin_users(self):
+        config = _prepare_script_config_object('conf1',
+                                               description='My wonderful test config',
+                                               admin_users=['another_user'])
+        self.config_service.create_config(self.admin_user, config)
+
+        _validate_config(self, 'conf1.json', config)
 
 
 class ConfigServiceUpdateConfigTest(unittest.TestCase):
@@ -340,6 +389,32 @@ class ConfigServiceUpdateConfigTest(unittest.TestCase):
                             ('parameters', [{'name': 'param1'}])])
         _validate_config(self, 'confX.json', body)
 
+    def test_update_config_allowed_admin_user(self):
+        config = _prepare_script_config_object('Conf X',
+                                               description='My wonderful test config',
+                                               admin_users=['admin_user'])
+        self.config_service.update_config(self.admin_user, config, 'confX.json')
+
+        new_config = _prepare_script_config_object('Conf X',
+                                                   description='New desc')
+        self.config_service.update_config(self.admin_user, new_config, 'confX.json')
+
+        _validate_config(self, 'confX.json', new_config)
+
+    def test_update_config_different_admin_user(self):
+        config = _prepare_script_config_object('Conf X',
+                                               description='My wonderful test config',
+                                               admin_users=['another_user'])
+        self.config_service.update_config(self.admin_user, config, 'confX.json')
+
+        new_config = _prepare_script_config_object('Conf X',
+                                                   description='New desc',
+                                                   admin_users=['admin_user'])
+        self.assertRaisesRegex(ConfigNotAllowedException, 'is not allowed to modify',
+                               self.config_service.update_config, self.admin_user, new_config, 'confX.json')
+
+        _validate_config(self, 'confX.json', config)
+
 
 class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
     def setUp(self):
@@ -366,7 +441,7 @@ class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
         _create_script_config_file('ConfX', name='my conf x')
         config = self.config_service.load_config('my conf x', self.admin_user)
 
-        self.assertEqual(config, {'filename': 'ConfX.json', 'config': {'name': 'my conf x'}})
+        self.assertEqual(config, {'filename': 'ConfX.json', 'config': {'name': 'my conf x', 'script_path': 'echo 123'}})
 
     def test_load_config_when_non_admin(self):
         _create_script_config_file('ConfX')
@@ -378,12 +453,21 @@ class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
         config = self.config_service.load_config('ConfX', self.admin_user)
         self.assertIsNone(config)
 
+    def test_load_config_when_script_has_admin_users(self):
+        _create_script_config_file('ConfX', admin_users=['admin_user'])
+        config = self.config_service.load_config('ConfX', self.admin_user)
+        self.assertEqual(config['filename'], 'ConfX.json')
+
+    def test_load_config_when_script_has_different_admin_users(self):
+        _create_script_config_file('ConfX', admin_users=['admin_user2'])
+        self.assertRaises(ConfigNotAllowedException, self.config_service.load_config, 'ConfX', self.admin_user)
+
 
 def _create_script_config_file(filename, *, name=None, **kwargs):
     conf_folder = os.path.join(test_utils.temp_folder, 'runners')
     file_path = os.path.join(conf_folder, filename + '.json')
 
-    config = {}
+    config = {'script_path': 'echo 123'}
     if name is not None:
         config['name'] = name
 

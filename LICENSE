@@ -1,5 +1,5 @@
    Script-server
-   Copyright 2016-2019 buggygm@gmail.com
+   Copyright 2016-2020 buggygm@gmail.com
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -31,6 +31,10 @@ images/github.png (modified)
 
 images/titleBackground.jpg
 The image is from free set of material design backgrounds, published by oxygenna.com and absolutely free to use (Source: http://www.oxygenna.com/news/brand-new-set-of-40-material-design-backgrounds)
+
+images/titleBackground_small.jpg
+images/titleBackground_login.jpg
+Same as above, but the image sizes was changed for Script server project
 
 images/cookie.png (modified)
 https://github.com/whitebird/FontAwesome-cookie

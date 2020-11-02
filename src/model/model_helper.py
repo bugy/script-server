@@ -1,9 +1,12 @@
 import logging
 import os
 import re
+from datetime import datetime
 
 import utils.env_utils as env_utils
 from config.constants import FILE_TYPE_DIR, FILE_TYPE_FILE
+from utils import date_utils
+from utils.string_utils import is_blank
 
 ENV_VAR_PREFIX = '$$'
 SECURE_MASK = '*' * 6
@@ -105,6 +108,20 @@ def read_bool_from_config(key, config_obj, *, default=None):
     raise Exception('"' + key + '" field should be true or false')
 
 
+def read_datetime_from_config(key, config_obj, *, default=None):
+    value = config_obj.get(key)
+    if value is None:
+        return default
+
+    if isinstance(value, datetime):
+        return value
+
+    if isinstance(value, str):
+        return date_utils.parse_iso_datetime(value)
+
+    raise InvalidValueTypeException('"' + key + '" field should be a datetime, but was ' + repr(value))
+
+
 def read_bool(value):
     if isinstance(value, bool):
         return value
@@ -134,6 +151,32 @@ def read_int_from_config(key, config_obj, *, default=None):
     raise InvalidValueTypeException('Invalid %s value: integer expected, but was: %s' % (key, repr(value)))
 
 
+def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False):
+    """
+    Reads string value from a config by the key
+    If the value is missing, returns specified default value
+    If the value is not string, InvalidValueTypeException is thrown
+
+    :param config_obj: where to read value from
+    :param key: key to read value from
+    :param default: default value, if config value is missing
+    :param blank_to_none: if value is blank, treat it as null
+    :return: config_obj[key] if non None, default otherwise
+    """
+    value = config_obj.get(key)
+
+    if blank_to_none and isinstance(value, str) and is_blank(value):
+        value = None
+
+    if value is None:
+        return default
+
+    if isinstance(value, str):
+        return value
+
+    raise InvalidValueTypeException('Invalid %s value: string expected, but was: %s' % (key, repr(value)))
+
+
 def is_empty(value):
     return (not value) and (value != 0) and (value is not False)
 
@@ -152,7 +195,8 @@ def fill_parameter_values(parameter_configs, template, values):
             value = ''
 
         if not isinstance(value, str):
-            value = str(value)
+            mapped_value = parameter_config.map_to_script(value)
+            value = parameter_config.to_script_args(mapped_value)
 
         result = result.replace('${' + parameter_name + '}', str(value))
 
@@ -161,6 +205,8 @@ def fill_parameter_values(parameter_configs, template, values):
 
 def replace_auth_vars(text, username, audit_name):
     result = text
+    if not result:
+        return result
 
     if not username:
         username = ''
@@ -216,6 +262,9 @@ class InvalidValueException(Exception):
     def __init__(self, param_name, validation_error) -> None:
         super().__init__(validation_error)
         self.param_name = param_name
+
+    def get_user_message(self):
+        return 'Invalid value for "' + self.param_name + '": ' + str(self)
 
 
 class InvalidValueTypeException(Exception):

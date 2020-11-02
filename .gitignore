@@ -64,9 +64,16 @@ target/
 
 conf/runners
 conf/conf.json
+conf/.htpasswd
 logs
 .idea
 temp
 /web
 web-src/node_modules
 web-src/package-lock.json
+web-src/tests/e2e/reports/
+web-src/selenium-debug.log
+web-src/chromedriver.log
+web-src/geckodriver.log
+
+venv/

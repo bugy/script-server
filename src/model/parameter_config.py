@@ -18,6 +18,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
 
 @observable_fields(
     'param',
+    'repeat_param'
     'env_var',
     'no_value',
     'description',
@@ -32,6 +33,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'secure',
     'separator',
     'multiple_arguments',
+    'same_arg_param',
     'file_dir',  # path relative to working dir (for execution)
     '_list_files_dir',  # file_dir, relative to the server path (for listing files)
     'file_type',
@@ -62,15 +64,17 @@ class ParameterModel(object):
         config = self._original_config
 
         self.param = config.get('param')
+        self.repeat_param = read_bool_from_config('repeat_param', config, default=True)
         self.env_var = config.get('env_var')
         self.no_value = read_bool_from_config('no_value', config, default=False)
-        self.description = config.get('description')
+        self.description = replace_auth_vars(config.get('description'), self._username, self._audit_name)
         self.required = read_bool_from_config('required', config, default=False)
         self.min = config.get('min')
         self.max = config.get('max')
         self.secure = read_bool_from_config('secure', config, default=False)
         self.separator = config.get('separator', ',')
         self.multiple_arguments = read_bool_from_config('multiple_arguments', config, default=False)
+        self.same_arg_param = read_bool_from_config('same_arg_param', config, default=False)
         self.default = _resolve_default(config.get('default'), self._username, self._audit_name, self._working_dir)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
@@ -92,13 +96,19 @@ class ParameterModel(object):
         self._reload_values()
 
     def _validate_config(self):
+        param_log_name = self.str_name()
+
         if self.constant and not self.default:
             message = 'Constant should have default value specified'
-            raise Exception('Failed to set parameter ' + self.name + ' to constant: ' + message)
+            raise Exception('Failed to set parameter "' + param_log_name + '" to constant: ' + message)
 
         if self.type == PARAM_TYPE_SERVER_FILE:
             if not self.file_dir:
-                raise Exception('Parameter ' + self.name + ' has missing config file_dir')
+                raise Exception('Parameter ' + param_log_name + ' has missing config file_dir')
+
+    def str_name(self):
+        names = (name for name in (self.name, self.param, self.description) if name)
+        return next(names, 'unknown')
 
     def validate_parameter_dependencies(self, all_parameters):
         required_parameters = self.get_required_parameters()
@@ -170,7 +180,7 @@ class ParameterModel(object):
             return ConstValuesProvider(values_config)
 
         elif 'script' in values_config:
-            script = values_config['script']
+            script = replace_auth_vars(values_config['script'], self._username, self._audit_name)
 
             if '${' not in script:
                 return ScriptValuesProvider(script)
@@ -456,8 +466,8 @@ class WrongParameterUsageException(Exception):
 
 
 def get_sorted_config(param_config):
-    key_order = ['name', 'required', 'param', 'type', 'no_value', 'default', 'constant', 'description', 'secure',
-                 'values', 'min', 'max', 'multiple_arguments', 'separator', 'file_dir', 'file_recursive', 'file_type',
+    key_order = ['name', 'required', 'param', 'repeat_param', 'type', 'no_value', 'default', 'constant', 'description', 'secure',
+                 'values', 'min', 'max', 'multiple_arguments', 'same_arg_param', 'separator', 'file_dir', 'file_recursive', 'file_type',
                  'file_extensions']
 
     def get_order(key):

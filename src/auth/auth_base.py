@@ -5,6 +5,7 @@ class Authenticator(metaclass=abc.ABCMeta):
     def __init__(self) -> None:
         self._client_visible_config = {}
         self.auth_type = None
+        self.auth_expiration_days = 30
 
     @abc.abstractmethod
     def authenticate(self, request_handler):
@@ -15,6 +16,12 @@ class Authenticator(metaclass=abc.ABCMeta):
 
     def get_groups(self, user, known_groups=None):
         return []
+
+    def validate_user(self, user, request_handler):
+        return True
+
+    def logout(self, user, request_handler):
+        return None
 
 
 class AuthRejectedError(Exception):

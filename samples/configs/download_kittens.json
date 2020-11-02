@@ -1,0 +1,11 @@
+{
+  "name": "Download kittens",
+  "description": "Downloads several random kitten images, with a delay. \nAll the images are kindly provided by https://cataas.com/",
+  "script_path": "python -u samples/scripts/download_kittens.py",
+  "output_files": [
+    {
+      "type": "inline-image",
+      "path": "##any_path#"
+    }
+  ]
+}

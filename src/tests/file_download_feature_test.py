@@ -197,17 +197,22 @@ class TestFileMatching(unittest.TestCase):
 
 class TestParametersSubstitute(unittest.TestCase):
     def test_no_parameters(self):
-        files = file_download_feature.substitute_parameter_values([], ['/home/user/test.txt'], [])
+        files = file_download_feature.substitute_variable_values(
+            [], ['/home/user/test.txt'], [],
+            '127.0.0.1',
+            'user_X')
 
         self.assertEqual(files, ['/home/user/test.txt'])
 
     def test_single_replace(self):
         parameter = create_parameter_model('param1')
 
-        files = file_download_feature.substitute_parameter_values(
+        files = file_download_feature.substitute_variable_values(
             [parameter],
             ['/home/user/${param1}.txt'],
-            {'param1': 'val1'})
+            {'param1': 'val1'},
+            '127.0.0.1',
+            'user_X')
 
         self.assertEqual(files, ['/home/user/val1.txt'])
 
@@ -216,10 +221,12 @@ class TestParametersSubstitute(unittest.TestCase):
         parameters.append(create_parameter_model('param1', all_parameters=parameters))
         parameters.append(create_parameter_model('param2', all_parameters=parameters))
 
-        files = file_download_feature.substitute_parameter_values(
+        files = file_download_feature.substitute_variable_values(
             parameters,
             ['/home/${param2}/${param1}.txt'],
-            {'param1': 'val1', 'param2': 'val2'})
+            {'param1': 'val1', 'param2': 'val2'},
+            '127.0.0.1',
+            'user_X')
 
         self.assertEqual(files, ['/home/val2/val1.txt'])
 
@@ -228,42 +235,86 @@ class TestParametersSubstitute(unittest.TestCase):
         parameters.append(create_parameter_model('param1', all_parameters=parameters))
         parameters.append(create_parameter_model('param2', all_parameters=parameters))
 
-        files = file_download_feature.substitute_parameter_values(
+        files = file_download_feature.substitute_variable_values(
             parameters,
             ['/home/${param2}/${param1}.txt', '/tmp/${param2}.txt', '/${param1}'],
-            {'param1': 'val1', 'param2': 'val2'})
+            {'param1': 'val1', 'param2': 'val2'},
+            '127.0.0.1',
+            'user_X')
 
         self.assertEqual(files, ['/home/val2/val1.txt', '/tmp/val2.txt', '/val1'])
 
     def test_no_pattern_match(self):
         param1 = create_parameter_model('param1')
 
-        files = file_download_feature.substitute_parameter_values(
+        files = file_download_feature.substitute_variable_values(
             [param1],
             ['/home/user/${paramX}.txt'],
-            {'param1': 'val1'})
+            {'param1': 'val1'},
+            '127.0.0.1',
+            'user_X')
 
         self.assertEqual(files, ['/home/user/${paramX}.txt'])
 
     def test_skip_secure_replace(self):
         param1 = create_parameter_model('param1', secure=True)
 
-        files = file_download_feature.substitute_parameter_values(
+        files = file_download_feature.substitute_variable_values(
             [param1],
             ['/home/user/${param1}.txt'],
-            {'param1': 'val1'})
+            {'param1': 'val1'},
+            '127.0.0.1',
+            'user_X')
 
         self.assertEqual(files, ['/home/user/${param1}.txt'])
 
     def test_skip_flag_replace(self):
         param1 = create_parameter_model('param1', no_value=True)
 
-        files = file_download_feature.substitute_parameter_values(
+        files = file_download_feature.substitute_variable_values(
             [param1],
             ['/home/user/${param1}.txt'],
-            {'param1': 'val1'})
+            {'param1': 'val1'},
+            '127.0.0.1',
+            'user_X')
 
         self.assertEqual(files, ['/home/user/${param1}.txt'])
+
+    def test_replace_audit_name(self):
+        param1 = create_parameter_model('param1', no_value=True)
+
+        files = file_download_feature.substitute_variable_values(
+            [param1],
+            ['/home/user/${auth.audit_name}.txt'],
+            {'param1': 'val1'},
+            '127.0.0.1',
+            'user_X')
+
+        self.assertEqual(files, ['/home/user/127.0.0.1.txt'])
+
+    def test_replace_username(self):
+        param1 = create_parameter_model('param1', no_value=True)
+
+        files = file_download_feature.substitute_variable_values(
+            [param1],
+            ['/home/user/${auth.username}.txt'],
+            {'param1': 'val1'},
+            '127.0.0.1',
+            'user_X')
+
+        self.assertEqual(files, ['/home/user/user_X.txt'])
+
+    def test_replace_username_and_param(self):
+        param1 = create_parameter_model('param1')
+
+        files = file_download_feature.substitute_variable_values(
+            [param1],
+            ['/home/${auth.username}/${param1}.txt'],
+            {'param1': 'val1'},
+            '127.0.0.1',
+            'user_X')
+
+        self.assertEqual(files, ['/home/user_X/val1.txt'])
 
 
 class FileDownloadFeatureTest(unittest.TestCase):

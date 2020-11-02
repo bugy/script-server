@@ -1,10 +1,11 @@
 import os
 import unittest
+from datetime import datetime, timezone
 
 from config.constants import FILE_TYPE_FILE, FILE_TYPE_DIR
 from model import model_helper
 from model.model_helper import read_list, read_dict, fill_parameter_values, resolve_env_vars, \
-    InvalidFileException, read_bool_from_config, InvalidValueException, InvalidValueTypeException
+    InvalidFileException, read_bool_from_config, InvalidValueException, InvalidValueTypeException, read_str_from_config
 from tests import test_utils
 from tests.test_utils import create_parameter_model, set_env_value
 
@@ -153,6 +154,38 @@ class TestFillParameterValues(unittest.TestCase):
         result = fill_parameter_values(self.create_parameters('p1'), 'Value = ${xyz}', {'p1': '12345'})
         self.assertEqual('Value = ${xyz}', result)
 
+    def test_fill_when_server_file_recursive_and_one_level(self):
+        parameters = [create_parameter_model(
+            'p1',
+            type='server_file',
+            file_dir=test_utils.temp_folder,
+            file_recursive=True)]
+
+        result = fill_parameter_values(parameters, 'Value = ${p1}', {'p1': ['folder']})
+        expected_value = os.path.join(test_utils.temp_folder, 'folder')
+        self.assertEqual('Value = ' + expected_value, result)
+
+    def test_fill_when_server_file_recursive_and_multiple_levels(self):
+        parameters = [create_parameter_model(
+            'p1',
+            type='server_file',
+            file_dir=test_utils.temp_folder,
+            file_recursive=True)]
+
+        result = fill_parameter_values(parameters, 'Value = ${p1}', {'p1': ['folder', 'sub', 'log.txt']})
+        expected_value = os.path.join(test_utils.temp_folder, 'folder', 'sub', 'log.txt')
+        self.assertEqual('Value = ' + expected_value, result)
+
+    def test_fill_when_server_file_plain(self):
+        parameters = [create_parameter_model(
+            'p1',
+            type='server_file',
+            file_dir=test_utils.temp_folder,
+            file_recursive=True)]
+
+        result = fill_parameter_values(parameters, 'Value = ${p1}', {'p1': 'folder'})
+        self.assertEqual('Value = folder', result)
+
     def create_parameters(self, *names):
         result = []
         for name in names:
@@ -160,6 +193,14 @@ class TestFillParameterValues(unittest.TestCase):
             result.append(parameter)
 
         return result
+
+    def setUp(self) -> None:
+        super().setUp()
+        test_utils.setup()
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        test_utils.cleanup()
 
 
 class TestResolveEnvVars(unittest.TestCase):
@@ -314,3 +355,85 @@ class TestReadIntFromConfig(unittest.TestCase):
     def test_default_value_when_empty_string(self):
         value = model_helper.read_int_from_config('my_key', {'my_key': ' '}, default=9999)
         self.assertEqual(9999, value)
+
+
+class TestReadStrFromConfig(unittest.TestCase):
+    def test_normal_text(self):
+        value = read_str_from_config({'key1': 'xyz'}, 'key1')
+        self.assertEquals('xyz', value)
+
+    def test_none_value_no_default(self):
+        value = read_str_from_config({'key1': None}, 'key1')
+        self.assertIsNone(value)
+
+    def test_none_value_with_default(self):
+        value = read_str_from_config({'key1': None}, 'key1', default='abc')
+        self.assertEquals('abc', value)
+
+    def test_no_key_no_default(self):
+        value = read_str_from_config({'key1': 'xyz'}, 'key2')
+        self.assertIsNone(value)
+
+    def test_no_key_with_default(self):
+        value = read_str_from_config({'key1': 'xyz'}, 'key2', default='abc')
+        self.assertEquals('abc', value)
+
+    def test_text_with_whitespaces(self):
+        value = read_str_from_config({'key1': '  xyz  \n'}, 'key1')
+        self.assertEquals('  xyz  \n', value)
+
+    def test_text_when_blank_to_none_and_none(self):
+        value = read_str_from_config({'key1': None}, 'key1', blank_to_none=True)
+        self.assertIsNone(value)
+
+    def test_text_when_blank_to_none_and_empty(self):
+        value = read_str_from_config({'key1': ''}, 'key1', blank_to_none=True)
+        self.assertIsNone(value)
+
+    def test_text_when_blank_to_none_and_blank(self):
+        value = read_str_from_config({'key1': ' \t \n'}, 'key1', blank_to_none=True)
+        self.assertIsNone(value)
+
+    def test_text_when_blank_to_none_and_blank_and_default(self):
+        value = read_str_from_config({'key1': ' \t \n'}, 'key1', blank_to_none=True, default='abc')
+        self.assertEquals('abc', value)
+
+    def test_text_when_int(self):
+        self.assertRaisesRegex(InvalidValueTypeException, 'Invalid key1 value: string expected, but was: 5',
+                               read_str_from_config, {'key1': 5}, 'key1')
+
+
+class TestReadDatetime(unittest.TestCase):
+    def test_datetime_value(self):
+        value = datetime.now()
+        actual_value = model_helper.read_datetime_from_config('p1', {'p1': value})
+        self.assertEqual(value, actual_value)
+
+    def test_string_value(self):
+        actual_value = model_helper.read_datetime_from_config('p1', {'p1': '2020-07-10T15:30:59.123456Z'})
+        expected_value = datetime(2020, 7, 10, 15, 30, 59, 123456, tzinfo=timezone.utc)
+        self.assertEqual(expected_value, actual_value)
+
+    def test_string_value_when_bad_format(self):
+        self.assertRaisesRegex(
+            ValueError,
+            'does not match format',
+            model_helper.read_datetime_from_config,
+            'p1', {'p1': '15:30:59 2020-07-10'})
+
+    def test_default_value_when_missing_key(self):
+        value = datetime.now()
+        actual_value = model_helper.read_datetime_from_config('p1', {'another_key': 'abc'}, default=value)
+        self.assertEqual(value, actual_value)
+
+    def test_default_value_when_value_none(self):
+        value = datetime.now()
+        actual_value = model_helper.read_datetime_from_config('p1', {'p1': None}, default=value)
+        self.assertEqual(value, actual_value)
+
+    def test_int_value(self):
+        self.assertRaisesRegex(
+            InvalidValueTypeException,
+            'should be a datetime',
+            model_helper.read_datetime_from_config,
+            'p1', {'p1': 12345})

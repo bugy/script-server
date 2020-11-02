@@ -142,6 +142,10 @@ def relative_path(path, parent_path):
     path = normalize_path(path)
     parent_path = normalize_path(parent_path)
 
+    if os_utils.is_win():
+        path = path.capitalize()
+        parent_path = parent_path.capitalize()
+
     if not path.startswith(parent_path):
         raise ValueError(path + ' is not subpath of ' + parent_path)
 
@@ -168,9 +172,9 @@ def split_all(path):
 
 def to_filename(txt):
     if os_utils.is_win():
-        return txt.replace(':', '-')
+        return re.sub('[<>:"/\\\\|?*]', '_', txt)
 
-    return txt
+    return txt.replace('/', '_')
 
 
 def create_unique_filename(preferred_path, retries=9999999):

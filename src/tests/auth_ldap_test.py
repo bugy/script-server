@@ -5,7 +5,7 @@ from ldap3.utils.dn import safe_dn
 
 from auth.auth_ldap import LdapAuthenticator
 from tests import test_utils
-from tests.test_utils import mock_object
+from tests.test_utils import mock_request_handler
 
 
 class _LdapAuthenticatorMockWrapper:
@@ -143,6 +143,24 @@ class TestFindGroups(unittest.TestCase):
         groups = self.auth_and_get_groups('user1', auth_wrapper)
         self.assertCountEqual(['group1', 'group2', 'group3'], groups)
 
+    def test_load_multiple_groups_by_uid_when_not_all_match(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper('cn=$username,cn=Users,dc=ldap,dc=test', 'dc=ldap,dc=test')
+        auth_wrapper.add_posix_user('user1', '1234', 'uid_X')
+        auth_wrapper.add_posix_group('group1', ['uid_X'])
+        auth_wrapper.add_posix_group('group2', ['uid_123'])
+        auth_wrapper.add_posix_group('group3', ['uid_X'])
+
+        groups = self.auth_and_get_groups('user1', auth_wrapper)
+        self.assertCountEqual(['group1', 'group3'], groups)
+
+    def test_load_single_group_by_uid_when_dn_has_parenthesss(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper('cn=$username,cn=Users,dc=ldap,dc=test', 'dc=ldap,dc=test')
+        auth_wrapper.add_posix_user('user (1)', '1234', 'uid (X)')
+        auth_wrapper.add_posix_group('group1', ['uid (X)'])
+
+        groups = self.auth_and_get_groups('user (1)', auth_wrapper)
+        self.assertCountEqual(['group1'], groups)
+
     def test_load_multiple_groups_by_member_and_uid_when_dn_template(self):
         auth_wrapper = _LdapAuthenticatorMockWrapper('cn=$username,cn=Users,dc=ldap,dc=test', 'dc=ldap,dc=test')
         auth_wrapper.add_posix_user('user1', '1234', 'uid_X')
@@ -169,6 +187,14 @@ class TestFindGroups(unittest.TestCase):
         groups = self.auth_and_get_groups('user1', auth_wrapper)
         self.assertEqual(['group1'], groups)
 
+    def test_load_single_group_by_member_when_sam_account_template_with_parentheses(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper('some_domain\\$username', 'dc=some_domain,dc=test')
+        auth_wrapper.add_user('User (Noname)', '1234', sAMAccountName='user (1)')
+        auth_wrapper.add_group('group1', ['User (Noname)'])
+
+        groups = self.auth_and_get_groups('user (1)', auth_wrapper)
+        self.assertEqual(['group1'], groups)
+
     def test_load_single_group_by_uid_when_sam_account_template(self):
         auth_wrapper = _LdapAuthenticatorMockWrapper('some_domain\\$username', 'dc=some_domain,dc=test')
         auth_wrapper.add_posix_user('User Noname', '1234', 'uid_X', sAMAccountName='user1')
@@ -183,6 +209,14 @@ class TestFindGroups(unittest.TestCase):
         auth_wrapper.add_group('group1', ['User Noname'])
 
         groups = self.auth_and_get_groups('user1', auth_wrapper)
+        self.assertEqual(['group1'], groups)
+
+    def test_load_single_group_by_member_when_user_principal_template_with_parentheses(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper('$username@buggy.net', 'dc=buggy,dc=net')
+        auth_wrapper.add_user('User (Noname)', '1234', userPrincipalName='user (1)@buggy.net')
+        auth_wrapper.add_group('group1', ['User (Noname)'])
+
+        groups = self.auth_and_get_groups('user (1)', auth_wrapper)
         self.assertEqual(['group1'], groups)
 
     def test_cannot_load_group_when_same_principal_names(self):
@@ -275,15 +309,4 @@ class TestGroupsPersistence(unittest.TestCase):
 
 
 def _mock_request_handler(username, password):
-    request_handler = mock_object()
-
-    def get_argument(arg_name):
-        if arg_name == 'username':
-            return username
-        elif arg_name == 'password':
-            return password
-        else:
-            return None
-
-    request_handler.get_argument = get_argument
-    return request_handler
+    return mock_request_handler(arguments={'username': username, 'password': password})

@@ -12,8 +12,8 @@ class TestLogNameCreator(unittest.TestCase):
         self.assertEqual(filename, 'my_script_bugy_180506_083026.log')
 
     def test_custom_date_format(self):
-        filename = self.create_filename(date_format='xx%y/%m/%d-%fxx')
-        self.assertEqual(filename, 'my_script_bugy_xx18/05/06-234000xx.log')
+        filename = self.create_filename(date_format='xx%y-%m-%d_%fxx')
+        self.assertEqual(filename, 'my_script_bugy_xx18-05-06_234000xx.log')
 
     def test_custom_name_id_only(self):
         filename = self.create_filename(filename_pattern='$ID')

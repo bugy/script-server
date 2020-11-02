@@ -1,6 +1,5 @@
 import abc
 import logging
-import os
 import re
 
 from model.model_helper import is_empty, fill_parameter_values, InvalidFileException, list_files
@@ -96,7 +95,7 @@ class DependantScriptValuesProvider(ValuesProvider):
         try:
             script_output = process_utils.invoke(script)
         except Exception as e:
-            LOGGER.warn('Failed to execute script. ' + str(e))
+            LOGGER.warning('Failed to execute script. ' + str(e))
             return []
 
         script_output = script_output.rstrip('\n')
