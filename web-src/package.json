@@ -1,6 +1,6 @@
 {
   "name": "script-server",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "private": true,
   "dependencies": {
     "axios": "^0.19.2",
