@@ -9,6 +9,9 @@ class TestIsAllowed(unittest.TestCase):
     def test_allowed_from_single_user(self):
         self.assertTrue(self.authorizer.is_allowed('user1', ['user1']))
 
+    def test_allowed_from_single_user_ignore_case(self):
+        self.assertTrue(self.authorizer.is_allowed('USer1', ['usER1']))
+
     def test_not_allowed_from_single_user(self):
         self.assertFalse(self.authorizer.is_allowed('user1', ['user2']))
 
@@ -21,6 +24,10 @@ class TestIsAllowed(unittest.TestCase):
     def test_allowed_from_single_group(self):
         self.user_groups['user1'] = ['group1']
         self.assertTrue(self.authorizer.is_allowed('user1', ['@group1']))
+
+    def test_allowed_from_single_group_ignore_case(self):
+        self.user_groups['user1'] = ['Group1']
+        self.assertTrue(self.authorizer.is_allowed('user1', ['@groUP1']))
 
     def test_not_allowed_from_single_group_invalid_name_in_provider(self):
         self.user_groups['user1'] = ['@group1']
@@ -66,6 +73,9 @@ class TestIsAllowedInApp(unittest.TestCase):
     def test_single_user_allowed(self):
         self.assertAllowed('user1', ['user1'], True)
 
+    def test_single_user_allowed_ignore_case(self):
+        self.assertAllowed('User1', ['uSEr1'], True)
+
     def test_multiple_users_allowed(self):
         self.assertAllowed('user2', ['user1', 'user2', 'user3'], True)
 
@@ -97,6 +107,9 @@ class TestIsAllowedInApp(unittest.TestCase):
 class TestIsAdmin(unittest.TestCase):
     def test_single_admin_allowed(self):
         self.assertAdmin('admin1', ['admin1'], True)
+
+    def test_single_admin_allowed_ignore_case(self):
+        self.assertAdmin('adMin1', ['AdmiN1'], True)
 
     def test_multiple_admins_allowed(self):
         self.assertAdmin('admin2', ['admin1', 'admin2', 'admin3'], True)
@@ -130,6 +143,9 @@ class TestHistoryAccess(unittest.TestCase):
     def test_user_in_the_list(self):
         self.assert_has_access('user1', [], ['user1'], True)
 
+    def test_user_in_the_list_ignore_case(self):
+        self.assert_has_access('useR1', [], ['UsEr1'], True)
+
     def test_any_user_allowed(self):
         self.assert_has_access('user2', [], [ANY_USER], True)
 
@@ -162,6 +178,10 @@ class TestPreconfiguredGroupProvider(unittest.TestCase):
     def test_single_user_in_single_group(self):
         provider = PreconfiguredGroupProvider({'group1': ['user1']})
         self.assertCountEqual(provider.get_groups('user1'), ['group1'])
+
+    def test_single_user_in_single_group_ignore_case(self):
+        provider = PreconfiguredGroupProvider({'group1': ['USER1']})
+        self.assertCountEqual(provider.get_groups('User1'), ['group1'])
 
     def test_two_users_in_different_groups(self):
         provider = PreconfiguredGroupProvider(

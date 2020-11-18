@@ -5,31 +5,52 @@ ADMIN_GROUP = 'admin_users'
 GROUP_PREFIX = '@'
 
 
+def _normalize_user(user):
+    if user:
+        return user.lower()
+    return user
+
+
+def _normalize_users(allowed_users):
+    if isinstance(allowed_users, list):
+        if ANY_USER in allowed_users:
+            return ANY_USER
+
+        return [_normalize_user(user) for user in allowed_users]
+
+    return allowed_users
+
+
 class Authorizer:
     def __init__(self, app_allowed_users, admin_users, full_history_users, groups_provider):
-        self._app_allowed_users = app_allowed_users
-        self._admin_users = admin_users
-        self._full_history_users = full_history_users
+        self._app_allowed_users = _normalize_users(app_allowed_users)
+        self._admin_users = _normalize_users(admin_users)
+        self._full_history_users = _normalize_users(full_history_users)
 
         self._groups_provider = groups_provider
 
     def is_allowed_in_app(self, user_id):
-        return self.is_allowed(user_id, self._app_allowed_users)
+        return self._is_allowed_internal(user_id, self._app_allowed_users)
 
     def is_admin(self, user_id):
-        return self.is_allowed(user_id, self._admin_users)
+        return self._is_allowed_internal(user_id, self._admin_users)
 
     def has_full_history_access(self, user_id):
-        return self.is_admin(user_id) or self.is_allowed(user_id, self._full_history_users)
+        return self.is_admin(user_id) or self._is_allowed_internal(user_id, self._full_history_users)
 
     def is_allowed(self, user_id, allowed_users):
-        if not allowed_users:
+        normalized_users = _normalize_users(allowed_users)
+
+        return self._is_allowed_internal(user_id, normalized_users)
+
+    def _is_allowed_internal(self, user_id, normalized_allowed_users):
+        if not normalized_allowed_users:
             return False
 
-        if (allowed_users == ANY_USER) or (ANY_USER in allowed_users):
+        if normalized_allowed_users == ANY_USER:
             return True
 
-        if user_id in allowed_users:
+        if _normalize_user(user_id) in normalized_allowed_users:
             return True
 
         user_groups = self._groups_provider.get_groups(user_id)
@@ -37,7 +58,7 @@ class Authorizer:
             return False
 
         for group in user_groups:
-            if (GROUP_PREFIX + group) in allowed_users:
+            if _normalize_user(GROUP_PREFIX + group) in normalized_allowed_users:
                 return True
 
         return False
@@ -92,10 +113,10 @@ class PreconfiguredGroupProvider:
                 if member.startswith(GROUP_PREFIX):
                     self._lazy_group_parents[member[1:]].append(group)
                 else:
-                    self._user_groups[member].append(group)
+                    self._user_groups[_normalize_user(member)].append(group)
 
     def get_groups(self, user, known_groups=None):
-        user_groups = set(self._user_groups[user])
+        user_groups = set(self._user_groups[_normalize_user(user)])
 
         if known_groups:
             for known_group in known_groups:
