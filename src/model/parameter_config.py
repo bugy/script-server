@@ -27,6 +27,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'type',
     'min',
     'max',
+    'max_length',
     'constant',
     '_values_provider',
     'values',
@@ -71,6 +72,7 @@ class ParameterModel(object):
         self.required = read_bool_from_config('required', config, default=False)
         self.min = config.get('min')
         self.max = config.get('max')
+        self.max_length = config.get('max_length')
         self.secure = read_bool_from_config('secure', config, default=False)
         self.separator = config.get('separator', ',')
         self.multiple_arguments = read_bool_from_config('multiple_arguments', config, default=False)
@@ -277,6 +279,9 @@ class ParameterModel(object):
             return None
 
         if self.type == 'text':
+            if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
+                return 'is longer than allowed char length (' \
+                        + str(len(value)) + ' > ' + str(self.max_length) + ')'
             return None
 
         if self.type == 'file_upload':
@@ -291,7 +296,7 @@ class ParameterModel(object):
             int_value = int(value)
 
             if (not is_empty(self.max)) and (int_value > int(self.max)):
-                return 'is greater than allowed value (' \
+                return 'is longer than allowed value (' \
                        + value_string + ' > ' + str(self.max) + ')'
 
             if (not is_empty(self.min)) and (int_value < int(self.min)):
