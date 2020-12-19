@@ -41,6 +41,7 @@ def parameter_to_external(parameter):
         'type': parameter.type,
         'min': parameter.min,
         'max': parameter.max,
+        'max_length': parameter.max_length,
         'values': parameter.values,
         'secure': parameter.secure,
         'fileRecursive': parameter.file_recursive,
