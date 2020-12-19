@@ -67,6 +67,9 @@
                        title="Allowed file extensions"
                        v-model="fileExtensions"/>
         </div>
+        <div class="row" v-if="selectedType === 'text'">
+            <Textfield :config="maxLengthField" @error="handleError(maxLengthField, $event)" class="col s5" v-model="max_length"/>
+        </div>
     </form>
 </template>
 
@@ -92,6 +95,7 @@
         fileTypeField,
         maxField,
         minField,
+        maxLengthField,
         multipleArgumentsField,
         sameArgParamField,
         nameField,
