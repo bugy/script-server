@@ -134,6 +134,7 @@
                 secure: 'secure',
                 min: 'min',
                 max: 'max',
+                max_length: 'max_length',
                 multipleArguments: 'multiple_arguments',
                 sameArgParam: 'same_arg_param',
                 separator: 'separator',
@@ -169,6 +170,7 @@
                 description: null,
                 min: null,
                 max: null,
+                max_length: null,
                 allowedValues: null,
                 allowedValuesScript: null,
                 allowedValuesFromScript: null,
@@ -193,6 +195,7 @@
                 descriptionField,
                 minField,
                 maxField: Object.assign({}, maxField),
+                maxLengthField,
                 allowedValuesScriptField,
                 allowedValuesFromScriptField,
                 defaultValueField: Object.assign({}, defaultValueField),
@@ -221,6 +224,7 @@
                         this.required = get(config, 'required', false);
                         this.min = config['min'];
                         this.max = config['max'];
+                        this.max_length = config['max_length'];
                         this.constant = !!get(config, 'constant', false);
                         this.secure = !!get(config, 'secure', false);
                         this.multipleArguments = !!get(config, 'multiple_arguments', false);

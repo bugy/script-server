@@ -67,6 +67,11 @@ export const allowedValuesScriptField = {
     required: true
 };
 
+export const maxLengthField = {
+    name: 'Max Characters',
+    type: 'int'
+};
+
 export const allowedValuesFromScriptField = {
     name: 'Load from script',
     withoutValue: true,

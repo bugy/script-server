@@ -121,7 +121,7 @@
                 }
 
                 if (!empty) {
-                    var typeError = getValidByTypeError(value, this.config.type, this.config.min, this.config.max);
+                    var typeError = getValidByTypeError(value, this.config.type, this.config.min, this.config.max, this.config.max_length);
                     if (!isEmptyString(typeError)) {
                         return typeError;
                     }
@@ -149,7 +149,15 @@
         }
     }
 
-    function getValidByTypeError(value, type, min, max) {
+    function getValidByTypeError(value, type, min, max, max_length) {
+        if (type === 'text') {
+            if (max_length) {
+                if (value.length > max_length) {
+                    return 'Max chars allowed: ' + max_length
+                }
+            }
+        }
+
         if (type === 'int') {
             const isInteger = /^(((-?[1-9])(\d*))|0)$/.test(value);
             if (!isInteger) {
