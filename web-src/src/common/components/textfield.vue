@@ -151,8 +151,10 @@
 
     function getValidByTypeError(value, type, min, max, max_length) {
         if (type === 'text') {
-            if (value.length > max_length) {
-                return 'Max chars allowed: ' + max_length
+            if (max_length) {
+                if (value.length > max_length) {
+                    return 'Max chars allowed: ' + max_length
+                }
             }
         }
 
