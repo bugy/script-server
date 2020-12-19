@@ -71,47 +71,48 @@
 </template>
 
 <script>
-    import Checkbox from '@/common/components/checkbox';
-    import ChipsList from '@/common/components/ChipsList';
-    import Combobox from '@/common/components/combobox';
-    import TextArea from '@/common/components/TextArea';
-    import Textfield from '@/common/components/textfield';
-    import {forEachKeyValue, isEmptyString} from '@/common/utils/common';
-    import get from 'lodash/get';
-    import Vue from 'vue';
-    import {
-        allowedValuesFromScriptField,
-        allowedValuesScriptField,
-        argField,
-        repeatParamField,
-        constantField,
-        defaultValueField,
-        descriptionField,
-        envVarField,
-        fileDirField,
-        fileTypeField,
-        maxField,
-        minField,
-        multipleArgumentsField,
-        sameArgParamField,
-        nameField,
-        noValueField,
-        recursiveField,
-        requiredField,
-        secureField,
-        separatorField,
-        typeField
-    } from './parameter-fields';
+import Checkbox from '@/common/components/checkbox';
+import ChipsList from '@/common/components/ChipsList';
+import Combobox from '@/common/components/combobox';
+import TextArea from '@/common/components/TextArea';
+import Textfield from '@/common/components/textfield';
+import {forEachKeyValue, isEmptyString} from '@/common/utils/common';
+import get from 'lodash/get';
+import Vue from 'vue';
+import {
+  allowedValuesFromScriptField,
+  allowedValuesScriptField,
+  argField,
+  constantField,
+  defaultValueField,
+  descriptionField,
+  envVarField,
+  fileDirField,
+  fileTypeField,
+  maxField,
+  maxLengthField,
+  minField,
+  multipleArgumentsField,
+  nameField,
+  noValueField,
+  recursiveField,
+  repeatParamField,
+  requiredField,
+  sameArgParamField,
+  secureField,
+  separatorField,
+  typeField
+} from './parameter-fields';
 
-    function updateValue(value, configField, newValue) {
-        if (!value.hasOwnProperty(configField)) {
-            Object.assign(value, {[configField]: newValue});
-        }
-        Vue.set(value, configField, newValue);
-    }
+function updateValue(value, configField, newValue) {
+  if (!value.hasOwnProperty(configField)) {
+    Object.assign(value, {[configField]: newValue});
+  }
+  Vue.set(value, configField, newValue);
+}
 
-    export default {
-        name: 'ParameterConfigForm',
+export default {
+  name: 'ParameterConfigForm',
         components: {ChipsList, TextArea, Checkbox, Combobox, Textfield},
         props: {
             value: {
