@@ -310,7 +310,9 @@
 <style scoped>
     .file-dialog {
         width: 500px;
+        max-width: 100vw;
         height: 500px;
+        max-height: 100vh;
         display: flex;
         flex-direction: column;
         border: 1px solid #E0E0E0;
