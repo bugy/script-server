@@ -26,7 +26,7 @@ install:
   - sudo pip3 install ldap3 parameterized bcrypt
   - sudo pip3 install requests --upgrade
   - cd web-src
-  - npm install
+  - npm install --loglevel verbose
   - npm update
   - cd ..
 before_script:
