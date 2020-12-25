@@ -119,6 +119,7 @@ class ServerTest(TestCase):
                     file_download_feature,
                     'cookie_secret',
                     None,
+                    self.conf_folder,
                     start_server=False)
         self.start_loop()
 
