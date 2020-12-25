@@ -1,12 +1,12 @@
 <template>
     <div class="script-list-group" :class="{active:group.isActive}">
-        <a class="collection-item waves-effect waves-teal script-group"
+        <a class="collection-item waves-effect script-group"
            :key="group.name"
            @click="$emit('group-clicked', group.name)">
-            <span>{{group.name}}</span>
-            <i class="material-icons">
-                {{ group.isActive ? 'expand_less' : 'expand_more'}}
-            </i>
+          <span>{{ group.name }}</span>
+          <i class="material-icons">
+            {{ group.isActive ? 'expand_less' : 'expand_more' }}
+          </i>
         </a>
 
         <ScriptListItem :script="innerScript"
@@ -16,17 +16,17 @@
 </template>
 
 <script>
-    import ScriptListItem from './ScriptListItem';
+import ScriptListItem from './ScriptListItem';
 
-    export default {
-        name: 'ScriptListGroup',
-        components: {ScriptListItem},
-        props: {
-            group: {
-                type: Object
-            }
-        }
+export default {
+  name: 'ScriptListGroup',
+  components: {ScriptListItem},
+  props: {
+    group: {
+      type: Object
     }
+  }
+}
 </script>
 
 <style scoped>

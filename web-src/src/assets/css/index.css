@@ -9,7 +9,7 @@ html {
 }
 
 body {
-    background: #eee;
+    background: var(--surface-color);
 }
 
 /* materialized styles */
@@ -47,25 +47,6 @@ h6.header {
     padding: 0.5rem;
 }
 
-input:not([type]),
-input[type=text]:not(.browser-default),
-input[type=password]:not(.browser-default),
-input[type=email]:not(.browser-default),
-input[type=url]:not(.browser-default),
-input[type=time]:not(.browser-default),
-input[type=date]:not(.browser-default),
-input[type=datetime]:not(.browsertele-default),
-input[type=datetime-local]:not(.browser-default),
-input[type=tel]:not(.browser-default),
-input[type=number]:not(.browser-default),
-input[type=search]:not(.browser-default),
-textarea.materialize-textarea {
-    color: rgba(0, 0, 0, 0.87);
-}
-
-input[type=checkbox]:not(.browser-default) + span {
-    color: #9e9e9e;
-}
 
 #login-body {
     height: 100vh;
@@ -74,13 +55,12 @@ input[type=checkbox]:not(.browser-default) + span {
 #login-panel {
     width: 300px;
     margin: auto;
+    background-color: var(--background-color-level-4dp);
 }
 
 #login-panel .card-image {
     height: 50px;
-    background: url('../titleBackground_login.jpg') no-repeat;
-    background-size: cover;
-    background-position-x: 28%;
+    background: var(--login-header-background);
 }
 
 #login-panel .login-form .input-field {
@@ -124,72 +104,53 @@ input[type=checkbox]:not(.browser-default) + span {
     margin-top: 16px;
 }
 
-#login-google_oauth-button {
+.oauth-button {
     height: 40px;
     width: 188px;
-    padding-left: 34px;
-    margin: auto;
-    margin-top: 34px;
     display: block;
+    margin-top: 34px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 36px;
 
     font-size: 14px;
     font-weight: 500;
-    color: #757575;
+    color: var(--font-color-main);
 
     border-radius: 2px;
-    box-shadow: 0 1px 3px -1px #202020;
+    box-shadow: var(--shadow-4dp);
     border: none;
 
-    background-image: url('../g-logo-plain.png');
-    background-color: white;
-    background-position-y: 50%;
-    background-position-x: -4px;
-    background-size: 48px;
     background-repeat: no-repeat;
+    background-size: contain;
+    background-color: var(--background-color-level-4dp);
+
+    outline: 0;
 }
 
-#login-google_oauth-button:active {
-    background-color: #EEE;
-    background-image: url('../g-logo-plain-pressed.png');
+.oauth-button:hover,
+.oauth-button:active {
+    box-shadow: var(--shadow-6dp);
 }
 
-#login-google_oauth-button[disabled] {
-    color: #B0B0B0;
+.oauth-button:active,
+.oauth-button:focus {
+    background-color: var(--focus-color-solid);
 }
 
+.oauth-button[disabled] {
+    color: var(--font-color-disabled);
+}
+
+#login-google_oauth-button {
+    background-image: url('../g-logo-plain.png');
+}
 
 #login-panel .login-gitlab .login-info-label {
     margin-top: 16px;
 }
 
 #login-gitlab-button {
-    height: 40px;
-    width: 188px;
-    padding-left: 34px;
-    margin: auto;
-    margin-top: 34px;
-    display: block;
-
-    font-size: 14px;
-    font-weight: 500;
-    color: #757575;
-
-    border-radius: 2px;
-    box-shadow: 0 1px 3px -1px #202020;
-    border: none;
-
     background-image: url('../gitlab-icon-rgb.png');
-    background-color: white;
-    background-position-y: 50%;
-    background-position-x: -4px;
-    background-size: 48px;
-    background-repeat: no-repeat;
-}
-
-#login-gitlab-button:active {
-    background-color: #EEE;
-}
-
-#login-gitlab-button[disabled] {
-    color: #B0B0B0;
+    background-position-x: 6px;
 }

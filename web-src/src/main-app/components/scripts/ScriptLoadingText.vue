@@ -5,28 +5,28 @@
 </template>
 
 <script>
-    import {randomInt} from '@/common/utils/common';
+import {randomInt} from '@/common/utils/common';
 
-    export default {
-        name: 'ScriptLoadingText',
+export default {
+  name: 'ScriptLoadingText',
 
-        data() {
-            return {
-                loadingDots: '',
-                loaderTimer: null,
-                counter: 0
-            }
-        },
+  data() {
+    return {
+      loadingDots: '',
+      loaderTimer: null,
+      counter: 0
+    }
+  },
 
-        props: {
-            loading: {
-                type: Boolean,
-                default: false
-            },
-            script: {
-                type: String,
-                default: null
-            },
+  props: {
+    loading: {
+      type: Boolean,
+      default: false
+    },
+    script: {
+      type: String,
+      default: null
+    },
             delay: {
                 type: Number,
                 default: 1000
@@ -116,7 +116,7 @@
 
 <style scoped>
     .script-loading-text {
-        color: #616161;
+      color: var(--font-color-medium);
     }
 
 </style>

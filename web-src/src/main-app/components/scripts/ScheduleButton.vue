@@ -45,26 +45,26 @@
 
 <style scoped>
     .schedule-button {
-        box-shadow: none;
-        color: #26a69a;
-        border: 1px solid #d9d9d9;
-        padding-left: 16px;
-        padding-right: 16px;
+      box-shadow: none;
+      color: var(--primary-color);
+      border: 1px solid var(--outline-color);
+      padding-left: 16px;
+      padding-right: 16px;
     }
 
-    .schedule-button.disabled {
-        color: #9F9F9F;
+    .schedule-button[disabled] {
+      border: 1px solid var(--outline-color-disabled);
     }
 
     .schedule-button i {
-        font-size: 22px;
-        line-height: 34px;
-        margin-right: 8px;
+      font-size: 22px;
+      line-height: 34px;
+      margin-right: 8px;
     }
 
     .schedule-button.short-view {
-        padding-left: 8px;
-        padding-right: 8px;
+      padding-left: 8px;
+      padding-right: 8px;
     }
 
     .schedule-button.short-view i {

@@ -10,7 +10,7 @@
 </template>
 
 <script>
-import {isNull, uuidv4} from "@/common/utils/common";
+import {getElementsByTagNameRecursive, isNull, uuidv4} from "@/common/utils/common";
 import '@/common/materializecss/imports/datepicker'
 
 export default {
@@ -33,24 +33,28 @@ export default {
             }
         },
         mounted: function () {
-            this.id = 'datepicker_' + uuidv4();
+          this.id = 'datepicker_' + uuidv4();
 
-            M.Datepicker.init(this.$refs.datePicker, {
-                defaultTime: 'now',
-                autoClose: true,
-                defaultDate: this.value,
-                setDefaultDate: true,
-                minDate: new Date(),
-                firstDay: 1,
-                yearRange: 5,
-                onSelect: newDate => {
-                    if (newDate.getTime() === this.value.getTime()) {
-                        return;
-                    }
+          const datepicker = M.Datepicker.init(this.$refs.datePicker, {
+            defaultTime: 'now',
+            autoClose: true,
+            defaultDate: this.value,
+            setDefaultDate: true,
+            minDate: new Date(),
+            firstDay: 1,
+            yearRange: 5,
+            onSelect: newDate => {
+              if (newDate.getTime() === this.value.getTime()) {
+                return;
+              }
 
-                    this.$nextTick(() => this.$emit('input', newDate));
-                }
-            });
+              this.$nextTick(() => this.$emit('input', newDate));
+            },
+            onDraw: () => {
+              const svgs = getElementsByTagNameRecursive(datepicker.$el[0].parentNode, 'svg');
+              svgs.forEach(svg => svg.style.fill = 'var(--font-color-main)')
+            }
+          });
         },
         beforeDestroy: function () {
             const instance = M.Datepicker.getInstance(this.$refs.datePicker);

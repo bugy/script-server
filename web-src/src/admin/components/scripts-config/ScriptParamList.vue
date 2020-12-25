@@ -13,32 +13,32 @@
 </template>
 
 <script>
-    import '@/common/materializecss/imports/collapsible'
-    import '@/common/materializecss/imports/toast'
-    import {guid} from '@/common/utils/common'
-    import ParamListItem from './ParamListItem';
+import '@/common/materializecss/imports/collapsible'
+import '@/common/materializecss/imports/toast'
+import {guid} from '@/common/utils/common'
+import ParamListItem from './ParamListItem';
 
-    export default {
-        name: 'ScriptParamList',
+export default {
+  name: 'ScriptParamList',
 
-        components: {ParamListItem},
+  components: {ParamListItem},
 
-        props: {
-            parameters: {
-                type: Array,
-                default: () => []
-            }
-        },
+  props: {
+    parameters: {
+      type: Array,
+      default: () => []
+    }
+  },
 
-        data() {
-            return {
-                openingNewParam: false,
-                paramKeys: new Map()
-            }
-        },
+  data() {
+    return {
+      openingNewParam: false,
+      paramKeys: new Map()
+    }
+  },
 
-        mounted: function () {
-            M.Collapsible.init(this.$refs.parametersPanel, {
+  mounted: function () {
+    M.Collapsible.init(this.$refs.parametersPanel, {
                 onOpenEnd: () => {
                     this.openingNewParam = false;
                 }
@@ -174,5 +174,9 @@
 </script>
 
 <style scoped>
+.collapsible-header:last-child,
+.collapsible >>> .collapsible-body {
+  border-bottom: none;
+}
 
 </style>

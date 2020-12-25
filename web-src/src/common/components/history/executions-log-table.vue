@@ -25,20 +25,20 @@
 </template>
 
 <script>
-    import {mapState} from 'vuex';
+import {mapState} from 'vuex';
 
-    export default {
-        name: 'executions-log-table',
-        props: {
-            rows: Array,
-            rowClick: {
-                type: Function
-            }
-        },
-        computed: {
-            ...mapState('history', ['loading'])
-        }
+export default {
+  name: 'executions-log-table',
+  props: {
+    rows: Array,
+    rowClick: {
+      type: Function
     }
+  },
+  computed: {
+    ...mapState('history', ['loading'])
+  }
+}
 </script>
 
 <style scoped>
@@ -67,9 +67,9 @@
     }
 
     .loading-text {
-        color: #616161;
-        font-size: 1.2em;
-        text-align: center;
-        margin-top: 1em;
+      color: var(--font-color-medium);
+      font-size: 1.2em;
+      text-align: center;
+      margin-top: 1em;
     }
 </style>

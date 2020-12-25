@@ -18,31 +18,31 @@
 </template>
 
 <script>
-    import ClearIcon from '@/assets/clear.png'
-    import SearchIcon from '@/assets/search.png'
-    import {setInputValue} from '@/common/utils/common';
+import ClearIcon from '@/assets/clear.png'
+import SearchIcon from '@/assets/search.png'
+import {setInputValue} from '@/common/utils/common';
 
-    export default {
-        name: 'SearchPanel',
-        data() {
-            return {
-                showSearchField: false,
-                openSearchOnTheNextClick: true
-            }
-        },
-        props: {
-            value: {
-                type: String,
-                default: ''
-            }
-        },
-        methods: {
-            clickHandler() {
-                if (this.openSearchOnTheNextClick) {
-                    this.showSearchField = true;
+export default {
+  name: 'SearchPanel',
+  data() {
+    return {
+      showSearchField: false,
+      openSearchOnTheNextClick: true
+    }
+  },
+  props: {
+    value: {
+      type: String,
+      default: ''
+    }
+  },
+  methods: {
+    clickHandler() {
+      if (this.openSearchOnTheNextClick) {
+        this.showSearchField = true;
 
-                    this.$nextTick(() => {
-                        this.$refs.searchField.focus();
+        this.$nextTick(() => {
+          this.$refs.searchField.focus();
                     });
 
                 } else {
@@ -86,14 +86,14 @@
     }
 
     .search-panel {
-        padding: 16px 10px;
-        width: calc(100% - 80px - 10px);
-        vertical-align: middle;
-        position: absolute;
-        top: 0;
-        right: 80px;
-        background: white;
-        transition: width 0.3s;
+      padding: 16px 10px;
+      width: calc(100% - 80px - 10px);
+      vertical-align: middle;
+      position: absolute;
+      top: 0;
+      right: 80px;
+      background: var(--background-color);
+      transition: width 0.3s;
     }
 
     .search-panel.collapsed {

@@ -1,48 +1,49 @@
 <template>
-    <div :class="{active: value}"
-         @click="$emit('input', !value)"
-         class="toggle-day-button"
-         v-trim-text>
-        {{text}}
-    </div>
+  <div v-trim-text
+       :class="{active: value}"
+       class="toggle-day-button"
+       @click="$emit('input', !value)">
+    {{ text }}
+  </div>
 </template>
 
 <script>
-    export default {
-        name: 'RoundToggleButton',
-        props: {
-            text: {
-                type: String,
-                default: '?'
-            },
-            value: {
-                type: Boolean,
-                default: false
-            }
-        }
+export default {
+  name: 'RoundToggleButton',
+  props: {
+    text: {
+      type: String,
+      default: '?'
+    },
+    value: {
+      type: Boolean,
+      default: false
     }
+  }
+}
 </script>
 
 <style scoped>
-    .toggle-day-button {
-        height: 28px;
-        width: 28px;
-        line-height: 28px;
+.toggle-day-button {
+  height: 28px;
+  width: 28px;
+  line-height: 28px;
 
-        text-align: center;
+  text-align: center;
 
-        border-radius: 14px;
-        background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  background-color: var(--background-color-high-emphasis);
 
-        cursor: pointer;
-        text-transform: uppercase;
+  cursor: pointer;
+  text-transform: uppercase;
 
-        font-size: 11px;
-        color: rgba(0, 0, 0, 0.6);
-    }
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--font-color-disabled);
+}
 
-    .toggle-day-button.active {
-        color: white;
-        background-color: #26a69a;
-    }
+.toggle-day-button.active {
+  color: var(--font-on-primary-color-main);
+  background-color: var(--primary-color);
+}
 </style>

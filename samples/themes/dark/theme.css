@@ -1,0 +1,42 @@
+html:root {
+    --hover-color: rgba(255, 255, 255, 0.04);
+    --focus-color: rgba(255, 255, 255, 0.12);
+    --focus-color-solid: #424242;
+
+    --font-color-main: rgba(255, 255, 255, 0.87);
+    --font-color-medium: rgba(255, 255, 255, 0.60);
+    --font-color-disabled: rgba(255, 255, 255, 0.38);
+
+    --primary-color: #dce775;
+    --primary-color-raised-hover-solid: #E6F17F;
+    --primary-color-raised-focus-solid: #FAFF93;
+    --primary-color-when-focused: rgba(0, 0, 0, 0.12);
+    --primary-color-when-hovered: rgba(0, 0, 0, 0.04);
+    --font-on-primary-color-main: rgba(0, 0, 0, 0.87);
+    --font-on-primary-color-medium: rgba(0, 0, 0, 0.60);
+
+    --primary-color-dark-color: #a8b545;
+    --primary-color-dark-when-focused: rgba(0, 0, 0, 0.12);
+    --primary-color-dark-when-hovered: rgba(0, 0, 0, 0.04);
+    --font-on-primary-color-dark-main: rgba(0, 0, 0, 0.87);
+    --font-on-primary-color-dark-medium: rgba(0, 0, 0, 0.60);
+
+    --primary-color-light-color: #F0F4C3;
+
+    --surface-color: #121212;
+
+    --background-color: #242424;
+    --background-color-slight-emphasis: rgba(255, 255, 255, 0.05);
+    --background-color-high-emphasis: rgba(255, 255, 255, 0.09);
+    --background-color-level-4dp: rgba(255, 255, 255, 0.09);
+    --background-color-level-8dp: rgba(255, 255, 255, 0.12);
+    --background-color-level-16dp: rgba(255, 255, 255, 0.15);
+    --background-color-disabled: rgba(255, 255, 255, 0.12);
+
+    --script-header-background: url('../theme/darkBackground_header.jpg') center / cover no-repeat;
+    --login-header-background: url('../theme/darkBackground_login.jpg') center / cover no-repeat;
+
+    --separator-color: #424242;
+
+    --outline-color: rgba(255, 255, 255, 0.18);
+}

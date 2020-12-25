@@ -1,43 +1,43 @@
 <template>
     <div class="log-panel">
-        <div class="log-panel-shadow"
-             v-bind:class="{
+      <div class="log-panel-shadow"
+           v-bind:class="{
              'shadow-top': !atTop && atBottom,
              'shadow-bottom': atTop && !atBottom,
              'shadow-top-bottom': !atTop && !atBottom}">
-        </div>
-        <a @click="copyLogToClipboard" class="copy-text-button btn-floating btn-flat waves-effect">
-            <i class="material-icons">content_copy</i>
-        </a>
+      </div>
+      <a class="copy-text-button btn-icon-flat waves-effect waves-circle" @click="copyLogToClipboard">
+        <i class="material-icons">content_copy</i>
+      </a>
     </div>
 </template>
 
 <script>
-    import {copyToClipboard, isNull} from '@/common/utils/common';
-    import {TerminalModel} from './terminal/terminal_model';
-    import {Terminal} from './terminal/terminal_view';
+import {copyToClipboard, isNull} from '@/common/utils/common';
+import {TerminalModel} from './terminal/terminal_model';
+import {Terminal} from './terminal/terminal_view';
 
-    export default {
-        props: {
-            'autoscrollEnabled': {
-                type: Boolean,
-                default: true
-            }
-        },
-        data: function () {
-            return {
-                atBottom: false,
-                atTop: false,
-                mouseDown: false,
-                scrollUpdater: null,
-                needScrollUpdate: false
-            }
-        },
+export default {
+  props: {
+    'autoscrollEnabled': {
+      type: Boolean,
+      default: true
+    }
+  },
+  data: function () {
+    return {
+      atBottom: false,
+      atTop: false,
+      mouseDown: false,
+      scrollUpdater: null,
+      needScrollUpdate: false
+    }
+  },
 
-        created() {
-            this.terminalModel = new TerminalModel();
-            this.terminal = new Terminal(this.terminalModel);
-        },
+  created() {
+    this.terminalModel = new TerminalModel();
+    this.terminal = new Terminal(this.terminalModel);
+  },
 
         mounted: function () {
             const terminal = this.terminal.element;
@@ -135,17 +135,17 @@
 
 <style scoped>
     .log-panel {
-        flex: 1;
+      flex: 1;
 
-        position: relative;
-        min-height: 0;
+      position: relative;
+      min-height: 0;
 
-        background: #f4f2f0;
+      background: var(--surface-color);
 
-        width: 100%;
+      width: 100%;
 
-        border: solid 1px rgba(51, 51, 51, 0.12);
-        border-radius: 2px;
+      border: solid 1px var(--separator-color);
+      border-radius: 2px;
     }
 
     .log-panel-shadow {
@@ -160,21 +160,15 @@
     }
 
     .shadow-top-bottom {
-        box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
-        -webkit-box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
-        -moz-box-shadow: 0 7px 8px -4px #888888 inset, 0 -7px 8px -4px #888888 inset;
+      box-shadow: 0 7px 8px -4px rgba(0, 0, 0, 0.4) inset, 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
     }
 
     .shadow-top {
-        box-shadow: 0 7px 8px -4px #888888 inset;
-        -webkit-box-shadow: 0 7px 8px -4px #888888 inset;
-        -moz-box-shadow: 0 7px 8px -4px #888888 inset;
+      box-shadow: 0 7px 8px -4px rgba(0, 0, 0, 0.4) inset;
     }
 
     .shadow-bottom {
-        box-shadow: 0 -7px 8px -4px #888888 inset;
-        -webkit-box-shadow: 0 -7px 8px -4px #888888 inset;
-        -moz-box-shadow: 0 -7px 8px -4px #888888 inset;
+      box-shadow: 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
     }
 
     .log-panel >>> .log-content img {
@@ -182,13 +176,13 @@
     }
 
     .log-panel .copy-text-button {
-        position: absolute;
-        right: 12px;
-        bottom: 8px;
+      position: absolute;
+      right: 8px;
+      bottom: 4px;
     }
 
     .log-panel .copy-text-button i {
-        color: #00000030;
+      color: var(--font-color-disabled);
     }
 
     /*noinspection CssInvalidPropertyValue,CssOverwrittenProperties*/

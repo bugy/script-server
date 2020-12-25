@@ -1,3 +1,69 @@
 .btn-flat:hover {
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: var(--hover-color);
+}
+
+.primary-color-dark .btn-flat {
+    color: var(--font-on-primary-color-dark-main)
+}
+
+.primary-color-dark .btn-flat:hover {
+    background-color: var(--primary-color-dark-when-hovered);
+}
+
+.primary-color-dark .btn-flat:focus {
+    background-color: var(--primary-color-dark-when-focused);
+}
+
+.primary-color-light .btn-flat {
+    color: var(--font-on-primary-color-light--main)
+}
+
+.primary-color-light .btn-flat:hover {
+    background-color: var(--primary-color-light-when-hovered);
+}
+
+.primary-color-light .btn-flat:focus {
+    background-color: var(--primary-color-light-when-focused);
+}
+
+.btn-icon-flat {
+    color: var(--font-color-medium);
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    outline: none;
+}
+
+.btn-icon-flat i {
+    font-size: 1.6rem;
+    line-height: inherit;
+}
+
+.btn-icon-flat.btn-small {
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    padding: 0;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.btn-icon-flat.btn-small i {
+    font-size: 1.45rem;
+}
+
+.btn-icon-flat:hover {
+    background-color: var(--hover-color);
+}
+
+.btn-icon-flat:focus {
+    background-color: var(--focus-color);
+}
+
+.btn-icon-flat[disabled],
+.btn-icon-flat:disabled {
+    pointer-events: none;
 }

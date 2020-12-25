@@ -1,50 +1,50 @@
 <template>
     <li class="param-list-item">
-        <div class="collapsible-header teal lighten-5 param-header">
-            <i :class="{'red-text': errorText}" :title="errorText" class="material-icons">
-                {{ errorText ? 'warning' : 'unfold_more' }}
-            </i>
-            <span :class="{'red-text': errorText}">{{ param.name }}</span>
-            <div style="flex: 1 1 0"></div>
-            <a @click.stop="$emit('delete')" class="btn-flat waves-circle">
-                <i class="material-icons">delete</i>
-            </a>
-            <a @click.stop="$emit('moveUp')" class="btn-flat waves-circle">
-                <i class="material-icons">arrow_upward</i>
-            </a>
-            <a @click.stop="$emit('moveDown')" class="btn-flat waves-circle">
-                <i class="material-icons">arrow_downward</i>
-            </a>
-        </div>
-        <div class="collapsible-body">
-            <ParameterConfigForm :value="param" @error="handleError($event)"/>
-        </div>
+      <div class="collapsible-header param-header primary-color-light">
+        <i :class="{'red-text': errorText}" :title="errorText" class="material-icons">
+          {{ errorText ? 'warning' : 'unfold_more' }}
+        </i>
+        <span :class="{'red-text': errorText}">{{ param.name }}</span>
+        <div style="flex: 1 1 0"></div>
+        <a class="btn-flat waves-circle" @click.stop="$emit('delete')">
+          <i class="material-icons">delete</i>
+        </a>
+        <a class="btn-flat waves-circle" @click.stop="$emit('moveUp')">
+          <i class="material-icons">arrow_upward</i>
+        </a>
+        <a @click.stop="$emit('moveDown')" class="btn-flat waves-circle">
+          <i class="material-icons">arrow_downward</i>
+        </a>
+      </div>
+      <div class="collapsible-body">
+        <ParameterConfigForm :value="param" @error="handleError($event)"/>
+      </div>
     </li>
 </template>
 
 <script>
-    import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
-    import ParameterConfigForm from './ParameterConfigForm';
+import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
+import ParameterConfigForm from './ParameterConfigForm';
 
-    export default {
-        name: 'ParamListItem',
-        components: {ParameterConfigForm},
+export default {
+  name: 'ParamListItem',
+  components: {ParameterConfigForm},
 
-        props: {
-            param: {
-                type: Object
-            }
-        },
+  props: {
+    param: {
+      type: Object
+    }
+  },
 
-        data() {
-            return {
-                errors: null
-            }
-        },
+  data() {
+    return {
+      errors: null
+    }
+  },
 
-        computed: {
-            errorText() {
-                const errors = this.errors;
+  computed: {
+    errorText() {
+      const errors = this.errors;
                 if (isEmptyObject(errors)) {
                     return null;
                 }

@@ -21,11 +21,70 @@ $orange: (
 
 // override materialize css colors, because there are too many of them, and they are not used
 $colors: (
-  "materialize-red": $materialize-red,
-  "red": $red,
-  "teal": $teal,
-  "orange": $orange,
-  "grey": $grey,
-  "green": $green,
-  "light-blue": $light-blue
+        "materialize-red": $materialize-red,
+        "red": $red,
+        "teal": $teal,
+        "orange": $orange,
+        "grey": $grey,
+        "green": $green,
+        "light-blue": $light-blue
 );
+
+$bg-color: var(--background-color);
+$bg-hover-color-opaque: var(--hover-color);
+$bg-focus-color-opaque: var(--focus-color);
+$bg-hover-color-solid: var(--hover-color);
+$bg-focus-color-solid: var(--focus-color);
+$secondary-color: var(--primary-color);
+$secondary-color-when-hovered-solid: var(--primary-color-raised-hover-solid);
+$secondary-color-when-focused-solid: var(--primary-color-raised-focus-solid);
+$button-raised-color: var(--font-on-primary-color-main);
+$button-disabled-background: var(--background-color-disabled);
+$button-disabled-color: var(--font-color-disabled);
+$button-flat-color: var(--font-color-main);
+$button-flat-disabled-color: var(--font-color-disabled);
+$button-floating-color: var(--font-on-primary-color-main);
+$card-bg-color: var(--background-color);
+$datepicker-weekday-bg: #00FF00;
+$datepicker-calendar-header-color: var(--font-color-medium);
+$datepicker-selected-outfocus: #00FF00;
+$datepicker-day-focus: var(--focus-color);
+$datepicker-year: var(--font-on-primary-color-medium);
+$datepicker-disabled-day-color: var(--font-color-disabled);
+
+$switch-track-checked-bg: var(--primary-color-dark-color);
+$collection-active-color: var(--primary-color);
+$collection-active-bg-color: var(--focus-color);
+$collection-bg-color: transparent;
+$collection-hover-bg-color: var(--hover-color);
+$collection-border-color: var(--separator-color);
+$progress-bar-track-color: transparent;
+$off-black: var(--font-color-main);
+
+$chip-selected-color: var(--primary-color);
+$chip-bg-color: var(--background-color-high-emphasis);
+$chip-border-color: var(--font-color-medium);
+
+$select-background: var(--background-color-level-16dp);
+$select-focus: transparent;
+$select-option-hover: var(--hover-color);
+$select-option-focus: var(--focus-color);
+$select-option-selected: var(--focus-color);
+$select-disabled-color: var(--font-color-disabled);
+
+$collapsible-header-color: var(--background-color-level-8dp);
+$collapsible-border-color: var(--separator-color);
+
+$input-border-color: var(--font-color-medium);
+$input-disabled-color: var(--font-color-disabled);
+$input-disabled-solid-color: var(--font-color-disabled);
+$placeholder-text-color: var(--font-color-medium);
+
+$radio-empty-color: var(--font-color-medium) !default;
+
+$navbar-font-color: var(--font-color-main);
+
+$table-striped-color: var(--background-color-slight-emphasis);
+
+$card-link-color: var(--primary-color);
+$card-link-color-light: var(--primary-color-raised-hover-solid);

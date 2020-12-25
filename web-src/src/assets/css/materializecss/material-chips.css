@@ -1,0 +1,11 @@
+.chips-list .chips input:not(.browser-default).input {
+    color: var(--font-color-main)
+}
+
+.chips-list .chip {
+    color: var(--font-color-medium)
+}
+
+.chips-list .chip:focus {
+    color: var(--font-on-primary-color-main);
+}

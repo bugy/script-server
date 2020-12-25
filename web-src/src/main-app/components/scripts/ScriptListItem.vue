@@ -1,6 +1,6 @@
 <template>
     <router-link :to="'/' + descriptor.hash"
-                 class="collection-item waves-effect waves-teal script-list-item"
+                 class="collection-item waves-effect script-list-item"
                  v-bind:class="{ active: descriptor.active}">
         {{ descriptor.name }}
 
@@ -25,32 +25,32 @@
 </template>
 
 <script>
-    import '@/common/materializecss/imports/spinner'
-    import {forEachKeyValue} from '@/common/utils/common';
-    import {mapState} from 'vuex';
-    import {scriptNameToHash} from '../../utils/model_helper';
+import '@/common/materializecss/imports/spinner'
+import {forEachKeyValue} from '@/common/utils/common';
+import {mapState} from 'vuex';
+import {scriptNameToHash} from '../../utils/model_helper';
 
-    export default {
-        name: 'ScriptListItem',
-        props: {
-            script: {
-                type: Object,
-                default: null
-            }
-        },
-        computed: {
-            descriptor() {
-                return {
-                    name: this.script.name,
-                    state: this.getState(this.script.name),
-                    active: this.selectedScript === this.script.name,
-                    hash: this.toHash(this.script.name)
-                }
-            },
-            ...mapState('scripts', ['selectedScript'])
-        },
-        methods: {
-            getState(scriptName) {
+export default {
+  name: 'ScriptListItem',
+  props: {
+    script: {
+      type: Object,
+      default: null
+    }
+  },
+  computed: {
+    descriptor() {
+      return {
+        name: this.script.name,
+        state: this.getState(this.script.name),
+        active: this.selectedScript === this.script.name,
+        hash: this.toHash(this.script.name)
+      }
+    },
+    ...mapState('scripts', ['selectedScript'])
+  },
+  methods: {
+    getState(scriptName) {
                 let state = 'idle';
 
                 forEachKeyValue(this.$store.state.executions.executors, function (id, executor) {
@@ -84,13 +84,9 @@
     }
 
     .scripts-list .collection-item .menu-item-state > .check-icon {
-        color: #26a69a;
-        display: none;
-        font-size: 24px;
-    }
-
-    .scripts-list .collection-item.active .menu-item-state > .check-icon {
-        color: white;
+      color: var(--primary-color);
+      display: none;
+      font-size: 24px;
     }
 
     .scripts-list .collection-item .menu-item-state > .preloader-wrapper {
@@ -120,11 +116,7 @@
         display: none;
     }
 
-    .scripts-list .collection-item.active .preloader-wrapper .spinner-layer {
-        border-color: white;
-    }
-
     .scripts-list .collection-item .preloader-wrapper .spinner-layer {
-        border-color: #26a69a;
+      border-color: var(--primary-color);
     }
 </style>

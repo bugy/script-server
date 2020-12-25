@@ -11,29 +11,29 @@
 </template>
 
 <script>
-    import ConsoleImage from '@/assets/console.png'
-    import CookieImage from '@/assets/cookie.png'
-    import {mapActions} from 'vuex';
+import ConsoleImage from '@/assets/console.png'
+import CookieImage from '@/assets/cookie.png'
+import {mapActions} from 'vuex';
 
-    const defaultImageSrc = ConsoleImage;
-    const cookieImageSrc = CookieImage;
+const defaultImageSrc = ConsoleImage;
+const cookieImageSrc = CookieImage;
 
-    export default {
-        name: 'AppWelcomePanel',
-        data() {
-            return {
-                'imageSrc': defaultImageSrc
-            }
-        },
+export default {
+  name: 'AppWelcomePanel',
+  data() {
+    return {
+      'imageSrc': defaultImageSrc
+    }
+  },
 
-        methods: {
-            ...mapActions('page', ['setLoading'])
-        },
+  methods: {
+    ...mapActions('page', ['setLoading'])
+  },
 
-        mounted: function () {
-            const welcomeCookiePanel = this.$refs.welcomeCookieText;
-            welcomeCookiePanel.addEventListener('mouseover', () => {
-                this.imageSrc = cookieImageSrc;
+  mounted: function () {
+    const welcomeCookiePanel = this.$refs.welcomeCookieText;
+    welcomeCookiePanel.addEventListener('mouseover', () => {
+      this.imageSrc = cookieImageSrc;
             });
 
             welcomeCookiePanel.addEventListener('mouseout', () => {
@@ -48,16 +48,16 @@
 
 <style scoped>
     .welcome-panel {
-        flex: 1;
-        color: #9e9e9e;
-        display: flex;
-        text-align: center;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+      flex: 1;
+      color: var(--font-color-medium);
+      display: flex;
+      text-align: center;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
 
-        height: 100%;
-        overflow: hidden;
+      height: 100%;
+      overflow: hidden;
     }
 
     .welcome-text {

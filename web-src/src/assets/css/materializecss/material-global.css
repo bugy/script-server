@@ -1,0 +1,12 @@
+.primary-color-dark .breadcrumb,
+.primary-color-dark .breadcrumb:before {
+    color: var(--font-on-primary-color-dark-medium)
+}
+
+.primary-color-dark .breadcrumb:last-child {
+    color: var(--font-on-primary-color-dark-main)
+}
+
+.script-server table.striped > tbody > tr:hover {
+    background-color: var(--hover-color);
+}

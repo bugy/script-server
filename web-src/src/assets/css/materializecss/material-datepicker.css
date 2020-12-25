@@ -1,3 +1,21 @@
 .input-field.inline .datepicker-container .select-dropdown {
     margin-bottom: 0;
 }
+
+.datepicker-date-display {
+    color: var(--font-on-primary-color-main);
+}
+
+.datepicker-table td.is-selected {
+    color: var(--font-on-primary-color-main);
+}
+
+.datepicker-controls button:hover,
+.datepicker-day-button:hover {
+    background-color: var(--hover-color);
+}
+
+.datepicker-controls button:focus,
+.datepicker-day-button:focus {
+    background-color: var(--focus-color);
+}

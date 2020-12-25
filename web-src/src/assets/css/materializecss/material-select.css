@@ -1,0 +1,5 @@
+.select-dropdown.dropdown-content li.disabled,
+.select-dropdown.dropdown-content li.disabled > span,
+.select-dropdown.dropdown-content li.optgroup {
+    background-color: transparent;
+}

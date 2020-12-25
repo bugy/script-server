@@ -1,17 +1,17 @@
 <template>
     <div class="input-field server-file-field" :title="config.description" :data-error="error">
-        <a class="btn-flat waves-effect btn-floating" ref="openFileButton" @click="openDialog">
-            <i class="material-icons">folder_open</i>
-        </a>
-        <input :id="config.name"
-               :required="config.required"
-               class="validate"
-               ref="inputField"
-               @blur="focused = false"
-               @focus="focused = true"
-               @click="openDialog"
-               @keypress.enter.prevent="openDialog"
-               @keypress.space.prevent="openDialog"
+      <a ref="openFileButton" class="btn-icon-flat btn-small waves-effect waves-circle" @click="openDialog">
+        <i class="material-icons">folder_open</i>
+      </a>
+      <input :id="config.name"
+             :required="config.required"
+             class="validate"
+             ref="inputField"
+             @blur="focused = false"
+             @focus="focused = true"
+             @click="openDialog"
+             @keypress.enter.prevent="openDialog"
+             @keypress.space.prevent="openDialog"
                :value="valueText"
                readonly/>
         <label :for="config.name"
@@ -28,30 +28,30 @@
 </template>
 
 <script>
-    import '@/common/materializecss/imports/modal';
-    import {addClass, arraysEqual, getTextWidth, isEmptyArray, isNull, removeClass} from '@/common/utils/common';
-    import FileDialog from './file_dialog'
+import '@/common/materializecss/imports/modal';
+import {addClass, arraysEqual, getTextWidth, isEmptyArray, isNull, removeClass} from '@/common/utils/common';
+import FileDialog from './file_dialog'
 
-    export default {
-        name: 'server_file_field',
+export default {
+  name: 'server_file_field',
 
-        components: {
-            FileDialog
-        },
+  components: {
+    FileDialog
+  },
 
-        props: {
-            'value': [Array],
-            'config': Object
-        },
+  props: {
+    'value': [Array],
+    'config': Object
+  },
 
-        data: function () {
-            return {
-                error: '',
-                focused: false,
-                dialogOpened: false,
-                isMounted: false
-            }
-        },
+  data: function () {
+    return {
+      error: '',
+      focused: false,
+      dialogOpened: false,
+      isMounted: false
+    }
+  },
 
         computed: {
             valueText() {
@@ -160,41 +160,45 @@
 </script>
 
 <style scoped>
-    .btn-flat {
-        position: absolute;
-        top: -10px;
-        right: -4px;
-    }
+.btn-icon-flat {
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  z-index: 1;
+}
 
-    .btn-flat > i {
-        color: #9e9e9e;
-        font-size: 1.4rem;
-    }
+.btn-icon-flat > i {
+  font-size: 1.4rem;
+}
 
     .server-file-field .modal {
-        width: fit-content;
-        width: -moz-fit-content;
-        height: 70%;
-        min-height: 300px;
+      width: fit-content;
+      width: -moz-fit-content;
+      height: 70%;
+      min-height: 300px;
     }
 
-    .server-file-field .file-dialog {
-        height: 100%;
-    }
+.server-file-field .file-dialog {
+  height: 100%;
+}
 
-    .server-file-field input[readonly] {
-        user-select: none;
-        color: rgba(0, 0, 0, 0.87);
-        border-bottom: 1px solid #9e9e9e;
-    }
+.server-file-field input[readonly] {
+  user-select: none;
+  color: var(--font-color-main);
+  border-bottom: 1px solid var(--font-color-medium);
+}
 
-    .server-file-field input:focus {
-        border-bottom: 1px solid #26a69a;
-        box-shadow: 0 1px 0 0 #26a69a;
-    }
+.server-file-field input[readonly] + label {
+  color: var(--font-color-medium);
+}
 
-    .server-file-field input:focus + label {
-        color: #26a69a;
-    }
+.server-file-field input:focus {
+  border-bottom: 1px solid var(--primary-color);
+  box-shadow: 0 1px 0 0 var(--primary-color);
+}
+
+.server-file-field input:focus + label {
+  color: var(--primary-color);
+}
 
 </style>

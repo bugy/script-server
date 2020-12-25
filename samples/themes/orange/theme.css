@@ -1,0 +1,14 @@
+html:root {
+
+    --primary-color: #E64A19;
+    --primary-color-raised-hover-solid: #F05423;
+    --primary-color-raised-focus-solid: #FF7241;
+
+    --primary-color-dark-color: #BF360C;
+
+    --primary-color-light-color: #FBE9E7;
+
+    --script-header-background: #FFCC80;
+    --login-header-background: var(--primary-color-dark-color);
+
+}

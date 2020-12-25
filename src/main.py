@@ -137,7 +137,8 @@ def main():
         file_upload_feature,
         file_download_feature,
         secret,
-        server_version)
+        server_version,
+        CONFIG_FOLDER)
 
 
 if __name__ == '__main__':

@@ -14,7 +14,7 @@
 
 <style scoped>
     .readonly-field {
-        color: rgba(0, 0, 0, 0.87);
+      color: var(--font-color-main);
     }
 
     .readonly-field label:nth-child(1) {

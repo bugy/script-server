@@ -667,3 +667,24 @@ export function trimTextNodes(el) {
         }
     }
 }
+
+export function getElementsByTagNameRecursive(parent, tag) {
+    const tagLower = tag.toLowerCase();
+
+    const result = [];
+
+    const queue = [];
+    queue.push(...parent.childNodes);
+
+    while (!isEmptyArray(queue)) {
+        const next = queue.shift()
+
+        if (next.tagName && (next.tagName.toLowerCase() === tagLower)) {
+            result.push(next);
+        }
+
+        queue.push(...next.childNodes);
+    }
+
+    return result;
+}

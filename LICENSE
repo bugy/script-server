@@ -22,12 +22,11 @@ The file is a part of the Font Software Project and distributed under SIL Open F
 
 images/search.png (modified)
 images/clear.png (modified)
-images/logout.png (modified)
 https://material.io/icons/
 The icon is available under the Apache License Version 2.0
 
-images/github.png (modified)
-"github_logo_social_social_network_icon" by pixan (https://www.iconfinder.com/iconsimple) is licensed under Creative Commons (Attribution 2.5 Generic). Image color was changed by the buggygm@gmail.com for this project.
+MainAppSidebar.vue: svg.github-icon:
+The svg is copied from https://github.com/logos page
 
 images/titleBackground.jpg
 The image is from free set of material design backgrounds, published by oxygenna.com and absolutely free to use (Source: http://www.oxygenna.com/news/brand-new-set-of-40-material-design-backgrounds)
@@ -45,6 +44,19 @@ https://material.io/icons/#ic_file_download
 
 
 images/g-logo-plain.png (modified)
-images/g-logo-plain-pressed.png (modified)
 https://developers.google.com/identity/branding-guidelines
 Licensed under the Creative Commons Attribution 3.0 License
+
+samples/themes/dark/darkBackground_header.jpg (modified)
+samples/themes/dark/darkBackground_login.jpg (modified)
+Copyright © 2018 onlyvectorbackgrounds.com
+The images are taken from https://onlyvectorbackgrounds.com/abstract-geometric-background-dark-3/ and modified for this project
+License:
+https://onlyvectorbackgrounds.com/terms/
+Extract:
+YOU CAN
+Use the images for personal use as they are, in part or remix to make other designs.
+Use the images for commercial use as they are, in part or remix to make other designs.
+YOU CANNOT
+Claim that the images are your property or were designed by you.
+Redistribute, sell, licence, sublicense or rent the images (e.g. selling on stock imagery sites).

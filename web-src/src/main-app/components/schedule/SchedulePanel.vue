@@ -1,7 +1,7 @@
 <template>
     <div class="schedule-panel card">
         <div class="card-content">
-            <span class="card-title teal-text">Schedule execution</span>
+            <span class="card-title primary-color-text">Schedule execution</span>
             <div class="schedule-type-panel">
                 <p class="schedule-type-field">
                     <label>
@@ -53,54 +53,53 @@
                 </div>
             </div>
         </div>
-        <div class="schedule-panel-buttons card-action">
-            <a @click="close" class="waves-effect waves-teal btn-flat teal-text">
-                Cancel
-            </a>
-            <PromisableButton :click="runScheduleAction"
-                              :enabled="errors.length === 0"
-                              :preloaderStyle="{ width: '20px', height: '20px' }"
-                              class="teal-text"
-                              title="Schedule"/>
-        </div>
+      <div class="schedule-panel-buttons card-action">
+        <a class="waves-effect btn-flat" @click="close">
+          Cancel
+        </a>
+        <PromisableButton :click="runScheduleAction"
+                          :enabled="errors.length === 0"
+                          :preloaderStyle="{ width: '20px', height: '20px' }"
+                          title="Schedule"/>
+      </div>
     </div>
 </template>
 
 <script>
-    import '@/common/materializecss/imports/datepicker'
-    import DatePicker from "@/common/components/inputs/DatePicker";
-    import TimePicker from "@/common/components/inputs/TimePicker";
-    import Textfield from "@/common/components/textfield";
-    import Combobox from "@/common/components/combobox";
-    import '@/common/materializecss/imports/cards';
-    import {repeatPeriodField, repeatTimeUnitField} from "@/main-app/components/schedule/schedulePanelFields";
-    import ToggleDayButton from "@/main-app/components/schedule/ToggleDayButton";
-    import PromisableButton from "@/common/components/PromisableButton";
-    import {mapActions} from "vuex";
-    import '@/common/materializecss/imports/toast'
-    import {clearArray, isEmptyArray, isEmptyString} from "@/common/utils/common";
+import '@/common/materializecss/imports/datepicker'
+import DatePicker from "@/common/components/inputs/DatePicker";
+import TimePicker from "@/common/components/inputs/TimePicker";
+import Textfield from "@/common/components/textfield";
+import Combobox from "@/common/components/combobox";
+import '@/common/materializecss/imports/cards';
+import {repeatPeriodField, repeatTimeUnitField} from "@/main-app/components/schedule/schedulePanelFields";
+import ToggleDayButton from "@/main-app/components/schedule/ToggleDayButton";
+import PromisableButton from "@/common/components/PromisableButton";
+import {mapActions} from "vuex";
+import '@/common/materializecss/imports/toast'
+import {clearArray, isEmptyArray, isEmptyString} from "@/common/utils/common";
 
-    export default {
-        name: 'SchedulePanel',
-        components: {PromisableButton, ToggleDayButton, Combobox, Textfield, TimePicker, DatePicker},
-        props: {
-            mobileView: {
-                type: Boolean,
-                default: false
-            },
-        },
+export default {
+  name: 'SchedulePanel',
+  components: {PromisableButton, ToggleDayButton, Combobox, Textfield, TimePicker, DatePicker},
+  props: {
+    mobileView: {
+      type: Boolean,
+      default: false
+    },
+  },
 
-        data() {
-            const now = new Date();
-            const currentDay = now.getDay();
+  data() {
+    const now = new Date();
+    const currentDay = now.getDay();
 
-            return {
-                oneTimeSchedule: true,
-                startDate: now,
-                startTime: now.toTimeString().substr(0, 5),
-                id: null,
-                repeatPeriod: 1,
-                repeatTimeUnit: 'days',
+    return {
+      oneTimeSchedule: true,
+      startDate: now,
+      startTime: now.toTimeString().substr(0, 5),
+      id: null,
+      repeatPeriod: 1,
+      repeatTimeUnit: 'days',
                 weekDays: [
                     {'day': 'Monday', active: currentDay === 1},
                     {'day': 'Tuesday', active: currentDay === 2},
@@ -245,12 +244,11 @@
     }
 
     .schedule-panel .with-gap + span {
-        color: rgba(0, 0, 0, 0.6);
         font-size: 16px;
     }
 
     .schedule-panel .with-gap:checked + span {
-        color: rgba(0, 0, 0, 0.87);
+      color: var(--font-color-main);
     }
 
     .toggle-day-button {
@@ -263,7 +261,7 @@
     }
 
     .schedule-panel input[type="radio"]:not(:checked) + span:before {
-        border: 2px solid rgba(0, 0, 0, 0.6);
+      border: 2px solid var(--font-color-medium);
     }
 
     .schedule-type-panel {

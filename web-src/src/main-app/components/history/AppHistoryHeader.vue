@@ -10,28 +10,28 @@
 </template>
 
 <script>
-    import {isNull} from '@/common/utils/common';
-    import {mapState} from 'vuex';
+import {isNull} from '@/common/utils/common';
+import {mapState} from 'vuex';
 
-    export default {
-        name: 'AppHistoryHeader',
+export default {
+  name: 'AppHistoryHeader',
 
-        computed: {
-            ...mapState('history', ['selectedExecution']),
+  computed: {
+    ...mapState('history', ['selectedExecution']),
 
-            baseRoute: function () {
-                return this.$route.matched[0].path;
-            },
+    baseRoute: function () {
+      return this.$route.matched[0].path;
+    },
 
-            selectedExecutionString: function () {
-                const execution = this.selectedExecution;
-                if (isNull(execution)) {
-                    return null;
-                }
+    selectedExecutionString: function () {
+      const execution = this.selectedExecution;
+      if (isNull(execution)) {
+        return null;
+      }
 
-                return '#' + execution.id + ' - ' + execution.user + '@' + execution.script;
-            }
-        }
+      return '#' + execution.id + ' - ' + execution.user + '@' + execution.script;
+    }
+  }
     }
 </script>
 
@@ -50,17 +50,17 @@
 
     .main-content-header h3,
     .main-content-header .breadcrumb:before {
-        color: rgba(0, 0, 0, 0.87);
-        line-height: 1.3em;
-        font-size: 1.3em;
+      color: var(--font-color-main);
+      line-height: 1.3em;
+      font-size: 1.3em;
     }
 
     .main-content-header .execution-breadcrumb {
-        color: rgba(0, 0, 0, 0.87);
-        flex: 1 1 0;
-        min-width: 0;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
+      color: var(--font-color-main);
+      flex: 1 1 0;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 </style>
