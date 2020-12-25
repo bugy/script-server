@@ -68,7 +68,7 @@ export const allowedValuesScriptField = {
 };
 
 export const maxLengthField = {
-    name: 'Max Characters',
+    name: 'Max characters length',
     type: 'int'
 };
 

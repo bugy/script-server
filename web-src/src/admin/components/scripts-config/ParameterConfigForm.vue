@@ -66,8 +66,11 @@
       <ChipsList v-model="fileExtensions" class="col s12"
                  title="Allowed file extensions"
                  @error="handleError('Allowed file extensions', $event)"/>
-    </div>
-  </form>
+        </div>
+        <div class="row" v-if="selectedType === 'text' || selectedType === undefined">
+            <Textfield :config="maxLengthField" @error="handleError(maxLengthField, $event)" class="col s4" v-model="max_length"/>
+        </div>
+    </form>
 </template>
 
 <script>
