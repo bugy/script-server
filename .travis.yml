@@ -27,7 +27,6 @@ install:
   - sudo pip3 install requests --upgrade
   - cd web-src
   - npm install
-  - cat package-lock.json
   - cd ..
 before_script:
   - cd src
