@@ -1,25 +1,25 @@
 <template>
-    <li class="param-list-item">
-      <div class="collapsible-header param-header primary-color-light">
-        <i :class="{'red-text': errorText}" :title="errorText" class="material-icons">
-          {{ errorText ? 'warning' : 'unfold_more' }}
-        </i>
-        <span :class="{'red-text': errorText}">{{ param.name }}</span>
-        <div style="flex: 1 1 0"></div>
-        <a class="btn-flat waves-circle" @click.stop="$emit('delete')">
-          <i class="material-icons">delete</i>
-        </a>
-        <a class="btn-flat waves-circle" @click.stop="$emit('moveUp')">
-          <i class="material-icons">arrow_upward</i>
-        </a>
-        <a @click.stop="$emit('moveDown')" class="btn-flat waves-circle">
-          <i class="material-icons">arrow_downward</i>
-        </a>
-      </div>
-      <div class="collapsible-body">
-        <ParameterConfigForm :value="param" @error="handleError($event)"/>
-      </div>
-    </li>
+  <li class="param-list-item">
+    <div class="collapsible-header param-header primary-color-light">
+      <i :class="{'red-text': errorText}" :title="errorText" class="material-icons">
+        {{ errorText ? 'warning' : 'unfold_more' }}
+      </i>
+      <span :class="{'red-text': errorText}">{{ param.name }}</span>
+      <div style="flex: 1 1 0"></div>
+      <a class="btn-flat waves-circle" @click.stop="$emit('delete')">
+        <i class="material-icons">delete</i>
+      </a>
+      <a class="btn-flat waves-circle" @click.stop="$emit('moveUp')">
+        <i class="material-icons">arrow_upward</i>
+      </a>
+      <a class="btn-flat waves-circle" @click.stop="$emit('moveDown')">
+        <i class="material-icons">arrow_downward</i>
+      </a>
+    </div>
+    <div class="collapsible-body">
+      <ParameterConfigForm :value="param" @error="handleError($event)"/>
+    </div>
+  </li>
 </template>
 
 <script>
@@ -45,46 +45,46 @@ export default {
   computed: {
     errorText() {
       const errors = this.errors;
-                if (isEmptyObject(errors)) {
-                    return null;
-                }
+      if (isEmptyObject(errors)) {
+        return null;
+      }
 
-                let text = '';
-                forEachKeyValue(errors, (key, value) => text += key + ': ' + value + '\n');
-                return text;
-            }
-        },
-
-        methods: {
-            handleError(error) {
-                if (isNull(this.errors)) {
-                    this.errors = {};
-                }
-
-                const fieldName = error['fieldName'];
-                if (isEmptyString(error.message)) {
-                    this.$delete(this.errors, fieldName);
-                } else {
-                    this.$set(this.errors, fieldName, error.message);
-                }
-            }
-        }
+      let text = '';
+      forEachKeyValue(errors, (key, value) => text += key + ': ' + value + '\n');
+      return text;
     }
+  },
+
+  methods: {
+    handleError(error) {
+      if (isNull(this.errors)) {
+        this.errors = {};
+      }
+
+      const fieldName = error['fieldName'];
+      if (isEmptyString(error.message)) {
+        this.$delete(this.errors, fieldName);
+      } else {
+        this.$set(this.errors, fieldName, error.message);
+      }
+    }
+  }
+}
 </script>
 
 <style scoped>
-    .collapsible-header.param-header {
-        padding-top: 8px;
-        padding-bottom: 8px;
-        align-items: center;
-    }
+.collapsible-header.param-header {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  align-items: center;
+}
 
-    .btn-flat {
-        padding: 0;
-    }
+.btn-flat {
+  padding: 0;
+}
 
-    .btn-flat i {
-        margin-right: 0;
-    }
+.btn-flat i {
+  margin-right: 0;
+}
 
 </style>

@@ -1,21 +1,21 @@
 <template>
-    <div class="main-app-content">
-        <ScriptView :class="{collapsed: showError}" :hideExecutionControls="showError"
-                    ref="scriptView"/>
-        <div class="error-panel" v-if="showError">
-            <p v-if="!authenticated">
-                Credentials expired, please <a href="javascript:void(0)" onclick="location.reload()">relogin</a>
-            </p>
-            <p v-else-if="scriptLoadError && notFound">
-                Failed to load script info: script '{{ selectedScript }}' not found
-            </p>
-            <p v-else-if="scriptLoadError">
-                Failed to load script info. Try to reload the page. Error message:
-                <br>
-                {{ scriptLoadError }}
-            </p>
-        </div>
+  <div class="main-app-content">
+    <ScriptView ref="scriptView" :class="{collapsed: showError}"
+                :hideExecutionControls="showError"/>
+    <div v-if="showError" class="error-panel">
+      <p v-if="!authenticated">
+        Credentials expired, please <a href="javascript:void(0)" onclick="location.reload()">relogin</a>
+      </p>
+      <p v-else-if="scriptLoadError && notFound">
+        Failed to load script info: script '{{ selectedScript }}' not found
+      </p>
+      <p v-else-if="scriptLoadError">
+        Failed to load script info. Try to reload the page. Error message:
+        <br>
+        {{ scriptLoadError }}
+      </p>
     </div>
+  </div>
 </template>
 
 <script>
@@ -45,44 +45,44 @@ export default {
   watch: {
     loading: {
       immediate: true,
-                handler(newValue) {
-                    this.setLoading(newValue);
-                }
-            }
-        }
+      handler(newValue) {
+        this.setLoading(newValue);
+      }
     }
+  }
+}
 </script>
 
 <style scoped>
-    .main-app-content {
-      height: 100%;
+.main-app-content {
+  height: 100%;
 
-      background: var(--background-color);
-      padding: 16px 24px 12px;
+  background: var(--background-color);
+  padding: 16px 24px 12px;
 
-      display: flex;
-      flex-direction: column;
-    }
+  display: flex;
+  flex-direction: column;
+}
 
-    .main-app-content >>> .input-field label {
-        top: 0;
+.main-app-content >>> .input-field label {
+  top: 0;
 
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-    }
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
 
-    .collapsed {
-        flex: 0 1 auto;
-    }
+.collapsed {
+  flex: 0 1 auto;
+}
 
-    .error-panel {
-        color: #F44336;
-        margin-top: 17px;
-    }
+.error-panel {
+  color: #F44336;
+  margin-top: 17px;
+}
 
-    .error-panel p {
-        margin: 0;
-    }
+.error-panel p {
+  margin: 0;
+}
 
 </style>

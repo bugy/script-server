@@ -1,15 +1,15 @@
 <template>
-    <div class="log-panel">
-      <div class="log-panel-shadow"
-           v-bind:class="{
+  <div class="log-panel">
+    <div class="log-panel-shadow"
+         v-bind:class="{
              'shadow-top': !atTop && atBottom,
              'shadow-bottom': atTop && !atBottom,
              'shadow-top-bottom': !atTop && !atBottom}">
-      </div>
-      <a class="copy-text-button btn-icon-flat waves-effect waves-circle" @click="copyLogToClipboard">
-        <i class="material-icons">content_copy</i>
-      </a>
     </div>
+    <a class="copy-text-button btn-icon-flat waves-effect waves-circle" @click="copyLogToClipboard">
+      <i class="material-icons">content_copy</i>
+    </a>
+  </div>
 </template>
 
 <script>
@@ -39,179 +39,179 @@ export default {
     this.terminal = new Terminal(this.terminalModel);
   },
 
-        mounted: function () {
-            const terminal = this.terminal.element;
-            terminal.classList.add('log-content');
-            terminal.addEventListener('scroll', () => this.recalculateScrollPosition());
-            terminal.addEventListener('mousedown', () => this.mouseDown = true);
-            terminal.addEventListener('mouseup', () => this.mouseDown = false);
+  mounted: function () {
+    const terminal = this.terminal.element;
+    terminal.classList.add('log-content');
+    terminal.addEventListener('scroll', () => this.recalculateScrollPosition());
+    terminal.addEventListener('mousedown', () => this.mouseDown = true);
+    terminal.addEventListener('mouseup', () => this.mouseDown = false);
 
-            this.$el.insertBefore(terminal, this.$el.children[0]);
+    this.$el.insertBefore(terminal, this.$el.children[0]);
 
-            this.recalculateScrollPosition();
-            window.addEventListener('resize', this.revalidateScroll);
+    this.recalculateScrollPosition();
+    window.addEventListener('resize', this.revalidateScroll);
 
-            this.scrollUpdater = window.setInterval(() => {
-                if (!this.needScrollUpdate) {
-                    return;
-                }
-                this.needScrollUpdate = false;
+    this.scrollUpdater = window.setInterval(() => {
+      if (!this.needScrollUpdate) {
+        return;
+      }
+      this.needScrollUpdate = false;
 
-                let autoscrolled = false;
-                if (this.autoscrollEnabled) {
-                    autoscrolled = this.autoscroll();
-                }
+      let autoscrolled = false;
+      if (this.autoscrollEnabled) {
+        autoscrolled = this.autoscroll();
+      }
 
-                if (!autoscrolled) {
-                    this.recalculateScrollPosition();
-                }
-            }, 40);
-        },
+      if (!autoscrolled) {
+        this.recalculateScrollPosition();
+      }
+    }, 40);
+  },
 
-        methods: {
-            recalculateScrollPosition: function () {
-                var logContent = this.terminal.element;
+  methods: {
+    recalculateScrollPosition: function () {
+      var logContent = this.terminal.element;
 
-                var scrollTop = logContent.scrollTop;
-                var newAtBottom = (scrollTop + logContent.clientHeight + 5) > (logContent.scrollHeight);
-                var newAtTop = scrollTop === 0;
+      var scrollTop = logContent.scrollTop;
+      var newAtBottom = (scrollTop + logContent.clientHeight + 5) > (logContent.scrollHeight);
+      var newAtTop = scrollTop === 0;
 
-                // sometimes we can get scroll update (from incoming text) between autoscroll and this method
-                if (!this.needScrollUpdate) {
-                    this.atBottom = newAtBottom;
-                    this.atTop = newAtTop;
-                }
-            },
+      // sometimes we can get scroll update (from incoming text) between autoscroll and this method
+      if (!this.needScrollUpdate) {
+        this.atBottom = newAtBottom;
+        this.atTop = newAtTop;
+      }
+    },
 
-            autoscroll: function () {
-                var logContent = this.terminal.element;
-                if ((this.atBottom) && (!this.mouseDown)) {
-                    logContent.scrollTop = logContent.scrollHeight;
-                    return true;
-                }
-                return false;
-            },
+    autoscroll: function () {
+      var logContent = this.terminal.element;
+      if ((this.atBottom) && (!this.mouseDown)) {
+        logContent.scrollTop = logContent.scrollHeight;
+        return true;
+      }
+      return false;
+    },
 
-            revalidateScroll: function () {
-                this.needScrollUpdate = true;
-            },
+    revalidateScroll: function () {
+      this.needScrollUpdate = true;
+    },
 
-            setLog: function (text) {
-                this.terminalModel.clear();
+    setLog: function (text) {
+      this.terminalModel.clear();
 
-                this.appendLog(text);
-            },
+      this.appendLog(text);
+    },
 
-            appendLog: function (text) {
-                if (isNull(text) || (text === '')) {
-                    return;
-                }
+    appendLog: function (text) {
+      if (isNull(text) || (text === '')) {
+        return;
+      }
 
-                this.terminalModel.write(text);
+      this.terminalModel.write(text);
 
-                this.revalidateScroll();
-            },
+      this.revalidateScroll();
+    },
 
-            removeInlineImage: function (output_path) {
-                this.terminalModel.removeInlineImage(output_path);
-            },
+    removeInlineImage: function (output_path) {
+      this.terminalModel.removeInlineImage(output_path);
+    },
 
-            setInlineImage: function (output_path, download_url) {
-                this.terminalModel.setInlineImage(output_path, download_url);
-            },
+    setInlineImage: function (output_path, download_url) {
+      this.terminalModel.setInlineImage(output_path, download_url);
+    },
 
-            copyLogToClipboard: function () {
-                copyToClipboard(this.terminal.element);
-            }
-        },
-
-        beforeDestroy: function () {
-            window.removeEventListener('resize', this.revalidateScroll);
-            window.clearInterval(this.scrollUpdater);
-        }
+    copyLogToClipboard: function () {
+      copyToClipboard(this.terminal.element);
     }
+  },
+
+  beforeDestroy: function () {
+    window.removeEventListener('resize', this.revalidateScroll);
+    window.clearInterval(this.scrollUpdater);
+  }
+}
 
 </script>
 
 <style scoped>
-    .log-panel {
-      flex: 1;
+.log-panel {
+  flex: 1;
 
-      position: relative;
-      min-height: 0;
+  position: relative;
+  min-height: 0;
 
-      background: var(--surface-color);
+  background: var(--surface-color);
 
-      width: 100%;
+  width: 100%;
 
-      border: solid 1px var(--separator-color);
-      border-radius: 2px;
-    }
+  border: solid 1px var(--separator-color);
+  border-radius: 2px;
+}
 
-    .log-panel-shadow {
-        position: absolute;
+.log-panel-shadow {
+  position: absolute;
 
-        width: 100%;
-        min-height: 100%;
-        top: 0;
-        z-index: 5;
+  width: 100%;
+  min-height: 100%;
+  top: 0;
+  z-index: 5;
 
-        pointer-events: none;
-    }
+  pointer-events: none;
+}
 
-    .shadow-top-bottom {
-      box-shadow: 0 7px 8px -4px rgba(0, 0, 0, 0.4) inset, 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
-    }
+.shadow-top-bottom {
+  box-shadow: 0 7px 8px -4px rgba(0, 0, 0, 0.4) inset, 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
+}
 
-    .shadow-top {
-      box-shadow: 0 7px 8px -4px rgba(0, 0, 0, 0.4) inset;
-    }
+.shadow-top {
+  box-shadow: 0 7px 8px -4px rgba(0, 0, 0, 0.4) inset;
+}
 
-    .shadow-bottom {
-      box-shadow: 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
-    }
+.shadow-bottom {
+  box-shadow: 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
+}
 
-    .log-panel >>> .log-content img {
-        max-width: 100%
-    }
+.log-panel >>> .log-content img {
+  max-width: 100%
+}
 
-    .log-panel .copy-text-button {
-      position: absolute;
-      right: 8px;
-      bottom: 4px;
-    }
+.log-panel .copy-text-button {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+}
 
-    .log-panel .copy-text-button i {
-      color: var(--font-color-disabled);
-    }
+.log-panel .copy-text-button i {
+  color: var(--font-color-disabled);
+}
 
-    /*noinspection CssInvalidPropertyValue,CssOverwrittenProperties*/
-    .log-panel >>> .log-content {
-        display: block;
-        overflow-y: auto;
-        height: 100%;
+/*noinspection CssInvalidPropertyValue,CssOverwrittenProperties*/
+.log-panel >>> .log-content {
+  display: block;
+  overflow-y: auto;
+  height: 100%;
 
-        font-size: .875em;
+  font-size: .875em;
 
-        padding: 1.5em;
+  padding: 1.5em;
 
-        white-space: pre-wrap; /* CSS 3 */
-        white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
-        white-space: -o-pre-wrap; /* Opera 7 */
-        overflow-wrap: break-word;
+  white-space: pre-wrap; /* CSS 3 */
+  white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+  white-space: -o-pre-wrap; /* Opera 7 */
+  overflow-wrap: break-word;
 
-        -ms-word-break: break-all;
-        /* This is the dangerous one in WebKit, as it breaks things wherever */
-        word-break: break-all;
-        /* Instead use this non-standard one: */
-        word-break: break-word;
+  -ms-word-break: break-all;
+  /* This is the dangerous one in WebKit, as it breaks things wherever */
+  word-break: break-all;
+  /* Instead use this non-standard one: */
+  word-break: break-word;
 
-        /* Adds a hyphen where the word breaks, if supported (No Blink) */
-        -ms-hyphens: auto;
-        -moz-hyphens: auto;
-        -webkit-hyphens: auto;
-        hyphens: auto;
-    }
+  /* Adds a hyphen where the word breaks, if supported (No Blink) */
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
 
 
 </style>

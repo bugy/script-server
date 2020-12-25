@@ -1,7 +1,7 @@
 <template>
-    <div class="app-history-panel">
-        <ExecutionsLogPage :disableProgressIndicator="true" class="main-app-executions-log"/>
-    </div>
+  <div class="app-history-panel">
+    <ExecutionsLogPage :disableProgressIndicator="true" class="main-app-executions-log"/>
+  </div>
 </template>
 
 <script>
@@ -29,32 +29,32 @@ export default {
       immediate: true,
       handler() {
         this.updateLoadingIndicator()
-                }
-            },
-            detailsLoading: {
-                immediate: true,
-                handler() {
-                    this.updateLoadingIndicator()
-                }
-            }
-        }
+      }
+    },
+    detailsLoading: {
+      immediate: true,
+      handler() {
+        this.updateLoadingIndicator()
+      }
     }
+  }
+}
 
 </script>
 
 <style scoped>
-    .app-history-panel {
-      height: 100%;
-      overflow-y: auto;
+.app-history-panel {
+  height: 100%;
+  overflow-y: auto;
 
-      background: var(--background-color);
-      padding-bottom: 12px;
+  background: var(--background-color);
+  padding-bottom: 12px;
 
-      display: flex;
-      flex-direction: column;
-    }
+  display: flex;
+  flex-direction: column;
+}
 
-    .main-app-executions-log {
-        height: 100%;
-    }
+.main-app-executions-log {
+  height: 100%;
+}
 </style>

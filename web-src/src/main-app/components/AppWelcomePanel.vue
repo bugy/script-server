@@ -1,13 +1,13 @@
 <template>
-    <div class="welcome-panel">
-        <img :src="imageSrc" alt="script server logo">
-        <div class="welcome-text">
-            Welcome to the Script Server. <br> To start, select one of the scripts
-        </div>
-        <div class="welcome-cookie-text" ref="welcomeCookieText">
-            or just take a cookie and enjoy!
-        </div>
+  <div class="welcome-panel">
+    <img :src="imageSrc" alt="script server logo">
+    <div class="welcome-text">
+      Welcome to the Script Server. <br> To start, select one of the scripts
     </div>
+    <div ref="welcomeCookieText" class="welcome-cookie-text">
+      or just take a cookie and enjoy!
+    </div>
+  </div>
 </template>
 
 <script>
@@ -34,37 +34,37 @@ export default {
     const welcomeCookiePanel = this.$refs.welcomeCookieText;
     welcomeCookiePanel.addEventListener('mouseover', () => {
       this.imageSrc = cookieImageSrc;
-            });
+    });
 
-            welcomeCookiePanel.addEventListener('mouseout', () => {
-                this.imageSrc = defaultImageSrc;
-            });
+    welcomeCookiePanel.addEventListener('mouseout', () => {
+      this.imageSrc = defaultImageSrc;
+    });
 
-            this.setLoading(false);
-        }
+    this.setLoading(false);
+  }
 
-    }
+}
 </script>
 
 <style scoped>
-    .welcome-panel {
-      flex: 1;
-      color: var(--font-color-medium);
-      display: flex;
-      text-align: center;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+.welcome-panel {
+  flex: 1;
+  color: var(--font-color-medium);
+  display: flex;
+  text-align: center;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 
-      height: 100%;
-      overflow: hidden;
-    }
+  height: 100%;
+  overflow: hidden;
+}
 
-    .welcome-text {
-        margin-top: 15px;
-    }
+.welcome-text {
+  margin-top: 15px;
+}
 
-    .welcome-cookie-text {
-        margin-top: 8px;
-    }
+.welcome-cookie-text {
+  margin-top: 8px;
+}
 </style>
