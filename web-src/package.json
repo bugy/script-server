@@ -7,7 +7,7 @@
     "core-js": "^3.6.4",
     "marked": "^0.7.0",
     "material-design-icons": "^3.0.1",
-    "materialize-css": "git+https://github.com/bugy/materialize.git#bugy-stable",
+    "materialize-css": "git+https://github.com/bugy/materialize.git#91c2699",
     "typeface-roboto": "0.0.75",
     "vue": "^2.6.11",
     "vue-router": "^3.1.5",

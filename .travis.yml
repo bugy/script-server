@@ -1,9 +1,9 @@
 if: tag IS blank
 sudo: required
-dist: xenial
+dist: bionic
 language: node_js
 node_js:
-  - '11'
+  - '15'
 cache:
   directories:
     - web-src/node_modules
