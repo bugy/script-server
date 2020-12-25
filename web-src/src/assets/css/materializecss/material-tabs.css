@@ -1,0 +1,44 @@
+.tabs .tab a,
+.tabs .tab a:focus,
+.tabs .tab a:hover {
+    color: var(--font-on-primary-color-medium)
+}
+
+.tabs .tab a.active,
+.tabs .tab a.active:hover,
+.tabs .tab a.active:focus {
+    color: var(--font-on-primary-color-main)
+}
+
+.tabs .indicator {
+    background-color: var(--font-on-primary-color-main);
+}
+
+.tabs .tab a:hover {
+    background-color: var(--primary-color-when-hovered);
+}
+
+.tabs .tab a:focus,
+.tabs .tab a.active:focus {
+    background-color: var(--primary-color-when-focused);
+}
+
+.primary-color-dark .tabs .tab a {
+    color: var(--font-on-primary-color-dark-medium)
+}
+
+.primary-color-dark .tabs .tab a.active {
+    color: var(--font-on-primary-color-dark-main)
+}
+
+.primary-color-dark .tabs .indicator {
+    background-color: var(--font-on-primary-color-dark-main);
+}
+
+.primary-color-dark .tabs .tab a:hover {
+    background-color: var(--primary-color-dark-when-hovered);
+}
+
+.primary-color-dark .tabs .tab a:focus {
+    background-color: var(--primary-color-dark-when-focused);
+}

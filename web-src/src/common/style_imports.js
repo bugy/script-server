@@ -7,5 +7,8 @@ import 'materialize-css/sass/components/_color-classes.scss';
 import 'materialize-css/sass/components/_grid.scss';
 import 'materialize-css/sass/components/_buttons.scss';
 import 'materialize-css/sass/components/_waves.scss';
+import '@/assets/css/materializecss/material-global.css';
 import '@/assets/css/materializecss/material-buttons.css';
 import '@/assets/css/materializecss/material-textfield.css';
+import '@/assets/css/materializecss/material-waves.css';
+import '@/assets/css/shared.css';

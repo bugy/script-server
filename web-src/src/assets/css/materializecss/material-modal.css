@@ -1,0 +1,12 @@
+.modal {
+    background-color: var(--background-color);
+}
+
+.modal .card {
+    background-color: var(--background-color-level-4dp);
+}
+
+.modal .card-action {
+    background: none;
+    border-top-color: var(--separator-color);
+}

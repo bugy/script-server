@@ -1,16 +1,16 @@
 <template>
-    <div>
-        <router-view/>
-    </div>
+  <div>
+    <router-view/>
+  </div>
 </template>
 
 <script>
 
-    export default {
-        name: 'ScriptConfigListPage',
+export default {
+  name: 'ScriptConfigListPage',
 
-        components: {}
-    }
+  components: {}
+}
 </script>
 
 <style scoped>

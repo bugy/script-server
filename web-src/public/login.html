@@ -7,10 +7,11 @@
     <meta content="width=device-width, initial-scale=1" name="viewport">
 
     <link href="<%= BASE_URL %>favicon.ico" rel="icon">
+    <link href="./theme/theme.css" rel="stylesheet">
 
 </head>
 
-<body id="login-body" class="valign-wrapper">
+<body id="login-body" class="valign-wrapper script-server">
 <div id="login-panel" class="card">
     <div class="card-image"></div>
     <div class="card-content" id="login-content-container">
@@ -38,14 +39,15 @@
 
 <script type="text/template" id="login-google_oauth-template">
     <div>
-        <input type="submit" id="login-google_oauth-button" class="login-button" value="Sign in with Google">
+        <input type="submit" id="login-google_oauth-button" class="login-button oauth-button"
+               value="Sign in with Google">
         <div class="login-info-label"></div>
     </div>
 </script>
 
 <script type="text/template" id="login-gitlab-template">
     <div>
-        <input type="submit" id="login-gitlab-button" class="login-button" value="Sign in with Gitlab">
+        <input type="submit" id="login-gitlab-button" class="login-button oauth-button" value="Sign in with Gitlab">
         <div class="login-info-label"></div>
     </div>
 </script>

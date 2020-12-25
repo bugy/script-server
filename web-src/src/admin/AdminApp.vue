@@ -1,147 +1,139 @@
 <template>
-    <div class="admin-page">
-        <div class="page-title teal z-depth-1">
-            <a class="btn-flat left home-button" href="index.html">
-                <i class="material-icons white-text">home</i>
-            </a>
-            <ul class="tabs tabs-fixed-width" ref="tabs">
-                <li class="tab">
-                    <router-link to="/logs">Logs</router-link>
-                </li>
-                <li class="tab">
-                    <router-link to="/scripts">Scripts</router-link>
-                </li>
-            </ul>
-            <div class="subheader" v-if="subheader">{{ subheader }}</div>
-        </div>
-        <router-view class="page-content"/>
+  <div class="admin-page">
+    <div class="page-title primary-color-dark">
+      <a class="btn-flat left home-button" href="index.html">
+        <i class="material-icons">home</i>
+      </a>
+      <ul ref="tabs" class="tabs tabs-fixed-width">
+        <li class="tab">
+          <router-link to="/logs">Logs</router-link>
+        </li>
+        <li class="tab">
+          <router-link to="/scripts">Scripts</router-link>
+        </li>
+      </ul>
+      <div v-if="subheader" class="subheader">{{ subheader }}</div>
     </div>
+    <router-view class="page-content"/>
+  </div>
 </template>
 
 <script>
-    import executions from '@/common/store/executions-module';
-    import Vue from 'vue';
-    import Vuex, {mapActions, mapState} from 'vuex';
-    import scriptConfig from './store/script-config-module';
-    import scripts from './store/scripts-module';
+import executions from '@/common/store/executions-module';
+import Vue from 'vue';
+import Vuex, {mapActions, mapState} from 'vuex';
+import scriptConfig from './store/script-config-module';
+import scripts from './store/scripts-module';
 
-    Vue.use(Vuex);
+Vue.use(Vuex);
 
-    const store = new Vuex.Store({
-        state: {
-            subheader: null
-        },
-        modules: {
-            'history': executions(),
-            scripts: scripts,
-            scriptConfig: scriptConfig
-        },
-        actions: {
-            setSubheader({commit}, subheader) {
-                commit('SET_SUBHEADER', subheader);
-            }
-        },
-        mutations: {
-            SET_SUBHEADER(state, subheader) {
-                if (subheader) {
-                    state.subheader = subheader;
-                } else {
-                    state.subheader = null;
-                }
-            }
-        }
-    });
-
-    export default {
-        name: 'AdminApp',
-        store,
-
-        mounted() {
-            const instance = M.Tabs.init(this.$refs.tabs, {});
-        },
-
-        computed: {
-            ...mapState(['subheader'])
-        },
-
-        methods: {
-            ...mapActions(['setSubheader'])
-        },
-
-        watch: {
-            $route() {
-                this.setSubheader(null);
-            }
-        }
+const store = new Vuex.Store({
+  state: {
+    subheader: null
+  },
+  modules: {
+    'history': executions(),
+    scripts: scripts,
+    scriptConfig: scriptConfig
+  },
+  actions: {
+    setSubheader({commit}, subheader) {
+      commit('SET_SUBHEADER', subheader);
     }
+  },
+  mutations: {
+    SET_SUBHEADER(state, subheader) {
+      if (subheader) {
+        state.subheader = subheader;
+      } else {
+        state.subheader = null;
+      }
+    }
+  }
+});
+
+export default {
+  name: 'AdminApp',
+  store,
+
+  mounted() {
+    const instance = M.Tabs.init(this.$refs.tabs, {});
+  },
+
+  computed: {
+    ...mapState(['subheader'])
+  },
+
+  methods: {
+    ...mapActions(['setSubheader'])
+  },
+
+  watch: {
+    $route() {
+      this.setSubheader(null);
+    }
+  }
+}
 </script>
 
 <style scoped>
-    .admin-page {
-        display: flex;
-        flex-direction: column;
+.admin-page {
+  display: flex;
+  flex-direction: column;
 
-        background: white;
-        font-family: "Roboto", sans-serif;
-        font-weight: normal;
+  background: var(--background-color);
+  font-family: "Roboto", sans-serif;
+  font-weight: normal;
 
-        height: 100vh;
-    }
+  height: 100vh;
+}
 
-    .page-title {
-        flex: 0 0 0;
-        width: 100%;
+.page-title {
+  flex: 0 0 0;
+  width: 100%;
 
-        -webkit-font-smoothing: antialiased;
-        text-rendering: optimizeLegibility;
-    }
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 
-    .tabs.tabs-fixed-width {
-        max-width: 30em;
-        background: none;
-    }
+  box-shadow: var(--shadow-4dp);
+}
 
-    .tabs.tabs-fixed-width .tab a {
-        font-size: 1em;
-        font-weight: 500;
-        letter-spacing: 1px;
+.tabs.tabs-fixed-width {
+  max-width: 30em;
+  background: none;
+}
 
-        color: rgba(255, 255, 255, 0.7);
-    }
+.tabs.tabs-fixed-width .tab a {
+  font-size: 1em;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
 
-    .tabs.tabs-fixed-width .tab a.active {
-        color: #FFF;
-    }
+.subheader {
+  font-size: 1em;
+  font-weight: 400;
 
-    .subheader {
-        font-size: 1em;
-        font-weight: 400;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--font-on-primary-color-dark-main);
 
-        text-transform: uppercase;
-        text-align: center;
-        color: #FFF;
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
 
-        margin-top: 0.8em;
-        margin-bottom: 0.8em;
-    }
+.page-content {
+  flex: 1 1 0;
+  overflow-y: auto;
+}
 
-    .admin-page >>> .tabs.tabs-fixed-width .indicator {
-        background-color: white;
-    }
+.home-button {
+  height: 100%;
+  padding-left: 20px;
+  padding-right: 20px;
+}
 
-    .page-content {
-        flex: 1 1 0;
-        overflow-y: auto;
-    }
-
-    .home-button {
-        height: 100%;
-        padding-left: 20px;
-        padding-right: 20px;
-    }
-
-    .home-button i {
-        font-size: 1.8em;
-        line-height: 1.8em;
-    }
+.home-button i {
+  font-size: 1.8em;
+  line-height: 1.8em;
+}
 </style>

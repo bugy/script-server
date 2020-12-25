@@ -2,3 +2,19 @@
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
 }
+
+.select-wrapper .caret {
+    fill: var(--font-color-main)
+}
+
+.select-dropdown.dropdown-content.multiple-select-dropdown li.selected {
+    background-color: transparent;
+}
+
+.select-dropdown.dropdown-content.multiple-select-dropdown li:hover:not(.disabled) {
+    background-color: var(--hover-color);
+}
+
+.select-dropdown.dropdown-content.multiple-select-dropdown li:focus:not(.disabled) {
+    background-color: var(--hover-color);
+}

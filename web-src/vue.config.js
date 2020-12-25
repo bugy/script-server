@@ -42,7 +42,7 @@ module.exports = {
     css: {
         loaderOptions: {
             scss: {
-                prependData: '@import "./src/assets/css/color_variables.scss"; '
+                additionalData: '@import "./src/assets/css/color_variables.scss"; '
                     + '@import "materialize-css/sass/components/_variables.scss"; '
                     + '@import "materialize-css/sass/components/_global.scss"; '
                     + '@import "materialize-css/sass/components/_typography.scss"; '

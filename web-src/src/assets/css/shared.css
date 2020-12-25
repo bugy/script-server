@@ -1,0 +1,86 @@
+.primary-color {
+    background-color: var(--primary-color) !important;
+}
+
+.primary-color-dark {
+    background-color: var(--primary-color-dark-color) !important;
+}
+
+.primary-color-light {
+    background-color: var(--primary-color-light-color) !important;
+    color: var(--font-on-primary-color-light--main);
+}
+
+.primary-color-text {
+    color: var(--primary-color) !important;
+}
+
+.shadow-8dp {
+    position: relative;
+}
+
+.shadow-8dp:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    box-shadow: var(--shadow-8dp);
+}
+
+:root {
+
+    /* https://gist.github.com/serglo/f9f0be9a66fd6755a0bda85f9c64e85f */
+    --shadow-4dp: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.20);
+    --shadow-6dp: 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12), 0 3px 5px -1px rgba(0, 0, 0, 0.20);
+    --shadow-8dp: 0 5px 5px -3px rgba(0, 0, 0, .2), 0 8px 10px 1px rgba(0, 0, 0, .14), 0 3px 14px 2px rgba(0, 0, 0, .12);
+
+    --hover-color: rgba(0, 0, 0, 0.04);
+    --focus-color: rgba(0, 0, 0, 0.12);
+    --focus-color-solid: #E0E0E0;
+
+    --font-color-main: rgba(0, 0, 0, 0.87);
+    --font-color-medium: rgba(0, 0, 0, 0.56);
+    --font-color-disabled: rgba(0, 0, 0, 0.38);
+
+    --primary-color: #26a69a;
+    --primary-color-raised-hover-solid: #30B0A4; /* raised buttons */
+    --primary-color-raised-focus-solid: #44C4B8;
+    --primary-color-when-focused: rgba(255, 255, 255, 0.12);
+    --primary-color-when-hovered: rgba(255, 255, 255, 0.04);
+    --font-on-primary-color-main: rgba(255, 255, 255, 0.87);
+    --font-on-primary-color-medium: rgba(255, 255, 255, 0.60);
+
+    --primary-color-dark-color: #00796B;
+    --primary-color-dark-when-focused: rgba(255, 255, 255, 0.12);
+    --primary-color-dark-when-hovered: rgba(255, 255, 255, 0.04);
+    --font-on-primary-color-dark-main: rgba(255, 255, 255, 0.87);
+    --font-on-primary-color-dark-medium: rgba(255, 255, 255, 0.60);
+
+    --primary-color-light-color: #e0f2f1;
+    --primary-color-light-when-hovered: rgba(0, 0, 0, 0.04);
+    --primary-color-light-when-focused: rgba(0, 0, 0, 0.12);
+    --font-on-primary-color-light--main: rgba(0, 0, 0, 0.87);
+
+    --surface-color: #EEEEEE; /* surface color and log panel color */
+
+    --background-color: #FFFFFF;
+    --background-color-slight-emphasis: rgba(0, 0, 0, 0.025); /* stripes in table */
+    --background-color-high-emphasis: rgba(0, 0, 0, 0.06); /* chips, toggle-day buttons */
+    --background-color-level-4dp: var(--background-color);
+    --background-color-level-8dp: var(--background-color);
+    --background-color-level-16dp: var(--background-color);
+    --background-color-disabled: rgba(0, 0, 0, 0.12); /* disabled button */
+
+    --script-header-background: url('../titleBackground_small.jpg') center left / cover no-repeat;
+    --login-header-background: url('../titleBackground_login.jpg') center / cover no-repeat;
+
+    --separator-color: #DDDDDD; /* borders between components */
+
+    --outline-color: rgba(0, 0, 0, 0.22); /* outlined buttons */
+    --outline-color-disabled: var(--background-color-disabled);
+
+}
+

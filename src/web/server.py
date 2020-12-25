@@ -96,7 +96,7 @@ def is_allowed_during_login(request_path, login_url, request_handler):
                        '/fonts/roboto-latin-400.woff',
                        '/img/titleBackground_login.jpg']
 
-    return request_path in login_resources
+    return (request_path in login_resources) or (request_path.startswith('/theme/'))
 
 
 # In case of REST requests we don't redirect explicitly, but reply with Unauthorized code.
@@ -650,6 +650,18 @@ class AuthorizedStaticFileHandler(BaseStaticHandler):
         return False
 
 
+class ThemeStaticFileHandler(AuthorizedStaticFileHandler):
+
+    async def get(self, path: str, include_body: bool = True) -> None:
+        if path == 'theme.css':
+            self.absolute_path = self.get_absolute_path(self.root, path)
+            if not os.path.exists(self.absolute_path):
+                # if custom theme doesn't exist, return empty body
+                return
+
+        return await super().get(path, include_body)
+
+
 class ScriptParameterListFiles(BaseRequestHandler):
 
     @check_authorization
@@ -928,6 +940,7 @@ def init(server_config: ServerConfig,
          file_download_feature: FileDownloadFeature,
          secret,
          server_version,
+         conf_folder,
          *,
          start_server=True):
     ssl_context = None
@@ -972,6 +985,7 @@ def init(server_config: ServerConfig,
         handlers.append((r'/auth/config', AuthConfigHandler))
         handlers.append((r'/logout', LogoutHandler))
 
+    handlers.append((r'/theme/(.*)', ThemeStaticFileHandler, {'path': os.path.join(conf_folder, 'theme')}))
     handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 
     settings = {
