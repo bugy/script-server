@@ -8,7 +8,7 @@ import termios
 import time
 
 from execution import process_base
-from utils import process_utils
+from utils import process_utils, encoding_utils
 
 script_encodings = {}
 
@@ -118,10 +118,10 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
 
                 if data:
                     try:
-                        output_text = data.decode(self.encoding)
+                        output_text = encoding_utils.decode(data, self.encoding)
                         self._write_script_output(output_text)
-                    except UnicodeDecodeError as e:
-                        print(e)
+                    except UnicodeDecodeError:
+                        LOGGER.exception('Failed to decode output chunk')
 
                 if finished:
                     break
