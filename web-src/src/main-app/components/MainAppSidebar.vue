@@ -1,8 +1,14 @@
 <template>
   <div class="main-app-sidebar">
     <div class="list-header">
-      <router-link :title="versionString" class="header server-header" to="/">
-        Script server
+      <router-link :class="{
+                    'header-gt-15-chars' : serverName && serverName.length >= 15,
+                   'header-gt-18-chars' : serverName && serverName.length >= 18,
+                   'header-gt-21-chars' : serverName && serverName.length >= 21
+      }" :title="versionString"
+                   class="header server-header"
+                   to="/">
+        {{ serverName || 'Script server' }}
       </router-link>
 
       <SearchPanel v-model="searchText"/>
@@ -57,7 +63,8 @@ export default {
 
   computed: {
     ...mapState('serverConfig', {
-      versionString: state => state.version ? 'v' + state.version : null
+      versionString: state => state.version ? 'v' + state.version : null,
+      serverName: 'serverName'
     }),
     ...mapState('auth', {
       adminUser: 'admin',
@@ -94,7 +101,25 @@ export default {
   padding: 0.8rem;
   font-weight: 300;
   line-height: 110%;
-  color: var(--font-color-main)
+  color: var(--font-color-main);
+  min-width: 0;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+
+.server-header.header-gt-15-chars {
+  font-size: 1.45rem;
+}
+
+.server-header.header-gt-18-chars {
+  font-size: 1.25rem;
+}
+
+.server-header.header-gt-21-chars {
+  font-size: 1.2rem;
 }
 
 .main-app-sidebar {

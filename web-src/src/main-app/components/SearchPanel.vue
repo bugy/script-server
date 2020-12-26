@@ -98,6 +98,8 @@ export default {
 
 .search-panel.collapsed {
   width: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .search-button {
