@@ -329,6 +329,10 @@ export function isWebsocketClosed(websocket) {
     return ((websocket.readyState === 2) || (websocket.readyState === 3));
 }
 
+export function isWebsocketConnecting(websocket) {
+    return (websocket.readyState === 0)
+}
+
 export function isWebsocketOpen(websocket) {
     return !isNull(websocket) && (websocket.readyState === 1);
 }

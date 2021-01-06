@@ -4,6 +4,7 @@ import {
     HttpRequestError,
     HttpUnauthorizedError,
     isWebsocketClosed,
+    isWebsocketConnecting,
     isWebsocketOpen,
     SocketClosedError
 } from '@/common/utils/common';
@@ -22,6 +23,7 @@ export function ReactiveWebSocket(path, observer) {
     this._finished = false;
     this._observer = observer;
     this._id = i++;
+    this.queuedMessages = []
 
     try {
         this._websocket = new WebSocket(this.url);
@@ -32,6 +34,11 @@ export function ReactiveWebSocket(path, observer) {
         return;
     }
 
+    this._websocket.addEventListener('open', () => {
+        for (const queuedMessage of this.queuedMessages) {
+            this._websocket.send(queuedMessage);
+        }
+    })
 
     this._websocket.addEventListener('close', function (event) {
         if (self._finished) {
@@ -78,6 +85,11 @@ export function ReactiveWebSocket(path, observer) {
         if (isWebsocketClosed(self._websocket) || self._finished) {
             console.log('Attempt to write to closed socket. Data: ' + data);
             return false;
+        }
+
+        if (isWebsocketConnecting(self._websocket)) {
+            this.queuedMessages.push(data)
+            return
         }
 
         self._websocket.send(data);

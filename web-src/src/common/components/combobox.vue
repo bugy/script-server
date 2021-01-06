@@ -7,12 +7,24 @@
         :multiple="config.multiselect"
         :required="config.required"
         class="validate">
-      <option v-if="showHeader" :selected="!anythingSelected" disabled value="">Choose your option</option>
+      <option v-if="showHeader"
+              v-trim-text
+              :selected="!anythingSelected"
+              class="select-header"
+              disabled
+              value="">
+        {{ config.multiselect ? 'Choose your options' : 'Choose your option' }}
+      </option>
       <option v-for="option in options"
+              :key="option.value"
+              v-trim-text
+              :disabled="option.disabled"
               :selected="option.selected"
-              :value="option.value">{{ option.value }}
+              :value="option.value">
+        {{ option.value }}
       </option>
     </select>
+
     <label :for="config.name">{{ config.name }}</label>
 
     <ComboboxSearch v-if="searchEnabled" ref="comboboxSearch" :comboboxWrapper="comboboxWrapper"/>
@@ -21,9 +33,18 @@
 
 <script>
 import '@/common/materializecss/imports/select';
-import {addClass, contains, findNeighbour, isEmptyString, isNull, removeClass} from '@/common/utils/common';
-import {hasClass} from '../utils/common';
+import {
+  addClass,
+  contains,
+  findNeighbour,
+  hasClass,
+  isEmptyArray,
+  isEmptyString,
+  isNull,
+  removeClass
+} from '@/common/utils/common';
 import ComboboxSearch from './ComboboxSearch';
+import Vue from 'vue'
 
 export default {
   name: 'Combobox',
@@ -32,6 +53,10 @@ export default {
     'config': Object,
     'value': [String, Array],
     'disabled': {
+      type: Boolean,
+      default: false
+    },
+    'forceValue': {
       type: Boolean,
       default: false
     },
@@ -61,28 +86,13 @@ export default {
     'config.values': {
       immediate: true,
       handler(newOptionValues) {
-        if (isNull(newOptionValues)) {
-          this.options = [];
-          return;
-        }
-
-        var newOptions = [];
-        for (var i = 0; i < newOptionValues.length; i++) {
-          newOptions.push({
-            value: newOptionValues[i],
-            selected: false
-          });
-        }
-
-        this.options = newOptions;
-
-        if (!this._fixValueByAllowedValues(this.config.values)) {
-          this._selectValue(this.value);
-        }
-
-        this.$nextTick(function () {
-          this.rebuildCombobox();
-        }.bind(this));
+        this.setNewOptions(newOptionValues)
+      }
+    },
+    'forceValue': {
+      immediate: true,
+      handler() {
+        this.setNewOptions(this.config.values)
       }
     },
 
@@ -142,7 +152,7 @@ export default {
     },
 
     _fixValueByAllowedValues(allowedValues) {
-      if (isNull(this.value) || (this.value === '') || (this.value === [])) {
+      if (isNull(this.value) || (this.value === '') || (this.value === []) || (this.forceValue)) {
         return false;
       }
 
@@ -185,15 +195,12 @@ export default {
 
       this.anythingSelected = false;
 
-      const existingSelectedValues = new Set();
-
       for (var i = 0; i < this.options.length; i++) {
         var option = this.options[i];
         option.selected = contains(selectedValues, option.value);
 
         if (option.selected) {
           this.anythingSelected = true;
-          existingSelectedValues.add(option.value);
         }
       }
 
@@ -207,18 +214,39 @@ export default {
     _validate(selectedValues) {
       if (this.config.required && (selectedValues.length === 0)) {
         this.error = 'required';
+
       } else {
-        this.error = '';
+        const wrongValues = selectedValues.filter(value => !this.config.values.includes(value))
+        if (!isEmptyArray(wrongValues)) {
+          if (selectedValues.length === 1) {
+            this.error = 'Obsolete value'
+          } else {
+            this.error = 'Obsolete values: ' + wrongValues.join(',')
+          }
+        } else {
+          this.error = ''
+        }
       }
+
       this.$emit('error', this.error);
     },
 
     rebuildCombobox() {
+      if (this.comboboxWrapper) {
+        this.comboboxWrapper.destroy()
+      }
+
       this.comboboxWrapper = M.FormSelect.init(this.$refs.selectField,
           {
             dropdownOptions: {
               constrainWidth: false,
-              dropdownContainer: this.dropdownContainer
+              dropdownContainer: this.dropdownContainer,
+              multiple: this.config.multiselect,
+              onCloseEnd: () => {
+                if (this.$refs.selectField) {
+                  this.setNewOptions(this.config.values)
+                }
+              }
             }
           });
 
@@ -231,11 +259,74 @@ export default {
         }
 
         if (hasClass(item, 'disabled')) {
-          item.removeAttribute("tabIndex");
+          item.removeAttribute('tabIndex');
         }
       });
 
       this.updateComboboxValue();
+    },
+
+    setNewOptions(newOptionValues) {
+      if (isNull(newOptionValues)) {
+        this.options = []
+        return
+      }
+
+      if (this.config.multiselect
+          && this.comboboxWrapper
+          && this.comboboxWrapper.dropdown
+          && this.comboboxWrapper.dropdown.isOpen) {
+        return
+      }
+
+      const newOptions = []
+      for (let i = 0; i < newOptionValues.length; i++) {
+        newOptions.push({
+          value: newOptionValues[i],
+          selected: false
+        })
+      }
+
+      let disabledOptions = []
+      if ((this.forceValue) && !isEmptyString(this.value) && !isEmptyArray(this.value)) {
+        const valueAsArray = this.asArray(this.value)
+        for (const valueElement of valueAsArray) {
+          if (!newOptionValues.includes(valueElement)) {
+            const disabledOption = {
+              value: valueElement,
+              selected: false,
+              disabled: false
+            }
+            disabledOptions.push(disabledOption)
+          }
+        }
+        newOptions.unshift(...disabledOptions)
+      }
+
+      this.options = newOptions
+
+      if (!this._fixValueByAllowedValues(this.config.values)) {
+        this._selectValue(this.value)
+      }
+
+      if (!isEmptyArray(disabledOptions)) {
+        // for Firefox we cannot select and disable simultaneously,
+        // so we have to select an element first, and then mark it as disabled in a next iteration
+        Vue.nextTick(() => {
+          for (let disabledOption of disabledOptions) {
+            const foundOption = this.options.find(o => o.value === disabledOption.value)
+            Vue.set(foundOption, 'disabled', true)
+          }
+
+          Vue.nextTick(() => {
+            this.rebuildCombobox()
+          })
+        })
+      } else {
+        this.$nextTick(() => {
+          this.rebuildCombobox()
+        })
+      }
     },
 
     updateComboboxValue() {

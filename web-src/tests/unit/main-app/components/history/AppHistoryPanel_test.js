@@ -2,15 +2,15 @@
 import AppHistoryPanel from '@/main-app/components/history/AppHistoryPanel';
 import router from '@/main-app/router/router';
 import pageModule from '@/main-app/store/page'
-import {createLocalVue, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import {config as chaiConfig} from 'chai';
 import VueRouter from 'vue-router';
 import Vuex from 'vuex';
-import {vueTicks} from '../../../test_utils';
+import {createScriptServerTestVue, vueTicks} from '../../../test_utils';
 
 chaiConfig.truncateThreshold = 0;
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 localVue.use(VueRouter);
 

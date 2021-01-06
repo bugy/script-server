@@ -5,7 +5,7 @@
     </div>
     <div class="app-content">
       <div ref="contentHeader"
-           :class="{borderless: !hasHeader || loading, 'shadow-8dp': hasHeader}" class="content-header">
+           :class="{borderless: !hasHeader, 'shadow-8dp': hasHeader}" class="content-header">
         <a class="btn-flat app-menu-button" @click="setSidebarVisibility(true)">
           <i class="material-icons">menu</i>
         </a>
@@ -171,7 +171,7 @@ function updatedStylesBasedOnContent(contentHeader, contentPanel, appLayout) {
 
 .content-header .progress {
   margin: 0;
-  bottom: 0;
+  bottom: -1px;
   position: absolute;
   left: 0;
 }

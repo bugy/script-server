@@ -125,7 +125,7 @@ class ConfigService:
 
         return self._visit_script_configs(load_script)
 
-    def load_config_model(self, name, user, parameter_values=None):
+    def load_config_model(self, name, user, parameter_values=None, skip_invalid_parameters=False):
         (short_config, path, json_object) = self._find_config(name)
 
         if path is None:
@@ -134,7 +134,7 @@ class ConfigService:
         if not self._can_access_script(user, short_config):
             raise ConfigNotAllowedException()
 
-        return self._load_script_config(path, json_object, user, parameter_values)
+        return self._load_script_config(path, json_object, user, parameter_values, skip_invalid_parameters)
 
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
@@ -186,7 +186,7 @@ class ConfigService:
 
         return configs[0]
 
-    def _load_script_config(self, path, content_or_json_dict, user, parameter_values):
+    def _load_script_config(self, path, content_or_json_dict, user, parameter_values, skip_invalid_parameters):
         if isinstance(content_or_json_dict, str):
             json_object = json.loads(content_or_json_dict)
         else:
@@ -197,8 +197,10 @@ class ConfigService:
             user.get_username(),
             user.get_audit_name(),
             pty_enabled_default=os_utils.is_pty_supported(),
-            ansi_enabled_default=os_utils.is_linux() or os_utils.is_mac(),
-            parameter_values=parameter_values)
+            ansi_enabled_default=os_utils.is_linux() or os_utils.is_mac())
+
+        if parameter_values is not None:
+            config.set_all_param_values(parameter_values, skip_invalid_parameters)
 
         return config
 

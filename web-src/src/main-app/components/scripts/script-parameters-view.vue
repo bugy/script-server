@@ -7,6 +7,7 @@
           :config="parameter"
           :value="parameterValues[parameter.name]"
           class="inline parameter"
+          :forceValue="forcedValueParameters.includes(parameter.name)"
           @error="handleError(parameter, $event)"
           @input="setParameterValue(parameter.name, $event)"/>
     </template>
@@ -30,7 +31,8 @@ export default {
       parameters: 'parameters'
     }),
     ...mapState('scriptSetup', {
-      parameterValues: 'parameterValues'
+      parameterValues: 'parameterValues',
+      forcedValueParameters: 'forcedValueParameters',
     })
   },
 

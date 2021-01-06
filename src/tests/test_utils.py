@@ -241,7 +241,11 @@ def create_config_model(name, *,
 
     result_config['script_path'] = script_command
 
-    return ConfigModel(result_config, path, username, audit_name, parameter_values=parameter_values)
+    model = ConfigModel(result_config, path, username, audit_name)
+    if parameter_values is not None:
+        model.set_all_param_values(model)
+
+    return model
 
 
 def create_parameter_model(name=None,

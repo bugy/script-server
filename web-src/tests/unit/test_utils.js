@@ -1,10 +1,10 @@
-import {isNull} from '@/common/utils/common';
+import {forEachKeyValue} from '@/common/utils/common';
 import Vue from 'vue';
+import {createLocalVue} from '@vue/test-utils'
+import vueDirectives from '@/common/vueDirectives'
 
-export async function vueTicks(count) {
-    if (isNull(count)) {
-        count = 3;
-    } else if (count === 0) {
+export async function vueTicks(count = 3) {
+    if (count === 0) {
         return Promise.resolve(null);
     }
 
@@ -99,3 +99,11 @@ export function destroy(component) {
 }
 
 export const flushPromises = () => new Promise(resolve => setTimeout(resolve));
+
+export const createScriptServerTestVue = () => {
+    const vue = createLocalVue()
+    forEachKeyValue(vueDirectives, (id, definition) => {
+        vue.directive(id, definition)
+    })
+    return vue
+}

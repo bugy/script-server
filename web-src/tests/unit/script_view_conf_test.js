@@ -1,13 +1,13 @@
 'use strict';
 import ScriptView from '@/main-app/components/scripts/script-view';
-import {createLocalVue, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import {vueTicks} from './test_utils';
+import {createScriptServerTestVue, vueTicks} from './test_utils';
 
 chaiConfig.truncateThreshold = 0;
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
 describe('Test Configuration of ScriptView', function () {
@@ -65,12 +65,23 @@ describe('Test Configuration of ScriptView', function () {
 
     describe('Test loading', function () {
 
-        it('test loading true', async function () {
-            this.store.state.scriptConfig.loading = true;
+        it('test loading true when no config', async function () {
+            this.store.state.scriptConfig.scriptConfig = null
+            this.store.state.scriptConfig.loading = true
 
             await vueTicks();
 
             expect(scriptView.find('.script-loading-text').text()).toEqual('Loading ..')
+            expect(scriptView.find('.button-execute').attributes('disabled')).toBe('disabled')
+        });
+
+        it('test loading true when config exists', async function () {
+            this.store.state.scriptConfig.scriptConfig = {name: 'abc'}
+            this.store.state.scriptConfig.loading = true
+
+            await vueTicks();
+
+            expect(scriptView.find('.script-loading-text').exists()).toBeFalse()
             expect(scriptView.find('.button-execute').attributes('disabled')).toBe('disabled')
         });
 

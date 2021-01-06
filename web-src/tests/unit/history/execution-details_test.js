@@ -1,16 +1,16 @@
 'use strict';
 import ExecutionDetails from '@/common/components/history/execution-details'
 import historyModule, {axiosInstance} from '@/common/store/executions-module';
-import {createLocalVue, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import {flushPromises, vueTicks} from '../test_utils';
+import {createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
 
 
 chaiConfig.truncateThreshold = 0;
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
 const axiosMock = new MockAdapter(axiosInstance);

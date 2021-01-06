@@ -1,18 +1,25 @@
 import {clearArray, removeElement, SocketClosedError} from '@/common/utils/common';
 import scriptConfig, {__RewireAPI__ as SocketRewireAPI} from '@/main-app/store/scriptConfig';
-import {createLocalVue} from '@vue/test-utils';
 import {assert} from 'chai';
 import Vuex from 'vuex';
-import {timeout} from './test_utils'
+import {createScriptServerTestVue, timeout} from './test_utils'
 
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
+
+const DEFAULT_SCRIPT_NAME = 'testScript'
 
 function createStore() {
     return new Vuex.Store({
         modules: {
-            scriptConfig: scriptConfig
+            scriptConfig: scriptConfig,
+            scripts: {
+                namespaced: true,
+                state: {
+                    selectedScript: DEFAULT_SCRIPT_NAME
+                }
+            }
         }
     });
 }
@@ -33,7 +40,7 @@ function createConfig() {
         }];
 
     return {
-        name: 'testScript',
+        name: DEFAULT_SCRIPT_NAME,
         description: 'some script description',
         parameters: parameters
     };
@@ -43,6 +50,20 @@ function createConfigEvent(config) {
     return JSON.stringify({
         event: 'initialConfig',
         data: config
+    });
+}
+
+function createReloadModelEvent(config) {
+    return JSON.stringify({
+        event: 'reloadedConfig',
+        data: config
+    });
+}
+
+function createReloadModelRequest(clientModelId, parameterValues) {
+    return JSON.stringify({
+        event: 'reloadModelValues',
+        data: {parameterValues, clientModelId}
     });
 }
 
@@ -67,10 +88,17 @@ function createRemoveParameterEvent(parameter) {
     });
 }
 
-function createSentValue(parameter, value) {
+function createSentValueEvent(parameter, value) {
     return JSON.stringify({
         'event': 'parameterValue',
         data: {parameter, value}
+    });
+}
+
+function createInitialValuesEvent(parameterValues) {
+    return JSON.stringify({
+        'event': 'initialValues',
+        data: {parameterValues}
     });
 }
 
@@ -82,7 +110,8 @@ describe('Test scriptConfig module', function () {
 
         this.sentData = sentData;
 
-        SocketRewireAPI.__Rewire__('ReactiveWebSocket', function (path, observer) {
+        SocketRewireAPI.__Rewire__('ReactiveWebSocket', function (path, callback) {
+            const observer = {callback, path}
             observers.push(observer);
             let closed = false;
 
@@ -104,10 +133,18 @@ describe('Test scriptConfig module', function () {
         this.disconnectSocket = async function (awaitTimeout) {
             const observer = observers[0];
             observers.splice(0, 1);
-            observer.onError(new SocketClosedError());
+            observer.callback.onError(new SocketClosedError());
             await timeout(awaitTimeout);
         };
     });
+
+    function sendEventFromServer(event) {
+        observers[0].callback.onNext(event)
+    }
+
+    function sendSocketError(error) {
+        observers[0].callback.onError(error)
+    }
 
     describe('Test config in single connection', function () {
         it('Test connect on reload', function () {
@@ -116,10 +153,11 @@ describe('Test scriptConfig module', function () {
 
             const config = createConfig();
 
-            observers[0].onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
             assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
             assert.deepEqual(store.state.scriptConfig.parameters, config.parameters);
+            expect(observers[0].path).toEndWith('?initWithValues=false')
         });
 
         it('Test replace config', function () {
@@ -128,13 +166,13 @@ describe('Test scriptConfig module', function () {
 
             const config = createConfig();
 
-            observers[0].onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
             config.name = 'new name';
             config.parameters.splice(1, 1);
             config.parameters.push({name: 'param3'});
 
-            observers[0].onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
             assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
             assert.deepEqual(store.state.scriptConfig.parameters, config.parameters);
@@ -146,11 +184,11 @@ describe('Test scriptConfig module', function () {
 
             const config = createConfig();
 
-            observers[0].onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
             const newParameter = {name: 'param3', type: 'multiselect', 'default': 'abc'};
 
-            observers[0].onNext(createAddParameterEvent(newParameter));
+            sendEventFromServer(createAddParameterEvent(newParameter));
 
             const expectedParameters = config.parameters.concat([newParameter]);
             newParameter.multiselect = true;
@@ -164,9 +202,9 @@ describe('Test scriptConfig module', function () {
 
             const config = createConfig();
 
-            observers[0].onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
-            observers[0].onNext(createRemoveParameterEvent(config.parameters[0].name));
+            sendEventFromServer(createRemoveParameterEvent(config.parameters[0].name));
 
             config.parameters.splice(0, 1);
 
@@ -180,7 +218,7 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/reloadScript', {selectedScript: 'my script'});
 
             const oldObserver = observers[0];
-            oldObserver.onError(new SocketClosedError());
+            sendSocketError(new SocketClosedError());
 
             assert.isNull(store.state.scriptConfig.scriptConfig);
             assert.equal(store.state.scriptConfig.loadError, 'Failed to connect to the server');
@@ -193,7 +231,7 @@ describe('Test scriptConfig module', function () {
             const oldObserver = observers[0];
 
             const config = createConfig();
-            oldObserver.onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
             await this.disconnectSocket(50);
 
@@ -209,17 +247,15 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/reloadScript', {selectedScript: 'my script'});
 
             const config = createConfig();
-            observers[0].onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
             await this.disconnectSocket(50);
-
-            const newObserver = observers[0];
 
             assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
             config.name = 'new name';
             config.parameters.push({'name': 'param3'});
 
-            newObserver.onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
             assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
             assert.deepEqual(store.state.scriptConfig.parameters, config.parameters);
@@ -233,7 +269,7 @@ describe('Test scriptConfig module', function () {
 
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
-            assert.deepEqual(this.sentData, [createSentValue('param1', 123)]);
+            assert.deepEqual(this.sentData, [createSentValueEvent('param1', 123)]);
         });
 
         it('Test send same value multiple times', function () {
@@ -244,7 +280,7 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
-            assert.deepEqual(this.sentData, [createSentValue('param1', 123)]);
+            assert.deepEqual(this.sentData, [createSentValueEvent('param1', 123)]);
         });
 
         it('Test send same parameter different values', function () {
@@ -256,9 +292,9 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
             assert.deepEqual(this.sentData, [
-                createSentValue('param1', 123),
-                createSentValue('param1', 456),
-                createSentValue('param1', 123)
+                createSentValueEvent('param1', 123),
+                createSentValueEvent('param1', 456),
+                createSentValueEvent('param1', 123)
             ]);
         });
 
@@ -270,8 +306,8 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 'hello'});
 
             assert.deepEqual(this.sentData, [
-                createSentValue('param2', 123),
-                createSentValue('param1', 'hello')
+                createSentValueEvent('param2', 123),
+                createSentValueEvent('param1', 'hello')
             ]);
         });
 
@@ -280,7 +316,7 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/reloadScript', {selectedScript: 'my script'});
 
             const config = createConfig();
-            observers[0].onNext(createConfigEvent(config));
+            sendEventFromServer(createConfigEvent(config));
 
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param2', value: 123});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 'hello'});
@@ -288,141 +324,69 @@ describe('Test scriptConfig module', function () {
             clearArray(this.sentData);
 
             await this.disconnectSocket(100);
-            assert.deepEqual(this.sentData, []);
 
-            observers[0].onNext(createConfigEvent(config));
+            expect(this.sentData).toEqual(
+                [createInitialValuesEvent({param2: 123, param1: 'hello'})])
+            expect(observers[0].path).toEndWith('?initWithValues=true')
+
+            clearArray(this.sentData);
+
+            sendEventFromServer(createConfigEvent(config));
 
             assert.deepEqual(this.sentData, [
-                createSentValue('param2', 123),
-                createSentValue('param1', 'hello')
+                createSentValueEvent('param2', 123),
+                createSentValueEvent('param1', 'hello')
             ]);
         });
     });
 
-    describe('Test force allowed values', function () {
-        let store;
+    describe('Test reloadModel', function () {
+        let store
 
         beforeEach(function () {
             store = createStore();
-            store.dispatch('scriptConfig/reloadScript', {selectedScript: 'my script'});
-        });
 
-        const assertAllowedValues = (parameterName, expectedValues) => {
-            const param = store.state.scriptConfig.parameters.find(p => p.name === parameterName);
-            assert.exists(param, 'Couldn\'t find parameter for name: ' + parameterName);
-
-            assert.deepEqual(param.values, expectedValues);
-        };
-
-        const setForcedAllowedValues = (values) => {
-            store.dispatch('scriptConfig/setForcedAllowedValues', values);
-        };
-
-        const sendConfig = () => {
+            store.dispatch('scriptConfig/reloadScript', {selectedScript: DEFAULT_SCRIPT_NAME});
             const config = createConfig();
-            observers[0].onNext(createConfigEvent(config));
-        };
 
-        it('Test force before initial config', function () {
-            setForcedAllowedValues({'param2': '12345'});
+            sendEventFromServer(createConfigEvent(config));
+        })
 
-            sendConfig();
+        it('Test simple scenario', async function () {
+            const parameterValues = {'param1': 'abc'}
+            const modelId = 12345
 
-            assertAllowedValues('param2', DEFAULT_PARAM2_VALUES.concat(['12345']));
-        });
+            store.dispatch('scriptConfig/reloadModel',
+                {parameterValues: parameterValues, clientModelId: modelId, scriptName: DEFAULT_SCRIPT_NAME});
 
-        it('Test force after initial config', function () {
-            sendConfig();
+            expect(this.sentData).toEqual([createReloadModelRequest(modelId, parameterValues)])
+            expect(store.state.scriptConfig.loading).toBeTrue()
 
-            setForcedAllowedValues({'param2': '12345'});
+            clearArray(this.sentData)
 
-            assertAllowedValues('param2', DEFAULT_PARAM2_VALUES.concat(['12345']));
-        });
+            const newConfig = createConfig()
+            newConfig.name = 'New name'
+            newConfig.clientModelId = modelId
 
-        it('Test force for added parameter', function () {
-            setForcedAllowedValues({'param3': '12345'});
+            sendEventFromServer(createReloadModelEvent(newConfig))
 
-            sendConfig();
+            expect(store.state.scriptConfig.loading).toBeFalse()
+            expect(store.state.scriptConfig.scriptConfig).toEqual(newConfig)
+            expect(this.sentData).toBeEmpty()
+        })
 
-            const newParameter = {name: 'param3', type: 'list', values: ['hello', 'world']};
-            observers[0].onNext(createAddParameterEvent(newParameter));
+        it('Test ignore reload for different script', async function () {
+            store.state.scripts.selectedScript = 'another script'
 
-            assertAllowedValues('param3', ['hello', 'world', '12345']);
-        });
+            store.dispatch('scriptConfig/reloadModel',
+                {
+                    parameterValues: {'param1': 'abc'},
+                    clientModelId: 12345,
+                    scriptName: DEFAULT_SCRIPT_NAME
+                });
 
-        it('Test force for updated parameter', function () {
-            setForcedAllowedValues({'param2': '12345'});
-
-            sendConfig();
-
-            const newParameterConfig = {name: 'param2', type: 'list', values: ['999']};
-            observers[0].onNext(createUpdateParameterEvent(newParameterConfig));
-
-            assertAllowedValues('param2', ['999', '12345']);
-        });
-
-        it('Test force when initial values undefined', function () {
-            setForcedAllowedValues({'param3': '12345'});
-
-            const config = createConfig();
-            config.parameters.push({name: 'param3', type: 'list'});
-            observers[0].onNext(createConfigEvent(config));
-
-            assertAllowedValues('param3', ['12345']);
-        });
-
-        it('Test force when multiselect', function () {
-            setForcedAllowedValues({'param3': ['v2', 'v4', 'v6']});
-
-            const config = createConfig();
-            config.parameters.push({name: 'param3', type: 'multiselect', values: ['v1', 'v2', 'v3']});
-            observers[0].onNext(createConfigEvent(config));
-
-            assertAllowedValues('param3', ['v1', 'v2', 'v3', 'v4', 'v6']);
-        });
-
-        it('Test force when server_file', function () {
-            setForcedAllowedValues({'param3': 'my.dat'});
-
-            const config = createConfig();
-            config.parameters.push({name: 'param3', type: 'server_file', values: ['log.txt', 'admin.pwd']});
-            observers[0].onNext(createConfigEvent(config));
-
-            assertAllowedValues('param3', ['log.txt', 'admin.pwd', 'my.dat']);
-        });
-
-        it('Test force when server_file recursive ', function () {
-            setForcedAllowedValues({'param3': 'my.dat'});
-
-            const config = createConfig();
-            config.parameters.push({
-                name: 'param3',
-                type: 'server_file',
-                values: ['log.txt', 'admin.pwd'],
-                fileRecursive: true
-            });
-            observers[0].onNext(createConfigEvent(config));
-
-            assertAllowedValues('param3', ['log.txt', 'admin.pwd']);
-        });
-
-        it('Test force when null value', function () {
-            setForcedAllowedValues({'param2': null});
-
-            sendConfig();
-
-            assertAllowedValues('param2', DEFAULT_PARAM2_VALUES);
-        });
-
-        it('Test force after reset', function () {
-            setForcedAllowedValues({'param2': 'new value'});
-
-            store.dispatch('scriptConfig/reloadScript', {selectedScript: 'another script'});
-
-            sendConfig();
-
-            assertAllowedValues('param2', DEFAULT_PARAM2_VALUES);
-        });
-
-    });
+            expect(this.sentData).toEqual([])
+            expect(store.state.scriptConfig.loading).toBeFalse()
+        })
+    })
 });

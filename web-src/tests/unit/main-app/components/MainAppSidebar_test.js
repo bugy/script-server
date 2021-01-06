@@ -1,12 +1,12 @@
 'use strict';
-import {createLocalVue, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import Vuex from 'vuex';
 import VueRouter from 'vue-router';
-import MainAppSidebar from "@/main-app/components/MainAppSidebar";
-import {vueTicks} from "../../test_utils";
+import MainAppSidebar from '@/main-app/components/MainAppSidebar';
+import {createScriptServerTestVue, vueTicks} from '../../test_utils';
 import router from '@/main-app/router/router';
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 localVue.use(VueRouter);
 

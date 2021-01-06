@@ -5,6 +5,7 @@
            :value="value"
            @blur="focused = false"
            @focus="focused = true"
+           autocomplete="off"
            @input="inputFieldChanged"/>
 
     <label :for="id" v-bind:class="{ active: labelActive }">Search</label>
@@ -76,8 +77,9 @@ export default {
         comboboxWrapper.dropdown.dropdownEl.style.maxHeight = null;
       });
 
-      const headerItems = comboboxWrapper.dropdown.dropdownEl.getElementsByClassName('disabled');
-      for (const headerItem of headerItems) {
+      const disabledItems = comboboxWrapper.dropdown.dropdownEl.getElementsByClassName('disabled');
+      if (disabledItems.length > 0) {
+        const headerItem = disabledItems[0]
         destroyChildren(headerItem);
         headerItem.appendChild(searchElement);
         addClass(headerItem, 'combobox-search-header');
@@ -100,7 +102,9 @@ export default {
     },
 
     focus() {
-      this.$refs.textField.focus();
+      if (this.$refs.textField) {
+        this.$refs.textField.focus();
+      }
     },
 
     executeSearch(searchString) {
@@ -138,21 +142,13 @@ export default {
 }
 
 function disableDropdownCloseOnInput(comboboxWrapper) {
-  comboboxWrapper.dropdown.options.closeOnClick = false;
-
-  const autoclose = (e) => {
+  const ignoreSearchClickEvents = (e) => {
     const closest = closestByClass(e.target, 'input-field');
     if (!isNull(closest) && hasClass(closest, 'combobox-search')) {
       e.stopPropagation();
-      return;
     }
-
-    setTimeout(() => {
-      comboboxWrapper.dropdown.close();
-    }, 0);
-    comboboxWrapper.dropdown.isTouchMoving = false;
   };
-  comboboxWrapper.dropdownOptions.addEventListener('click', autoclose, {capture: true});
+  comboboxWrapper.dropdownOptions.addEventListener('click', ignoreSearchClickEvents, {capture: true});
 }
 
 function appendCallback(object, callbackField, newCallback) {

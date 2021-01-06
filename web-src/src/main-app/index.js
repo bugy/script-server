@@ -1,15 +1,15 @@
 import '@/common/style_imports'
-import {trimTextNodes} from '@/common/utils/common';
+import {forEachKeyValue} from '@/common/utils/common';
 import Vue from 'vue'
 import MainApp from './MainApp.vue';
 import router from './router/router'
 import store from './store'
+import vueDirectives from '@/common/vueDirectives'
 
 Vue.config.productionTip = false;
 
-Vue.directive('trim-text', {
-    inserted: trimTextNodes,
-    componentUpdated: trimTextNodes
+forEachKeyValue(vueDirectives, (id, definition) => {
+    Vue.directive(id, definition)
 })
 
 new Vue({

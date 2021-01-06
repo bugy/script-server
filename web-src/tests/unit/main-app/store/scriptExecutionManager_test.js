@@ -4,17 +4,16 @@ import scriptExecutionManagerModule, {
     axiosInstance
 } from '@/main-app/store/scriptExecutionManager';
 import {STATUS_INITIALIZING} from '@/main-app/store/scriptExecutor';
-import {createLocalVue} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
 import cloneDeep from 'lodash/cloneDeep';
 import {WebSocket} from 'mock-socket';
 import Vuex from 'vuex';
-import {flushPromises} from '../../test_utils';
+import {createScriptServerTestVue, flushPromises} from '../../test_utils';
 
 const axiosMock = new MockAdapter(axiosInstance);
 window.WebSocket = WebSocket;
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
 ExecutionManagerRewire.__Rewire__('scriptExecutor', createMockExecutor);
@@ -32,7 +31,7 @@ function createStore() {
                     parameterValues: {}
                 },
                 actions: {
-                    setParameterValues({state}, valuesHolder) {
+                    reloadModel({state}, valuesHolder) {
                         state.parameterValues = valuesHolder.values;
                     }
                 }

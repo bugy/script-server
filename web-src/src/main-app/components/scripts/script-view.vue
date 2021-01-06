@@ -1,6 +1,6 @@
 <template>
   <div :id="id" class="script-view">
-    <ScriptLoadingText v-if="loading" :loading="loading" :script="selectedScript"/>
+    <ScriptLoadingText v-if="loading && !scriptConfig" :loading="loading" :script="selectedScript"/>
     <p v-show="scriptDescription" class="script-description" v-html="formattedDescription"/>
     <ScriptParametersView ref="parametersView"/>
     <div class="actions-panel">
@@ -64,7 +64,7 @@ import marked from 'marked';
 import {mapActions, mapState} from 'vuex'
 import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
 import ScriptParametersView from './script-parameters-view'
-import ScriptViewScheduleHolder from "@/main-app/components/scripts/ScriptViewScheduleHolder";
+import ScriptViewScheduleHolder from '@/main-app/components/scripts/ScriptViewScheduleHolder';
 
 export default {
   data: function () {

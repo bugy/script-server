@@ -2,16 +2,16 @@
 
 import ScriptConfig from '@/admin/components/scripts-config/ScriptConfig';
 import ScriptConfigForm from '@/admin/components/scripts-config/ScriptConfigForm';
-import {createLocalVue, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import {vueTicks} from '../test_utils';
+import {createScriptServerTestVue, vueTicks} from '../test_utils';
 import {findField, setValueByUser} from './ParameterConfigForm_test';
 
 
 chaiConfig.truncateThreshold = 0;
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
 describe('Test ScriptConfig', function () {

@@ -19,7 +19,7 @@
         </a>
       </li>
     </ul>
-    <div ref="tabIndicator" class="tab-indicator"></div>
+    <div ref="tabIndicator" :class="{inactive:loading}" class="tab-indicator"></div>
   </div>
 </template>
 
@@ -40,6 +40,9 @@ export default {
   computed: {
     ...mapState('scripts', {
       selectedScript: 'selectedScript'
+    }),
+    ...mapState('scriptConfig', {
+      loading: 'loading'
     }),
     ...mapState('executions', ['currentExecutor', 'executors']),
 
@@ -126,6 +129,11 @@ export default {
         this.$nextTick(this.updateTabIndicator);
       }
     },
+    loading: {
+      handler() {
+        this.$nextTick(this.updateTabIndicator);
+      }
+    },
     scriptExecutors() {
       this.$nextTick(this.updateTabIndicator);
       this.$nextTick(this.calcAvailableSpace);
@@ -206,6 +214,10 @@ export default {
   width: 88px;
   background-color: var(--primary-color);
   transition: left 0.3s;
+}
+
+.execution-instance-tabs .tab-indicator.inactive {
+  background-color: var(--focus-color);
 }
 
 .add-execution-tab-button {

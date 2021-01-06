@@ -541,6 +541,29 @@ class TestParametersValidation(unittest.TestCase):
         valid = self._validate(script_config, values)
         self.assertFalse(valid)
 
+    def test_multiple_required_parameters_when_one_missing_and_skip_invalid(self):
+        values = {}
+        parameters = []
+        for i in range(0, 5):
+            param_name = 'param' + str(i)
+            parameter = create_script_param_config(param_name, required=True)
+            parameters.append(parameter)
+
+            if i != 3:
+                values[param_name] = str(i)
+
+        script_config = _create_config_model('conf_x', parameters=parameters, skip_invalid_parameters=True)
+
+        valid = self._validate(script_config, values, skip_invalid_parameters=True)
+        self.assertTrue(valid)
+        self.assertEqual({
+            'param0': '0',
+            'param1': '1',
+            'param2': '2',
+            'param3': None,
+            'param4': '4'},
+            script_config.parameter_values)
+
     def test_multiple_parameters_when_all_defined(self):
         values = {}
         parameters = []
@@ -605,9 +628,9 @@ class TestParametersValidation(unittest.TestCase):
         test_utils.cleanup()
 
     @staticmethod
-    def _validate(script_config, parameter_values):
+    def _validate(script_config, parameter_values, skip_invalid_parameters=False):
         try:
-            script_config.set_all_param_values(parameter_values)
+            script_config.set_all_param_values(parameter_values, skip_invalid_parameters=skip_invalid_parameters)
             return True
 
         except InvalidValueException:
@@ -852,7 +875,8 @@ def _create_config_model(name, *,
                          parameters=None,
                          parameter_values=None,
                          working_dir=None,
-                         script_path='echo 123'):
+                         script_path='echo 123',
+                         skip_invalid_parameters=False):
     result_config = {}
 
     if script_path is not None:
@@ -872,4 +896,8 @@ def _create_config_model(name, *,
     if working_dir is not None:
         result_config['working_directory'] = working_dir
 
-    return ConfigModel(result_config, path, username, audit_name, parameter_values=parameter_values)
+    model = ConfigModel(result_config, path, username, audit_name)
+    if parameter_values is not None:
+        model.set_all_param_values(parameter_values, skip_invalid_parameters=skip_invalid_parameters)
+
+    return model

@@ -1,9 +1,10 @@
 'use strict';
 import ScriptView from '@/main-app/components/scripts/script-view';
-import {createLocalVue, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import Vuex from 'vuex';
+import {createScriptServerTestVue} from '../../../test_utils'
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
 

@@ -7,6 +7,7 @@
            :required="config.required"
            :type="fieldType"
            :value="value"
+           :autocomplete="config.name"
            @input="inputFieldChanged"/>
     <label :for="id" v-bind:class="{ active: labelActive }">{{ config.name }}</label>
   </div>

@@ -1,13 +1,13 @@
 'use strict';
 import scripts, {axiosInstance} from '@/admin/store/scripts-module'
-import {createLocalVue} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
+import {createScriptServerTestVue} from '../test_utils'
 
 chaiConfig.truncateThreshold = 0;
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
 const axiosMock = new MockAdapter(axiosInstance);

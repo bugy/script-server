@@ -1,11 +1,11 @@
 'use strict';
 import ExecutionInstanceTabs from '@/main-app/components/scripts/ExecutionInstanceTabs';
-import {createLocalVue, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import clone from 'lodash/clone';
 import Vuex from 'vuex';
-import {vueTicks} from '../../../test_utils';
+import {createScriptServerTestVue, vueTicks} from '../../../test_utils';
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
 
@@ -86,7 +86,7 @@ describe('Test ExecutionInstanceTabs', function () {
 
     function assertTab(tab, id, status, selected) {
         let expectedText = status === 'finished' ? 'check' : 'lens';
-        expectedText += ' ' + id;
+        expectedText += id;
 
         expect(tab.text()).toBe(expectedText);
 

@@ -3,3 +3,12 @@
 .select-dropdown.dropdown-content li.optgroup {
     background-color: transparent;
 }
+
+.script-server .multiple-select-dropdown li:first-child [type=checkbox]:disabled + span:not(.lever) {
+    padding-left: 0;
+}
+
+.script-server .multiple-select-dropdown li:first-child [type=checkbox]:disabled + span:not(.lever):before {
+    background: none;
+    border: none;
+}

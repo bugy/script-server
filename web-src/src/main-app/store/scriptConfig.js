@@ -1,23 +1,23 @@
 import {ReactiveWebSocket} from '@/common/connections/rxWebsocket';
+import clone from 'lodash/clone';
 import {
-    arraysEqual,
-    contains,
     forEachKeyValue,
     HttpForbiddenError,
     HttpRequestError,
     HttpUnauthorizedError,
     isEmptyArray,
+    isEmptyObject,
     isEmptyString,
     isNull,
     logError,
     removeElement,
     SocketClosedError,
-    toDict
+    toDict,
+    toQueryArgs
 } from '@/common/utils/common';
 import axios from 'axios';
 import Vue from 'vue';
-import {toQueryArgs} from '../../common/utils/common';
-import {isComboboxParameter, preprocessParameter} from '../utils/model_helper';
+import {preprocessParameter} from '../utils/model_helper';
 
 const internalState = {
     websocket: null,
@@ -34,6 +34,14 @@ function sendParameterValue(parameterName, value, websocket) {
     }));
 }
 
+function sendReloadModelRequest(parameterValues, clientModelId, websocket) {
+    const data = {parameterValues, clientModelId};
+    websocket.send(JSON.stringify({
+        'event': 'reloadModelValues',
+        data
+    }));
+}
+
 export const NOT_FOUND_ERROR_PREFIX = `Failed to find the script`;
 
 export default {
@@ -42,7 +50,6 @@ export default {
         loadError: null,
         parameters: [],
         sentValues: {},
-        forcedAllowedValues: {},
         loading: false
     },
     namespaced: true,
@@ -57,9 +64,17 @@ export default {
             }
         },
 
+        reloadModel({state, commit, rootState}, {scriptName, parameterValues, clientModelId}) {
+            if (rootState.scripts.selectedScript === scriptName) {
+                commit('SET_LOADING', true);
+                sendReloadModelRequest(parameterValues, clientModelId, internalState.websocket)
+                commit('SET_SENT_VALUES', parameterValues)
+            }
+        },
+
         sendParameterValue({state, commit}, {parameterName, value}) {
             const websocket = internalState.websocket;
-            if (isNull(websocket) || !websocket.isOpen(websocket)) {
+            if (isNull(websocket) || websocket.isClosed(websocket)) {
                 return;
             }
 
@@ -80,7 +95,7 @@ export default {
             internalState.websocket = websocket;
         },
 
-        resendValues({state, dispatch}) {
+        resendValues({state}) {
             const websocket = internalState.websocket;
             if (isNull(websocket) || websocket.isClosed()) {
                 return;
@@ -88,26 +103,6 @@ export default {
 
             forEachKeyValue(state.sentValues, (key, value) => sendParameterValue(key, value, websocket));
         },
-
-        setForcedAllowedValues({state, commit}, values) {
-            commit('SET_FORCED_ALLOWED_VALUES', values);
-
-            for (const parameter of state.parameters) {
-                if (isComboboxParameter(parameter)) {
-                    const forcedValue = values[parameter.name];
-
-                    if (!isNull(forcedValue)) {
-                        const newValues = enrichAllowedValues(forcedValue, parameter.values);
-                        if (!arraysEqual(newValues, parameter.values)) {
-                            commit('SET_PARAMETER_ALLOWED_VALUES', {
-                                parameterName: parameter.name,
-                                allowedValues: newValues
-                            })
-                        }
-                    }
-                }
-            }
-        }
     },
     mutations: {
         RESET_CONFIG(state) {
@@ -118,7 +113,6 @@ export default {
             state.loadError = null;
             state.loading = false;
             state.sentValues = {};
-            state.forcedAllowedValues = {};
         },
 
         SET_ERROR(state, error) {
@@ -131,7 +125,7 @@ export default {
 
             const newParameters = config.parameters;
             for (const parameter of newParameters) {
-                _preprocessParameter(parameter, state.forcedAllowedValues[parameter.name], state.scriptConfig);
+                _preprocessParameter(parameter, state.scriptConfig);
             }
 
             if (isEmptyArray(state.parameters)) {
@@ -161,7 +155,7 @@ export default {
         },
 
         ADD_PARAMETER(state, parameter) {
-            _preprocessParameter(parameter, state.forcedAllowedValues[parameter.name], state.scriptConfig);
+            _preprocessParameter(parameter, state.scriptConfig);
             state.parameters.push(parameter);
         },
 
@@ -183,7 +177,7 @@ export default {
                 return;
             }
 
-            _preprocessParameter(parameter, state.forcedAllowedValues[parameter.name], state.scriptConfig);
+            _preprocessParameter(parameter, state.scriptConfig);
             Vue.set(parameters, foundIndex, parameter);
         },
 
@@ -213,16 +207,8 @@ export default {
             state.sentValues[parameterName] = value;
         },
 
-        SET_FORCED_ALLOWED_VALUES(state, values) {
-            state.forcedAllowedValues = values;
-        },
-
-        SET_PARAMETER_ALLOWED_VALUES(state, {parameterName, allowedValues}) {
-            state.parameters.forEach(p => {
-                if (p.name === parameterName) {
-                    p.values = allowedValues;
-                }
-            })
+        SET_SENT_VALUES(state, parameterValues) {
+            state.sentValues = clone(parameterValues)
         },
 
         SET_LOADING(state, loading) {
@@ -234,7 +220,13 @@ export default {
 function reconnect(state, internalState, commit, dispatch, selectedScript) {
     let dataReceived = false;
 
-    const socket = new ReactiveWebSocket('scripts/' + encodeURIComponent(selectedScript), {
+    let initWithValues = false
+    if (!isNull(state.scriptConfig) && !isEmptyObject(state.sentValues)) {
+        initWithValues = true
+    }
+
+    const uri = 'scripts/' + encodeURIComponent(selectedScript) + '?initWithValues=' + initWithValues
+    const socket = new ReactiveWebSocket(uri, {
         onNext: function (rawMessage) {
             internalState.reconnectionAttempt = 0;
 
@@ -256,6 +248,12 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
                 commit('UPDATE_SCRIPT_CONFIG', data);
                 commit('SET_LOADING', false);
                 dispatch('resendValues');
+                return;
+            }
+
+            if (eventType === 'reloadedConfig') {
+                commit('UPDATE_SCRIPT_CONFIG', data);
+                commit('SET_LOADING', false);
                 return;
             }
 
@@ -325,36 +323,22 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
         }
     });
 
+    if (initWithValues) {
+        socket.send(JSON.stringify({
+            'event': 'initialValues',
+            data: {
+                'parameterValues': state.sentValues
+            }
+        }))
+    }
+
     dispatch('setConnection', socket);
 }
 
-function _preprocessParameter(parameter, forcedAllowedValue, scriptConfig) {
+function _preprocessParameter(parameter, scriptConfig) {
     preprocessParameter(parameter, (path) => {
         return loadFiles(scriptConfig, parameter.name, path);
     });
-
-    if (isComboboxParameter(parameter) && !isNull(forcedAllowedValue)) {
-        parameter.values = enrichAllowedValues(forcedAllowedValue, parameter.values);
-    }
-}
-
-function enrichAllowedValues(value, parameterValues) {
-    let newValues = isNull(parameterValues) ? [] : parameterValues.slice();
-
-    if (Array.isArray(value)) {
-        for (let j = 0; j < value.length; j++) {
-            const valueElement = value[j];
-            if (!contains(parameterValues, valueElement)) {
-                newValues.push(valueElement);
-            }
-        }
-    } else {
-        if (isEmptyArray(parameterValues) || !contains(parameterValues, value)) {
-            newValues.push(value);
-        }
-    }
-
-    return newValues;
 }
 
 function loadFiles(scriptConfig, parameterName, path) {

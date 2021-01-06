@@ -1,4 +1,3 @@
-import itertools
 from collections import UserList, UserDict
 
 from typing import Optional, Iterable as Iterable, Mapping as Mapping, TypeVar
@@ -62,6 +61,9 @@ class ObservableList(UserList):
 
     def subscribe(self, observer):
         self._observers.append(observer)
+
+    def unsubscribe(self, observer):
+        self._observers.remove(observer)
 
     def append(self, item: _T) -> None:
         super().append(item)

@@ -9,7 +9,7 @@ class ExecutionInfo(object):
         self.script = None
 
 
-def config_to_external(config, id):
+def config_to_external(config, id, external_id=None):
     parameters = []
     for parameter in config.parameters:
         external_param = parameter_to_external(parameter)
@@ -21,6 +21,7 @@ def config_to_external(config, id):
 
     return {
         'id': id,
+        'clientModelId': external_id,
         'name': config.name,
         'description': config.description,
         'schedulable': config.schedulable,

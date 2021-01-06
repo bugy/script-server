@@ -1,29 +1,47 @@
-import {forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
+import {forEachKeyValue, guid, isEmptyObject, isEmptyString, isNull, removeElement} from '@/common/utils/common';
 import Vue from 'vue';
+import clone from 'lodash/clone';
+import isEqual from 'lodash/isEqual';
 
 export default {
     namespaced: true,
     state: {
         parameterValues: {},
+        forcedValueParameters: [],
         errors: {},
-        lastPredefinedScript: null
+        nextReloadValues: null,
+        _parameterAllowedValues: {}
     },
     actions: {
-        reset({commit, dispatch}) {
+        reset({commit}) {
             commit('SET_ERRORS', {});
             commit('SET_VALUES', {});
-            commit('SET_LAST_PREDEFINED_SCRIPT', null);
-            dispatch('scriptConfig/setForcedAllowedValues', {}, {root: true})
+            commit('SET_FORCED_VALUE_PARAMETERS', []);
+            commit('SET_NEXT_RELOAD_VALUES', null);
         },
 
-        initFromParameters({state, dispatch, commit}, {scriptName, parameters}) {
-            if (!isNull(state.lastPredefinedScript)) {
-                if ((scriptName === state.lastPredefinedScript) || (scriptName === null)) {
+        initFromParameters({state, dispatch, commit}, {scriptConfig, parameters}) {
+            const oldParameterAllowedValues = state._parameterAllowedValues
+
+            commit('CACHE_PARAMETER_ALLOWED_VALUES', parameters)
+
+            if (!isNull(state.nextReloadValues) && !isNull(scriptConfig)) {
+                const forceAllowedValues = state.nextReloadValues.forceAllowedValues
+                const parameterValues = state.nextReloadValues.parameterValues
+                const expectedReloadedScript = state.nextReloadValues.scriptName
+                const expectedReloadedModelId = state.nextReloadValues.clientModelId
+
+                if (expectedReloadedScript !== scriptConfig.name) {
+                    commit('SET_NEXT_RELOAD_VALUES', null);
+                } else if (expectedReloadedModelId === scriptConfig.clientModelId) {
+                    commit('SET_VALUES', parameterValues);
+                    commit('SET_NEXT_RELOAD_VALUES', null);
+                    commit('SET_FORCED_VALUE_PARAMETERS', forceAllowedValues ? Object.keys(parameterValues) : []);
                     return;
                 }
-
-                commit('SET_LAST_PREDEFINED_SCRIPT', null);
             }
+
+            commit('UPDATE_FORCED_PARAMETERS', {oldParameterAllowedValues})
 
             if (!isEmptyObject(state.parameterValues)) {
                 for (const parameter of parameters) {
@@ -52,7 +70,7 @@ export default {
                 }
             }
 
-            dispatch('_setParameterValues', values);
+            dispatch('_setAndSendParameterValues', values);
         },
 
         setParameterValue({state, commit, dispatch}, {parameterName, value}) {
@@ -64,16 +82,22 @@ export default {
             commit('UPDATE_PARAMETER_ERROR', {parameterName, errorMessage})
         },
 
-        setParameterValues({state, rootState, commit, dispatch}, {values, forceAllowedValues, scriptName}) {
-            dispatch('_setParameterValues', values);
+        reloadModel({state, commit, dispatch}, {values, forceAllowedValues, scriptName}) {
+            commit('SET_FORCED_VALUE_PARAMETERS', []);
 
-            const forcedAllowedValues = forceAllowedValues ? values : {};
-            dispatch('scriptConfig/setForcedAllowedValues', forcedAllowedValues, {root: true});
+            if (isEqual(state.parameterValues, values)) {
+                return
+            }
 
-            commit('SET_LAST_PREDEFINED_SCRIPT', scriptName);
+            const clientModelId = guid(16)
+
+            commit('SET_VALUES', values)
+            commit('SET_NEXT_RELOAD_VALUES', {parameterValues: values, forceAllowedValues, scriptName, clientModelId});
+
+            dispatch('scriptConfig/reloadModel', {scriptName, parameterValues: values, clientModelId}, {root: true});
         },
 
-        _setParameterValues({state, rootState, commit, dispatch}, values) {
+        _setAndSendParameterValues({state, commit, dispatch}, values) {
             commit('SET_VALUES', values);
 
             forEachKeyValue(values, (parameterName, value) => dispatch('sendValueToServer', {
@@ -89,13 +113,19 @@ export default {
     },
     mutations: {
         SET_VALUES(state, values) {
-            state.parameterValues = values;
+            state.parameterValues = clone(values)
+        },
+        SET_FORCED_VALUE_PARAMETERS(state, parameterNames) {
+            state.forcedValueParameters = clone(parameterNames)
         },
         SET_ERRORS(state, errors) {
             state.errors = errors;
         },
         UPDATE_SINGLE_VALUE(state, {parameterName, value}) {
-            Vue.set(state.parameterValues, parameterName, value);
+            if (state.parameterValues[parameterName] !== value) {
+                Vue.set(state.parameterValues, parameterName, value);
+                removeElement(state.forcedValueParameters, parameterName)
+            }
         },
         UPDATE_PARAMETER_ERROR(state, {parameterName, errorMessage}) {
             if (isEmptyString(errorMessage)) {
@@ -104,8 +134,28 @@ export default {
                 state.errors[parameterName] = errorMessage;
             }
         },
-        SET_LAST_PREDEFINED_SCRIPT(state, scriptName) {
-            state.lastPredefinedScript = scriptName;
+        SET_NEXT_RELOAD_VALUES(state, nextReloadValues) {
+            state.nextReloadValues = nextReloadValues;
+        },
+        CACHE_PARAMETER_ALLOWED_VALUES(state, parameters) {
+            state._parameterAllowedValues = parameters
+                .filter(p => !isNull(p.values))
+                .reduce((result, param) => {
+                    result[param.name] = param.values
+                    return result
+                }, {})
+        },
+        UPDATE_FORCED_PARAMETERS(state, {oldParameterAllowedValues}) {
+            const newParameterAllowedValues = state._parameterAllowedValues
+
+            for (const forcedParameter of clone(state.forcedValueParameters)) {
+                const oldValues = oldParameterAllowedValues[forcedParameter]
+                const newValues = newParameterAllowedValues[forcedParameter]
+
+                if (isNull(oldValues) || isNull(newValues) || !isEqual(oldValues, newValues)) {
+                    removeElement(state.forcedValueParameters, forcedParameter)
+                }
+            }
         }
     }
 }

@@ -3,16 +3,16 @@
 import {hasClass, isBlankString} from '@/common/utils/common';
 import ScriptsList from '@/main-app/components/scripts/ScriptsList';
 import router from '@/main-app/router/router';
-import {createLocalVue, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import VueRouter from 'vue-router';
 import Vuex from 'vuex';
-import {triggerSingleClick, vueTicks} from '../../test_utils';
+import {createScriptServerTestVue, triggerSingleClick, vueTicks} from '../../test_utils';
 
 
 chaiConfig.truncateThreshold = 0;
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 localVue.use(VueRouter);
 

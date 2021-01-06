@@ -41,8 +41,7 @@ class ConfigModel:
                  username,
                  audit_name,
                  pty_enabled_default=True,
-                 ansi_enabled_default=True,
-                 parameter_values=None):
+                 ansi_enabled_default=True):
         super().__init__()
 
         short_config = read_short(path, config_object)
@@ -70,11 +69,8 @@ class ConfigModel:
 
         self._init_parameters(username, audit_name)
 
-        if parameter_values is not None:
-            self.set_all_param_values(parameter_values)
-        else:
-            for parameter in self.parameters:
-                self.parameter_values[parameter.name] = parameter.default
+        for parameter in self.parameters:
+            self.parameter_values[parameter.name] = parameter.default
 
         self._reload_parameters({})
 
@@ -93,15 +89,24 @@ class ConfigModel:
 
         self.parameter_values[param_name] = value
 
-    def set_all_param_values(self, param_values):
+    def set_all_param_values(self, param_values, skip_invalid_parameters=False):
         original_values = dict(self.parameter_values)
         processed = {}
 
         anything_changed = True
+
+        def get_sort_key(parameter):
+            if parameter.name in self._included_config_path.required_parameters:
+                return len(parameter.get_required_parameters())
+            return 100 + len(parameter.get_required_parameters())
+
+        sorted_parameters = sorted(self.parameters, key=get_sort_key)
+
         while (len(processed) < len(self.parameters)) and anything_changed:
             anything_changed = False
 
-            for parameter in self.parameters:
+            parameters = sorted_parameters + [p for p in self.parameters if p not in sorted_parameters]
+            for parameter in parameters:
                 if parameter.name in processed:
                     continue
 
@@ -112,8 +117,12 @@ class ConfigModel:
                 value = parameter.normalize_user_value(param_values.get(parameter.name))
                 validation_error = parameter.validate_value(value)
                 if validation_error:
-                    self.parameter_values.set(original_values)
-                    raise InvalidValueException(parameter.name, validation_error)
+                    if skip_invalid_parameters:
+                        logging.warning('Parameter ' + parameter.name + ' has invalid value, skipping')
+                        value = parameter.normalize_user_value(None)
+                    else:
+                        self.parameter_values.set(original_values)
+                        raise InvalidValueException(parameter.name, validation_error)
 
                 self.parameter_values[parameter.name] = value
                 processed[parameter.name] = parameter

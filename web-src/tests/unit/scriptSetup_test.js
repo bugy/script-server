@@ -1,11 +1,11 @@
 import scriptSetup from '@/main-app/store/scriptSetup';
-import {createLocalVue} from '@vue/test-utils';
 import {assert} from 'chai';
 import Vuex from 'vuex';
 import cloneDeep from 'lodash/cloneDeep';
+import {createScriptServerTestVue} from './test_utils'
 
 
-const localVue = createLocalVue();
+const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
 function createStore(sentData) {
@@ -14,9 +14,15 @@ function createStore(sentData) {
             scriptSetup: cloneDeep(scriptSetup),
             scriptConfig: {
                 namespaced: true,
+                state: {
+                    lastClientModelId: null
+                },
                 actions: {
                     sendParameterValue(_, {parameterName, value}) {
                         sentData.push(createSentValue(parameterName, value));
+                    },
+                    reloadModel({state}, {clientModelId}) {
+                        state.lastClientModelId = clientModelId
                     }
                 }
             }
@@ -62,19 +68,14 @@ describe('Test scriptSetup module', function () {
 
     describe('Test initFromParameters', function () {
         it('Test single parameter with default', function () {
-            store.dispatch('scriptSetup/initFromParameters', {
-                scriptName: 'myScript',
-                parameters: [{name: 'param1', default: 123}]
-            });
+            dispatchInitFromParameters('myScript', [{name: 'param1', default: 123}]);
 
             expect(store.state.scriptSetup.parameterValues).toEqual({'param1': 123});
         });
 
         it('Test single parameter with default, initialized again', function () {
-            store.dispatch('scriptSetup/initFromParameters', {
-                scriptName: 'myScript',
-                parameters: [{name: 'param1', default: 123}]
-            });
+            dispatchInitFromParameters('myScript', [{name: 'param1', default: 123}])
+
             store.dispatch('scriptSetup/initFromParameters', {
                 scriptName: 'myScript',
                 parameters: [{name: 'param1', default: 456}]
@@ -84,47 +85,111 @@ describe('Test scriptSetup module', function () {
         });
 
         it('Test 2 parameters with default', function () {
-            store.dispatch('scriptSetup/initFromParameters', {
-                scriptName: 'myScript',
-                parameters: [{name: 'param1', default: 123}, {name: 'param2', default: 'hello'}]
-            });
-
+            dispatchInitFromParameters('myScript',
+                [{name: 'param1', default: 123}, {name: 'param2', default: 'hello'}]);
 
             expect(store.state.scriptSetup.parameterValues).toEqual({'param1': 123, 'param2': 'hello'});
         });
 
         it('Test 2 parameters initialized sequentially', function () {
-            store.dispatch('scriptSetup/initFromParameters', {
-                scriptName: 'myScript',
-                parameters: [{name: 'param1', default: 123}]
-            });
-            store.dispatch('scriptSetup/initFromParameters', {
-                scriptName: 'myScript',
-                parameters: [{name: 'param2', default: 'hello'}]
-            });
+            dispatchInitFromParameters('myScript', [{name: 'param1', default: 123}]);
+            dispatchInitFromParameters('myScript', [{name: 'param2', default: 'hello'}]);
 
             expect(store.state.scriptSetup.parameterValues).toEqual({'param1': 123, 'param2': 'hello'});
         });
 
-        it('Test init parameters after setParameterValues', function () {
-            store.dispatch('scriptSetup/setParameterValues', {values: {'paramX': 'abc'}, scriptName: 's1'})
-            store.dispatch('scriptSetup/initFromParameters', {
-                scriptName: 's1',
-                parameters: [{name: 'param1', default: 123}]
-            });
+        it('Test init parameters after reloadModel', async function () {
+            store.dispatch('scriptSetup/reloadModel', {values: {'paramX': 'abc'}, scriptName: 's1'})
+            dispatchInitFromParameters('s1', [{name: 'param1', default: 123}]);
 
             expect(store.state.scriptSetup.parameterValues).toEqual({'paramX': 'abc'});
         });
 
-        it('Test init parameters after setParameterValues after reset', function () {
-            store.dispatch('scriptSetup/setParameterValues', {values: {'paramX': 'abc'}, scriptName: 's1'})
+        it('Test init parameters after reloadModel after reset', function () {
+            store.dispatch('scriptSetup/reloadModel', {values: {'paramX': 'abc'}, scriptName: 's1'})
             store.dispatch('scriptSetup/reset')
-            store.dispatch('scriptSetup/initFromParameters', {
-                scriptName: 's1',
-                parameters: [{name: 'param1', default: 123}]
-            });
+            dispatchInitFromParameters('s1', [{name: 'param1', default: 123}]);
 
             expect(store.state.scriptSetup.parameterValues).toEqual({'param1': 123});
         });
     });
-});
+
+    describe('Test forceValues', function () {
+        it('Test forceValues after initFromParameters', function () {
+            reloadAndInit('abc', {paramX: 'hello', paramY: 123}, true)
+
+            expect(store.state.scriptSetup.forcedValueParameters).toEqual(['paramX', 'paramY']);
+        })
+
+        it('Test forceValues after initFromParameters without modelId', function () {
+            const parameters = {paramX: 'hello', paramY: 123}
+            store.dispatch('scriptSetup/reloadModel', {values: parameters, scriptName: 'abc', forceAllowedValues: true})
+
+            store.dispatch('scriptSetup/initFromParameters', {
+                scriptConfig: {name: 'abc'},
+                parameters: [createDefaultParam('paramX'), createDefaultParam('paramY')]
+            });
+
+            expect(store.state.scriptSetup.forcedValueParameters).toEqual([]);
+        })
+
+        it('Test forceValues after initFromParameters with different scriptName', function () {
+            const parameters = {paramX: 'hello', paramY: 123}
+
+            store.dispatch('scriptSetup/reloadModel', {values: parameters, scriptName: 'ABC', forceAllowedValues: true})
+
+            store.dispatch('scriptSetup/initFromParameters', {
+                scriptConfig: {name: 'XYZ', clientModelId: store.state.scriptConfig.lastClientModelId},
+                parameters: [createDefaultParam('paramX'), createDefaultParam('paramY')]
+            });
+
+            expect(store.state.scriptSetup.forcedValueParameters).toEqual([]);
+        })
+
+        it('Test forceValues and reload allowedValues', function () {
+            reloadAndInit('abc', {paramX: 'hello', paramY: 123}, true)
+
+            store.dispatch('scriptSetup/initFromParameters', {
+                scriptConfig: {name: 'abc'},
+                parameters: [
+                    createDefaultParam('paramX'),
+                    {name: 'paramY', values: [4, 5, 6]}]
+            });
+
+            expect(store.state.scriptSetup.forcedValueParameters).toEqual(['paramX']);
+        })
+
+        it('Test forceValues and setParameterValue', function () {
+            reloadAndInit('abc', {paramX: 'hello', paramY: 123}, true)
+
+            store.dispatch('scriptSetup/setParameterValue', {
+                parameterName: 'paramX',
+                value: 2
+            });
+
+            expect(store.state.scriptSetup.forcedValueParameters).toEqual(['paramY']);
+        })
+
+        function createDefaultParam(paramName) {
+            return {name: paramName, values: [1, 2, 3]}
+        }
+
+        function reloadAndInit(scriptName, values, forceAllowedValues) {
+            store.dispatch('scriptSetup/reloadModel', {values, scriptName, forceAllowedValues})
+
+            const parameters = Object.keys(values).map(createDefaultParam)
+            store.dispatch('scriptSetup/initFromParameters', {
+                scriptConfig: {name: scriptName, clientModelId: store.state.scriptConfig.lastClientModelId},
+                parameters
+            });
+        }
+    })
+
+    function dispatchInitFromParameters(scriptName, parameters) {
+        store.dispatch('scriptSetup/initFromParameters', {
+            scriptConfig: {name: scriptName, clientModelId: store.state.scriptConfig.lastClientModelId},
+            parameters
+        });
+    }
+
+})

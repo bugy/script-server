@@ -3,7 +3,7 @@ import axios from 'axios';
 import clone from 'lodash/clone';
 import get from 'lodash/get';
 import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
-import {parametersToFormData} from "@/main-app/store/mainStoreHelper";
+import {parametersToFormData} from '@/main-app/store/mainStoreHelper';
 
 export const axiosInstance = axios.create();
 
@@ -207,8 +207,8 @@ export default {
 
             commit('SELECT_EXECUTOR', executor);
             if (executor) {
-                dispatch('scriptSetup/setParameterValues', {
-                    values: executor.state.parameterValues,
+                dispatch('scriptSetup/reloadModel', {
+                    values: clone(executor.state.parameterValues),
                     forceAllowedValues: true,
                     scriptName: executor.state.scriptName
                 }, {root: true});
