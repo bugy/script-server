@@ -65,6 +65,7 @@ import {mapActions, mapState} from 'vuex'
 import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
 import ScriptParametersView from './script-parameters-view'
 import ScriptViewScheduleHolder from '@/main-app/components/scripts/ScriptViewScheduleHolder';
+import DOMPurify from 'dompurify';
 
 export default {
   data: function () {
@@ -118,7 +119,7 @@ export default {
         return '';
       }
 
-      var descriptionHtml = marked(this.scriptDescription, {sanitize: true, gfm: true, breaks: true});
+      var descriptionHtml = DOMPurify.sanitize(marked(this.scriptDescription, {gfm: true, breaks: true}));
       var paragraphRemoval = document.createElement('div');
       paragraphRemoval.innerHTML = descriptionHtml.trim();
 
