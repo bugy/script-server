@@ -107,7 +107,7 @@ def main():
     existing_ids = [entry.id for entry in execution_logging_service.get_history_entries(None, system_call=True)]
     id_generator = IdGenerator(existing_ids)
 
-    execution_service = ExecutionService(id_generator)
+    execution_service = ExecutionService(authorizer, id_generator)
 
     execution_logging_controller = ExecutionLoggingController(execution_service, execution_logging_service)
     execution_logging_controller.start()

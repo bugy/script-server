@@ -34,11 +34,13 @@ from scheduling.schedule_service import ScheduleService, UnavailableScriptExcept
 from utils import file_utils as file_utils
 from utils import tornado_utils, os_utils, env_utils
 from utils.audit_utils import get_audit_name_from_request
+from utils.exceptions.missing_arg_exception import MissingArgumentException
+from utils.exceptions.not_found_exception import NotFoundException
 from utils.tornado_utils import respond_error, redirect_relative
 from web.script_config_socket import ScriptConfigSocket, active_config_models
 from web.streaming_form_reader import StreamingFormReader
 from web.web_auth_utils import check_authorization
-from web.web_utils import wrap_to_server_event, identify_user, inject_user
+from web.web_utils import wrap_to_server_event, identify_user, inject_user, get_user
 
 BYTES_IN_MB = 1024 * 1024
 
@@ -68,11 +70,30 @@ class ProxiedRedirectHandler(tornado.web.RedirectHandler):
         redirect_relative(self._url.format(*args), self, *args)
 
 
+def exception_to_code_and_message(exception):
+    if isinstance(exception, AccessProhibitedException):
+        return 403, str(exception)
+    if isinstance(exception, MissingArgumentException):
+        return 400, str(exception)
+    if isinstance(exception, NotFoundException):
+        return 404, str(exception)
+
+    return None, None
+
+
 class BaseRequestHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header('X-Frame-Options', 'DENY')
 
     def write_error(self, status_code, **kwargs):
+        if ('exc_info' in kwargs) and (kwargs['exc_info']):
+            (type, value, traceback) = kwargs['exc_info']
+            (custom_code, custom_message) = exception_to_code_and_message(value)
+
+            if custom_code:
+                respond_error(self, custom_code, custom_message)
+                return
+
         respond_error(self, status_code, self._reason)
 
 
@@ -150,18 +171,16 @@ class AdminGetScriptEndpoint(BaseRequestHandler):
 
 class ScriptStop(BaseRequestHandler):
     @check_authorization
-    def post(self, execution_id):
-        validate_execution_id(execution_id, self)
-
-        self.application.execution_service.stop_script(execution_id)
+    @inject_user
+    def post(self, user, execution_id):
+        self.application.execution_service.stop_script(execution_id, user)
 
 
 class ScriptKill(BaseRequestHandler):
     @check_authorization
-    def post(self, execution_id):
-        validate_execution_id(execution_id, self)
-
-        self.application.execution_service.kill_script(execution_id)
+    @inject_user
+    def post(self, user, execution_id):
+        self.application.execution_service.kill_script(execution_id, user)
 
 
 class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
@@ -171,16 +190,19 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         self.executor = None
 
     @check_authorization
-    def open(self, execution_id):
+    @inject_user
+    def open(self, user, execution_id):
         auth = self.application.auth
         if not auth.is_authenticated(self):
             return None
 
-        validate_execution_id(execution_id, self)
-
         execution_service = self.application.execution_service
 
-        self.executor = execution_service.get_active_executor(execution_id)
+        try:
+            self.executor = execution_service.get_active_executor(execution_id, get_user(self))
+        except Exception as e:
+            self.handle_exception_on_open(e)
+            return
 
         self.ioloop = tornado.ioloop.IOLoop.current()
 
@@ -242,6 +264,13 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         url_path = relative_path.replace(os.path.sep, '/')
         url_path = 'result_files/' + url_path
         return url_path
+
+    def handle_exception_on_open(self, e):
+        (status_code, message) = exception_to_code_and_message(e)
+        if status_code:
+            self.close(code=status_code, reason=message)
+            return
+        raise e
 
 
 @tornado.web.stream_request_body
@@ -314,8 +343,7 @@ class ScriptExecute(StreamUploadRequestHandler):
             execution_id = self.application.execution_service.start_script(
                 config_model,
                 normalized_values,
-                user.user_id,
-                all_audit_names)
+                user)
 
             self.write(str(execution_id))
 
@@ -362,10 +390,9 @@ class GetActiveExecutionIds(BaseRequestHandler):
 
 class GetExecutingScriptConfig(BaseRequestHandler):
     @check_authorization
-    def get(self, execution_id):
-        validate_execution_id(execution_id, self)
-
-        config = self.application.execution_service.get_config(execution_id)
+    @inject_user
+    def get(self, user, execution_id):
+        config = self.application.execution_service.get_config(execution_id, user)
 
         values = dict(self.application.execution_service.get_user_parameter_values(execution_id))
 
@@ -382,35 +409,17 @@ class GetExecutingScriptConfig(BaseRequestHandler):
 
 class CleanupExecutingScript(BaseRequestHandler):
     @check_authorization
-    def post(self, execution_id):
-        validate_execution_id(execution_id, self)
-
-        self.application.execution_service.cleanup_execution(execution_id)
+    @inject_user
+    def post(self, user, execution_id):
+        self.application.execution_service.cleanup_execution(execution_id, user)
 
 
 class GetExecutionStatus(BaseRequestHandler):
     @check_authorization
-    def get(self, execution_id):
-        validate_execution_id(execution_id, self, only_active=False)
-
-        running = self.application.execution_service.is_running(execution_id)
+    @inject_user
+    def get(self, user, execution_id):
+        running = self.application.execution_service.is_running(execution_id, user)
         self.write(external_model.running_flag_to_status(running))
-
-
-def validate_execution_id(execution_id, request_handler, only_active=True):
-    if is_empty(execution_id):
-        raise tornado.web.HTTPError(400, reason='Execution id is missing')
-
-    execution_service = request_handler.application.execution_service
-
-    if only_active and (not execution_service.is_active(execution_id)):
-        raise tornado.web.HTTPError(400, reason='No (active) executor found for id ' + execution_id)
-
-    user_id = identify_user(request_handler)
-    if not execution_service.can_access(execution_id, user_id):
-        LOGGER.warning('Prohibited access to not owned execution #%s (user=%s)',
-                       execution_id, str(user_id))
-        raise tornado.web.HTTPError(403, reason='Prohibited access to not owned execution')
 
 
 class AuthorizedStaticFileHandler(BaseStaticHandler):
@@ -599,7 +608,7 @@ class GetShortHistoryEntriesHandler(BaseRequestHandler):
         history_entries = self.application.execution_logging_service.get_history_entries(user.user_id)
         running_script_ids = []
         for entry in history_entries:
-            if self.application.execution_service.is_running(entry.id):
+            if self.application.execution_service.is_running(entry.id, user):
                 running_script_ids.append(entry.id)
 
         short_logs = to_short_execution_log(history_entries, running_script_ids)
@@ -628,7 +637,7 @@ class GetLongHistoryEntryHandler(BaseRequestHandler):
         if is_empty(log):
             LOGGER.warning('No log found for execution ' + execution_id)
 
-        running = self.application.execution_service.is_running(history_entry.id)
+        running = self.application.execution_service.is_running(history_entry.id, user)
         long_log = to_long_execution_log(history_entry, log, running)
         self.write(json.dumps(long_log))
 

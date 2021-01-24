@@ -23,12 +23,16 @@ def identify_user(request_handler):
 
 def inject_user(func):
     def wrapper(self, *args, **kwargs):
-        user_id = identify_user(self)
-        audit_names = audit_utils.get_all_audit_names(self)
-
-        user = User(user_id, audit_names)
+        user = get_user(self)
 
         new_args = chain([user], args)
         return func(self, *new_args, **kwargs)
 
     return wrapper
+
+
+def get_user(request_handler):
+    user_id = identify_user(request_handler)
+    audit_names = audit_utils.get_all_audit_names(request_handler)
+
+    return User(user_id, audit_names)

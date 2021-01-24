@@ -2,12 +2,14 @@ import json
 import unittest
 from collections import defaultdict, OrderedDict
 
+from auth.user import User
 from communications import destination_email
 from features.executions_callback_feature import ExecutionsCallbackFeature
 from tests.communications.communication_test_utils import mock_communicators
 from tests.test_utils import create_config_model
 from utils.string_utils import values_to_string
 
+user_x = User('userX', {})
 
 @mock_communicators
 class TestExecutionsCallbackFeature(unittest.TestCase):
@@ -86,7 +88,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         feature = self.create_feature(['http'])
         feature.start()
 
-        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.add_execution(123, user_x, 666, 13, 'my_script')
         self.fire_started(123)
 
         self.assert_messages([123], 'execution_started')
@@ -95,7 +97,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         feature = self.create_feature(['http'])
         feature.start()
 
-        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.add_execution(123, user_x, 666, 13, 'my_script')
         self.fire_finished(123)
 
         self.assert_messages([123], 'execution_finished')
@@ -104,7 +106,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         feature = self.create_feature(['email'])
         feature.start()
 
-        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.add_execution(123, user_x, 666, 13, 'my_script')
         self.fire_started(123)
 
         self.assert_messages([123], 'execution_started')
@@ -113,7 +115,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         feature = self.create_feature(['email'])
         feature.start()
 
-        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.add_execution(123, user_x, 666, 13, 'my_script')
         self.fire_finished(123)
 
         self.assert_messages([123], 'execution_finished')
@@ -122,7 +124,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         feature = self.create_feature(['script'])
         feature.start()
 
-        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.add_execution(123, user_x, 666, 13, 'my_script')
         self.fire_started(123)
 
         self.assert_messages([123], 'execution_started')
@@ -131,7 +133,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         feature = self.create_feature(['script'])
         feature.start()
 
-        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.add_execution(123, user_x, 666, 13, 'my_script')
         self.fire_finished(123)
 
         self.assert_messages([123], 'execution_finished')
@@ -158,7 +160,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         feature = self.create_feature(['http', 'email'], notification_fields=fields)
         feature.start()
 
-        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.add_execution(123, user_x, 666, 13, 'my_script')
         self.fire_started(123)
 
         self.assert_messages([123], 'execution_started', fields)
@@ -169,7 +171,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         feature = self.create_feature(['http', 'email'], notification_fields=fields)
         feature.start()
 
-        self.add_execution(123, 'userX', 666, 13, 'my_script')
+        self.add_execution(123, user_x, 666, 13, 'my_script')
         self.fire_finished(123)
 
         self.assert_messages([123], 'execution_finished', fields)
@@ -214,7 +216,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
         body_object['execution_id'] = execution_id
         body_object['pid'] = execution_info.pid
         body_object['script_name'] = execution_info.script_name
-        body_object['user'] = execution_info.owner
+        body_object['user'] = execution_info.owner_user.user_id
 
         if message_type != 'execution_started':
             body_object['exit_code'] = execution_info.exit_code
@@ -267,37 +269,37 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
     def get_process_id(self, execution_id):
         return self.execution_infos[execution_id].pid
 
-    def get_config(self, execution_id):
+    def get_config(self, execution_id, user):
         if execution_id in self.execution_infos:
             return create_config_model(self.execution_infos[execution_id].script_name)
 
         return None
 
     def get_owner(self, execution_id):
-        return self.execution_infos[execution_id].owner
+        return self.execution_infos[execution_id].owner_user.user_id
 
     def get_exit_code(self, execution_id):
         return self.execution_infos[execution_id].exit_code
 
     def fire_started(self, execution_id):
         for listener in self.start_listeners:
-            listener(execution_id)
+            listener(execution_id, user_x)
 
         if self.callback_feature:
             self.callback_feature._wait()
 
     def fire_finished(self, execution_id):
         for listener in self.finish_listeners:
-            listener(execution_id)
+            listener(execution_id, user_x)
 
         if self.callback_feature:
             self.callback_feature._wait()
 
 
 class _ExecutionInfo:
-    def __init__(self, execution_id, owner, pid, exit_code, script_name) -> None:
+    def __init__(self, execution_id, owner_user, pid, exit_code, script_name) -> None:
         self.script_name = script_name
         self.exit_code = exit_code
         self.pid = pid
-        self.owner = owner
+        self.owner_user = owner_user
         self.execution_id = execution_id

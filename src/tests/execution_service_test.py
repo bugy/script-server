@@ -1,14 +1,24 @@
 import copy
 import unittest
 
+from parameterized import parameterized
+
+from auth.authorization import Authorizer, ANY_USER, EmptyGroupProvider
+from auth.user import User
 from execution import executor
 from execution.execution_service import ExecutionService
+from execution.executor import create_process_wrapper
+from model.model_helper import AccessProhibitedException
 from model.script_config import ConfigModel
 from tests import test_utils
 from tests.test_utils import mock_object, create_audit_names, _MockProcessWrapper, _IdGeneratorMock
+from utils import audit_utils
 
-DEFAULT_USER = 'test_user'
-DEFAULT_AUDIT_NAMES = create_audit_names(auth_username=DEFAULT_USER)
+DEFAULT_USER_ID = 'test_user'
+DEFAULT_AUDIT_NAMES = create_audit_names(auth_username=DEFAULT_USER_ID)
+DEFAULT_USER = User(DEFAULT_USER_ID, DEFAULT_AUDIT_NAMES)
+
+execution_owners = {}
 
 
 class ExecutionServiceTest(unittest.TestCase):
@@ -22,7 +32,7 @@ class ExecutionServiceTest(unittest.TestCase):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
 
-        self.assertTrue(execution_service.is_running(execution_id))
+        self.assertTrue(execution_service.is_running(execution_id, DEFAULT_USER))
 
     def test_is_running_after_stop(self):
         execution_service = self.create_execution_service()
@@ -30,7 +40,7 @@ class ExecutionServiceTest(unittest.TestCase):
         process = self.get_process(execution_id)
         process.stop()
 
-        self.assertFalse(execution_service.is_running(execution_id))
+        self.assertFalse(execution_service.is_running(execution_id, DEFAULT_USER))
 
     def test_exit_code(self):
         execution_service = self.create_execution_service()
@@ -52,7 +62,7 @@ class ExecutionServiceTest(unittest.TestCase):
         id1 = self._start(execution_service)
         id2 = self._start(execution_service)
 
-        execution_service.stop_script(id2)
+        execution_service.stop_script(id2, DEFAULT_USER)
 
         self.assertCountEqual([id1], execution_service.get_running_executions())
 
@@ -61,7 +71,7 @@ class ExecutionServiceTest(unittest.TestCase):
         id1 = self._start(execution_service)
         id2 = self._start(execution_service)
 
-        self.assertCountEqual([id1, id2], execution_service.get_active_executions(DEFAULT_USER))
+        self.assertCountEqual([id1, id2], execution_service.get_active_executions(DEFAULT_USER_ID))
 
     def test_active_executions_with_different_user(self):
         execution_service = self.create_execution_service()
@@ -76,26 +86,26 @@ class ExecutionServiceTest(unittest.TestCase):
         id2 = self._start(execution_service)
 
         self.get_process(id1).stop()
-        execution_service.cleanup_execution(id1)
+        execution_service.cleanup_execution(id1, DEFAULT_USER)
 
-        self.assertCountEqual([id2], execution_service.get_active_executions(DEFAULT_USER))
+        self.assertCountEqual([id2], execution_service.get_active_executions(DEFAULT_USER_ID))
 
     def test_active_executor(self):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
 
         self.assertTrue(execution_service.is_active(execution_id))
-        self.assertIsNotNone(execution_service.get_active_executor(execution_id))
+        self.assertIsNotNone(execution_service.get_active_executor(execution_id, DEFAULT_USER))
 
     def test_active_executor_after_cleanup(self):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
 
         self.get_process(execution_id).stop()
-        execution_service.cleanup_execution(execution_id)
+        execution_service.cleanup_execution(execution_id, DEFAULT_USER)
 
         self.assertFalse(execution_service.is_active(execution_id))
-        self.assertIsNone(execution_service.get_active_executor(execution_id))
+        self.assertIsNone(execution_service.get_active_executor(execution_id, DEFAULT_USER))
 
     def test_cleanup_fails_on_active_execution(self):
         execution_service = self.create_execution_service()
@@ -107,7 +117,7 @@ class ExecutionServiceTest(unittest.TestCase):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
 
-        self.assertTrue(execution_service.can_access(execution_id, DEFAULT_USER))
+        self.assertTrue(execution_service.can_access(execution_id, DEFAULT_USER_ID))
 
     def test_can_access_different_user(self):
         execution_service = self.create_execution_service()
@@ -119,13 +129,13 @@ class ExecutionServiceTest(unittest.TestCase):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service, user_id='another_user')
 
-        self.assertFalse(execution_service.can_access(execution_id, DEFAULT_USER))
+        self.assertFalse(execution_service.can_access(execution_id, DEFAULT_USER_ID))
 
     def test_get_audit_name(self):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
 
-        self.assertEqual(DEFAULT_USER, execution_service.get_audit_name(execution_id))
+        self.assertEqual(DEFAULT_USER_ID, execution_service.get_audit_name(execution_id))
 
     def test_get_user_parameter_values(self):
         parameter_values = {'x': 1, 'y': '2', 'z': 'True'}
@@ -138,7 +148,7 @@ class ExecutionServiceTest(unittest.TestCase):
 
         config_model = test_utils.create_config_model(
             'test_get_user_parameter_values',
-            username=DEFAULT_USER,
+            username=DEFAULT_USER_ID,
             parameters=parameters.values())
         execution_id = self._start_with_config(execution_service, config_model, parameter_values)
 
@@ -155,7 +165,7 @@ class ExecutionServiceTest(unittest.TestCase):
 
         config_model = test_utils.create_config_model(
             'test_get_user_parameter_values',
-            username=DEFAULT_USER,
+            username=DEFAULT_USER_ID,
             parameters=parameters.values())
         execution_id = self._start_with_config(execution_service, config_model, parameter_values)
 
@@ -166,7 +176,7 @@ class ExecutionServiceTest(unittest.TestCase):
         started_ids = []
 
         execution_service = self.create_execution_service()
-        execution_service.add_start_listener(lambda id: started_ids.append(id))
+        execution_service.add_start_listener(lambda id, user: started_ids.append(id))
 
         id1 = self._start(execution_service)
         id2 = self._start(execution_service)
@@ -177,7 +187,7 @@ class ExecutionServiceTest(unittest.TestCase):
         finished_ids = []
 
         execution_service = self.create_execution_service()
-        execution_service.add_finish_listener(lambda id: finished_ids.append(id))
+        execution_service.add_finish_listener(lambda id, user: finished_ids.append(id))
 
         id1 = self._start(execution_service)
         id2 = self._start(execution_service)
@@ -204,38 +214,25 @@ class ExecutionServiceTest(unittest.TestCase):
         self.get_process(id1).stop()
         self.assertEqual(1, len(notifications))
 
-    def _start(self, execution_service, user_id=DEFAULT_USER):
-        execution_id = execution_service.start_script(
-            self._create_script_config([]),
-            {},
-            user_id,
-            DEFAULT_AUDIT_NAMES)
-        return execution_id
+    def _start(self, execution_service, user_id=DEFAULT_USER_ID):
+        return _start(execution_service, user_id)
 
-    def _start_with_config(self, execution_service, config, parameter_values=None, user_id=DEFAULT_USER):
+    def _start_with_config(self, execution_service, config, parameter_values=None, user_id=DEFAULT_USER_ID):
         if parameter_values is None:
             parameter_values = {}
 
+        user = User(user_id, DEFAULT_AUDIT_NAMES)
         execution_id = execution_service.start_script(
             config,
             parameter_values,
-            user_id,
-            DEFAULT_AUDIT_NAMES)
+            user)
         return execution_id
-
-    def _create_script_config(self, parameter_configs):
-        config = ConfigModel(
-            {'name': 'script_x',
-             'script_path': 'ls',
-             'parameters': parameter_configs},
-            'script_x.json', 'user1', 'localhost')
-        return config
 
     def create_execution_service(self):
         file_download_feature = mock_object()
         file_download_feature.is_downloadable = lambda x: False
 
-        execution_service = ExecutionService(self.id_generator)
+        execution_service = ExecutionService(self.authorizer, self.id_generator)
         self.exec_services.append(execution_service)
         return execution_service
 
@@ -245,6 +242,7 @@ class ExecutionServiceTest(unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.id_generator = _IdGeneratorMock()
+        self.authorizer = Authorizer(ANY_USER, [], [], EmptyGroupProvider())
         self.exec_services = []
         self.processes = {}
 
@@ -260,11 +258,157 @@ class ExecutionServiceTest(unittest.TestCase):
 
         for service in self.exec_services:
             for id in service.get_running_executions():
-                service.kill_script(id)
+                user = execution_owners[id]
+                service.kill_script(id, user)
 
             active_exec_ids = copy.copy(service._active_executor_ids)
             for id in active_exec_ids:
-                service.cleanup_execution(id)
+                user = execution_owners[id]
+                service.cleanup_execution(id, user)
 
     def get_last_id(self):
         return self.id_generator.generated_ids[-1]
+
+
+class ExecutionServiceAuthorizationTest(unittest.TestCase):
+    owner_user = User('user_x', {audit_utils.AUTH_USERNAME: 'some_name'})
+
+    @parameterized.expand([
+        (owner_user.user_id, None),
+        ('another_user', AccessProhibitedException),
+        ('admin_user', AccessProhibitedException),
+        ('history_user', AccessProhibitedException)
+    ])
+    def test_get_active_executor(self, user_id, expected_exception):
+        self._assert_throws_exception(expected_exception,
+                                      self.executor_service.get_active_executor,
+                                      self.execution_id,
+                                      User(user_id, {}))
+
+    @parameterized.expand([
+        (owner_user.user_id, None),
+        ('another_user', AccessProhibitedException),
+        ('admin_user', AccessProhibitedException),
+        ('history_user', AccessProhibitedException)
+    ])
+    def test_stop_script(self, user_id, expected_exception):
+        self._assert_throws_exception(expected_exception,
+                                      self.executor_service.stop_script,
+                                      self.execution_id,
+                                      User(user_id, {}),
+                                      has_results=False)
+
+    @parameterized.expand([
+        (owner_user.user_id, None),
+        ('another_user', AccessProhibitedException),
+        ('admin_user', AccessProhibitedException),
+        ('history_user', AccessProhibitedException)
+    ])
+    def test_kill_script(self, user_id, expected_exception):
+        self._assert_throws_exception(expected_exception,
+                                      self.executor_service.kill_script,
+                                      self.execution_id,
+                                      User(user_id, {}),
+                                      has_results=False)
+
+    @parameterized.expand([
+        (owner_user.user_id, None),
+        ('another_user', AccessProhibitedException),
+        ('admin_user', None),
+        ('history_user', None)
+    ])
+    def test_is_running(self, user_id, expected_exception):
+        self._assert_throws_exception(expected_exception,
+                                      self.executor_service.is_running,
+                                      self.execution_id,
+                                      User(user_id, {}))
+
+    @parameterized.expand([
+        (owner_user.user_id, None),
+        ('another_user', AccessProhibitedException),
+        ('admin_user', AccessProhibitedException),
+        ('history_user', AccessProhibitedException)
+    ])
+    def test_get_config(self, user_id, expected_exception):
+        self._assert_throws_exception(expected_exception,
+                                      self.executor_service.get_config,
+                                      self.execution_id,
+                                      User(user_id, {}))
+
+    @parameterized.expand([
+        (owner_user.user_id, None),
+        ('another_user', AccessProhibitedException),
+        ('admin_user', AccessProhibitedException),
+        ('history_user', AccessProhibitedException)
+    ])
+    def test_cleanup(self, user_id, expected_exception):
+        self.executor_service.stop_script(self.execution_id, self.owner_user)
+
+        self._assert_throws_exception(expected_exception,
+                                      self.executor_service.cleanup_execution,
+                                      self.execution_id,
+                                      User(user_id, {}),
+                                      has_results=False)
+
+        self.script_cleaned = True
+
+    def _assert_throws_exception(self, expected_exception, func, *parameters, has_results=True):
+        try:
+            result = func(*parameters)
+            if expected_exception:
+                self.fail('Should throw ' + str(expected_exception) + ', but did not')
+            if has_results:
+                self.assertIsNotNone(result)
+
+        except Exception as e:
+            self.assertIsInstance(e, expected_exception)
+
+    def setUp(self) -> None:
+        super().setUp()
+
+        def create_process(executor, command, working_directory, env_variables):
+            return _MockProcessWrapper(executor, command, working_directory, env_variables)
+
+        executor._process_creator = create_process
+
+        authorizer = Authorizer([ANY_USER], ['admin_user'], ['history_user'], EmptyGroupProvider())
+        self.executor_service = ExecutionService(authorizer, _IdGeneratorMock())
+
+        self.execution_id = _start(self.executor_service, self.owner_user.user_id)
+
+        self.script_cleaned = False
+
+    def tearDown(self) -> None:
+        super().tearDown()
+
+        executor._process_creator = create_process_wrapper
+
+        if not self.script_cleaned:
+            self.executor_service.kill_script(self.execution_id, self.owner_user)
+            self.executor_service.cleanup_execution(self.execution_id, self.owner_user)
+
+
+def _start(execution_service, user_id=DEFAULT_USER_ID):
+    return _start_with_config(execution_service, _create_script_config([]), None, user_id)
+
+
+def _start_with_config(execution_service, config, parameter_values=None, user_id=DEFAULT_USER_ID):
+    if parameter_values is None:
+        parameter_values = {}
+
+    user = User(user_id, DEFAULT_AUDIT_NAMES)
+    execution_id = execution_service.start_script(
+        config,
+        parameter_values,
+        user)
+    execution_owners[execution_id] = user_id
+    return execution_id
+
+
+def _create_script_config(parameter_configs):
+    config = ConfigModel(
+        {'name': 'script_x',
+         'script_path': 'ls',
+         'parameters': parameter_configs},
+        'script_x.json', 'user1', 'localhost')
+    return config

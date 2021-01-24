@@ -6,6 +6,7 @@ from shutil import copyfile
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
 import utils.string_utils as string_utils
+from auth.user import User
 from execution.execution_service import ExecutionService
 from model.model_helper import is_empty, fill_parameter_values, replace_auth_vars
 from react.observable import read_until_closed
@@ -28,8 +29,8 @@ class FileDownloadFeature:
         self._execution_handlers = {}
 
     def subscribe(self, execution_service: ExecutionService):
-        def start_listener(execution_id):
-            handler = _ScriptHandler(execution_id, execution_service, self.result_folder, self.user_file_storage)
+        def start_listener(execution_id, user):
+            handler = _ScriptHandler(execution_id, user, execution_service, self.result_folder, self.user_file_storage)
             self._execution_handlers[execution_id] = handler
 
         execution_service.add_start_listener(start_listener)
@@ -58,11 +59,12 @@ class FileDownloadFeature:
 
 class _ScriptHandler:
 
-    def __init__(self, execution_id, execution_service: ExecutionService, result_folder, file_storage) -> None:
+    def __init__(self, execution_id, user: User, execution_service: ExecutionService, result_folder,
+                 file_storage) -> None:
         self.execution_id = execution_id
         self.execution_service = execution_service
 
-        self.config = self.execution_service.get_config(execution_id)
+        self.config = self.execution_service.get_config(execution_id, user)
 
         self.result_files_paths = self._get_paths(execution_id, self._is_post_finish_path)
         self.inline_image_paths = self._get_paths(execution_id, self._is_inline_image_path)

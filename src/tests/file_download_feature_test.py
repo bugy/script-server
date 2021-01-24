@@ -2,6 +2,7 @@ import os
 import threading
 import unittest
 
+from auth.user import User
 from execution import executor
 from execution.execution_service import ExecutionService
 from features import file_download_feature
@@ -9,9 +10,11 @@ from features.file_download_feature import FileDownloadFeature
 from files.user_file_storage import UserFileStorage
 from tests import test_utils
 from tests.test_utils import create_parameter_model, _MockProcessWrapper, _IdGeneratorMock, create_config_model, \
-    create_audit_names, create_script_param_config
+    create_audit_names, create_script_param_config, AnyUserAuthorizer
 from utils import file_utils, os_utils
 from utils.file_utils import normalize_path
+
+DEFAULT_USER = User('userX', {})
 
 
 class TestFileMatching(unittest.TestCase):
@@ -368,9 +371,10 @@ class FileDownloadFeatureTest(unittest.TestCase):
 
         config_model = create_config_model('my_script', output_files=output_files, parameters=parameters)
 
+        user = User('userX', create_audit_names(ip='127.0.0.1'))
         execution_id = self.executor_service.start_script(
-            config_model, parameter_values, 'userX', create_audit_names(ip='127.0.0.1'))
-        self.executor_service.stop_script(execution_id)
+            config_model, parameter_values, user)
+        self.executor_service.stop_script(execution_id, user)
 
         finish_condition = threading.Event()
         self.executor_service.add_finish_listener(lambda: finish_condition.set(), execution_id)
@@ -385,7 +389,7 @@ class FileDownloadFeatureTest(unittest.TestCase):
         test_utils.setup()
 
         executor._process_creator = _MockProcessWrapper
-        self.executor_service = ExecutionService(_IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
 
         self.feature = FileDownloadFeature(UserFileStorage(b'123456'), test_utils.temp_folder)
         self.feature.subscribe(self.executor_service)
@@ -419,7 +423,7 @@ class TestInlineImages(unittest.TestCase):
         test_utils.setup()
 
         executor._process_creator = _MockProcessWrapper
-        self.executor_service = ExecutionService(_IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
 
         self.file_download_feature = file_download_feature.FileDownloadFeature(
             UserFileStorage(b'123456'), test_utils.temp_folder)
@@ -432,7 +436,7 @@ class TestInlineImages(unittest.TestCase):
 
         executions = self.executor_service.get_active_executions('userX')
         for execution in executions:
-            self.executor_service.kill_script(execution)
+            self.executor_service.kill_script(execution, User('userX', []))
 
     def _add_image(self, original_path, new_path):
         self.images.append((original_path, new_path))
@@ -580,7 +584,7 @@ class TestInlineImages(unittest.TestCase):
         self.write_output(execution_id, normalized[4:])
         self.wait_output_chunks(execution_id, chunks_count=2)
 
-        self.executor_service.get_active_executor(execution_id).process_wrapper.stop()
+        self.executor_service.get_active_executor(execution_id, DEFAULT_USER).process_wrapper.stop()
         self.wait_close(execution_id)
 
         self.assert_images(path)
@@ -605,11 +609,11 @@ class TestInlineImages(unittest.TestCase):
             chunk_condition.wait_for(lambda: closed, 0.5)
 
     def write_output(self, execution_id, output):
-        process_wrapper = self.executor_service.get_active_executor(execution_id).process_wrapper
+        process_wrapper = self.executor_service.get_active_executor(execution_id, DEFAULT_USER).process_wrapper
         process_wrapper.write_output(output)
 
     def start_execution(self, config):
-        execution_id = self.executor_service.start_script(config, {}, 'userX', {})
+        execution_id = self.executor_service.start_script(config, {}, DEFAULT_USER)
         self.file_download_feature.subscribe_on_inline_images(execution_id, self._add_image)
         return execution_id
 

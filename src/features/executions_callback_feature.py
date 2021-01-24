@@ -64,8 +64,8 @@ class ExecutionsCallbackFeature:
         execution_service = self._execution_service
 
         if self.notify_on_start:
-            def started(execution_id):
-                notification_object = self.prepare_notification_object(execution_id, 'execution_started')
+            def started(execution_id, user):
+                notification_object = self.prepare_notification_object(execution_id, 'execution_started', user)
                 if _EXIT_CODE_FIELD in notification_object:
                     del notification_object[_EXIT_CODE_FIELD]
                 title = 'Execution ' + str(execution_id) + ' started'
@@ -75,8 +75,8 @@ class ExecutionsCallbackFeature:
             execution_service.add_start_listener(started)
 
         if self.notify_on_finish:
-            def finished(execution_id):
-                notification_object = self.prepare_notification_object(execution_id, 'execution_finished')
+            def finished(execution_id, user):
+                notification_object = self.prepare_notification_object(execution_id, 'execution_finished', user)
 
                 title = 'Execution ' + str(execution_id) + ' finished'
                 self._communication_service.send(title, notification_object)
@@ -86,17 +86,17 @@ class ExecutionsCallbackFeature:
     def start(self):
         self._subscribe_execution_listener()
 
-    def prepare_notification_object(self, execution_id, event_type):
+    def prepare_notification_object(self, execution_id, event_type, user):
         execution_service = self._execution_service
         pid = execution_service.get_process_id(execution_id)
-        script_name = execution_service.get_config(execution_id).name
+        script_name = execution_service.get_config(execution_id, user).name
 
         notification_object = OrderedDict()
 
         notification_object['execution_id'] = execution_id
         notification_object['pid'] = pid
         notification_object['script_name'] = script_name
-        notification_object['user'] = execution_service.get_owner(execution_id)
+        notification_object['user'] = user.user_id
         notification_object[_EXIT_CODE_FIELD] = execution_service.get_exit_code(execution_id)
 
         all_fields = list(notification_object.keys())

@@ -1,3 +1,4 @@
+from auth.user import User
 from communications.alerts_service import AlertsService
 from communications.communication_model import File
 from execution.execution_service import ExecutionService
@@ -15,13 +16,13 @@ class FailAlerterFeature:
         execution_service = self._execution_service
         alert_service = self._alert_service
 
-        def finished(execution_id):
+        def finished(execution_id, user: User):
             return_code = execution_service.get_exit_code(execution_id)
 
             if return_code != 0:
-                script_config = execution_service.get_config(execution_id)
+                script_config = execution_service.get_config(execution_id, user)
                 script = str(script_config.name)
-                audit_name = execution_service.get_audit_name(execution_id)
+                audit_name = user.get_audit_name()
                 output_stream = execution_service.get_anonymized_output_stream(execution_id)
 
                 title = script + ' FAILED'

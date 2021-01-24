@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from auth.authorization import Authorizer, EmptyGroupProvider
+from auth.user import User
 from execution import executor
 from execution.execution_service import ExecutionService
 from execution.logging import ScriptOutputLogger, ExecutionLoggingService, OUTPUT_STARTED_MARKER, \
@@ -16,9 +17,11 @@ from model.model_helper import AccessProhibitedException
 from react.observable import Observable
 from tests import test_utils
 from tests.test_utils import _IdGeneratorMock, create_config_model, _MockProcessWrapper, create_audit_names, \
-    create_script_param_config, wait_observable_close_notification
+    create_script_param_config, wait_observable_close_notification, AnyUserAuthorizer
 from utils import file_utils, audit_utils
 from utils.date_utils import get_current_millis, ms_to_datetime, to_millis
+
+USER_X = User('userX', [])
 
 
 def default_values_decorator(func):
@@ -495,13 +498,12 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
         execution_id = self.executor_service.start_script(
             create_config_model('my_script'),
             {},
-            'userX',
-            create_audit_names(ip='localhost'))
+            User('userX', create_audit_names(ip='localhost')))
 
-        executor = self.executor_service.get_active_executor(execution_id)
+        executor = self.executor_service.get_active_executor(execution_id, USER_X)
         executor.process_wrapper.finish(0)
 
-        entry = self.logging_service.find_history_entry(execution_id, 'userX')
+        entry = self.logging_service.find_history_entry(execution_id, USER_X.user_id)
         self.assertIsNotNone(entry)
 
     def test_logging_values(self):
@@ -515,10 +517,9 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
         execution_id = self.executor_service.start_script(
             config_model,
             {'p1': 'abc', 'p3': True, 'p4': 987},
-            'userX',
-            create_audit_names(ip='localhost', auth_username='sandy'))
+            User('userX', create_audit_names(ip='localhost', auth_username='sandy')))
 
-        executor = self.executor_service.get_active_executor(execution_id)
+        executor = self.executor_service.get_active_executor(execution_id, USER_X)
         executor.process_wrapper._write_script_output('some text\n')
         executor.process_wrapper._write_script_output('another text')
         executor.process_wrapper.finish(0)
@@ -543,10 +544,9 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
         execution_id = self.executor_service.start_script(
             config_model,
             {},
-            'userX',
-            create_audit_names(ip='localhost'))
+            User('userX', create_audit_names(ip='localhost')))
 
-        executor = self.executor_service.get_active_executor(execution_id)
+        executor = self.executor_service.get_active_executor(execution_id, USER_X)
         executor.process_wrapper._write_script_output('some text\n')
         executor.process_wrapper._write_script_output('another text')
         executor.process_wrapper.finish(14)
@@ -563,7 +563,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         authorizer = Authorizer([], [], [], EmptyGroupProvider())
         self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), authorizer)
-        self.executor_service = ExecutionService(_IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
 
         self.controller = ExecutionLoggingController(self.executor_service, self.logging_service)
         self.controller.start()
@@ -571,10 +571,10 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
     def tearDown(self):
         test_utils.cleanup()
 
-        executions = self.executor_service.get_active_executions('userX')
+        executions = self.executor_service.get_active_executions(USER_X.user_id)
         for execution_id in executions:
             try:
-                self.executor_service.kill_script(execution_id)
-                self.executor_service.cleanup_execution(execution_id)
+                self.executor_service.kill_script(execution_id, USER_X)
+                self.executor_service.cleanup_execution(execution_id, USER_X)
             except:
                 traceback.print_exc()

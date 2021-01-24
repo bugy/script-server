@@ -125,8 +125,7 @@ class ScheduleService:
             config = self._config_service.load_config_model(script_name, user, parameter_values)
             self.validate_script_config(config)
 
-            execution_id = self._execution_service.start_script(config, parameter_values, user.user_id,
-                                                                user.audit_names)
+            execution_id = self._execution_service.start_script(config, parameter_values, user)
             LOGGER.info('Started script #' + str(execution_id) + ' for ' + job.get_log_name())
         except:
             LOGGER.exception('Failed to execute ' + job.get_log_name())

@@ -276,7 +276,7 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
         self.schedule_service._execute_job(job)
 
         self.execution_service.start_script.assert_called_once_with(
-            ANY, job.parameter_values, job.user.user_id, job.user.audit_names)
+            ANY, job.parameter_values, job.user)
         self.assert_schedule_calls([])
 
     def test_execute_repeatable_job(self):
@@ -289,7 +289,7 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
         self.schedule_service._execute_job(job)
 
         self.execution_service.start_script.assert_called_once_with(
-            ANY, job.parameter_values, job.user.user_id, job.user.audit_names)
+            ANY, job.parameter_values, job.user)
         self.assert_schedule_calls([(job, mocked_now_epoch + 86399)])
 
     def test_execute_when_fails(self):
