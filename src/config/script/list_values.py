@@ -47,7 +47,7 @@ class ScriptValuesProvider(ValuesProvider):
     def __init__(self, script) -> None:
         script_output = process_utils.invoke(script)
         script_output = script_output.rstrip('\n')
-        self._values = script_output.split('\n')
+        self._values = [line for line in script_output.split('\n') if not is_empty(line)]
 
     def get_values(self, parameter_values):
         return self._values
@@ -99,7 +99,7 @@ class DependantScriptValuesProvider(ValuesProvider):
             return []
 
         script_output = script_output.rstrip('\n')
-        return script_output.split('\n')
+        return [line for line in script_output.split('\n') if not is_empty(line)]
 
 
 class FilesProvider(ValuesProvider):
