@@ -401,7 +401,7 @@ def _start_with_config(execution_service, config, parameter_values=None, user_id
         config,
         parameter_values,
         user)
-    execution_owners[execution_id] = user_id
+    execution_owners[execution_id] = user
     return execution_id
 
 
