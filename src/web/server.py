@@ -809,7 +809,11 @@ def init(server_config: ServerConfig,
     io_loop = tornado.ioloop.IOLoop.current()
 
     global _http_server
-    _http_server = httpserver.HTTPServer(application, ssl_options=ssl_context, max_buffer_size=10 * BYTES_IN_MB)
+    _http_server = httpserver.HTTPServer(
+        application,
+        ssl_options=ssl_context,
+        max_buffer_size=10 * BYTES_IN_MB,
+        xheaders=True)
     _http_server.listen(server_config.port, address=server_config.address)
 
     intercept_stop_when_running_scripts(io_loop, execution_service)

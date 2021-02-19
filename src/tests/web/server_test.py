@@ -88,6 +88,14 @@ class ServerTest(TestCase):
             {'name': 's3', 'group': None}],
             response['scripts'])
 
+    def test_redirect_honors_protocol_header(self):
+        self.start_server(12345, '127.0.0.1')
+
+        response = requests.get('http://127.0.0.1:12345/',
+            allow_redirects=False,
+            headers={'X-Forwarded-Proto': 'https'})
+        self.assertRegex(response.headers['Location'], '^https')
+
     def request(self, method, url):
         response = requests.request(method, url)
         self.assertEqual(200, response.status_code, 'Failed to execute request: ' + response.text)
