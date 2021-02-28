@@ -5,8 +5,8 @@ from collections import OrderedDict
 
 from auth.authorization import Authorizer, EmptyGroupProvider
 from auth.user import User
-from config.config_service import ConfigService, ConfigNotAllowedException, AdminAccessRequiredException, \
-    InvalidConfigException
+from config.config_service import ConfigService, ConfigNotAllowedException, AdminAccessRequiredException
+from config.exceptions import InvalidConfigException
 from model.model_helper import InvalidFileException
 from tests import test_utils
 from tests.test_utils import AnyUserAuthorizer

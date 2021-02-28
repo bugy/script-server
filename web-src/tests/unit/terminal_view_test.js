@@ -1,7 +1,7 @@
 'use strict';
 
-import {TerminalModel} from '@/common/components/terminal/terminal_model';
-import {Terminal} from '@/common/components/terminal/terminal_view';
+import {TerminalModel} from '@/common/components/terminal/ansi/terminal_model';
+import {Terminal} from '@/common/components/terminal/ansi/terminal_view';
 import {removeElement} from '@/common/utils/common';
 import {assert, config as chaiConfig} from 'chai';
 import {clearScreen, clearScreenDown, clearScreenUp, format, moveCursorUp, moveToPosition} from './terminal_test_utils';

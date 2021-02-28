@@ -8,6 +8,7 @@ from datetime import datetime
 
 import execution.logging
 from execution.logging import ExecutionLoggingService
+from model import model_helper
 from utils import file_utils
 from utils.date_utils import sec_to_datetime, to_millis
 from utils.string_utils import is_blank
@@ -259,6 +260,24 @@ def __migrate_output_files_parameters_substitution(context):
 
         if changed:
             _write_json(conf_file, json_object, content)
+
+
+# 1.16 -> 1.17 migration
+@_migration('migrate_bash_formatting_to_output_format')
+def __migrate_bash_formatting_to_output_format(context):
+    for (conf_file, json_object, content) in _load_runner_files(context.conf_folder):
+        if 'bash_formatting' not in json_object:
+            continue
+
+        if model_helper.read_bool_from_config('bash_formatting', json_object, default=True) is False:
+            output_format = 'text'
+        else:
+            output_format = 'terminal'
+
+        del json_object['bash_formatting']
+        json_object['output_format'] = output_format
+
+        _write_json(conf_file, json_object, content)
 
 
 def _write_json(file_path, json_object, old_content):

@@ -32,7 +32,7 @@
     </div>
 
     <div class="row">
-      <CheckBox v-model="bashFormatting" :config="bashFormattingField" class="col s3 checkbox-field"/>
+      <Combobox v-model="outputFormat" :config="outputFormatField" class="col s3"/>
       <CheckBox v-model="requiresTerminal" :config="requiresTerminalField"
                 class="col s3 checkbox-field"/>
       <TextField v-model="includeScript" :config="includeScriptField" class="col s5 offset-s1"/>
@@ -49,20 +49,21 @@ import {forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/uti
 import get from 'lodash/get';
 import {
   allowAllField,
-  bashFormattingField,
   descriptionField,
   groupField,
   includeScriptField,
   nameField,
+  outputFormatField,
   requiresTerminalField,
   scriptPathField,
   workDirField
 } from './script-fields';
-import {allowAllAdminsField} from "@/admin/components/scripts-config/script-fields";
+import {allowAllAdminsField} from '@/admin/components/scripts-config/script-fields';
+import Combobox from '@/common/components/combobox'
 
 export default {
   name: 'ScriptConfigForm',
-  components: {TextArea, ChipsList, TextField, CheckBox},
+  components: {Combobox, TextArea, ChipsList, TextField, CheckBox},
 
   props: {
     value: {
@@ -81,7 +82,7 @@ export default {
       workingDirectory: null,
       requiresTerminal: null,
       includeScript: null,
-      bashFormatting: null,
+      outputFormat: null,
       allowedUsers: [],
       allowAllUsers: true,
       adminUsers: [],
@@ -93,7 +94,7 @@ export default {
       descriptionField,
       allowAllField,
       allowAllAdminsField,
-      bashFormattingField,
+      outputFormatField,
       requiresTerminalField,
       includeScriptField
     }
@@ -108,7 +109,7 @@ export default {
       'workingDirectory': 'working_directory',
       'requiresTerminal': 'requires_terminal',
       'includeScript': 'include',
-      'bashFormatting': 'bash_formatting'
+      'outputFormat': 'output_format'
     };
 
     forEachKeyValue(simpleFields, (vmField, configField) => {
@@ -133,7 +134,7 @@ export default {
         this.workingDirectory = config['working_directory'];
         this.requiresTerminal = get(config, 'requires_terminal', true);
         this.includeScript = config['include'];
-        this.bashFormatting = get(config, 'bash_formatting', true);
+        this.outputFormat = config['output_format'];
         this.updateAccessFieldInVm(config,
             'allowedUsers',
             'allowAllUsers',

@@ -2,7 +2,10 @@ import os
 import unittest
 from collections import OrderedDict
 
+from parameterized import parameterized
+
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
+from config.exceptions import InvalidConfigException
 from model.script_config import ConfigModel, InvalidValueException, _TemplateProperty, ParameterNotFoundException, \
     get_sorted_config
 from react.properties import ObservableDict, ObservableList
@@ -25,7 +28,7 @@ class ConfigModelInitTest(unittest.TestCase):
         description = 'A script for test_create_full_config'
         working_directory = '/root'
         requires_terminal = False
-        bash_formatting = True
+        output_format = 'terminal'
         output_files = ['file1', 'file2']
 
         config_model = _create_config_model(name, config={
@@ -33,7 +36,7 @@ class ConfigModelInitTest(unittest.TestCase):
             'description': description,
             'working_directory': working_directory,
             'requires_terminal': requires_terminal,
-            'bash_formatting': bash_formatting,
+            'output_format': output_format,
             'output_files': output_files,
             'scheduling': {'enabled': True}})
 
@@ -42,7 +45,7 @@ class ConfigModelInitTest(unittest.TestCase):
         self.assertEqual(description, config_model.description)
         self.assertEqual(working_directory, config_model.working_directory)
         self.assertEqual(requires_terminal, config_model.requires_terminal)
-        self.assertEqual(bash_formatting, config_model.ansi_enabled)
+        self.assertEqual(output_format, config_model.output_format)
         self.assertEqual(output_files, config_model.output_files)
         self.assertTrue(config_model.schedulable)
 
@@ -92,6 +95,27 @@ class ConfigModelInitTest(unittest.TestCase):
                       create_script_param_config('p2', no_value=True)]
         self.assertRaisesRegex(Exception, 'Unsupported parameter "p2"',
                                _create_config_model, 'conf', parameters=parameters)
+
+    @parameterized.expand([
+        ('html', 'html'),
+        ('terminal', 'terminal'),
+        ('', 'terminal'),
+        ('HTML_iframe', 'html_iframe'),
+        (' Text  ', 'text'),
+    ])
+    def test_create_with_output_format(self, output_format, expected_output_format):
+        name = 'conf_y'
+
+        config_model = _create_config_model(name, config={
+            'output_format': output_format})
+
+        self.assertEqual(expected_output_format, config_model.output_format)
+
+    def test_create_with_wrong_output_format(self):
+        name = 'conf_y'
+
+        self.assertRaisesRegex(InvalidConfigException, 'Invalid output format', _create_config_model, name, config={
+            'output_format': 'abc'})
 
 
 class ConfigModelValuesTest(unittest.TestCase):

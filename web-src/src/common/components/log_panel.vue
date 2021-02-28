@@ -14,14 +14,20 @@
 
 <script>
 import {copyToClipboard, isNull} from '@/common/utils/common';
-import {TerminalModel} from './terminal/terminal_model';
-import {Terminal} from './terminal/terminal_view';
+import {TerminalOutput} from '@/common/components/terminal/ansi/TerminalOutput'
+import {TextOutput} from '@/common/components/terminal/text/TextOutput'
+import {HtmlIFrameOutput} from '@/common/components/terminal/html/HtmlIFrameOutput'
+import {HtmlOutput} from '@/common/components/terminal/html/HtmlOutput'
 
 export default {
   props: {
     'autoscrollEnabled': {
       type: Boolean,
       default: true
+    },
+    'outputFormat': {
+      type: String,
+      default: 'terminal'
     }
   },
   data: function () {
@@ -30,25 +36,12 @@ export default {
       atTop: false,
       mouseDown: false,
       scrollUpdater: null,
-      needScrollUpdate: false
+      needScrollUpdate: false,
+      text: ''
     }
   },
 
-  created() {
-    this.terminalModel = new TerminalModel();
-    this.terminal = new Terminal(this.terminalModel);
-  },
-
   mounted: function () {
-    const terminal = this.terminal.element;
-    terminal.classList.add('log-content');
-    terminal.addEventListener('scroll', () => this.recalculateScrollPosition());
-    terminal.addEventListener('mousedown', () => this.mouseDown = true);
-    terminal.addEventListener('mouseup', () => this.mouseDown = false);
-
-    this.$el.insertBefore(terminal, this.$el.children[0]);
-
-    this.recalculateScrollPosition();
     window.addEventListener('resize', this.revalidateScroll);
 
     this.scrollUpdater = window.setInterval(() => {
@@ -66,11 +59,13 @@ export default {
         this.recalculateScrollPosition();
       }
     }, 40);
+
+    this.renderOutputElement()
   },
 
   methods: {
     recalculateScrollPosition: function () {
-      var logContent = this.terminal.element;
+      var logContent = this.output.element;
 
       var scrollTop = logContent.scrollTop;
       var newAtBottom = (scrollTop + logContent.clientHeight + 5) > (logContent.scrollHeight);
@@ -84,7 +79,8 @@ export default {
     },
 
     autoscroll: function () {
-      var logContent = this.terminal.element;
+      var logContent = this.output.element;
+
       if ((this.atBottom) && (!this.mouseDown)) {
         logContent.scrollTop = logContent.scrollHeight;
         return true;
@@ -97,9 +93,12 @@ export default {
     },
 
     setLog: function (text) {
-      this.terminalModel.clear();
+      this.text = ''
+      this.output.clear()
 
-      this.appendLog(text);
+      this.recalculateScrollPosition()
+
+      this.appendLog(text)
     },
 
     appendLog: function (text) {
@@ -107,27 +106,76 @@ export default {
         return;
       }
 
-      this.terminalModel.write(text);
+      this.text += text
+      this.output.write(text);
 
       this.revalidateScroll();
     },
 
     removeInlineImage: function (output_path) {
-      this.terminalModel.removeInlineImage(output_path);
+      this.output.removeInlineImage(output_path);
     },
 
     setInlineImage: function (output_path, download_url) {
-      this.terminalModel.setInlineImage(output_path, download_url);
+      this.output.setInlineImage(output_path, download_url);
     },
 
     copyLogToClipboard: function () {
-      copyToClipboard(this.terminal.element);
+      copyToClipboard(this.output.element);
+    },
+
+    renderOutputElement: function () {
+      if (!this.output || !this.$el) {
+        return
+      }
+
+      const oldOutputs = this.$el.getElementsByClassName('log-content')
+      Array.from(oldOutputs).forEach(old => this.$el.removeChild(old))
+
+      const terminal = this.output.element;
+      terminal.classList.add('log-content');
+      terminal.addEventListener('scroll', () => this.recalculateScrollPosition());
+      terminal.addEventListener('mousedown', () => this.mouseDown = true);
+      terminal.addEventListener('mouseup', () => this.mouseDown = false);
+
+      this.$el.insertBefore(terminal, this.$el.children[0]);
+
+      this.revalidateScroll()
     }
   },
 
   beforeDestroy: function () {
     window.removeEventListener('resize', this.revalidateScroll);
     window.clearInterval(this.scrollUpdater);
+  },
+
+  watch: {
+    outputFormat: {
+      immediate: true,
+      handler: function () {
+        switch (this.outputFormat) {
+          case 'terminal':
+            this.output = new TerminalOutput()
+            break
+          case 'html_iframe':
+            this.output = new HtmlIFrameOutput()
+            break
+          case 'html':
+            this.output = new HtmlOutput()
+            break
+          case 'text':
+            this.output = new TextOutput()
+            break
+          default:
+            console.log('WARNING! Unknown outputFormat: "' + this.outputFormat + '". Falling back to terminal')
+            this.output = new TerminalOutput()
+        }
+
+        this.output.write(this.text)
+
+        this.renderOutputElement()
+      }
+    }
   }
 }
 
@@ -171,7 +219,7 @@ export default {
   box-shadow: 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
 }
 
-.log-panel >>> .log-content img {
+.log-panel >>> .log-content.terminal-output img {
   max-width: 100%
 }
 
@@ -190,6 +238,7 @@ export default {
   display: block;
   overflow-y: auto;
   height: 100%;
+  width: 100%;
 
   font-size: .875em;
 

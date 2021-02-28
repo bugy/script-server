@@ -22,12 +22,14 @@ export const allowAllField = {
 export const allowAllAdminsField = {
     name: 'Any admin'
 };
-export const bashFormattingField = {
-    name: 'Bash formatting',
-    description: 'Enable ANSI escape sequences for text formatting and cursor moves'
+export const outputFormatField = {
+    name: 'Output format',
+    description: 'Specifies in which format the script outputs data ' +
+        '(terminal, plain text, html tags, or an extended html page (iframe)',
+    values: ['terminal', 'text', 'html', 'html_iframe']
 };
 export const requiresTerminalField = {
-    name: 'Requires terminal',
+    name: 'Enable pseudo-terminal',
     description: 'Enables pseudo-terminal. ' +
         'This is need for some utilities which behave differently, when executed from terminal'
 };

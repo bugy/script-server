@@ -67,7 +67,7 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
 
         self.assertEqual(
             {'event': event_type,
-             'data': {'clientModelId': external_model_id, 'name': 'Test script 1',
+             'data': {'clientModelId': external_model_id, 'name': 'Test script 1', 'outputFormat': 'terminal',
                       'description': None, 'schedulable': False, 'parameters': [
                      {'name': 'text 1', 'description': None, 'withoutValue': False, 'required': True, 'default': None,
                       'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,

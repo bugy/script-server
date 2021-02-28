@@ -19,7 +19,8 @@ import tornado.websocket
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from communications.alerts_service import AlertsService
-from config.config_service import ConfigService, ConfigNotAllowedException, InvalidConfigException
+from config.config_service import ConfigService, ConfigNotAllowedException
+from config.exceptions import InvalidConfigException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
 from features.file_download_feature import FileDownloadFeature

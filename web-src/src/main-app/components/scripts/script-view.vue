@@ -22,7 +22,7 @@
       <div v-if="schedulable" class="button-gap"></div>
       <ScheduleButton v-if="schedulable" :disabled="!enableScheduleButton" @click="openSchedule"/>
     </div>
-    <LogPanel v-show="showLog && !hasErrors && !hideExecutionControls" ref="logPanel"/>
+    <LogPanel v-show="showLog && !hasErrors && !hideExecutionControls" ref="logPanel" :outputFormat="outputFormat"/>
     <div v-if="hasErrors" v-show="!hideExecutionControls" class="validation-panel">
       <h6 class="header">Validation failed. Errors list:</h6>
       <ul class="validation-errors-list">
@@ -100,7 +100,8 @@ export default {
     ...mapState('scriptConfig', {
       scriptDescription: state => state.scriptConfig ? state.scriptConfig.description : '',
       loading: 'loading',
-      scriptConfig: 'scriptConfig'
+      scriptConfig: 'scriptConfig',
+      outputFormat: state => state.scriptConfig ? state.scriptConfig.outputFormat : undefined,
     }),
     ...mapState('scriptSetup', {
       parameterErrors: 'errors'

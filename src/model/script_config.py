@@ -5,6 +5,7 @@ import re
 from collections import OrderedDict
 
 from auth.authorization import ANY_USER
+from config.exceptions import InvalidConfigException
 from model import parameter_config
 from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
     read_str_from_config, replace_auth_vars
@@ -12,6 +13,8 @@ from model.parameter_config import ParameterModel
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
 from utils import file_utils
 from utils.object_utils import merge_dicts
+
+OUTPUT_FORMATS = ['terminal', 'html', 'html_iframe', 'text']
 
 LOGGER = logging.getLogger('script_server.script_config')
 
@@ -29,7 +32,7 @@ class ShortConfig(object):
     'description',
     'requires_terminal',
     'working_directory',
-    'ansi_enabled',
+    'output_format',
     'output_files',
     'schedulable',
     '_included_config')
@@ -40,13 +43,11 @@ class ConfigModel:
                  path,
                  username,
                  audit_name,
-                 pty_enabled_default=True,
-                 ansi_enabled_default=True):
+                 pty_enabled_default=True):
         super().__init__()
 
         short_config = read_short(path, config_object)
         self.name = short_config.name
-        self._ansi_enabled_default = ansi_enabled_default
         self._pty_enabled_default = pty_enabled_default
         self._config_folder = os.path.dirname(path)
 
@@ -172,8 +173,7 @@ class ConfigModel:
         required_terminal = read_bool_from_config('requires_terminal', config, default=self._pty_enabled_default)
         self.requires_terminal = required_terminal
 
-        ansi_enabled = read_bool_from_config('bash_formatting', config, default=self._ansi_enabled_default)
-        self.ansi_enabled = ansi_enabled
+        self.output_format = read_output_format(config)
 
         self.output_files = config.get('output_files', [])
 
@@ -377,7 +377,10 @@ def get_sorted_config(config):
                  'admin_users',
                  'schedulable',
                  'include',
-                 'output_files', 'requires_terminal', 'bash_formatting', 'parameters']
+                 'output_files',
+                 'requires_terminal',
+                 'output_format',
+                 'parameters']
 
     def get_order(key):
         if key == 'parameters':
@@ -393,3 +396,15 @@ def get_sorted_config(config):
             config['parameters'][i] = parameter_config.get_sorted_config(param)
 
     return sorted_config
+
+
+def read_output_format(config):
+    output_format = config.get('output_format')
+    if not output_format:
+        output_format = 'terminal'
+
+    output_format = output_format.strip().lower()
+    if output_format not in OUTPUT_FORMATS:
+        raise InvalidConfigException('Invalid output format, should be one of: ' + str(OUTPUT_FORMATS))
+
+    return output_format

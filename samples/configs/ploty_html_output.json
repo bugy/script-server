@@ -1,0 +1,7 @@
+{
+  "name": "Ploty HTML output",
+  "script_path": "./samples/scripts/ploty_html_output.py",
+  "description": "A sample script which outputs html data from ploty",
+  "output_format": "html_iframe",
+  "group": "HTML"
+}

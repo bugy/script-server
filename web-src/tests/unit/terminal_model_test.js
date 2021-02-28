@@ -1,6 +1,6 @@
 'use strict';
 
-import {Style, StyledRange, TerminalModel} from '@/common/components/terminal/terminal_model';
+import {Style, StyledRange, TerminalModel} from '@/common/components/terminal/ansi/terminal_model';
 import {clearArray, isNull} from '@/common/utils/common';
 import {assert, config as chaiConfig, expect} from 'chai';
 import * as sinon from 'sinon';

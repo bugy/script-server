@@ -1,0 +1,7 @@
+{
+  "name": "Simple HTML output",
+  "script_path": "./samples/scripts/html_output_test.py",
+  "description": "A sample script which outputs simple html data\nCredits: https://www.smashingmagazine.com/2009/08/designing-a-html-5-layout-from-scratch/",
+  "group": "HTML",
+  "output_format": "html"
+}

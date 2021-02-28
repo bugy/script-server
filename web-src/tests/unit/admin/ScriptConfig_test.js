@@ -76,7 +76,7 @@ describe('Test ScriptConfig', function () {
                 'working_directory': '/home',
                 'requires_terminal': true,
                 'include': 'script.json',
-                'bash_formatting': false
+                'output_format': 'terminal'
             };
 
             await vueTicks();
@@ -86,9 +86,9 @@ describe('Test ScriptConfig', function () {
             assert.equal('ping', _findField('Script path').value);
             assert.equal('some desc', _findField('Description').value);
             assert.equal('/home', _findField('Working directory').value);
-            assert.equal(true, _findField('Requires terminal').value);
+            assert.equal(true, _findField('Enable pseudo-terminal').value);
             assert.equal('script.json', _findField('Include config').value);
-            assert.equal(false, _findField('Bash formatting').value);
+            assert.equal('terminal', _findField('Output format').value);
         });
     });
 
@@ -123,5 +123,14 @@ describe('Test ScriptConfig', function () {
             expect(store.state.scriptConfig.scriptConfig.admin_users).toBeNil()
         });
     });
+
+    describe('Test edit output_format', function () {
+        it('Test edit output_format manually', async function () {
+            await _setValueByUser('Output format', 'html');
+
+            expect(store.state.scriptConfig.scriptConfig.output_format).toEqual('html')
+        });
+    });
+
 
 });

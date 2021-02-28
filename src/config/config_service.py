@@ -3,6 +3,7 @@ import logging
 import os
 import re
 
+from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
 from model.script_config import get_sorted_config
@@ -196,8 +197,7 @@ class ConfigService:
             path,
             user.get_username(),
             user.get_audit_name(),
-            pty_enabled_default=os_utils.is_pty_supported(),
-            ansi_enabled_default=os_utils.is_linux() or os_utils.is_mac())
+            pty_enabled_default=os_utils.is_pty_supported())
 
         if parameter_values is not None:
             config.set_all_param_values(parameter_values, skip_invalid_parameters)
@@ -225,6 +225,3 @@ class AdminAccessRequiredException(Exception):
         super().__init__(message)
 
 
-class InvalidConfigException(Exception):
-    def __init__(self, message):
-        super().__init__(message)
