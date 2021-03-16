@@ -13,6 +13,7 @@ import tornado.concurrent
 import tornado.escape
 import tornado.httpserver as httpserver
 import tornado.ioloop
+import tornado.routing
 import tornado.web
 import tornado.websocket
 
@@ -42,6 +43,7 @@ from web.script_config_socket import ScriptConfigSocket, active_config_models
 from web.streaming_form_reader import StreamingFormReader
 from web.web_auth_utils import check_authorization
 from web.web_utils import wrap_to_server_event, identify_user, inject_user, get_user
+from web.xheader_app_wrapper import autoapply_xheaders
 
 BYTES_IN_MB = 1024 * 1024
 
@@ -788,6 +790,7 @@ def init(server_config: ServerConfig,
     }
 
     application = tornado.web.Application(handlers, **settings)
+    autoapply_xheaders(application)
 
     application.auth = auth
 
