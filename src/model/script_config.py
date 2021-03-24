@@ -238,18 +238,28 @@ class ConfigModel:
         if path is None:
             return None
 
-        path = file_utils.normalize_path(path, self._config_folder)
+        Z={"parameters":[]}
 
-        if os.path.exists(path):
-            try:
-                file_content = file_utils.read_file(path)
-                return json.loads(file_content)
-            except:
-                LOGGER.exception('Failed to load included file ' + path)
+        # Check if its a string or a list, for backwards compatibility
+        if type(path) == str:
+            path=[path]
+
+        t=Z['parameters']
+        for p in path:
+            p = file_utils.normalize_path(p, self._config_folder)
+            # LOGGER.debug (f"Importing template {p}")
+            if os.path.exists(p):
+                try:
+                    this_json = json.loads( ( file_utils.read_file(p) ) )
+                    for i in this_json.get('parameters'):
+                        t.append (i)
+                except:
+                    LOGGER.exception('Failed to load included file ' + p)
+                    return None
+            else:
+                LOGGER.warning('Failed to load included file, path does not exist: ' + p)
                 return None
-        else:
-            LOGGER.warning('Failed to load included file, path does not exist: ' + path)
-            return None
+        return Z
 
 
 def _read_name(file_path, json_object):
@@ -306,6 +316,7 @@ class _TemplateProperty:
         required_parameters = set()
 
         if template:
+            # TODO: What is this doing? Counting the number of letter in the filename?
             while search_start < len(template):
                 match = pattern.search(template, search_start)
                 if not match:
