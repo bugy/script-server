@@ -1,0 +1,8 @@
+{
+  "title": "Script server",
+  "port": "8000"
+//   "ssl": {
+//     "key_path": "./script-server.key",
+//     "cert_path": "./script-server.crt"
+//   },
+}
