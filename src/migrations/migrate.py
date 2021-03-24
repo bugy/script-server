@@ -1,5 +1,5 @@
 import itertools
-import json
+import commentjson as json
 import logging
 import os
 import re
