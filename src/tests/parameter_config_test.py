@@ -125,6 +125,13 @@ class ParameterModelInitTest(unittest.TestCase):
             'values': {'script': 'echo "123\n" "456"'}})
         self.assertEqual(None, parameter_model.values)
 
+    def test_allowed_values_for_editable_list(self):
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'editable_list',
+            'values': {'script': 'echo "123\n" "456"'}})
+        self.assertEqual(['123', ' 456'], parameter_model.values)
+
     def test_ip_uppercase(self):
         parameter_model = _create_parameter_model({
             'name': 'def_param',
@@ -477,6 +484,13 @@ class TestSingleParameterValidation(unittest.TestCase):
 
         error = parameter.validate_value('val4')
         self.assert_error(error)
+
+    def test_editable_list_parameter_when_not_matches(self):
+        parameter = create_parameter_model(
+            'param', type='editable_list', allowed_values=['val1', 'val2', 'val3'])
+
+        error = parameter.validate_value('val4')
+        self.assertIsNone(error)
 
     def test_multiselect_when_empty_string(self):
         parameter = create_parameter_model(

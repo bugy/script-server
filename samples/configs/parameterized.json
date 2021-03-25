@@ -224,6 +224,16 @@
         ".log",
         "TXT"
       ]
+    },
+    {
+      "name": "Editable list",
+      "param": "--editable_list",
+      "type": "editable_list",
+      "values": [
+        "Value A",
+        "Value B",
+        "Value C"
+      ]
     }
   ]
 }

@@ -325,6 +325,21 @@ describe('Test ParameterConfigForm', function () {
             assert.isUndefined(_findField('allowed values', false));
             assert.isTrue(_findField('load from script').value);
         });
+
+        it('Test allowed values when array and type editable_list', async function () {
+            form.setProps({
+                value: {
+                    type: 'editable_list',
+                    values: ['abc', '123', 'xyz']
+                }
+            });
+
+            await vueTicks();
+
+            assert.isUndefined(_findField('script', false));
+            assert.deepEqual(['abc', '123', 'xyz'], _findField('allowed values').value);
+            assert.isFalse(_findField('load from script').value);
+        });
     });
 
     describe('Test update values in form', function () {
@@ -600,7 +615,7 @@ describe('Test ParameterConfigForm', function () {
             assert.isDefined(_findField('Separator'));
         });
 
-        it('Test server_file fields when type multiselect set via props', async function () {
+        it('Test server_file fields when type server_file set via props', async function () {
             await _setValueByUser('type', 'server_file');
 
             assert.isDefined(_findField('File directory'));
@@ -609,7 +624,7 @@ describe('Test ParameterConfigForm', function () {
             assert.isDefined(_findField('Allowed file extensions'));
         });
 
-        it('Test server_file fields when type multiselect set by user', async function () {
+        it('Test server_file fields when type server_file set by user', async function () {
             await _setValueByUser('Type', 'server_file');
 
             assert.isDefined(_findField('File directory'));

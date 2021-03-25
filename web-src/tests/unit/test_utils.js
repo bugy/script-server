@@ -107,3 +107,21 @@ export const createScriptServerTestVue = () => {
     })
     return vue
 }
+
+export const attachToDocument = () => {
+    const element = document.createElement('div')
+    document.body.appendChild(element)
+    return element
+}
+
+export const mapArrayWrapper = (arrayWrapper, mapFunction) => {
+    const result = []
+
+    for (let i = 0; i < arrayWrapper.length; i++) {
+        const element = arrayWrapper.at(i)
+
+        result.push(mapFunction(element))
+    }
+
+    return result
+}

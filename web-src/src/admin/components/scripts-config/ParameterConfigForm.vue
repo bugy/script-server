@@ -35,7 +35,8 @@
       <Textfield v-model="max" :config="maxField" class="col s6 offset-s1"
                  @error="handleError(maxField, $event)"/>
     </div>
-    <div v-if="(selectedType === 'list' || selectedType === 'multiselect')" class="row">
+    <div v-if="(selectedType === 'list' || selectedType === 'multiselect' || selectedType === 'editable_list')"
+         class="row">
       <Textfield v-if="allowedValuesFromScript" v-model="allowedValuesScript"
                  :config="allowedValuesScriptField"
                  class="col s9" @error="handleError(allowedValuesScriptField, $event)"/>

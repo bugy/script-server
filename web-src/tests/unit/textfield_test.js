@@ -2,11 +2,13 @@
 
 import Textfield from '@/common/components/textfield'
 import {isEmptyString, setInputValue} from '@/common/utils/common';
-import {mount} from '@vue/test-utils';
+import {enableAutoDestroy, mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import {setDeepProp, vueTicks, wrapVModel} from './test_utils';
+import {attachToDocument, mapArrayWrapper, setDeepProp, timeout, vueTicks, wrapVModel} from './test_utils';
 
 chaiConfig.truncateThreshold = 0;
+
+enableAutoDestroy(afterEach)
 
 describe('Test TextField', function () {
 
@@ -29,14 +31,6 @@ describe('Test TextField', function () {
         wrapVModel(textfield);
 
         this.textfield = textfield;
-    });
-
-    afterEach(async function () {
-        await vueTicks();
-        this.textfield.destroy();
-    });
-
-    after(function () {
     });
 
     describe('Test config', function () {
@@ -322,4 +316,103 @@ describe('Test TextField', function () {
             await testValidation(this.textfield, 'ip', 'ABCX::0', 'IPv4 or IPv6 expected')
         });
     });
+
+
+    describe('Test autocomplete', function () {
+        let autocompleteComponent
+
+        beforeEach(async function () {
+            autocompleteComponent = mount(Textfield, {
+                attachTo: attachToDocument(),
+                propsData: {
+                    config: {
+                        required: true,
+                        name: 'Text autocomplete',
+                        values: ['Value A', 'Value B', 'Value C'],
+                        type: 'editable_list'
+                    },
+                    value: ''
+                }
+            });
+            wrapVModel(autocompleteComponent);
+
+            await vueTicks()
+        });
+
+        async function clickOnInputField() {
+            await autocompleteComponent.find('input').trigger('click')
+            await timeout(150)
+        }
+
+        function getOptionTexts() {
+            const listElements = autocompleteComponent.findAll('ul li')
+            return mapArrayWrapper(listElements, wrapper => wrapper.text())
+        }
+
+        it('Test open dropdown on click', async function () {
+            await clickOnInputField()
+
+            expect(autocompleteComponent.find('input').classes()).toContain('autocomplete')
+
+            expect(autocompleteComponent.find('ul').element).toBeVisible()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Value A', 'Value B', 'Value C'])
+        });
+
+        it('Test open dropdown on click when input value matches all elements', async function () {
+            await autocompleteComponent.find('input').setValue('alu');
+
+            await clickOnInputField()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Value A', 'Value B', 'Value C'])
+
+            expect(autocompleteComponent.vm.value).toBe('alu')
+        });
+
+        it('Test open dropdown on click when input value matches single element', async function () {
+            await autocompleteComponent.find('input').setValue('B');
+
+            await clickOnInputField()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Value B'])
+
+            expect(autocompleteComponent.vm.value).toBe('B')
+        });
+
+        it('Test open dropdown on click when vm value matches single element', async function () {
+            await autocompleteComponent.setProps({value: 'B'});
+
+            await clickOnInputField()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Value B'])
+
+            expect(autocompleteComponent.vm.value).toBe('B')
+        });
+
+        it('Test select option from dropdown', async function () {
+            await clickOnInputField()
+
+            await autocompleteComponent.findAll('ul li').at(1).trigger('click')
+            await timeout(300)
+
+            expect(autocompleteComponent.find('ul').element).not.toBeVisible()
+            expect(autocompleteComponent.vm.value).toBe('Value B')
+        });
+
+        it('Test update values', async function () {
+            setDeepProp(autocompleteComponent, 'config.values', ['Abc', 'Def', 'Xyz']);
+            await vueTicks()
+
+            await clickOnInputField()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Abc', 'Def', 'Xyz'])
+        });
+
+    })
+
 });

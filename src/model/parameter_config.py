@@ -3,7 +3,8 @@ import os
 from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
-from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR
+from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR, \
+    PARAM_TYPE_EDITABLE_LIST
 from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
     DependantScriptValuesProvider, NoneValuesProvider, FilesProvider
 from model import model_helper
@@ -172,7 +173,7 @@ class ParameterModel(object):
         if self._is_plain_server_file():
             return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions)
 
-        if (type != 'list') and (type != PARAM_TYPE_MULTISELECT):
+        if (type != 'list') and (type != PARAM_TYPE_MULTISELECT) and (type != PARAM_TYPE_EDITABLE_LIST):
             return NoneValuesProvider()
 
         if is_empty(values_config):
