@@ -7,6 +7,7 @@ import re
 import stat
 import sys
 import time
+from fnmatch import fnmatch
 
 from utils import os_utils
 
@@ -277,3 +278,106 @@ def _pre_3_5_recursive_glob(path_pattern, parent_path=None):
             break
 
     return current_paths
+
+
+class SingleFileMatcher:
+    def __init__(self, pattern, working_dir):
+        self.pattern = self._normalize_pattern(pattern, working_dir)
+
+    def has_match(self, absolute_path):
+        if '*' not in self.pattern:
+            if self._contains_child(self.pattern, absolute_path):
+                return True
+        else:
+            if absolute_path.match(self.pattern):
+                return True
+
+            if '**' in self.pattern and self._matches_recursive_blob(absolute_path, self.pattern):
+                return True
+
+            for parent in absolute_path.parents:
+                if parent.match(self.pattern):
+                    return True
+
+    @staticmethod
+    def _normalize_pattern(pattern, working_dir):
+        if not os.path.isabs(pattern):
+            return normalize_path(pattern, working_dir)
+        return pattern
+
+    @staticmethod
+    def _contains_child(parent_str, child_path):
+        try:
+            child_path.relative_to(parent_str)
+            return True
+        except ValueError:
+            return False
+
+    @staticmethod
+    def _split_first_parent(path):
+        split = split_all(path)
+        if len(split) == 1:
+            return split[0], None
+
+        return split[0], os.path.join(*split[1:])
+
+    @staticmethod
+    def _matches_recursive_blob(path, pattern):
+        split = pattern.split('**', maxsplit=1)
+
+        try:
+            remaining_path = path.relative_to(split[0])
+        except ValueError:
+            return False
+
+        if len(split) == 1:
+            return False
+
+        remaining_pattern = split[1]
+        if remaining_pattern.startswith(os_utils.path_sep()):
+            remaining_pattern = remaining_pattern[len(os_utils.path_sep()):]
+
+        if remaining_pattern == '':  # this can happen if pattern ends with **
+            return True
+
+        if remaining_path.match(remaining_pattern):
+            return True
+        elif '**' not in remaining_pattern:
+            return False
+
+        (remaining_head, remaining_tail) = SingleFileMatcher._split_first_parent(remaining_pattern)
+        for parent in remaining_path.parents:
+            if parent.name == '':
+                continue
+
+            if fnmatch(parent.name, remaining_head):
+                if SingleFileMatcher._matches_recursive_blob(remaining_path.relative_to(parent), remaining_tail):
+                    return True
+
+        return False
+
+
+class FileMatcher:
+    def __init__(self, patterns, working_dir) -> None:
+        self.matchers = self._create_single_matchers(patterns, working_dir)
+
+    def has_match(self, file_path):
+        if isinstance(file_path, str):
+            file_path = pathlib.Path(file_path)
+
+        absolute_path = file_path.absolute()
+
+        for matcher in self.matchers:
+            if matcher.has_match(absolute_path):
+                return True
+
+        return False
+
+    @staticmethod
+    def _create_single_matchers(patterns, working_dir):
+        result = []
+        if patterns:
+            for pattern in patterns:
+                result.append(SingleFileMatcher(pattern, working_dir))
+
+        return result

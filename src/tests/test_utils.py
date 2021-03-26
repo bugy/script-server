@@ -139,6 +139,7 @@ def create_script_param_config(
         file_recursive=None,
         file_type=None,
         file_extensions=None,
+        excluded_files=None,
         repeat_param=None,
         same_arg_param=None):
     conf = {'name': param_name}
@@ -196,6 +197,9 @@ def create_script_param_config(
 
     if file_type is not None:
         conf['file_type'] = file_type
+
+    if excluded_files is not None:
+        conf['excluded_files'] = excluded_files
 
     if repeat_param is not None:
         conf['repeat_param'] = repeat_param

@@ -67,11 +67,15 @@
       <ChipsList v-model="fileExtensions" class="col s12"
                  title="Allowed file extensions"
                  @error="handleError('Allowed file extensions', $event)"/>
-        </div>
-        <div class="row" v-if="selectedType === 'text' || selectedType === undefined">
-            <Textfield :config="maxLengthField" @error="handleError(maxLengthField, $event)" class="col s4" v-model="max_length"/>
-        </div>
-    </form>
+      <ChipsList v-model="excludedFiles" class="col s12"
+                 title="Excluded files"
+                 @error="handleError('Excluded files', $event)"/>
+    </div>
+    <div v-if="selectedType === 'text' || selectedType === undefined" class="row">
+      <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
+                 @error="handleError(maxLengthField, $event)"/>
+    </div>
+  </form>
 </template>
 
 <script>
@@ -80,7 +84,7 @@ import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
 import Textfield from '@/common/components/textfield';
-import {forEachKeyValue, isEmptyString} from '@/common/utils/common';
+import {forEachKeyValue, isEmptyArray, isEmptyString} from '@/common/utils/common';
 import get from 'lodash/get';
 import Vue from 'vue';
 import {
@@ -189,6 +193,7 @@ export default {
       recursive: null,
       fileType: null,
       fileExtensions: null,
+      excludedFiles: null,
       nameField,
       argField: Object.assign({}, argField),
       repeatParamField,
@@ -239,6 +244,7 @@ export default {
           this.recursive = !!get(config, 'file_recursive', false);
           this.fileType = get(config, 'file_type', 'any');
           this.fileExtensions = get(config, 'file_extensions', []);
+          this.excludedFiles = get(config, 'excluded_files', []);
 
           const defaultValue = get(config, 'default', '');
           if (this.isRecursiveFile()) {
@@ -287,7 +293,18 @@ export default {
       }
     },
     fileExtensions(fileExtensions) {
-      updateValue(this.value, 'file_extensions', fileExtensions);
+      if (isEmptyArray(fileExtensions)) {
+        this.$delete(this.value, 'file_extensions');
+      } else {
+        updateValue(this.value, 'file_extensions', fileExtensions);
+      }
+    },
+    excludedFiles(excludedFiles) {
+      if (isEmptyArray(excludedFiles)) {
+        this.$delete(this.value, 'excluded_files');
+      } else {
+        updateValue(this.value, 'excluded_files', excludedFiles);
+      }
     },
     allowedValuesFromScript() {
       this.updateAllowedValues();

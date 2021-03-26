@@ -510,6 +510,7 @@ describe('Test ParameterConfigForm', function () {
         it('Test update file_extensions to empty', async function () {
             await _setValueByUser('Type', 'server_file');
 
+            await _setValueByUser('Allowed file extensions', ['png', '.txt']);
             await _setValueByUser('Allowed file extensions', []);
 
             assertOutputValue('file_extensions', undefined);
@@ -521,6 +522,23 @@ describe('Test ParameterConfigForm', function () {
             await _setValueByUser('Recursive', true);
 
             assertOutputValue('file_recursive', true);
+        });
+
+        it('Test update excluded_files', async function () {
+            await _setValueByUser('Type', 'server_file');
+
+            await _setValueByUser('Excluded files', ['**/.passwd', 'auth']);
+
+            assertOutputValue('excluded_files', ['**/.passwd', 'auth']);
+        });
+
+        it('Test update excluded_files to empty', async function () {
+            await _setValueByUser('Type', 'server_file');
+
+            await _setValueByUser('Excluded files', ['**/.passwd', 'auth']);
+            await _setValueByUser('Excluded files', []);
+
+            assertOutputValue('excluded_files', undefined);
         });
     });
 

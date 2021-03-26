@@ -205,6 +205,10 @@
       "file_dir": "/var/log",
       "file_extensions": [
         "log"
+      ],
+      "excluded_files": [
+        "auth*",
+        "/var/**/user*"
       ]
     },
     {
@@ -223,12 +227,18 @@
         "json",
         ".log",
         "TXT"
+      ],
+      "excluded_files": [
+        ".git",
+        "**/tests",
+        "**/processes/**/*.log"
       ]
     },
     {
       "name": "Editable list",
       "param": "--editable_list",
       "type": "editable_list",
+      "required": true,
       "values": [
         "Value A",
         "Value B",

@@ -4,6 +4,7 @@ import re
 
 from model.model_helper import is_empty, fill_parameter_values, InvalidFileException, list_files
 from utils import process_utils
+from utils.file_utils import FileMatcher
 
 LOGGER = logging.getLogger('list_values')
 
@@ -104,11 +105,18 @@ class DependantScriptValuesProvider(ValuesProvider):
 
 class FilesProvider(ValuesProvider):
 
-    def __init__(self, file_dir, file_type=None, file_extensions=None) -> None:
+    def __init__(self,
+                 file_dir,
+                 file_type=None,
+                 file_extensions=None,
+                 excluded_files_matcher: FileMatcher = None) -> None:
         self._file_dir = file_dir
 
         try:
-            self._values = list_files(file_dir, file_type, file_extensions)
+            self._values = list_files(file_dir,
+                                      file_type=file_type,
+                                      file_extensions=file_extensions,
+                                      excluded_files_matcher=excluded_files_matcher)
         except InvalidFileException as e:
             LOGGER.warning('Failed to list files for ' + file_dir + ': ' + str(e))
             self._values = []

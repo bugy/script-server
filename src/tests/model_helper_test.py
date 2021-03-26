@@ -8,6 +8,8 @@ from model.model_helper import read_list, read_dict, fill_parameter_values, reso
     InvalidFileException, read_bool_from_config, InvalidValueException, InvalidValueTypeException, read_str_from_config
 from tests import test_utils
 from tests.test_utils import create_parameter_model, set_env_value
+from utils import file_utils
+from utils.file_utils import FileMatcher
 
 
 class TestReadList(unittest.TestCase):
@@ -317,6 +319,170 @@ class ListFilesTest(unittest.TestCase):
     def test_dir_not_exists(self):
         dir = os.path.join(test_utils.temp_folder, 'dir2')
         self.assertRaises(InvalidFileException, model_helper.list_files, dir)
+
+    def setUp(self):
+        test_utils.setup()
+
+    def tearDown(self):
+        test_utils.cleanup()
+
+
+class ListFilesWithExclusionsTest(unittest.TestCase):
+
+    def test_plain_relative_path(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files)
+
+        matcher = self.create_matcher(['file2'])
+        files = model_helper.list_files(test_utils.temp_folder, excluded_files_matcher=matcher)
+        self.assertEqual(['file1', 'file3'], files)
+
+    def test_plain_absolute_path(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files)
+
+        excluded_file = os.path.abspath(os.path.join(test_utils.temp_folder, 'file2'))
+        matcher = self.create_matcher([excluded_file])
+        files = model_helper.list_files(test_utils.temp_folder, excluded_files_matcher=matcher)
+        self.assertEqual(['file1', 'file3'], files)
+
+    def test_plain_relative_path_in_subfolder(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files, 'sub')
+
+        subfolder_path = os.path.join(test_utils.temp_folder, 'sub')
+        matcher = self.create_matcher([(os.path.join('sub', 'file2'))])
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual(['file1', 'file3'], files)
+
+    def test_plain_relative_path_is_folder(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files, 'sub')
+
+        subfolder_path = os.path.join(test_utils.temp_folder, 'sub')
+        matcher = self.create_matcher(['sub'])
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual([], files)
+
+    def test_glob_relative_path(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files)
+
+        matcher = self.create_matcher(['*1'])
+        files = model_helper.list_files(test_utils.temp_folder, excluded_files_matcher=matcher)
+        self.assertEqual(['file2', 'file3'], files)
+
+    def test_glob_absolute_path(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files)
+
+        matcher = self.create_matcher([file_utils.normalize_path('*1', test_utils.temp_folder)])
+        files = model_helper.list_files(test_utils.temp_folder, excluded_files_matcher=matcher)
+        self.assertEqual(['file2', 'file3'], files)
+
+    def test_glob_relative_path_with_subfolder(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files, 'sub')
+
+        matcher = self.create_matcher([os.path.join('sub', '*3')])
+        subfolder_path = os.path.join(test_utils.temp_folder, 'sub')
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual(['file1', 'file2'], files)
+
+    def test_glob_relative_path_is_subfolder(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files, 'sub')
+
+        matcher = self.create_matcher(['*ub'])
+        subfolder_path = os.path.join(test_utils.temp_folder, 'sub')
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual([], files)
+
+    def test_recursive_glob_relative_path(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files, 'sub')
+
+        matcher = self.create_matcher(['**/file1'])
+        subfolder_path = os.path.join(test_utils.temp_folder, 'sub')
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual(['file2', 'file3'], files)
+
+    def test_recursive_glob_absolute_path(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files, 'sub')
+
+        matcher = self.create_matcher([file_utils.normalize_path('**/file1', test_utils.temp_folder)])
+        subfolder_path = os.path.join(test_utils.temp_folder, 'sub')
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual(['file2', 'file3'], files)
+
+    def test_recursive_glob_absolute_path_and_deep_nested(self):
+        created_files = ['file1', 'file2', 'file3']
+        abc_subfolder = os.path.join('a', 'b', 'c')
+        test_utils.create_files(created_files, abc_subfolder)
+
+        matcher = self.create_matcher([file_utils.normalize_path('**/file1', test_utils.temp_folder)])
+        abc_path = os.path.join(test_utils.temp_folder, abc_subfolder)
+        files = model_helper.list_files(abc_path, excluded_files_matcher=matcher)
+        self.assertEqual(['file2', 'file3'], files)
+
+    def test_recursive_glob_absolute_path_and_deep_nested_and_multiple_globs(self):
+        created_files = ['file1', 'file2', 'file3']
+        sub_sub_subfolder = os.path.join('a', 'b', 'c', 'd', 'e')
+        test_utils.create_files(created_files, sub_sub_subfolder)
+
+        matcher = self.create_matcher([file_utils.normalize_path('**/c/**/file1', test_utils.temp_folder)])
+        subfolder_path = os.path.join(test_utils.temp_folder, sub_sub_subfolder)
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual(['file2', 'file3'], files)
+
+    def test_recursive_glob_relative_path_any_match(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files, 'sub')
+
+        matcher = self.create_matcher(['**'])
+        subfolder_path = os.path.join(test_utils.temp_folder, 'sub')
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual([], files)
+
+    def test_recursive_glob_relative_path_match_any_in_subfolder(self):
+        created_files = ['file1', 'file2', 'file3']
+        subfolder = os.path.join('a', 'b', 'c', 'd', 'e')
+        test_utils.create_files(created_files, subfolder)
+
+        matcher = self.create_matcher(['**/e/**'])
+        subfolder_path = os.path.join(test_utils.temp_folder, subfolder)
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual([], files)
+
+    def test_recursive_glob_relative_different_work_dir(self):
+        created_files = ['file1', 'file2', 'file3']
+        test_utils.create_files(created_files, 'sub')
+
+        matcher = FileMatcher(['**'], test_utils.temp_folder + '2')
+        subfolder_path = os.path.join(test_utils.temp_folder, 'sub')
+        files = model_helper.list_files(subfolder_path, excluded_files_matcher=matcher)
+        self.assertEqual(['file1', 'file2', 'file3'], files)
+
+    def test_multiple_exclusions(self):
+        created_files = ['file1', 'file2', 'file3', 'file4']
+        test_utils.create_files(created_files)
+
+        matcher = self.create_matcher(['*2', 'file1', file_utils.normalize_path('file4', test_utils.temp_folder)])
+        files = model_helper.list_files(test_utils.temp_folder, excluded_files_matcher=matcher)
+        self.assertEqual(['file3'], files)
+
+    def test_multiple_exclusions_when_no_match(self):
+        created_files = ['fileA', 'fileB', 'fileC', 'fileD']
+        test_utils.create_files(created_files)
+
+        matcher = self.create_matcher(['*2', 'file1', file_utils.normalize_path('file4', test_utils.temp_folder)])
+        files = model_helper.list_files(test_utils.temp_folder, excluded_files_matcher=matcher)
+        self.assertEqual(created_files, files)
+
+    @staticmethod
+    def create_matcher(excluded_paths):
+        return FileMatcher(excluded_paths, test_utils.temp_folder)
 
     def setUp(self):
         test_utils.setup()

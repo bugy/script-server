@@ -97,6 +97,22 @@ class PlainServerFileTest(unittest.TestCase):
         config = _create_parameter_model(recursive=False, file_dir=file_dir, working_dir=working_dir_path)
         self.assertEqual(os.path.join(file_dir, 'file.txt'), config.map_to_script('file.txt'))
 
+    def test_allowed_values_when_excluded_files(self):
+        dirname = 'inner'
+        create_files(['abc', 'def'], dirname)
+        config = _create_parameter_model(recursive=False,
+                                         file_dir=os.path.join(test_utils.temp_folder, dirname),
+                                         excluded_files=['abc'])
+        self.assertEqual(['def'], config.values)
+
+    def test_allowed_values_when_environment_variable(self):
+        dirname = 'inner'
+        create_files(['abc', 'def'], dirname)
+        config = _create_parameter_model(recursive=False,
+                                         file_dir=os.path.join(test_utils.temp_folder, dirname),
+                                         excluded_files=[os.path.join('$$PWD', test_utils.temp_folder, dirname, 'abc')])
+        self.assertEqual(['def'], config.values)
+
     def test_validate_success_when_working_dir(self):
         working_dir = os.path.join('work', 'dir')
         file_dir = 'inner'
@@ -111,6 +127,11 @@ class PlainServerFileTest(unittest.TestCase):
         working_dir_path = os.path.join(test_utils.temp_folder, 'work', 'dir')
         config = _create_parameter_model(recursive=False, file_dir=file_dir, working_dir=working_dir_path)
         self.assertRegex(config.validate_value('def'), '.+ but should be in \[\]')
+
+    def test_validate_failure_when_excluded_file(self):
+        create_files(['abc', 'def'])
+        config = _create_parameter_model(recursive=False, file_dir=test_utils.temp_folder, excluded_files=['abc'])
+        self.assertRegex(config.validate_value('abc'), '.+ but should be in \[\'def\'\]')
 
     def setUp(self):
         test_utils.setup()
@@ -318,6 +339,30 @@ class RecursiveServerFileTest(unittest.TestCase):
         files = config.list_files(['another'])
         self.assertCountEqual([_file('xyz'), _file('abc')], files)
 
+    def test_list_files_when_excluded_plain_file(self):
+        subfolder = os.path.join('work', 'another')
+        create_files(['xyz', 'abc'], subfolder)
+        config = _create_parameter_model(recursive=True, excluded_files=[os.path.join(subfolder, 'abc')])
+
+        files = config.list_files(['work', 'another'])
+        self.assertCountEqual([_file('xyz')], files)
+
+    def test_list_files_when_excluded_simple_glob(self):
+        subfolder = os.path.join('work', 'another')
+        create_files(['A.pdf', 'B.pdf', 'C.exe'], subfolder)
+        config = _create_parameter_model(recursive=True, excluded_files=[os.path.join(subfolder, '*.pdf')])
+
+        files = config.list_files(['work', 'another'])
+        self.assertCountEqual([_file('C.exe')], files)
+
+    def test_list_files_when_excluded_recursive_glob(self):
+        subfolder = os.path.join('work', 'another')
+        create_files(['A.pdf', 'B.pdf', 'C.exe'], subfolder)
+        config = _create_parameter_model(recursive=True, excluded_files=[os.path.join('**', '*.exe')])
+
+        files = config.list_files(['work', 'another'])
+        self.assertCountEqual([_file('A.pdf'), _file('B.pdf')], files)
+
     def test_validate_missing_value(self):
         config = _create_parameter_model(recursive=True)
 
@@ -420,6 +465,21 @@ class RecursiveServerFileTest(unittest.TestCase):
         error = config.validate_value(['print.pdf'])
         self.assertRegex(error, '.+ is not allowed')
 
+    def test_validate_fail_on_excluded_file(self):
+        subfolder = os.path.join('work', 'another')
+        create_files(['xyz', 'abc'], subfolder)
+        config = _create_parameter_model(recursive=True, excluded_files=[os.path.join(subfolder, 'abc')])
+
+        error = config.validate_value(['work', 'another', 'abc'])
+        self.assertRegex(error, '.+ is excluded')
+
+    def test_validate_fail_on_list_excluded_subfolder(self):
+        subfolder = os.path.join('work', 'another')
+        create_files(['xyz', 'abc'], subfolder)
+        config = _create_parameter_model(recursive=True, excluded_files=['work'])
+
+        self.assertRaisesRegex(InvalidValueException, '.+ is excluded', config.list_files, [subfolder])
+
     def test_normalize_when_list(self):
         config = _create_parameter_model(recursive=True)
 
@@ -470,19 +530,23 @@ class RecursiveServerFileTest(unittest.TestCase):
         test_utils.cleanup()
 
 
-def _create_config(file_dir=test_utils.temp_folder, recursive=None, extensions=None, file_type=None):
+def _create_config(file_dir=test_utils.temp_folder, recursive=None, extensions=None, file_type=None,
+                   excluded_files=None):
     return create_script_param_config(
         'plain_server_file_X',
         type='server_file',
         file_dir=file_dir,
         file_recursive=recursive,
         file_extensions=extensions,
-        file_type=file_type)
+        file_type=file_type,
+        excluded_files=excluded_files)
 
 
 def _create_parameter_model(*, recursive, file_type=None, extensions=None, working_dir=None,
-                            file_dir=test_utils.temp_folder):
-    config = _create_config(file_dir, recursive=recursive, file_type=file_type, extensions=extensions)
+                            file_dir=test_utils.temp_folder,
+                            excluded_files=None):
+    config = _create_config(file_dir, recursive=recursive, file_type=file_type, extensions=extensions,
+                            excluded_files=excluded_files)
     return test_utils.create_parameter_model_from_config(config, working_dir=working_dir)
 
 

@@ -12,6 +12,7 @@ from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SE
     normalize_extension, read_bool_from_config, InvalidValueException
 from react.properties import ObservableDict, observable_fields
 from utils import file_utils, string_utils, process_utils
+from utils.file_utils import FileMatcher
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('script_server.parameter_config')
@@ -84,6 +85,7 @@ class ParameterModel(object):
         self.file_extensions = _resolve_file_extensions(config, 'file_extensions')
         self.file_type = _resolve_parameter_file_type(config, 'file_type', self.file_extensions)
         self.file_recursive = read_bool_from_config('file_recursive', config, default=False)
+        self.excluded_files_matcher = _resolve_excluded_files(config, 'excluded_files', self._list_files_dir)
 
         self.type = self._read_type(config)
 
@@ -171,7 +173,8 @@ class ParameterModel(object):
             return NoneValuesProvider()
 
         if self._is_plain_server_file():
-            return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions)
+            return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions,
+                                 self.excluded_files_matcher)
 
         if (type != 'list') and (type != PARAM_TYPE_MULTISELECT) and (type != PARAM_TYPE_EDITABLE_LIST):
             return NoneValuesProvider()
@@ -353,11 +356,16 @@ class ParameterModel(object):
         result = []
 
         if is_empty(self.file_type) or self.file_type == FILE_TYPE_FILE:
-            files = model_helper.list_files(full_path, FILE_TYPE_FILE, self.file_extensions)
+            files = model_helper.list_files(full_path,
+                                            file_type=FILE_TYPE_FILE,
+                                            file_extensions=self.file_extensions,
+                                            excluded_files_matcher=self.excluded_files_matcher)
             for file in files:
                 result.append({'name': file, 'type': FILE_TYPE_FILE, 'readable': True})
 
-        dirs = model_helper.list_files(full_path, FILE_TYPE_DIR)
+        dirs = model_helper.list_files(full_path,
+                                       file_type=FILE_TYPE_DIR,
+                                       excluded_files_matcher=self.excluded_files_matcher)
         for dir in dirs:
             dir_path = os.path.join(full_path, dir)
 
@@ -383,6 +391,9 @@ class ParameterModel(object):
 
         full_path = self._build_list_file_path(path)
 
+        if self.excluded_files_matcher.has_match(full_path):
+            return 'Path ' + value_string + ' is excluded'
+
         if not os.path.exists(full_path):
             return 'Path ' + value_string + ' does not exist'
 
@@ -398,7 +409,10 @@ class ParameterModel(object):
             file = path[-1]
 
             dir_path = self._build_list_file_path(dir)
-            allowed_files = model_helper.list_files(dir_path, self.file_type, self.file_extensions)
+            allowed_files = model_helper.list_files(dir_path,
+                                                    file_type=self.file_type,
+                                                    file_extensions=self.file_extensions,
+                                                    excluded_files_matcher=self.excluded_files_matcher)
             if file not in allowed_files:
                 return 'Path ' + value_string + ' is not allowed'
 
@@ -453,6 +467,15 @@ def _resolve_file_extensions(config, key):
     return [normalize_extension(e) for e in strip(result)]
 
 
+def _resolve_excluded_files(config, key, file_dir):
+    raw_patterns = model_helper.read_list(config, key)
+    if raw_patterns is None:
+        patterns = []
+    else:
+        patterns = [resolve_env_vars(e) for e in strip(raw_patterns)]
+    return FileMatcher(patterns, file_dir)
+
+
 def _resolve_parameter_file_type(config, key, file_extensions):
     if file_extensions:
         return FILE_TYPE_FILE
@@ -472,9 +495,13 @@ class WrongParameterUsageException(Exception):
 
 
 def get_sorted_config(param_config):
-    key_order = ['name', 'required', 'param', 'repeat_param', 'type', 'no_value', 'default', 'constant', 'description', 'secure',
-                 'values', 'min', 'max', 'multiple_arguments', 'same_arg_param', 'separator', 'file_dir', 'file_recursive', 'file_type',
-                 'file_extensions']
+    key_order = ['name', 'required', 'param', 'repeat_param', 'type', 'no_value', 'default', 'constant', 'description',
+                 'secure',
+                 'values', 'min', 'max', 'multiple_arguments', 'same_arg_param', 'separator', 'file_dir',
+                 'file_recursive',
+                 'file_type',
+                 'file_extensions',
+                 'excluded_files']
 
     def get_order(key):
         if key in key_order:
