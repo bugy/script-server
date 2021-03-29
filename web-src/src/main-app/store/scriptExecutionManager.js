@@ -2,7 +2,13 @@ import {isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
 import axios from 'axios';
 import clone from 'lodash/clone';
 import get from 'lodash/get';
-import scriptExecutor, {STATUS_EXECUTING, STATUS_FINISHED, STATUS_INITIALIZING} from './scriptExecutor';
+import scriptExecutor, {
+    STATUS_DISCONNECTED,
+    STATUS_ERROR,
+    STATUS_EXECUTING,
+    STATUS_FINISHED,
+    STATUS_INITIALIZING
+} from './scriptExecutor';
 import {parametersToFormData} from '@/main-app/store/mainStoreHelper';
 
 export const axiosInstance = axios.create();
@@ -200,7 +206,7 @@ export default {
                     return;
                 }
 
-                if (currentExecutor.state.status === STATUS_FINISHED) {
+                if ([STATUS_FINISHED, STATUS_DISCONNECTED, STATUS_ERROR].includes(currentExecutor.state.status)) {
                     dispatch('_removeExecutor', currentExecutor);
                 }
             }

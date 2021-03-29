@@ -3,10 +3,12 @@
     <ul ref="tabs" class="execution-tabs">
       <li v-for="executor in scriptExecutors" :ref="'executor' + executor.state.id" class="tab executor-tab">
         <a v-trim-text
-           :class="{active: (executor === currentExecutor), finished: (executor.state.status === 'finished')}"
+           :class="{active: (executor === currentExecutor),
+                    finished: (executor.state.status === 'finished'),
+                    error: (executor.state.status === 'error') || (executor.state.status === 'disconnected') }"
            class="btn-flat"
            @click="selectExecutor(executor)">
-          <i class="material-icons">{{ executor.state.status === 'finished' ? 'check' : 'lens' }}</i>
+          <i class="material-icons">{{ getExecutorIcon(executor) }}</i>
           {{ executor.state.id }}
         </a>
       </li>
@@ -120,6 +122,17 @@ export default {
           .reduce((previousValue, currentValue) => currentValue + previousValue, 0);
 
       this.hasMoreSpace = (this.$el.offsetWidth - childrenWidth) > 100;
+    },
+
+    getExecutorIcon(executor) {
+      const status = executor.state.status
+      if (status === 'finished') {
+        return 'check'
+      } else if ((status === 'error') || (status === 'disconnected')) {
+        return 'error_outline'
+      } else {
+        return 'lens'
+      }
     }
   },
   watch: {
@@ -197,6 +210,11 @@ export default {
   font-size: 22px;
   margin-right: 6px;
   margin-left: -2px;
+}
+
+.execution-instance-tabs .executor-tab > a.error > i {
+  font-size: 16px;
+  margin-right: 10px;
 }
 
 .execution-instance-tabs .tab > a.active {

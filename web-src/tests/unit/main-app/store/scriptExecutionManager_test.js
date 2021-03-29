@@ -236,6 +236,23 @@ describe('Test scriptExecutionManager', function () {
             expect(store.state.executions[123]).not.toBeNil();
             assertSelectedExecutor(123);
         });
+
+        it('Test selectExecutor check remove current if error', async function () {
+            store.state.scripts.selectedScript = 'abc';
+
+            await setupInitialExecutors([
+                {id: 123, scriptName: 'abc'},
+                {id: 456, scriptName: 'def'}])
+
+            store.dispatch('executions/123/setError')
+
+            await selectExecutor(456);
+
+            expect(store.state.executions.executors[123]).toBeNil();
+            expect(store.state.executions[123]).toBeNil();
+        });
+
+
     });
 
     describe('Test selectScript', function () {
@@ -305,6 +322,9 @@ function createMockExecutor(id, scriptName, parameterValues) {
             },
             setFinished({state}) {
                 state.status = 'finished';
+            },
+            setError({state}) {
+                state.status = 'error';
             }
         },
         mutations: {
