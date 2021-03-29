@@ -27,14 +27,15 @@
     },
     {
       "name": "Simple List",
-      "param": "--simple_list",
+      "param": "--simple_list=",
       "type": "list",
       "description": "Parameter Five",
       "values": [
         "val1",
         "val3",
         "some long value"
-      ]
+      ],
+      "same_arg_param": true
     },
     {
       "name": "File upload",
@@ -47,6 +48,7 @@
       "param": "--multiselect",
       "type": "multiselect",
       "description": "Multiselect list",
+      "multiselect_argument_type": "repeat_param_value",
       "values": [
         "Black cat",
         "Brown dog",
@@ -160,7 +162,7 @@
         "multi2",
         "multi 3"
       ],
-      "multiple_arguments": true
+      "multiselect_argument_type": "argument_per_value"
     },
     {
       "name": "Dependant list",

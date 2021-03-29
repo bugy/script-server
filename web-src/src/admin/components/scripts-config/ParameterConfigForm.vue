@@ -4,20 +4,21 @@
       <Textfield v-model="name" :config="nameField" class="col s4" @error="handleError(nameField, $event)"/>
       <Checkbox v-model="required" :config="requiredField" class="col s3 offset-s1"
                 @error="handleError(requiredField, $event)"/>
-      <Checkbox v-model="secure" :config="secureField" class="col s3" @error="handleError(secureField, $event)"/>
-    </div>
-    <div class="row">
-      <Textfield v-model="arg" :config="argField" class="col s4" @error="handleError(argField, $event)"/>
-      <Checkbox v-model="noValue" :config="noValueField" class="col s3 offset-s1"
-                @error="handleError(noValueField, $event)"/>
       <Combobox v-model="type" :config="typeField" :disabled="noValue || constant"
                 :dropdownContainer="this.$el"
                 class="col s4" @error="handleError(typeField, $event)"/>
     </div>
     <div class="row">
+      <Textfield v-model="param" :config="paramField" class="col s4" @error="handleError(paramField, $event)"/>
+      <Checkbox v-model="noValue" :config="noValueField" class="col s3 offset-s1"
+                @error="handleError(noValueField, $event)"/>
+      <Checkbox v-if="!noValue" v-model="sameArgParam" :config="sameArgParamField"
+                class="col s3" @error="handleError(sameArgParamField, $event)"/>
+    </div>
+    <div class="row">
       <Textfield v-model="envVar" :config="envVarField" class="col s4" @error="handleError(envVarField, $event)"/>
-      <Checkbox v-if="!noValue" v-model="repeatParam" :config="repeatParamField"
-                class="col s3 offset-s1" @error="handleError(repeatParamField, $event)"/>
+      <Checkbox v-model="secure" :config="secureField" class="col s3 offset-s1"
+                @error="handleError(secureField, $event)"/>
     </div>
     <div v-if="selectedType !== 'file_upload' && !noValue" class="row">
       <Textfield v-model="defaultValue" :class="{s6: !isExtendedDefault, s8: isExtendedDefault}"
@@ -47,14 +48,11 @@
                 @error="handleError(allowedValuesFromScriptField, $event)"/>
     </div>
     <div v-if="(selectedType === 'multiselect')" class="row">
-      <Checkbox v-model="multipleArguments" :config="multipleArgumentsField"
-                class="col s4"
-                @error="handleError(multipleArgumentsField, $event)"/>
-      <Checkbox v-if="multipleArguments" v-model="sameArgParam"
-                :config="sameArgParamField" class="col s3"
-                @error="handleError(sameArgParamField, $event)"/>
-      <Textfield v-if="!multipleArguments" v-model="separator"
-                 :config="separatorField" class="col s3"
+      <Combobox v-model="multiselectArgumentType" :config="multiselectArgumentTypeField"
+                class="col s4" @error="handleError(multiselectArgumentTypeField, $event)"/>
+
+      <Textfield v-if="!multiselectArgumentType || multiselectArgumentType ==='single_argument'" v-model="separator"
+                 :config="separatorField" class="col s2 offset-s1"
                  @error="handleError(separatorField, $event)"/>
     </div>
     <div v-if="(selectedType === 'server_file')" class="row">
@@ -90,7 +88,6 @@ import Vue from 'vue';
 import {
   allowedValuesFromScriptField,
   allowedValuesScriptField,
-  argField,
   constantField,
   defaultValueField,
   descriptionField,
@@ -100,11 +97,11 @@ import {
   maxField,
   maxLengthField,
   minField,
-  multipleArgumentsField,
+  multiselectArgumentTypeField,
   nameField,
   noValueField,
+  paramField,
   recursiveField,
-  repeatParamField,
   requiredField,
   sameArgParamField,
   secureField,
@@ -133,8 +130,8 @@ export default {
     const simpleFields = {
       name: 'name',
       description: 'description',
-      arg: 'param',
-      repeatParam: 'repeat_param',
+      param: 'param',
+      sameArgParam: 'same_arg_param',
       envVar: 'env_var',
       type: 'type',
       noValue: 'no_value',
@@ -144,8 +141,7 @@ export default {
       min: 'min',
       max: 'max',
       max_length: 'max_length',
-      multipleArguments: 'multiple_arguments',
-      sameArgParam: 'same_arg_param',
+      multiselectArgumentType: 'multiselect_argument_type',
       separator: 'separator',
       fileDir: 'file_dir',
       recursive: 'file_recursive',
@@ -170,8 +166,8 @@ export default {
   data() {
     return {
       name: null,
-      arg: null,
-      repeatParam: null,
+      param: null,
+      sameArgParam: null,
       envVar: null,
       type: null,
       noValue: null,
@@ -186,17 +182,15 @@ export default {
       defaultValue: null,
       constant: null,
       secure: null,
-      multipleArguments: null,
-      sameArgParam: null,
       separator: null,
+      multiselectArgumentType: null,
       fileDir: null,
       recursive: null,
       fileType: null,
       fileExtensions: null,
       excludedFiles: null,
       nameField,
-      argField: Object.assign({}, argField),
-      repeatParamField,
+      paramField: Object.assign({}, paramField),
       envVarField,
       typeField,
       noValueField,
@@ -210,8 +204,8 @@ export default {
       allowedValuesFromScriptField,
       defaultValueField: Object.assign({}, defaultValueField),
       constantField,
-      multipleArgumentsField,
       sameArgParamField,
+      multiselectArgumentTypeField,
       separatorField,
       fileDirField,
       recursiveField,
@@ -226,8 +220,7 @@ export default {
         if (config) {
           this.name = config['name'];
           this.description = config['description'];
-          this.arg = config['param'];
-          this.repeatParam = !!get(config, 'repeat_param', true);
+          this.param = config['param'];
           this.envVar = config['env_var'];
           this.type = config['type'];
           this.noValue = get(config, 'no_value', false);
@@ -237,7 +230,7 @@ export default {
           this.max_length = config['max_length'];
           this.constant = !!get(config, 'constant', false);
           this.secure = !!get(config, 'secure', false);
-          this.multipleArguments = !!get(config, 'multiple_arguments', false);
+          this.multiselectArgumentType = get(config, 'multiselect_argument_type', 'single_argument');
           this.sameArgParam = !!get(config, 'same_arg_param', false);
           this.separator = get(config, 'separator', ',');
           this.fileDir = config['file_dir'];
@@ -277,7 +270,7 @@ export default {
     noValue: {
       immediate: true,
       handler(noValue) {
-        Vue.set(this.argField, 'required', noValue);
+        Vue.set(this.paramField, 'required', noValue);
       }
     },
     constant: {

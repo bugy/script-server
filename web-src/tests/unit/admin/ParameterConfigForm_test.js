@@ -165,7 +165,7 @@ describe('Test ParameterConfigForm', function () {
 
             assert.equal('param X', _findField('name').value);
             assert.equal('my desc', _findField('description').value);
-            assert.equal('-x', _findField('arg').value);
+            assert.equal('-x', _findField('param').value);
             assert.equal('int', _findField('type').value);
             assert.equal(true, _findField('without value').value);
             assert.equal(true, _findField('required').value);
@@ -190,26 +190,26 @@ describe('Test ParameterConfigForm', function () {
             assert.equal(1000, _findField('max').value);
         });
 
-        it('Test simple parameters when multiselect multiple_arguments', async function () {
+        it('Test simple parameters when multiselect argument_per_value', async function () {
             form.setProps({
                 value: {
                     type: 'multiselect',
-                    multiple_arguments: true,
+                    multiselect_argument_type: 'argument_per_value',
                 }
             });
 
             await vueTicks();
 
             assert.equal('multiselect', _findField('type').value);
-            assert.equal(true, _findField('as multiple arguments').value);
+            assert.equal('argument_per_value', _findField('Value split type').value);
             assert.isUndefined(_findField('separator', false));
         });
 
-        it('Test simple parameters when multiselect', async function () {
+        it('Test simple parameters when multiselect and single_argument', async function () {
             form.setProps({
                 value: {
                     type: 'multiselect',
-                    multiple_arguments: false,
+                    multiselect_argument_type: 'single_argument',
                     separator: '.'
                 }
             });
@@ -217,7 +217,7 @@ describe('Test ParameterConfigForm', function () {
             await vueTicks();
 
             assert.equal('multiselect', _findField('type').value);
-            assert.equal(false, _findField('as multiple arguments').value);
+            assert.equal('single_argument', _findField('Value split type').value);
             assert.equal('.', _findField('separator').value);
         });
 
@@ -357,7 +357,7 @@ describe('Test ParameterConfigForm', function () {
         });
 
         it('Test update param', async function () {
-            await _setValueByUser('Arg', '-p');
+            await _setValueByUser('Param', '-p');
 
             assertOutputValue('param', '-p');
         });
@@ -475,12 +475,12 @@ describe('Test ParameterConfigForm', function () {
             assertOutputValue('secure', true);
         });
 
-        it('Test update multiple_arguments', async function () {
+        it('Test update multiselect_argument_type', async function () {
             await _setValueByUser('Type', 'multiselect');
 
-            await _setValueByUser('As multiple arguments', true);
+            await _setValueByUser('Value split type', 'repeat_param_value');
 
-            assertOutputValue('multiple_arguments', true);
+            assertOutputValue('multiselect_argument_type', 'repeat_param_value');
         });
 
         it('Test update separator', async function () {
@@ -622,14 +622,14 @@ describe('Test ParameterConfigForm', function () {
         it('Test multiselect fields when type multiselect set via props', async function () {
             await setPropsField('type', 'multiselect');
 
-            assert.isDefined(_findField('As multiple arguments'));
+            assert.isDefined(_findField('Value split type'));
             assert.isDefined(_findField('Separator'));
         });
 
         it('Test multiselect fields when type multiselect set by user', async function () {
             await _setValueByUser('Type', 'multiselect');
 
-            assert.isDefined(_findField('As multiple arguments'));
+            assert.isDefined(_findField('Value split type'));
             assert.isDefined(_findField('Separator'));
         });
 
@@ -651,17 +651,17 @@ describe('Test ParameterConfigForm', function () {
             assert.isDefined(_findField('Allowed file extensions'));
         });
 
-        it('Test "arg" required when no_value set via props', async function () {
+        it('Test "param" required when no_value set via props', async function () {
             await setPropsField('no_value', true);
 
-            const argField = _findFieldInputElement('Arg');
+            const argField = _findFieldInputElement('Param');
             assert.isTrue(argField.required);
         });
 
-        it('Test "arg" required when no_value set by user', async function () {
+        it('Test "param" required when no_value set by user', async function () {
             await _setValueByUser('Without value', true);
 
-            const argField = _findFieldInputElement('Arg');
+            const argField = _findFieldInputElement('Param');
             assert.isTrue(argField.required);
         });
 
@@ -727,18 +727,18 @@ describe('Test ParameterConfigForm', function () {
             assertLastError('Script', '');
         });
 
-        it('Test Arg field required when no_value and value empty', async function () {
+        it('Test Param field required when no_value and value empty', async function () {
             await setPropsField('no_value', true);
 
-            assertLastError('Arg', 'required');
+            assertLastError('Param', 'required');
         });
 
-        it('Test Arg field required when no_value and value set', async function () {
+        it('Test Param field required when no_value and value set', async function () {
             await setPropsField('no_value', true);
 
-            await _setValueByUser('Arg', '--flag');
+            await _setValueByUser('Param', '--flag');
 
-            assertLastError('Arg', '');
+            assertLastError('Param', '');
         });
 
         it('Test Default field required when constant and value empty', async function () {

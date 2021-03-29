@@ -153,7 +153,7 @@ def read_int_from_config(key, config_obj, *, default=None):
     raise InvalidValueTypeException('Invalid %s value: integer expected, but was: %s' % (key, repr(value)))
 
 
-def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False):
+def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False, allowed_values=None):
     """
     Reads string value from a config by the key
     If the value is missing, returns specified default value
@@ -163,6 +163,7 @@ def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False):
     :param key: key to read value from
     :param default: default value, if config value is missing
     :param blank_to_none: if value is blank, treat it as null
+    :param allowed_values: a list with allowed values
     :return: config_obj[key] if non None, default otherwise
     """
     value = config_obj.get(key)
@@ -174,6 +175,10 @@ def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False):
         return default
 
     if isinstance(value, str):
+        if allowed_values and value not in allowed_values:
+            raise InvalidValueException(key, 'Invalid %s value: should be one of %s, but was: %s'
+                                        % (key, str(allowed_values), repr(value)))
+
         return value
 
     raise InvalidValueTypeException('Invalid %s value: string expected, but was: %s' % (key, repr(value)))

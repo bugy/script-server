@@ -280,6 +280,46 @@ def __migrate_bash_formatting_to_output_format(context):
         _write_json(conf_file, json_object, content)
 
 
+# 1.16 -> 1.17 migration
+@_migration('migrate_repeat_param_and_same_arg_param')
+def __migrate_repeat_param_and_same_arg_param(context):
+    for (conf_file, json_object, content) in _load_runner_files(context.conf_folder):
+        parameters = json_object.get('parameters')
+        if not parameters:
+            continue
+
+        has_changes = False
+        for parameter in parameters:
+            repeat_param = model_helper.read_bool_from_config('repeat_param', parameter)
+            same_arg_param = model_helper.read_bool_from_config('same_arg_param', parameter)
+            multiple_arguments = model_helper.read_bool_from_config('multiple_arguments', parameter)
+
+            if repeat_param is None and same_arg_param is None and multiple_arguments is None:
+                continue
+
+            has_changes = True
+
+            if repeat_param is not None:
+                del parameter['repeat_param']
+
+            if same_arg_param is not None:
+                del parameter['same_arg_param']
+
+            if multiple_arguments is not None:
+                del parameter['multiple_arguments']
+
+            if repeat_param is not None:
+                parameter['same_arg_param'] = not repeat_param
+
+            if same_arg_param:
+                parameter['multiselect_argument_type'] = 'repeat_param_value'
+            elif multiple_arguments:
+                parameter['multiselect_argument_type'] = 'argument_per_value'
+
+        if has_changes:
+            _write_json(conf_file, json_object, content)
+
+
 def _write_json(file_path, json_object, old_content):
     space_matches = re.findall('^\s+', old_content, flags=re.MULTILINE)
     if space_matches:

@@ -211,8 +211,6 @@ def build_command_args(param_values, config):
     for parameter in config.parameters:
         name = parameter.name
         option_name = parameter.param
-        if parameter.param is None:
-            option_name = ''
 
         if name in param_values:
             value = param_values[name]
@@ -223,33 +221,38 @@ def build_command_args(param_values, config):
 
             elif value:
 
-                def add_param_and_value(parameter_sh, value_sh):
-                    if parameter_sh.param:
-                        result.append(parameter_sh.param)
-                    if isinstance(value_sh, list):
-                        result.extend(value_sh)
-                    else:
-                        result.append(value_sh)
+                if option_name:
+                    if isinstance(value, list):
+                        if len(value) == 0:
+                            continue
 
-                if isinstance(value, list):
-                    if parameter.same_arg_param:
-                        for val in value:
-                            if parameter.repeat_param:
-                                add_param_and_value(parameter, val)
-                            else:
-                                result.append(option_name + str(val))
-                    else:
-                        if parameter.repeat_param:
-                            add_param_and_value(parameter, value)
-                        else:
-                            result.append(option_name + str(value[0]))
-                            if len(value) > 1:
+                        if parameter.multiselect_argument_type == 'argument_per_value':
+                            if parameter.same_arg_param:
+                                result.append(option_name + str(value[0]))
                                 result.extend(value[1:])
-                else:
-                    if parameter.repeat_param:
-                        add_param_and_value(parameter, value)
+                            else:
+                                result.append(option_name)
+                                result.extend(value)
+                        elif parameter.multiselect_argument_type == 'repeat_param_value':
+                            if parameter.same_arg_param:
+                                for el in value:
+                                    result.append(option_name + str(el))
+                            else:
+                                for el in value:
+                                    result.append(option_name)
+                                    result.append(el)
                     else:
-                        result.append(option_name + str(value))
+                        if parameter.same_arg_param:
+                            result.append(option_name + str(value))
+                        else:
+                            result.append(option_name)
+                            result.append(value)
+
+                else:
+                    if isinstance(value, list):
+                        result.extend(value)
+                    else:
+                        result.append(value)
 
     return result
 

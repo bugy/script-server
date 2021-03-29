@@ -7,9 +7,9 @@ export const descriptionField = {
     name: 'Description'
 };
 
-export const argField = {
-    name: 'Arg',
-    description: 'Allows to specify command-line argument for the parameter (e.g. -q or --quiet)'
+export const paramField = {
+    name: 'Param',
+    description: 'Allows to specify command-line option for the parameter (e.g. -q or --quiet)'
 };
 
 export const envVarField = {
@@ -26,13 +26,7 @@ export const typeField = {
 export const noValueField = {
     name: 'Without value',
     withoutValue: true,
-    description: 'Pass only flag (Arg) to the script, without any value'
-};
-
-export const repeatParamField = {
-    name: 'Space after Arg',
-    withoutValue: true,
-    description: 'Separate Arg and value with space (--Arg= value) or not (--Arg=value)'
+    description: 'Pass only flag (param) to the script, without any value'
 };
 
 export const constantField = {
@@ -82,16 +76,21 @@ export const defaultValueField = {
     name: 'Default value'
 };
 
-export const multipleArgumentsField = {
-    name: 'As multiple arguments',
+export const sameArgParamField = {
+    name: 'Combine param with value',
     withoutValue: true,
-    description: 'Pass each value as a separate argument (single comma-separated argument otherwise)'
+    description: 'If true, param and value will be sent as a single argument, e.g. -param=value'
 };
 
-export const sameArgParamField = {
-    name: 'Repeat Arg with each value',
-    withoutValue: true,
-    description: 'Add argument name to each value (Arg val1 Arg val2), one time argument otherwise (Arg val1 val2)'
+export const multiselectArgumentTypeField = {
+    name: 'Value split type',
+    type: 'list',
+    values: ['single_argument', 'argument_per_value', 'repeat_param_value'],
+    default: 'single_argument',
+    description: 'Defines how multiselect values will be passed to a script: \n'
+        + 'single_argument: -param value1,value2,value3 \n'
+        + 'argument_per_value: -param value1 value2 value3 \n'
+        + 'repeat_param_value: -param value1 -param value2 -param value3'
 };
 
 export const separatorField = {
