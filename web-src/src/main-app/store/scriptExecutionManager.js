@@ -78,7 +78,7 @@ export default {
                             })));
                     }
 
-                    if (!isNull(state.currentExecutor) || isNull(store.state.scripts.selectedScript)) {
+                    if (!isNull(state.currentExecutor)) {
                         return;
                     }
 
