@@ -86,7 +86,7 @@ class ConfigServiceTest(unittest.TestCase):
         _create_script_config_file('conf_x', name='Name with slash /')
 
         config = self.config_service.load_config_model('Name with slash /', self.user)
-        self.assertEquals('Name with slash /', config.name)
+        self.assertEqual('Name with slash /', config.name)
 
     def tearDown(self):
         super().tearDown()
