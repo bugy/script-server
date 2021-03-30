@@ -144,7 +144,7 @@ class ConfigService:
         # Read config file from within directories too
         for _root, _dirs, _files in os.walk(configs_dir, topdown=True):
             for name in _files:
-                files.append( os.path.join(_root, name).replace( 'conf/runners/', '') )
+                files.append( re.sub ( r'^.*/runners/', '', os.path.join( _root, name) ) )
 
         configs = [file for file in files if file.lower().endswith(".json")]
 
