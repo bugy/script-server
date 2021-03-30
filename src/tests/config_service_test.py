@@ -31,6 +31,15 @@ class ConfigServiceTest(unittest.TestCase):
         conf_names = [config.name for config in configs]
         self.assertCountEqual(['conf_x', 'conf_y', 'A B C'], conf_names)
 
+    def test_list_configs_when_multiple_and_subfolders(self):
+        _create_script_config_file('conf_x', subfolder = 's1/')
+        _create_script_config_file('conf_y', subfolder = 's2/')
+        _create_script_config_file('ABC', subfolder = os.path.join('s1', 'inner/'))
+
+        configs = self.config_service.list_configs(self.user)
+        conf_names = [config.name for config in configs]
+        self.assertCountEqual(['conf_x', 'conf_y', 'ABC'], conf_names)
+
     def test_list_configs_with_groups(self):
         _create_script_config_file('conf_x', group='g1')
         _create_script_config_file('conf_y')
@@ -463,9 +472,9 @@ class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
         self.assertRaises(ConfigNotAllowedException, self.config_service.load_config, 'ConfX', self.admin_user)
 
 
-def _create_script_config_file(filename, *, name=None, **kwargs):
+def _create_script_config_file(filename, *, name=None, subfolder='', **kwargs):
     conf_folder = os.path.join(test_utils.temp_folder, 'runners')
-    file_path = os.path.join(conf_folder, filename + '.json')
+    file_path = os.path.join(conf_folder, subfolder, filename + '.json')
 
     config = {'script_path': 'echo 123'}
     if name is not None:
