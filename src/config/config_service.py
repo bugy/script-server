@@ -1,4 +1,4 @@
-import commentjson as json
+import json
 import logging
 import os
 import re
@@ -10,6 +10,7 @@ from model.script_config import get_sorted_config
 from utils import os_utils, file_utils
 from utils.file_utils import to_filename
 from utils.string_utils import is_blank
+import utils.custom_json as custom_json
 
 LOGGER = logging.getLogger('config_service')
 
@@ -108,7 +109,7 @@ class ConfigService:
 
         def load_script(path, content):
             try:
-                json_object = json.loads(content)
+                json_object = custom_json.loads(content)
                 short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
@@ -167,7 +168,7 @@ class ConfigService:
     def _find_config(self, name):
         def find_and_load(path, content):
             try:
-                json_object = json.loads(content)
+                json_object = custom_json.loads(content)
                 short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
