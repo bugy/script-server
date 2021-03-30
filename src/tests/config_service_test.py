@@ -12,6 +12,7 @@ from tests import test_utils
 from tests.test_utils import AnyUserAuthorizer
 from utils import file_utils
 from utils.audit_utils import AUTH_USERNAME
+import utils.custom_json as custom_json
 
 
 class ConfigServiceTest(unittest.TestCase):
@@ -485,7 +486,7 @@ def _validate_config(test_case, expected_filename, expected_body):
     all_paths = str(os.listdir(configs_path))
     test_case.assertTrue(os.path.exists(path), 'Failed to find path ' + path + '. Existing paths: ' + all_paths)
 
-    actual_body = json.loads(file_utils.read_file(path))
+    actual_body = custom_json.loads(file_utils.read_file(path))
     test_case.assertEqual(expected_body, actual_body)
 
 
