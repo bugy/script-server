@@ -229,6 +229,14 @@ class TestAuthConfig(unittest.TestCase):
         self.assertEquals('dc=test', config.authenticator._base_dn)
         self.assertEquals(3, config.authenticator.version)
 
+    def test_ldap_multiple_urls(self):
+        config = _from_json({'auth': {'type': 'ldap',
+                                      'url': ['http://test-ldap-1.net', 'http://test-ldap-2.net'],
+                                      'username_pattern': '|$username|'}})
+        self.assertIsInstance(config.authenticator, LdapAuthenticator)
+        self.assertEquals(['http://test-ldap-1.net', 'http://test-ldap-2.net'], config.authenticator.url)
+        self.assertEquals('|xyz|', config.authenticator.username_template.substitute(username='xyz'))
+
     def test_htpasswd_auth(self):
         file = test_utils.create_file('some-path', text='user1:1yL79Q78yczsM')
         config = _from_json({'auth': {'type': 'htpasswd',
