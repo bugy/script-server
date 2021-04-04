@@ -21,7 +21,7 @@ const store = new Vuex.Store({
     modules: {
         scripts: scriptsModule,
         serverConfig: serverConfigModule,
-        scriptConfig: scriptConfigModule,
+        scriptConfig: scriptConfigModule(),
         scriptSetup: scriptSetupModule,
         executions: scriptExecutionManagerModule,
         auth: authModule,

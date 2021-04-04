@@ -58,9 +58,74 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
                           list2_values=['z1.txt', 'z2.txt', 'z3.txt'],
                           external_model_id='abcd')
 
-    def assert_model(self, response, event_type, external_model_id=None, list2_values=None):
+    @testing.gen_test
+    def test_client_version(self):
+        self.socket = yield self._connect('Test script 1')
+        _ = yield self.socket.read_message()
+
+        self.socket.write_message(json.dumps({
+            'event': 'parameterValue',
+            'data': {'parameter': 'file 1',
+                     'value': 'x',
+                     'clientStateVersion': 2}}))
+
+        self.socket.write_message(json.dumps({
+            'event': 'parameterValue',
+            'data': {'parameter': 'text 1',
+                     'value': 'included',
+                     'clientStateVersion': 3}}))
+
+        self.socket.write_message(json.dumps({
+            'event': 'parameterValue',
+            'data': {'parameter': 'file 1',
+                     'value': 'z',
+                     'clientStateVersion': 4}}))
+
+        self.socket.write_message(json.dumps({
+            'event': 'parameterValue',
+            'data': {'parameter': 'file 1',
+                     'value': 'z',
+                     'clientStateVersion': 5}}))
+
+        self.socket.write_message(json.dumps({
+            'event': 'parameterValue',
+            'data': {'parameter': 'text 1',
+                     'value': 'inc',
+                     'clientStateVersion': 6}}))
+
+        self.socket.write_message(json.dumps({
+            'event': 'reloadModelValues',
+            'data': {'clientModelId': 'abcd',
+                     'parameterValues': {'list 1': 'A', 'file 1': 'y', 'list 2': 'y1.txt'},
+                     'clientStateVersion': 7}}))
+
+        self._assert_parameter_change((yield self.socket.read_message()),
+                                      _list2(['x1.txt', 'x2.txt', 'x3.txt']), 2)
+        self._assert_version_beat((yield self.socket.read_message()), 2)
+
+        self._assert_parameter_added((yield self.socket.read_message()), _included_text2(), 3)
+        self._assert_version_beat((yield self.socket.read_message()), 3)
+
+        self._assert_parameter_change((yield self.socket.read_message()),
+                                      _list2(['z1.txt', 'z2.txt', 'z3.txt']), 4)
+        self._assert_version_beat((yield self.socket.read_message()), 4)
+
+        self._assert_version_beat((yield self.socket.read_message()), 5)
+
+        self._assert_parameter_removed((yield self.socket.read_message()), _included_text2()['name'], 6)
+        self._assert_version_beat((yield self.socket.read_message()), 6)
+
+        response3 = yield self.socket.read_message()
+        self.assert_model(response3, 'reloadedConfig',
+                          list2_values=['y1.txt', 'y2.txt', 'y3.txt'],
+                          external_model_id='abcd',
+                          client_version=7)
+
+    def assert_model(self, response, event_type, external_model_id=None, list2_values=None,
+                     client_version=None):
         event = json.loads(response)
-        del event['data']['id']
+        if 'id' in event['data']:
+            del event['data']['id']
 
         if list2_values is None:
             list2_values = []
@@ -69,19 +134,51 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
             {'event': event_type,
              'data': {'clientModelId': external_model_id, 'name': 'Test script 1', 'outputFormat': 'terminal',
                       'description': None, 'schedulable': False, 'parameters': [
-                     {'name': 'text 1', 'description': None, 'withoutValue': False, 'required': True, 'default': None,
-                      'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
-                      'fileRecursive': False, 'fileType': None},
-                     {'name': 'list 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
-                      'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': ['A', 'B', 'C'],
-                      'secure': False, 'fileRecursive': False, 'fileType': None},
-                     {'name': 'file 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
-                      'type': 'server_file', 'min': None, 'max': None, 'max_length': None, 'values': ['x', 'y', 'z'],
-                      'secure': False, 'fileRecursive': False, 'fileType': None},
-                     {'name': 'list 2', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
-                      'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': list2_values,
-                      'secure': False,
-                      'fileRecursive': False, 'fileType': None}]}},
+                     _text1(),
+                     _list1(),
+                     _file1(),
+                     _list2(list2_values)],
+                      'clientStateVersion': client_version}},
+            event)
+
+    def _assert_parameter_change(self, response, parameter, client_version=None):
+        event = json.loads(response)
+
+        data = dict(parameter)
+        data['clientStateVersion'] = client_version
+
+        self.assertEqual(
+            {'event': 'parameterChanged',
+             'data': data},
+            event)
+
+    def _assert_parameter_added(self, response, parameter, client_version=None):
+        event = json.loads(response)
+
+        data = dict(parameter)
+        data['clientStateVersion'] = client_version
+
+        self.assertEqual(
+            {'event': 'parameterAdded',
+             'data': data},
+            event)
+
+    def _assert_parameter_removed(self, response, parameter_name, client_version=None):
+        event = json.loads(response)
+
+        self.assertEqual(
+            {'event': 'parameterRemoved',
+             'data': {
+                 'clientStateVersion': client_version,
+                 'parameterName': parameter_name
+             }},
+            event)
+
+    def _assert_version_beat(self, response, client_version):
+        event = json.loads(response)
+
+        self.assertEqual(
+            {'data': {'clientStateVersion': client_version}, 'event': 'clientStateVersionAccepted'},
             event)
 
     def _connect(self, script_name, init_with_values=False):
@@ -119,6 +216,7 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         test_utils.write_script_config(
             {'name': 'Test script 1',
              'script_path': 'ls',
+             'include': '${text 1}.json',
              'parameters': [
                  test_utils.create_script_param_config('text 1', required=True),
                  test_utils.create_script_param_config('list 1', type='list',
@@ -129,6 +227,13 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
                                                        values_script='ls ' + test1_files_path + '/${file 1}')
              ]},
             'test_script_1')
+
+        test_utils.write_script_config(
+            {
+                'parameters': [
+                    test_utils.create_script_param_config('included text 2')
+                ]},
+            'included')
 
     def tearDown(self) -> None:
         if self.socket:
@@ -143,3 +248,41 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
             self.fail('Non-expected message received: ' + response)
         except TimeoutError:
             self.assertIsNone(self.socket.close_reason)
+
+
+def _text1():
+    return {'name': 'text 1', 'description': None, 'withoutValue': False, 'required': True, 'default': None,
+            'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
+            'fileRecursive': False, 'fileType': None,
+            'requiredParameters': []
+            }
+
+
+def _list1():
+    return {'name': 'list 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
+            'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': ['A', 'B', 'C'],
+            'secure': False, 'fileRecursive': False, 'fileType': None,
+            'requiredParameters': []}
+
+
+def _file1():
+    return {'name': 'file 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
+            'type': 'server_file', 'min': None, 'max': None, 'max_length': None, 'values': ['x', 'y', 'z'],
+            'secure': False, 'fileRecursive': False, 'fileType': None,
+            'requiredParameters': []}
+
+
+def _list2(list2_values):
+    return {'name': 'list 2', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
+            'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': list2_values,
+            'secure': False,
+            'fileRecursive': False, 'fileType': None,
+            'requiredParameters': ['file 1']}
+
+
+def _included_text2():
+    return {'name': 'included text 2', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
+            'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
+            'fileRecursive': False, 'fileType': None,
+            'requiredParameters': []
+            }

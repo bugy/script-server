@@ -47,7 +47,8 @@ def parameter_to_external(parameter):
         'values': parameter.values,
         'secure': parameter.secure,
         'fileRecursive': parameter.file_recursive,
-        'fileType': parameter.file_type
+        'fileType': parameter.file_type,
+        'requiredParameters': parameter.get_required_parameters()
     }
 
 

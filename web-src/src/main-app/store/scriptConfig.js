@@ -26,16 +26,24 @@ const internalState = {
 
 const reconnectionDelay = 500;
 
-function sendParameterValue(parameterName, value, websocket) {
-    const data = {parameter: parameterName, value};
+function sendParameterValue(parameterName, value, websocket, newStateVersion) {
+    const data = {
+        parameter: parameterName,
+        value,
+        clientStateVersion: newStateVersion
+    };
     websocket.send(JSON.stringify({
         'event': 'parameterValue',
         data
     }));
 }
 
-function sendReloadModelRequest(parameterValues, clientModelId, websocket) {
-    const data = {parameterValues, clientModelId};
+function sendReloadModelRequest(parameterValues, clientModelId, websocket, newStateVersion) {
+    const data = {
+        parameterValues,
+        clientModelId,
+        clientStateVersion: newStateVersion
+    };
     websocket.send(JSON.stringify({
         'event': 'reloadModelValues',
         data
@@ -44,13 +52,14 @@ function sendReloadModelRequest(parameterValues, clientModelId, websocket) {
 
 export const NOT_FOUND_ERROR_PREFIX = `Failed to find the script`;
 
-export default {
+export default () => ({
     state: {
         scriptConfig: null,
         loadError: null,
         parameters: [],
         sentValues: {},
-        loading: false
+        loading: false,
+        clientStateVersion: 0
     },
     namespaced: true,
     actions: {
@@ -78,10 +87,22 @@ export default {
                 return;
             }
 
-            if (state.sentValues[parameterName] !== value) {
-                commit('SET_SENT_VALUE', {parameterName, value});
+            const newStateVersion = state.clientStateVersion + 1
+            commit('SET_CLIENT_STATE_VERSION', newStateVersion)
 
-                sendParameterValue(parameterName, value, websocket);
+            if (state.sentValues[parameterName] !== value) {
+                for (const parameter of state.parameters) {
+                    if (parameter.requiredParameters && parameter.requiredParameters.includes(parameterName)) {
+                        commit('SET_AWAIT_DEPENDENCY', {
+                            parameterName: parameter.name,
+                            shouldAwait: true,
+                            newStateVersion
+                        })
+                    }
+                }
+
+                commit('SET_SENT_VALUE', {parameterName, value})
+                sendParameterValue(parameterName, value, websocket, newStateVersion);
             }
         },
 
@@ -177,11 +198,16 @@ export default {
                 return;
             }
 
+            const oldParameter = parameters[foundIndex]
+            parameter.loading = oldParameter.loading
+            parameter.awaitedVersion = oldParameter.awaitedVersion
+
             _preprocessParameter(parameter, state.scriptConfig);
             Vue.set(parameters, foundIndex, parameter);
         },
 
-        REMOVE_PARAMETER(state, parameterName) {
+        REMOVE_PARAMETER(state, data) {
+            const parameterName = data.parameterName
             let foundIndex = -1;
 
             const parameters = state.parameters;
@@ -213,9 +239,37 @@ export default {
 
         SET_LOADING(state, loading) {
             state.loading = loading;
+        },
+
+        SET_CLIENT_STATE_VERSION(state, clientStateVersion) {
+            state.clientStateVersion = clientStateVersion;
+        },
+
+        SET_AWAIT_DEPENDENCY(state, {parameterName, shouldAwait, newStateVersion}) {
+            for (const parameter of state.parameters) {
+                if (parameter.name === parameterName) {
+                    Vue.set(parameter, 'loading', shouldAwait)
+                    parameter.awaitedVersion = newStateVersion
+                    break
+                }
+            }
+        },
+
+        RESET_AWAITED_DEPENDENCIES(state, {clientStateVersion}) {
+            if (!clientStateVersion) {
+                return
+            }
+
+            for (const parameter of state.parameters) {
+                if ((parameter.awaitedVersion) && (parameter.awaitedVersion <= clientStateVersion)) {
+                    Vue.set(parameter, 'loading', false)
+                    parameter.awaitedVersion = null
+                    break
+                }
+            }
         }
     }
-}
+})
 
 function reconnect(state, internalState, commit, dispatch, selectedScript) {
     let dataReceived = false;
@@ -236,6 +290,9 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
 
             const eventType = event.event;
             const data = event.data;
+            const clientStateVersion = event.data.clientStateVersion;
+
+            commit('RESET_AWAITED_DEPENDENCIES', {clientStateVersion})
 
             if (isNull(state.scriptConfig) && (eventType !== 'initialConfig')) {
                 console.error('Expected "initialConfig" event, but got ' + eventType);
@@ -269,7 +326,6 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
 
             if (eventType === 'parameterRemoved') {
                 commit('REMOVE_PARAMETER', data);
-
             }
         },
 
