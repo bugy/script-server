@@ -419,7 +419,7 @@ describe('Test scriptConfig module', function () {
 
         function assertLoading(paramName, expectedValue) {
             const dependantParam = store.state.scriptConfig.parameters.find(p => p.name === paramName)
-            expect(dependantParam.loading ?? false).toEqual(expectedValue)
+            expect(dependantParam.loading || false).toEqual(expectedValue)
         }
 
         it('test set parameter to loading on dependency change', async function () {
