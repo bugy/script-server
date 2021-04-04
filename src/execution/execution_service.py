@@ -77,6 +77,10 @@ class ExecutionService:
         if execution_id in self._executors:
             self._executors[execution_id].kill()
 
+    def kill_script_by_system(self, execution_id):
+        if execution_id in self._executors:
+            self._executors[execution_id].kill()
+
     def get_exit_code(self, execution_id):
         return self._get_for_executor(execution_id, lambda e: e.get_return_code())
 

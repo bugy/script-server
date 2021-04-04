@@ -707,7 +707,7 @@ def intercept_stop_when_running_scripts(io_loop, execution_service):
                 try:
                     LOGGER.info('Killing the running processes: ' + str(running_processes))
                     for id in running_processes:
-                        execution_service.kill_script(id)
+                        execution_service.kill_script_by_system(id)
                 except:
                     LOGGER.exception('Could not kill running scripts, trying to stop the server')
 
