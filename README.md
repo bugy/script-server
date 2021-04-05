@@ -25,21 +25,27 @@ No script modifications are needed - you configure each script in Script server 
 - Execution history
 - Admin page for script configuration
 
-For more details check [how to configure a script](https://github.com/bugy/script-server/wiki/Script-config) or [how to configure the server](https://github.com/bugy/script-server/wiki/Server-configuration)
+For more details check [how to configure a script](https://github.com/bugy/script-server/wiki/Script-config)
+or [how to configure the server](https://github.com/bugy/script-server/wiki/Server-configuration)
 
 ## Requirements
+
 ### Server-side
-Python 3.5 or higher with the following modules:
-* Tornado 4 / 5 / 6
+
+Python 3.6 or higher with the following modules:
+
+* Tornado 5 / 6
 
 Some features can require additional modules. Such requirements are specified in a corresponding feature description.
 
 OS support:
-- Linux (main). Tested and working on Debian 9,10
+
+- Linux (main). Tested and working on Debian 10,11
 - Windows (additional). Light testing
 - macOS (additional). Light testing
 
 ### Client-side
+
 Any more or less up to date browser with enabled JS
 
 Internet connection is **not** needed. All the files are loaded from the server.
@@ -82,27 +88,40 @@ See [server config page](https://github.com/bugy/script-server/wiki/Server-confi
 Admin panel is accessible on admin.html page (e.g. http://localhost:5000/admin.html)
 
 ## Logging
+
 All web/operating logs are written to the *logs/server.log*
-Additionally each script logs are written to separate file in *logs/processes*. File name format is {script\_name}\_{client\_address}\_{date}\_{time}.log. 
+Additionally each script logs are written to separate file in *logs/processes*. File name format is
+{script\_name}\_{client\_address}\_{date}\_{time}.log.
 
 ## Testing/demo
-Script-server has bundled configs/scripts for testing/demo purposes, which are located in samples folder. You can link/copy these config files (samples/configs/\*.json) to server config folder (conf/runners).
+
+Script-server has bundled configs/scripts for testing/demo purposes, which are located in samples folder. You can
+link/copy these config files (samples/configs/\*.json) to server config folder (conf/runners).
 
 ## Security
-I do my best to make script-server secure and invulnerable to attacks, injections or user data security. However to be on the safe side, it's better to run Script server only on a trusted network.  
+
+I do my best to make script-server secure and invulnerable to attacks, injections or user data security. However to be
+on the safe side, it's better to run Script server only on a trusted network.  
 Any security leaks report or recommendations are greatly appreciated!
+
 ### Shell commands injection
-Script server guarantees that all user parameters are passed to an executable script as arguments and won't be executed under any conditions. There is no way to inject fraud command from a client-side.
-However user parameters are not escaped, so scripts should take care of not executing them also (general recommendation for bash is at least to wrap all arguments in double-quotes).
-It's recommended to use typed parameters when appropriate, because they are validated for proper values and so they are harder to be subject of commands injection. Such attempts would be easier to detect also.
+
+Script server guarantees that all user parameters are passed to an executable script as arguments and won't be executed
+under any conditions. There is no way to inject fraud command from a client-side. However, user parameters are not
+escaped, so scripts should take care of not executing them also (general recommendation for bash is at least to wrap all
+arguments in double-quotes). It's recommended to use typed parameters when appropriate, because they are validated for
+proper values and so they are harder to be subject of commands injection. Such attempts would be easier to detect also.
 
 _Important!_ Command injection protection is fully supported for Linux, but _only_ for .bat and .exe files on Windows
 
 ### XSS and CSRF
+
 At the moment script server _is_ vulnerable to these attacks.
 
 ## Contribution
+
 If you like the project and think you could help with making it better, there are many ways you can do it:
+
 - Create a new issue for new feature proposal or a bug
 - Implement existing issues (there are quite some of them: frontend/backend, simple/complex, choose whatever you like)
 - Help with improving the documentation
