@@ -40,12 +40,16 @@
          class="row">
       <Textfield v-if="allowedValuesFromScript" v-model="allowedValuesScript"
                  :config="allowedValuesScriptField"
-                 class="col s9" @error="handleError(allowedValuesScriptField, $event)"/>
-      <ChipsList v-else v-model="allowedValues" class="col s9" title="Allowed values"
+                 class="col s8" @error="handleError(allowedValuesScriptField, $event)"/>
+      <ChipsList v-else v-model="allowedValues" class="col s8" title="Allowed values"
                  @error="handleError('Allowed values', $event)"/>
       <Checkbox v-model="allowedValuesFromScript" :config="allowedValuesFromScriptField"
-                class="col s3"
+                class="col s2"
                 @error="handleError(allowedValuesFromScriptField, $event)"/>
+      <Checkbox v-if="allowedValuesFromScript" v-model="allowedValuesScriptShellEnabled"
+                :config="allowedValuesScriptShellEnabledField"
+                class="col s2"
+                @error="handleError(allowedValuesScriptShellEnabledField, $event)"/>
     </div>
     <div v-if="(selectedType === 'multiselect')" class="row">
       <Combobox v-model="multiselectArgumentType" :config="multiselectArgumentTypeField"
@@ -88,6 +92,7 @@ import Vue from 'vue';
 import {
   allowedValuesFromScriptField,
   allowedValuesScriptField,
+  allowedValuesScriptShellEnabledField,
   constantField,
   defaultValueField,
   descriptionField,
@@ -179,6 +184,7 @@ export default {
       allowedValues: null,
       allowedValuesScript: null,
       allowedValuesFromScript: null,
+      allowedValuesScriptShellEnabled: null,
       defaultValue: null,
       constant: null,
       secure: null,
@@ -209,7 +215,8 @@ export default {
       separatorField,
       fileDirField,
       recursiveField,
-      fileTypeField
+      fileTypeField,
+      allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField
     }
   },
 
@@ -259,10 +266,12 @@ export default {
             this.allowedValues = allowedValues;
             this.allowedValuesFromScript = false;
             this.allowedValuesScript = '';
+            this.allowedValuesScriptShellEnabled = false
           } else {
             this.allowedValues = [];
             this.allowedValuesFromScript = true;
             this.allowedValuesScript = allowedValues['script'];
+            this.allowedValuesScriptShellEnabled = get(allowedValues, 'shell', false);
           }
         }
       }
@@ -308,6 +317,9 @@ export default {
     allowedValuesScript() {
       this.updateAllowedValues();
     },
+    allowedValuesScriptShellEnabled() {
+      this.updateAllowedValues();
+    },
     defaultValue() {
       if (this.selectedType === 'multiselect') {
         updateValue(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
@@ -340,7 +352,10 @@ export default {
   methods: {
     updateAllowedValues() {
       if (this.allowedValuesFromScript) {
-        updateValue(this.value, 'values', {script: this.allowedValuesScript});
+        updateValue(this.value, 'values', {
+          script: this.allowedValuesScript,
+          shell: this.allowedValuesScriptShellEnabled
+        });
       } else {
         updateValue(this.value, 'values', this.allowedValues);
       }

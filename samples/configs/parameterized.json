@@ -28,14 +28,14 @@
     {
       "name": "Simple List",
       "param": "--simple_list=",
+      "same_arg_param": true,
       "type": "list",
       "description": "Parameter Five",
       "values": [
         "val1",
         "val3",
         "some long value"
-      ],
-      "same_arg_param": true
+      ]
     },
     {
       "name": "File upload",
@@ -48,13 +48,13 @@
       "param": "--multiselect",
       "type": "multiselect",
       "description": "Multiselect list",
-      "multiselect_argument_type": "repeat_param_value",
       "values": [
         "Black cat",
         "Brown dog",
         "Green parrot",
         "Red fox"
-      ]
+      ],
+      "multiselect_argument_type": "repeat_param_value"
     },
     {
       "name": "Required Text",
@@ -111,7 +111,7 @@
       "type": "list",
       "description": "List parameter 2",
       "values": {
-        "script": "ls /var"
+        "script": "ls /var | grep -v lock | grep -v backups"
       }
     },
     {
@@ -238,9 +238,9 @@
     },
     {
       "name": "Editable list",
+      "required": true,
       "param": "--editable_list",
       "type": "editable_list",
-      "required": true,
       "values": [
         "Value A",
         "Value B",

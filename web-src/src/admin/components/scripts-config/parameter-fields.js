@@ -72,6 +72,13 @@ export const allowedValuesFromScriptField = {
     description: 'Fill values based on defined script'
 };
 
+export const allowedValuesScriptShellEnabledField = {
+    name: 'Enable bash operators',
+    withoutValue: true,
+    description: 'Enables bash operators (e.g. | && ||) in script section. ' +
+        'Be careful!! If a script has dependant values, it will be a subject to script injection'
+};
+
 export const defaultValueField = {
     name: 'Default value'
 };

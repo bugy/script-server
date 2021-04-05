@@ -140,7 +140,8 @@ def create_script_param_config(
         file_type=None,
         file_extensions=None,
         excluded_files=None,
-        same_arg_param=None):
+        same_arg_param=None,
+        values_script_shell=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -148,6 +149,8 @@ def create_script_param_config(
 
     if values_script is not None:
         conf['values'] = {'script': values_script}
+        if values_script_shell is not None:
+            conf['values']['shell'] = values_script_shell
 
     if default is not None:
         conf['default'] = default
@@ -269,7 +272,8 @@ def create_parameter_model(name=None,
                            all_parameters=None,
                            file_dir=None,
                            file_recursive=None,
-                           other_param_values: ObservableDict = None):
+                           other_param_values: ObservableDict = None,
+                           values_script_shell=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -287,7 +291,8 @@ def create_parameter_model(name=None,
         max=max,
         allowed_values=allowed_values,
         file_dir=file_dir,
-        file_recursive=file_recursive)
+        file_recursive=file_recursive,
+        values_script_shell=values_script_shell)
 
     if all_parameters is None:
         all_parameters = []

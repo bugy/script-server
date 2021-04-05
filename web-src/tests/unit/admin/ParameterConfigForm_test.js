@@ -309,6 +309,7 @@ describe('Test ParameterConfigForm', function () {
             assert.isUndefined(_findField('script', false));
             assert.deepEqual(['abc', '123', 'xyz'], _findField('allowed values').value);
             assert.isFalse(_findField('load from script').value);
+            assert.isUndefined(_findField('enable bash operators', false));
         });
 
         it('Test allowed values when script', async function () {
@@ -324,6 +325,7 @@ describe('Test ParameterConfigForm', function () {
             assert.equal('ls ~/', _findField('script').value);
             assert.isUndefined(_findField('allowed values', false));
             assert.isTrue(_findField('load from script').value);
+            assert.isFalse(_findField('enable bash operators').value);
         });
 
         it('Test allowed values when array and type editable_list', async function () {
@@ -406,7 +408,17 @@ describe('Test ParameterConfigForm', function () {
 
             await _setValueByUser('Script', 'ls ~/');
 
-            assertOutputValue('values', {'script': 'ls ~/'});
+            assertOutputValue('values', {'script': 'ls ~/', 'shell': false});
+        });
+
+        it('Test update allowed values to script with shell', async function () {
+            await _setValueByUser('Type', 'list');
+            await _setValueByUser('Load from script', true);
+
+            await _setValueByUser('Script', 'ls ~/');
+            await _setValueByUser('Enable bash operators', true);
+
+            assertOutputValue('values', {'script': 'ls ~/', 'shell': true});
         });
 
         it('Test update allowed values to script and back', async function () {

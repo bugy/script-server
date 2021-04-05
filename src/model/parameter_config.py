@@ -188,12 +188,16 @@ class ParameterModel(object):
             return ConstValuesProvider(values_config)
 
         elif 'script' in values_config:
-            script = replace_auth_vars(values_config['script'], self._username, self._audit_name)
+            original_script = values_config['script']
+            has_variables = ('${' in original_script)
+
+            script = replace_auth_vars(original_script, self._username, self._audit_name)
+            shell = read_bool_from_config('shell', values_config, default=not has_variables)
 
             if '${' not in script:
-                return ScriptValuesProvider(script)
+                return ScriptValuesProvider(script, shell)
 
-            return DependantScriptValuesProvider(script, self._parameters_supplier)
+            return DependantScriptValuesProvider(script, self._parameters_supplier, shell)
 
         else:
             message = 'Unsupported "values" format for ' + self.name
@@ -439,11 +443,13 @@ def _resolve_default(default, username, audit_name, working_dir):
     if resolved_string_value == string_value:
         resolved_string_value = replace_auth_vars(string_value, username, audit_name)
 
-    if not script:
-        return resolved_string_value
+    if script:
+        has_variables = string_value != resolved_string_value
+        shell = read_bool_from_config('shell', default, default=not has_variables)
+        output = process_utils.invoke(resolved_string_value, working_dir, shell=shell)
+        return output.strip()
 
-    output = process_utils.invoke(resolved_string_value, working_dir)
-    return output.strip()
+    return resolved_string_value
 
 
 def _resolve_file_dir(config, key):
