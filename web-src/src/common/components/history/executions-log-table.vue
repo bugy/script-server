@@ -3,11 +3,21 @@
     <table class="highlight striped">
       <thead>
       <tr>
-        <th class="id-column">ID</th>
-        <th class="start_time-column">Start Time</th>
-        <th class="user-column">User</th>
-        <th class="script-column">Script</th>
-        <th class="status-column">Status</th>
+        <th class="id-column">
+          <a href="#" @click="sortBy('id')">ID</a>
+        </th>
+        <th class="start_time-column">
+          <a href="#" @click="sortBy('startTimeString')">Start Time</a>
+        </th>
+        <th class="user-column">
+          <a href="#" @click="sortBy('user')">User</a>
+        </th>
+        <th class="script-column">
+          <a href="#" @click="sortBy('script')">Script</a>
+        </th>
+        <th class="status-column">
+          <a href="#" @click="sortBy('fullStatus')">Status</a>
+        </th>
       </tr>
       </thead>
       <tbody v-if="!loading">
@@ -29,12 +39,37 @@ import {mapState} from 'vuex';
 
 export default {
   name: 'executions-log-table',
+  ascending: false,
+  sortColumn: 'id',
   props: {
     rows: Array,
     rowClick: {
       type: Function
     }
   },
+
+  methods: {
+    sortBy: function sortBy(sortKey) {
+      if (this.sortColumn === sortKey) {
+        this.ascending = !this.ascending;
+      } else {
+        this.ascending = true;
+        this.sortColumn = sortKey;
+      }
+
+      let ascending = this.ascending;
+
+      this.rows.sort(function(a, b) {
+        if (a[sortKey] > b[sortKey]) {
+          return ascending ? 1 : -1
+        } else if (a[sortKey] < b[sortKey]) {
+          return ascending ? -1 : 1
+        }
+        return 0;
+      })
+    }
+  },
+
   computed: {
     ...mapState('history', ['loading'])
   }
