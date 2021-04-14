@@ -4,19 +4,19 @@
       <thead>
       <tr>
         <th class="id-column">
-          <a href="#" @click="sortBy('id')">ID</a>
+          <a href="#" @click="sortBy('id')">ID<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
         </th>
         <th class="start_time-column">
-          <a href="#" @click="sortBy('startTimeString')">Start Time</a>
+          <a href="#" @click="sortBy('startTimeString')">Start Time<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
         </th>
         <th class="user-column">
-          <a href="#" @click="sortBy('user')">User</a>
+          <a href="#" @click="sortBy('user')">User<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
         </th>
         <th class="script-column">
-          <a href="#" @click="sortBy('script')">Script</a>
+          <a href="#" @click="sortBy('script')">Script<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
         </th>
         <th class="status-column">
-          <a href="#" @click="sortBy('fullStatus')">Status</a>
+          <a href="#" @click="sortBy('fullStatus')">Status<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
         </th>
       </tr>
       </thead>
@@ -39,10 +39,16 @@ import {mapState} from 'vuex';
 
 export default {
   name: 'executions-log-table',
-  ascending: false,
-  sortColumn: 'id',
   props: {
     rows: Array,
+    'sortColumn': {
+      type: String,
+      default: 'id'
+    },
+    'ascending': {
+      type: Boolean,
+      default: false
+    },
     rowClick: {
       type: Function
     }
@@ -106,5 +112,26 @@ export default {
   font-size: 1.2em;
   text-align: center;
   margin-top: 1em;
+}
+
+.executions-log-table .arrow {
+  display: inline-block;
+  vertical-align: middle;
+  width: 0;
+  height: 0;
+  margin-left: 5px;
+  opacity: 0.66;
+}
+
+.executions-log-table .arrow.asc {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid #42b983;
+}
+
+.executions-log-table .arrow.desc {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #42b983;
 }
 </style>
