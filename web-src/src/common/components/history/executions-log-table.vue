@@ -3,21 +3,11 @@
     <table class="highlight striped">
       <thead>
       <tr>
-        <th class="id-column">
-          <a href="#" @click="sortBy('id')">ID<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
-        </th>
-        <th class="start_time-column">
-          <a href="#" @click="sortBy('startTimeString')">Start Time<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
-        </th>
-        <th class="user-column">
-          <a href="#" @click="sortBy('user')">User<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
-        </th>
-        <th class="script-column">
-          <a href="#" @click="sortBy('script')">Script<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
-        </th>
-        <th class="status-column">
-          <a href="#" @click="sortBy('fullStatus')">Status<span :class="ascending ? 'arrow asc' : 'arrow desc'"></span></a>
-        </th>
+        <th class="id-column" :class="showArrow('id')" @click="sortBy('id')">ID</th>
+        <th class="start_time-column" :class="showArrow('startTimeString')" @click="sortBy('startTimeString')">Start Time</th>
+        <th class="user-column" :class="showArrow('user')" @click="sortBy('user')">User</th>
+        <th class="script-column" :class="showArrow('script')" @click="sortBy('script')">Script</th>
+        <th class="status-column" :class="showArrow('fullStatus')" @click="sortBy('fullStatus')">Status</th>
       </tr>
       </thead>
       <tbody v-if="!loading">
@@ -55,7 +45,13 @@ export default {
   },
 
   methods: {
-    sortBy: function sortBy(sortKey) {
+    showArrow: function (sortKey) {
+      if (this.sortColumn === sortKey) {
+        return this.ascending ? 'arrow asc' : 'arrow desc'
+      }
+    },
+
+    sortBy: function (sortKey) {
       if (this.sortColumn === sortKey) {
         this.ascending = !this.ascending;
       } else {
@@ -114,24 +110,24 @@ export default {
   margin-top: 1em;
 }
 
-.executions-log-table .arrow {
+.executions-log-table .arrow:after {
   display: inline-block;
   vertical-align: middle;
   width: 0;
   height: 0;
   margin-left: 5px;
-  opacity: 0.66;
+  content: ""
 }
 
-.executions-log-table .arrow.asc {
+.executions-log-table .arrow.asc:after {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-bottom: 4px solid #42b983;
+  border-bottom: 4px solid var(--font-color-main);
 }
 
-.executions-log-table .arrow.desc {
+.executions-log-table .arrow.desc:after {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 4px solid #42b983;
+  border-top: 4px solid var(--font-color-main);
 }
 </style>
