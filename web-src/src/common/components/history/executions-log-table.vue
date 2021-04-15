@@ -3,11 +3,11 @@
     <table class="highlight striped">
       <thead>
       <tr>
-        <th class="id-column" :class="showArrow('id')" @click="sortBy('id')">ID</th>
-        <th class="start_time-column" :class="showArrow('startTimeString')" @click="sortBy('startTimeString')">Start Time</th>
-        <th class="user-column" :class="showArrow('user')" @click="sortBy('user')">User</th>
-        <th class="script-column" :class="showArrow('script')" @click="sortBy('script')">Script</th>
-        <th class="status-column" :class="showArrow('fullStatus')" @click="sortBy('fullStatus')">Status</th>
+        <th class="id-column" :class="showSort('id')" @click="sortBy('id')">ID</th>
+        <th class="start_time-column" :class="showSort('startTimeString')" @click="sortBy('startTimeString')">Start Time</th>
+        <th class="user-column" :class="showSort('user')" @click="sortBy('user')">User</th>
+        <th class="script-column" :class="showSort('script')" @click="sortBy('script')">Script</th>
+        <th class="status-column" :class="showSort('fullStatus')" @click="sortBy('fullStatus')">Status</th>
       </tr>
       </thead>
       <tbody v-if="!loading">
@@ -45,9 +45,9 @@ export default {
   },
 
   methods: {
-    showArrow: function (sortKey) {
+    showSort: function (sortKey) {
       if (this.sortColumn === sortKey) {
-        return this.ascending ? 'arrow asc' : 'arrow desc'
+        return this.ascending ? 'sorted asc' : 'sorted desc'
       }
     },
 
@@ -110,7 +110,7 @@ export default {
   margin-top: 1em;
 }
 
-.executions-log-table .arrow:after {
+.executions-log-table .sorted:after {
   display: inline-block;
   vertical-align: middle;
   width: 0;
@@ -119,13 +119,13 @@ export default {
   content: ""
 }
 
-.executions-log-table .arrow.asc:after {
+.executions-log-table .sorted.asc:after {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-bottom: 4px solid var(--font-color-main);
 }
 
-.executions-log-table .arrow.desc:after {
+.executions-log-table .sorted.desc:after {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 4px solid var(--font-color-main);
