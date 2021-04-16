@@ -79,6 +79,10 @@ export default {
 </script>
 
 <style scoped>
+.executions-log-table th  {
+  cursor: pointer;
+}
+
 .executions-log-table tbody > tr {
   cursor: pointer;
 }
