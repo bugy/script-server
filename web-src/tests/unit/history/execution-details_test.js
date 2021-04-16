@@ -1,6 +1,7 @@
 'use strict';
 import ExecutionDetails from '@/common/components/history/execution-details'
-import historyModule, {axiosInstance} from '@/common/store/executions-module';
+import historyModule from '@/common/store/executions-module';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import {mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
 import {assert, config as chaiConfig} from 'chai';
@@ -13,7 +14,7 @@ chaiConfig.truncateThreshold = 0;
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
-const axiosMock = new MockAdapter(axiosInstance);
+let axiosMock;
 
 
 function mockGetExecution(id, startTime, user, script, status, exitCode, command, log) {
@@ -40,11 +41,14 @@ describe('Test history details', function () {
             localVue
         });
 
+        axiosMock = new MockAdapter(axiosInstance)
+
         await vueTicks();
     });
 
     afterEach(function () {
         executionDetails.destroy();
+        axiosMock.restore()
     });
 
     describe('Test visualisation', function () {

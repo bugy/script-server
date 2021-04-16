@@ -11,6 +11,10 @@ from utils.string_utils import strip
 
 LOGGER = logging.getLogger('server_conf')
 
+XSRF_PROTECTION_TOKEN = 'token'
+XSRF_PROTECTION_HEADER = 'header'
+XSRF_PROTECTION_DISABLED = 'disabled'
+
 
 class ServerConfig(object):
     def __init__(self) -> None:
@@ -34,6 +38,7 @@ class ServerConfig(object):
         self.callbacks_config = None
         self.user_header_name = None
         self.secret_storage_file = None
+        self.xsrf_protection = None
 
     def get_port(self):
         return self.port
@@ -122,6 +127,8 @@ def from_json(conf_path, temp_folder):
         admin_users = def_admins
         full_history_users = []
 
+    security = model_helper.read_dict(json_object, 'security')
+
     config.allowed_users = _prepare_allowed_users(allowed_users, admin_users, user_groups)
     config.alerts_config = json_object.get('alerts')
     config.callbacks_config = json_object.get('callbacks')
@@ -135,6 +142,7 @@ def from_json(conf_path, temp_folder):
     config.max_request_size_mb = read_int_from_config('max_request_size', json_object, default=10)
 
     config.secret_storage_file = json_object.get('secret_storage_file', os.path.join(temp_folder, 'secret.dat'))
+    config.xsrf_protection = _parse_xsrf_protection(security)
 
     return config
 
@@ -219,6 +227,15 @@ def _parse_history_users(json_object):
         return [ANY_USER]
 
     return full_history_users
+
+
+def _parse_xsrf_protection(security):
+    return model_helper.read_str_from_config(security,
+                                             'xsrf_protection',
+                                             default=XSRF_PROTECTION_TOKEN,
+                                             allowed_values=[XSRF_PROTECTION_TOKEN,
+                                                             XSRF_PROTECTION_HEADER,
+                                                             XSRF_PROTECTION_DISABLED])
 
 
 class InvalidServerConfigException(Exception):

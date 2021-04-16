@@ -3,7 +3,7 @@ import threading
 import traceback
 from asyncio import set_event_loop_policy
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import requests
 from parameterized import parameterized
@@ -12,8 +12,9 @@ from tornado.ioloop import IOLoop
 from auth.authorization import Authorizer, ANY_USER, EmptyGroupProvider
 from config.config_service import ConfigService
 from features.file_download_feature import FileDownloadFeature
+from features.file_upload_feature import FileUploadFeature
 from files.user_file_storage import UserFileStorage
-from model.server_conf import ServerConfig
+from model.server_conf import ServerConfig, XSRF_PROTECTION_TOKEN, XSRF_PROTECTION_HEADER
 from tests import test_utils
 from utils import os_utils, env_utils
 from web import server
@@ -100,6 +101,53 @@ class ServerTest(TestCase):
                                 headers={header: 'https'})
         self.assertRegex(response.headers['Location'], '^https')
 
+    def test_xsrf_protection_when_token(self):
+        self.start_server(12345, '127.0.0.1')
+
+        test_utils.write_script_config({'name': 's1', 'script_path': 'ls'}, 's1', self.runners_folder)
+        response = requests.get('http://127.0.0.1:12345/scripts')
+
+        xsrf_token = response.cookies.get('_xsrf')
+        start_response = requests.post(
+            'http://127.0.0.1:12345/executions/start',
+            data={'__script_name': 's1'},
+            files=[('notafile', None)],
+            headers={'X-XSRFToken': xsrf_token},
+            cookies=response.cookies
+        )
+        self.assertEqual(start_response.status_code, 200)
+        self.assertEqual(start_response.content, b'3')
+
+    def test_xsrf_protection_when_token_failed(self):
+        self.start_server(12345, '127.0.0.1')
+
+        test_utils.write_script_config({'name': 's1', 'script_path': 'ls'}, 's1', self.runners_folder)
+        response = requests.get('http://127.0.0.1:12345/scripts')
+
+        start_response = requests.post(
+            'http://127.0.0.1:12345/executions/start',
+            data={'__script_name': 's1'},
+            files=[('notafile', None)],
+            headers={'X-Requested-With': 'XMLHttpRequest'},
+            cookies=response.cookies
+        )
+        self.assertEqual(start_response.status_code, 403)
+
+    def test_xsrf_protection_when_header(self):
+        self.start_server(12345, '127.0.0.1', xsrf_protection=XSRF_PROTECTION_HEADER)
+
+        test_utils.write_script_config({'name': 's1', 'script_path': 'ls'}, 's1', self.runners_folder)
+        requests.get('http://127.0.0.1:12345/scripts')
+
+        start_response = requests.post(
+            'http://127.0.0.1:12345/executions/start',
+            data={'__script_name': 's1'},
+            files=[('notafile', None)],
+            headers={'X-Requested-With': 'XMLHttpRequest'},
+        )
+        self.assertEqual(start_response.status_code, 200)
+        self.assertEqual(start_response.content, b'3')
+
     def request(self, method, url):
         response = requests.request(method, url)
         self.assertEqual(200, response.status_code, 'Failed to execute request: ' + response.text)
@@ -109,22 +157,27 @@ class ServerTest(TestCase):
         response = requests.get('http://127.0.0.1:12345/conf')
         self.assertEqual(response.status_code, 200)
 
-    def start_server(self, port, address):
+    def start_server(self, port, address, *, xsrf_protection=XSRF_PROTECTION_TOKEN):
         file_download_feature = FileDownloadFeature(UserFileStorage(b'some_secret'), test_utils.temp_folder)
         config = ServerConfig()
         config.port = port
         config.address = address
+        config.xsrf_protection = xsrf_protection
+        config.max_request_size_mb = 1
 
         authorizer = Authorizer(ANY_USER, [], [], EmptyGroupProvider())
+        execution_service = MagicMock()
+        execution_service.start_script.return_value = 3
+
         server.init(config,
                     None,
                     authorizer,
-                    None,
-                    None,
-                    None,
+                    execution_service,
+                    MagicMock(),
+                    MagicMock(),
                     ConfigService(authorizer, self.conf_folder),
-                    None,
-                    None,
+                    MagicMock(),
+                    FileUploadFeature(UserFileStorage(b'cookie_secret'), test_utils.temp_folder),
                     file_download_feature,
                     'cookie_secret',
                     None,

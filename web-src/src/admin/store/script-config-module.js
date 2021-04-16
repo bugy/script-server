@@ -1,7 +1,7 @@
 import {contains, forEachKeyValue, isEmptyArray, isEmptyValue} from '@/common/utils/common';
-import axios from 'axios';
 import clone from 'lodash/clone';
 import router from '../router/router'
+import {axiosInstance} from '@/common/utils/axios_utils';
 
 const allowedEmptyValuesInParam = ['name'];
 
@@ -46,7 +46,7 @@ export default {
 
             commit('RESET', scriptName);
 
-            axios.get('admin/scripts/' + encodeURIComponent(scriptName))
+            axiosInstance.get('admin/scripts/' + encodeURIComponent(scriptName))
                 .then(({data}) => {
                     commit('SET_SCRIPT_CONFIG', {config: data.config, filename: data.filename});
                 })
@@ -61,7 +61,7 @@ export default {
 
             removeEmptyValues(config);
 
-            const axiosAction = state.new ? axios.post : axios.put;
+            const axiosAction = state.new ? axiosInstance.post : axiosInstance.put;
 
             return axiosAction('admin/scripts', {
                 config,

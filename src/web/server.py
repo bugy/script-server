@@ -31,7 +31,7 @@ from model.external_model import to_short_execution_log, to_long_execution_log
 from model.model_helper import is_empty, InvalidFileException, AccessProhibitedException
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
-from model.server_conf import ServerConfig
+from model.server_conf import ServerConfig, XSRF_PROTECTION_TOKEN, XSRF_PROTECTION_DISABLED, XSRF_PROTECTION_HEADER
 from scheduling.schedule_service import ScheduleService, UnavailableScriptException, InvalidScheduleException
 from utils import file_utils as file_utils
 from utils import tornado_utils, os_utils, env_utils
@@ -87,6 +87,22 @@ def exception_to_code_and_message(exception):
 class BaseRequestHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header('X-Frame-Options', 'DENY')
+
+        if self.application.server_config.xsrf_protection == XSRF_PROTECTION_TOKEN:
+            # This is needed to initialize cookie (by default tornado does it only on html template rendering)
+            # noinspection PyStatementEffect
+            self.xsrf_token
+
+    def check_xsrf_cookie(self):
+        xsrf_protection = self.application.server_config.xsrf_protection
+        if xsrf_protection == XSRF_PROTECTION_TOKEN:
+            return super().check_xsrf_cookie()
+
+        elif xsrf_protection == XSRF_PROTECTION_HEADER:
+            requested_with = self.request.headers.get('X-Requested-With')
+            if not requested_with:
+                raise tornado.web.HTTPError(403, 'X-Requested-With header is missing for XSRF protection')
+            return
 
     def write_error(self, status_code, **kwargs):
         if ('exc_info' in kwargs) and (kwargs['exc_info']):
@@ -786,7 +802,8 @@ def init(server_config: ServerConfig,
         "login_url": "/login.html",
         'websocket_ping_interval': 30,
         'websocket_ping_timeout': 300,
-        'compress_response': True
+        'compress_response': True,
+        'xsrf_cookies': server_config.xsrf_protection != XSRF_PROTECTION_DISABLED,
     }
 
     application = tornado.web.Application(handlers, **settings)

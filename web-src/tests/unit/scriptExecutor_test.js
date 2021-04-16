@@ -1,6 +1,6 @@
 import scriptExecutor, {__RewireAPI__ as ExecutorRewireAPI} from '@/main-app/store/scriptExecutor';
 
-import axios from 'axios';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import MockAdapter from 'axios-mock-adapter';
 import {assert} from 'chai';
 import {Server, WebSocket} from 'mock-socket';
@@ -8,7 +8,8 @@ import * as sinon from 'sinon';
 import Vuex from 'vuex';
 import {createScriptServerTestVue, timeout} from './test_utils'
 
-const axiosMock = new MockAdapter(axios);
+let axiosMock;
+
 window.WebSocket = WebSocket;
 
 const localVue = createScriptServerTestVue();
@@ -47,12 +48,15 @@ describe('Test scriptExecutor module', function () {
     let websocketServer = null;
 
     beforeEach(function () {
+        axiosMock = new MockAdapter(axiosInstance)
+
         websocketServer = new Server('ws://localhost:9876/executions/io/123');
         websocketServer.on('connection', socket => {
             currentSocket = socket;
         });
     });
     afterEach(function () {
+        axiosMock.restore()
         websocketServer.stop();
 
         ExecutorRewireAPI.__ResetDependency__('oneSecDelay', 1000);
@@ -130,6 +134,7 @@ describe('Test scriptExecutor module', function () {
         beforeEach(async function () {
             store = createStore();
 
+            mockStopEndpoint(123);
             await store.dispatch('scriptExecutor/reconnect');
         });
 

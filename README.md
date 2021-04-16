@@ -116,7 +116,12 @@ _Important!_ Command injection protection is fully supported for Linux, but _onl
 
 ### XSS and CSRF
 
-At the moment script server _is_ vulnerable to these attacks.
+_(v1.0 - v1.16)_  
+Script server _is_ vulnerable to these attacks.
+
+_(v1.17+)_  
+Script server is protected against XSRF attacks via a special token.    
+XSS protection TBD.
 
 ## Contribution
 

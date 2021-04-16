@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-
-export const axiosInstance = axios.create();
+import {axiosInstance} from '@/common/utils/axios_utils';
 
 export default {
     state: {

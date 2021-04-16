@@ -15,7 +15,7 @@ import {
     toDict,
     toQueryArgs
 } from '@/common/utils/common';
-import axios from 'axios';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import Vue from 'vue';
 import {preprocessParameter} from '../utils/model_helper';
 
@@ -408,6 +408,6 @@ function loadFiles(scriptConfig, parameterName, path) {
     const param = toQueryArgs({'path': path, 'id': scriptConfig.id});
     const full_url = url + '?' + param;
 
-    return axios.get(full_url)
+    return axiosInstance.get(full_url)
         .then(({data}) => data);
 }

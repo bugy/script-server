@@ -1,8 +1,6 @@
 import {isNull} from '@/common/utils/common';
-import scriptExecutionManagerModule, {
-    __RewireAPI__ as ExecutionManagerRewire,
-    axiosInstance
-} from '@/main-app/store/scriptExecutionManager';
+import scriptExecutionManagerModule, {__RewireAPI__ as ExecutionManagerRewire,} from '@/main-app/store/scriptExecutionManager';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import {STATUS_INITIALIZING} from '@/main-app/store/scriptExecutor';
 import MockAdapter from 'axios-mock-adapter';
 import cloneDeep from 'lodash/cloneDeep';
@@ -10,7 +8,7 @@ import {WebSocket} from 'mock-socket';
 import Vuex from 'vuex';
 import {createScriptServerTestVue, flushPromises} from '../../test_utils';
 
-const axiosMock = new MockAdapter(axiosInstance);
+let axiosMock;
 window.WebSocket = WebSocket;
 
 const localVue = createScriptServerTestVue();
@@ -65,7 +63,12 @@ describe('Test scriptExecutionManager', function () {
 
     beforeEach(async function () {
         store = createStore();
+        axiosMock = new MockAdapter(axiosInstance)
     });
+
+    afterEach(function () {
+        axiosMock.restore()
+    })
 
     async function setupInitialExecutors(executions) {
         mockActiveExecutions(executions);

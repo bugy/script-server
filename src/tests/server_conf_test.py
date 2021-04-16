@@ -2,12 +2,15 @@ import json
 import os
 import unittest
 
+from parameterized import parameterized
+
 from auth.auth_gitlab import GitlabOAuthAuthenticator
 from auth.auth_google_oauth import GoogleOauthAuthenticator
 from auth.auth_htpasswd import HtpasswdAuthenticator
 from auth.auth_ldap import LdapAuthenticator
 from auth.authorization import ANY_USER
 from model import server_conf
+from model.model_helper import InvalidValueException
 from model.server_conf import _prepare_allowed_users
 from tests import test_utils
 from utils import file_utils
@@ -245,6 +248,38 @@ class TestAuthConfig(unittest.TestCase):
 
         authenticated = config.authenticator.verifier.verify('user1', 'aaa')
         self.assertTrue(authenticated)
+
+    def setUp(self) -> None:
+        super().setUp()
+        test_utils.setup()
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        test_utils.cleanup()
+
+
+class TestSecurityConfig(unittest.TestCase):
+    def test_default_config(self):
+        config = _from_json({})
+
+        self.assertEquals('token', config.xsrf_protection)
+
+    @parameterized.expand([
+        ('token',),
+        ('header',),
+        ('disabled',),
+    ])
+    def test_xsrf_protection(self, xsrf_protection):
+        config = _from_json({'security': {
+            'xsrf_protection': xsrf_protection
+        }})
+
+        self.assertEquals(xsrf_protection, config.xsrf_protection)
+
+    def test_xsrf_protection_when_unsupported(self):
+        self.assertRaises(InvalidValueException, _from_json, {'security': {
+            'xsrf_protection': 'something'
+        }})
 
     def setUp(self) -> None:
         super().setUp()

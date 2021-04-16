@@ -1,4 +1,4 @@
-import axios from 'axios';
+import {axiosInstance} from '@/common/utils/axios_utils';
 
 export default {
     state: {
@@ -10,7 +10,7 @@ export default {
     namespaced: true,
     actions: {
         init({commit}) {
-            axios.get('auth/info').then(({data}) => {
+            axiosInstance.get('auth/info').then(({data}) => {
                 const {username, admin, enabled} = data;
 
                 commit('SET_CONFIG', {username, admin, enabled})
@@ -22,7 +22,7 @@ export default {
         },
 
         logout({}) {
-            return axios.post('logout')
+            return axiosInstance.post('logout')
                 .catch(error => {
                     const {status} = error.response;
                     if (status !== 405) {

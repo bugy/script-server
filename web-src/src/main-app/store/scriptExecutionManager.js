@@ -1,5 +1,5 @@
 import {isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
-import axios from 'axios';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import clone from 'lodash/clone';
 import get from 'lodash/get';
 import scriptExecutor, {
@@ -10,8 +10,7 @@ import scriptExecutor, {
     STATUS_INITIALIZING
 } from './scriptExecutor';
 import {parametersToFormData} from '@/main-app/store/mainStoreHelper';
-
-export const axiosInstance = axios.create();
+import axios from 'axios'
 
 export default {
     namespaced: true,
