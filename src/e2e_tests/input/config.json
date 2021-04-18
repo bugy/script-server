@@ -1,0 +1,6 @@
+{
+  "browser": "chrome",
+  "wait_time": 3,
+  "host": "http://localhost:5000/",
+  "headless_mode": true
+}
