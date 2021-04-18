@@ -69,6 +69,7 @@ def to_long_execution_log(entry, log, running):
     external_entry = _translate_history_entry(entry, running)
     external_entry['command'] = entry.command
     external_entry['log'] = log
+    external_entry['outputFormat'] = entry.output_format
 
     return external_entry
 

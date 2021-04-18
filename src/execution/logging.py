@@ -100,6 +100,7 @@ class HistoryEntry:
         self.start_time = None
         self.script_name = None
         self.command = None
+        self.output_format = None
         self.id = None
         self.exit_code = None
 
@@ -125,6 +126,7 @@ class ExecutionLoggingService:
                       command,
                       output_stream,
                       all_audit_names,
+                      output_format,
                       start_time_millis=None):
 
         if start_time_millis is None:
@@ -142,6 +144,7 @@ class ExecutionLoggingService:
         output_logger.write_line('script:' + script_name)
         output_logger.write_line('start_time:' + str(start_time_millis))
         output_logger.write_line('command:' + command)
+        output_logger.write_line('output_format:' + output_format)
         output_logger.write_line(OUTPUT_STARTED_MARKER)
         output_logger.start()
 
@@ -302,6 +305,7 @@ class ExecutionLoggingService:
         entry.user_name = parameters.get('user_name')
         entry.user_id = parameters.get('user_id')
         entry.command = parameters.get('command')
+        entry.output_format = parameters.get('output_format')
 
         exit_code = parameters.get('exit_code')
         if exit_code is not None:
@@ -397,7 +401,8 @@ class ExecutionLoggingController:
                 script_name,
                 audit_command,
                 output_stream,
-                all_audit_names)
+                all_audit_names,
+                script_config.output_format)
 
         def finished(execution_id, user):
             exit_code = execution_service.get_exit_code(execution_id)

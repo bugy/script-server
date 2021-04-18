@@ -5,11 +5,14 @@ export class HtmlOutput {
         this.element = document.createElement('code')
         addClass(this.element, 'html-output')
         this.element.style.whiteSpace = 'normal'
+
+        this.rawText = ''
     }
 
     clear() {
         this.element.innerHTML = ''
         this.element.lastTrimmedChildIndex = 0
+        this.rawText = ''
     }
 
     write(text) {

@@ -17,10 +17,10 @@ localVue.use(Vuex);
 let axiosMock;
 
 
-function mockGetExecution(id, startTime, user, script, status, exitCode, command, log) {
+function mockGetExecution(id, startTime, user, script, status, exitCode, command, log, outputFormat = null) {
     axiosMock.onGet('history/execution_log/long/' + id)
         .reply(200, {
-            id, startTime, user, script, status, exitCode, command, log
+            id, startTime, user, script, status, exitCode, command, log, outputFormat
         });
 }
 
@@ -124,6 +124,25 @@ describe('Test history details', function () {
                 assertField('Status', '');
                 assertField('Command', '');
                 assertLog('');
+            });
+
+            it('test outputFormat', async function () {
+                mockGetExecution('12345',
+                    '2019-12-25T12:30:01',
+                    'User X',
+                    'My script',
+                    'Finished',
+                    -15,
+                    'my_script.sh -a -b 2',
+                    '<b>some bold text</b>',
+                    'html');
+
+                executionDetails.setProps({'executionId': 12345});
+                await flushPromises();
+                await vueTicks();
+
+                const boldElement = executionDetails.get('b')
+                expect(boldElement.text()).toBe('some bold text')
             });
         }
     )
