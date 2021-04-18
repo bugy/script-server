@@ -120,8 +120,13 @@ _(v1.0 - v1.16)_
 Script server _is_ vulnerable to these attacks.
 
 _(v1.17+)_  
-Script server is protected against XSRF attacks via a special token.    
-XSS protection TBD.
+Script server is protected against XSRF attacks via a special token.      
+XSS protection: the code is written according to
+[OWASP Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html)
+and the only **known** vulnerabilities are:
+
+* `output_format`=`html_iframe`, see the reasoning in the
+  linked [Wiki page]((https://github.com/bugy/script-server/wiki/Script-config#output_format))
 
 ## Contribution
 

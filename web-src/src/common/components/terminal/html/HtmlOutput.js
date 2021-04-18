@@ -1,4 +1,5 @@
-import {addClass} from '@/common/utils/common'
+import {addClass, destroyChildren} from '@/common/utils/common'
+import DOMPurify from 'dompurify'
 
 export class HtmlOutput {
     constructor() {
@@ -16,7 +17,10 @@ export class HtmlOutput {
     }
 
     write(text) {
-        this.element.innerHTML += text
+        this.rawText += text
+
+        destroyChildren(this.element)
+        this.element.appendChild(DOMPurify.sanitize(this.rawText, {RETURN_DOM_FRAGMENT: true}))
     }
 
     removeInlineImage(outputPath) {
