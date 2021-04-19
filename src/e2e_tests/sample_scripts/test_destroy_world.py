@@ -1,10 +1,11 @@
-from common.pages import DestroyWorldScript
-from selenium.webdriver.common.keys import Keys
+import time
+
 import allure
+from allure import severity, severity_level
+from common.pages import DestroyWorldScript
 from common.pages import is_displayed, is_enabled, is_disabled
 from delayed_assert import expect, assert_expectations
-from allure import severity, severity_level
-import time
+from selenium.webdriver.common.keys import Keys
 
 
 @severity(severity_level.NORMAL)
@@ -99,7 +100,7 @@ def test_user_input(browser, config_host):
     destroy_world_script_page = DestroyWorldScript(browser, config_host)
 
     destroy_world_script_page.users_input.send_keys("Y" + Keys.ENTER)
-    time.sleep(1)
+    time.sleep(3)
 
     expect(destroy_world_script_page.log.get_attribute("innerHTML") == destroy_world_script_page.first_step_log_content + destroy_world_script_page.second_step_log_content)
 
@@ -117,7 +118,7 @@ def test_user_input_no(browser, config_host):
     destroy_world_script_page = DestroyWorldScript(browser, config_host)
 
     destroy_world_script_page.users_input.send_keys("N" + Keys.ENTER)
-    time.sleep(1)
+    time.sleep(3)
 
     expect(destroy_world_script_page.log.get_attribute("innerHTML") == destroy_world_script_page.first_step_log_content + destroy_world_script_page.second_step_log_content + destroy_world_script_page.no_exit_log_content)
 

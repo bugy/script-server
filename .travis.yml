@@ -27,13 +27,18 @@ install:
   - sudo pip3 install requests --upgrade
   - cd web-src
   - npm install
+  - npm install allure-commandline --save-dev
   - cd ..
+  - python3 -m venv e2e_venv
+  - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
 before_script:
+  - cd ../src/e2e_tests
+  - e2e_venv/bin/python -m pytest
+  - cd ../..
   - cd src
   - python3 -m unittest discover -s tests -p "*.py" -t .
   - cd ../web-src
   - npm run test:unit-ci
-  - cd ..
 script:
   - python3 tools/build.py
 before_deploy:
