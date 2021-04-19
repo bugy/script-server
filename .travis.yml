@@ -32,7 +32,7 @@ install:
   - python3 -m venv e2e_venv
   - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
 before_script:
-  - cd ../src/e2e_tests
+  - cd src/e2e_tests
   - e2e_venv/bin/python -m pytest
   - cd ../..
   - cd src
