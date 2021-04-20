@@ -48,6 +48,14 @@ before_deploy:
 
     fi
 deploy:
+  - provider: pages
+    skip_cleanup: true
+    github_token: "$GITHUB_TOKEN"
+    keep_history: true
+    repo: bugy/script-server.github.io
+    target_branch: $TRAVIS_BRANCH
+    verbose: true
+    local_dir: /tmp/allure_report
   - provider: releases
     name: dev
     api_key: "$GITHUB_TOKEN"
