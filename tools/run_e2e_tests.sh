@@ -2,7 +2,7 @@
 
 set -e
 
-mkdir conf/runners
+mkdir -p conf/runners
 cp samples/configs/* conf/runners/
 
 ./launcher.py &
