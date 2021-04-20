@@ -1,20 +1,19 @@
 import json
 import time
-import pytest
 
+import allure
+import pytest
 from selenium.webdriver import Chrome, Firefox, Ie
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
-
-import allure
-
 
 CONFIG_PATH = 'input/config.json'
 DEFAULT_WAIT_TIME = 10
 SUPPORTED_BROWSERS = ['chrome', 'firefox', 'ie']
 DEFAULT_HEADLESS_MODE = True
 DEFAULT_SCREENSHOTS_NEEDED = False
-DEFAULT_SCRIPTS = ["Bash formatting", "colortest", "destroy_world", "Download kittens", "Multiple words", "Very parameterized", "Write to file (WIN)"]
+DEFAULT_SCRIPTS = ["Bash formatting", "colortest", "destroy_world", "Download kittens", "Multiple words",
+                   "Very parameterized", "Write to file (WIN)", "Ploty HTML output", "Simple HTML output"]
 
 
 with open(CONFIG_PATH) as config_file:

@@ -18,6 +18,6 @@ STATUS=$?
 kill $SERVER_PID
 rm -rf conf/runners
 
-allure generate /tmp/allure_result --clean -o /tmp/allure_report
+../../web-src/node_modules/allure-commandline/dist/bin/allure generate /tmp/allure_result --clean -o /tmp/allure_report
 
 exit $STATUS
