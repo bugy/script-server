@@ -32,6 +32,7 @@ install:
   - python3 -m venv e2e_venv
   - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
 before_script:
+  - python3 tools/build.py # TODO remove
   - tools/run_e2e_tests.sh
   - cd src
   - python3 -m unittest discover -s tests -p "*.py" -t .
