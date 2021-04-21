@@ -44,7 +44,7 @@ install:
 #  - cd ../web-src
 #  - npm run test:unit-ci
 script:
-  - aws cp README.md s3://script-server-tests
+  - aws s3 cp README.md s3://script-server-tests
   - python3 tools/build.py
   - tools/run_e2e_tests.sh
 after_script:
