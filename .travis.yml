@@ -32,15 +32,16 @@ install:
   - sudo pip3 install ldap3 parameterized bcrypt
   - sudo pip3 install requests --upgrade
   - sudo pip3 install awscli
+  - sudo pip3 install allure-pytest
   - cd web-src
   - npm install
   - npm install allure-commandline --save-dev
   - cd ..
   - python3 -m venv e2e_venv
   - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
-#before_script:
-#  - cd src
-#  - python3 -m unittest discover -s tests -p "*.py" -t .
+before_script:
+  - cd src
+  - python3 -m unittest discover -s tests -p "*.py" -t . --alluredir /tmp/allure_result
 #  - cd ../web-src
 #  - npm run test:unit-ci
 script:
