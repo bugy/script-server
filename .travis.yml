@@ -43,8 +43,8 @@ before_script:
   #  - python3 -m unittest discover -s tests -p "*.py" -t .
   - cd ../web-src
   - npm run test:unit-ci
+  - cd ..
 script:
-  - aws s3 cp README.md s3://script-server-tests
   - python3 tools/build.py
   - tools/run_e2e_tests.sh
 after_script:
