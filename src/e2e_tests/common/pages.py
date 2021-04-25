@@ -91,6 +91,18 @@ class Page(ABC):
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
+    def get_scripts_group_by_name(self, name):
+        try:
+            return self.browser.find_element_by_xpath("//span[contains(text(), '{}')]/parent::a[contains(@class,'collection-item')][contains(@class,'script-group')]".format(name))
+        except (NoSuchElementException, ElementNotInteractableException):
+            return None
+
+    def get_scripts_inside_group(self, group_link):
+        try:
+            return get_parent_element(group_link).find_elements_by_css_selector("a")
+        except (NoSuchElementException, ElementNotInteractableException):
+            return None
+
     def get_random_script_link(self):
         return random.choice(self.all_script_links)
 
