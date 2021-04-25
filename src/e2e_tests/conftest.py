@@ -12,8 +12,7 @@ DEFAULT_WAIT_TIME = 10
 SUPPORTED_BROWSERS = ['chrome', 'firefox', 'ie']
 DEFAULT_HEADLESS_MODE = True
 DEFAULT_SCREENSHOTS_NEEDED = False
-DEFAULT_SCRIPTS = ["Bash formatting", "colortest", "destroy_world", "Download kittens", "Multiple words",
-                   "Very parameterized", "Write to file (WIN)", "Ploty HTML output", "Simple HTML output"]
+DEFAULT_SCRIPTS = ["Bash formatting", "colortest", "destroy_world", "Download kittens", "Multiple words", "Very parameterized", "Write to file (WIN)", "HTML"]
 
 
 with open(CONFIG_PATH) as config_file:
