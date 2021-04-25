@@ -83,7 +83,7 @@ class Page(ABC):
 
     @property
     def all_script_links(self):
-        return self.browser.find_elements_by_css_selector("a.collection-item")
+        return self.browser.find_elements_by_css_selector("a.collection-item.script-list-item")
 
     def get_script_link_by_name(self, name):
         try:
