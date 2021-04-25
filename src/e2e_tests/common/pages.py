@@ -83,11 +83,23 @@ class Page(ABC):
 
     @property
     def all_script_links(self):
-        return self.browser.find_elements_by_css_selector("a.collection-item")
+        return self.browser.find_elements_by_css_selector("a.collection-item.script-list-item")
 
     def get_script_link_by_name(self, name):
         try:
             return self.browser.find_element_by_link_text(name)
+        except (NoSuchElementException, ElementNotInteractableException):
+            return None
+
+    def get_scripts_group_by_name(self, name):
+        try:
+            return self.browser.find_element_by_xpath("//span[contains(text(), '{}')]/parent::a[contains(@class,'collection-item')][contains(@class,'script-group')]".format(name))
+        except (NoSuchElementException, ElementNotInteractableException):
+            return None
+
+    def get_scripts_inside_group(self, group_link):
+        try:
+            return get_parent_element(group_link).find_elements_by_css_selector("a")
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 

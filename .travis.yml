@@ -18,30 +18,41 @@ env:
     - secure: 0AUrT+5xg+JGjAeZQfeCyVFHYw04YDSzCpeQILtt7Ca00rNJ4yshvCx+zEsyh0aMEO6+fLmGo4KCWC1tHKqKdO9ByIBBO1vbsQ83kDqC7GR1xorK8abN708NArxLdqylPRrrYK9Gr0VLk8t17DIfQdoP2QryJ2mDdsthzpliZOJ7c58LxIkBlog0uLabrX/d/m8ZEpgpqQalCUBmImc31tKBDprl5CVLk8ONLRVwdQ8WcYQaTNpOiIfx0OWp5iX+P9gMUyBTw8aFMlmwfZpXbDyGlwckDdIkKfWTUPq8FXNPLjyPbJ2zraID/kkNEw6J+x91w/F7VydhOoU/Gc4IAlL6TKN5xQquSclMz05kBHthSzZf7g6KUuQ0TgzK46zArcV4ZEItLU1h2IcLsPLi3+/O6TtUdUSQOIaCQX6YbQsnGDgEMWjtfpNJKpTyd+7SR+BuoQmtihr+Utl8rfq7vFTzkz+AiCvNnGQJzQoZKs83hgC57BRSD+LIkI0BrZ54ijNYoKCqvKHqmamkrXQEdiImBlTg8NpmBNHJgHdL6PRqi3NxLzJzdqKtz5pkI4MVVLYFXsUApD0AWvEOPejLnfVEGber5cA/Hm3HhqB7M9ja2BFml+oYBLc3mnzjKd/FT3VwWMiijfTJVvr6feFrhSQGiRyBLmaoRNmUSjUsfR0=
     # DOCKER_PASSWORD
     - secure: S22ffhnZOs1yFdBwJO9+uzy9DB3e7ehLWbj47U1zavsMKMDyDw0lkOIy8PMERFh4roBoM5dG95RIVbfNbrPXQxnY5Og2w7RTTv3eeHGdYzh+34Dppfk8mhEAhn3NL98sOe6is/5sEDvZ2ykPFLvoJmyV15V7Wvtuy1Zx+0lyZ0R0tX6sVJUWDlClHspCuSIKK+iptL5yLu4TtvX9Wks/c3kH6GIXYIJIeC63D+RRhuetbtGKND/RtFkq5IDP9qMZNXUAT/Mb8hrsk9HntFgl79dG2ChvBpDE8/LqjYDBiFTiUAtJfBhC0pVB3WaEwGTU/hWe8WTjl29JIkGcoaeT7+wncJ72lEPJoO60YWSdtWfTlNlUiN27AcxGqk39MDhB5NAbuJpKvcFLMmWFY2uJefrR6XVEXBZ+9yAwzuZmj0GYFOQTuczAqncyj/3BuOEqfIkkQ5BLAS5BUuzSEbHOjwasqbTVcWM1H3cv2ZYATXQQN8KhcZ5c5lxy8eD0NXHKvBFlS3HOXOXn3P6PqGgFHzjL+yyHMvzIXBJY4jEr8FIH16dwbXDqb4gi4lrrCZHDeIhVKsmLSUJjhmiKeP7dWcfUOGMxzLRmqA8r58TXcN3OvBrqNN63nUSG+Wb6XxmzLwE4PrlBy0fTRymG8WXrdE/Z2lglBhc8J3A8ER9c46s=
+    # AWS_ACCESS_KEY_ID
+    - secure: UUEboIaoKJD1vMGYrHzdr54QyWwOtY0XWGMrvCWwN76vHa2EOFl4OSO5MaSnNweoBfmw1HwVIeDuda1/cFVW2JPCSihVKdt9thK4dbXvXGkUOoUbHAPU9L6s2VXzFfuxTMhEew6sL8XY9K4RdVC+fgSGL03oQeJPSJgzNlAiOXEp8bNMELTEWQX7vIUaRv6vBLZ60UPkcq4SWfKb7uhLrKMGwmPVxSd7Jrp3JzXD7Tgj7WNE+KowpJqDgjuoXBhtFrqp0DCUj9HsPPSOQxuwFcQr/3u6TzpctYYv2qNor0h3ugmMJgiLNbn6VW+KbnLXGax1+YVdMGe+QAt/6yZjMbGioD1008bWeSpw2M6n7643yA9q8AeHUxMnP1VNsKit6z6YXskxsPpV9OIas/5KfmSGOhlrpeHpWonBWcdOlktVepOQ1bySxbDYH7bGx02cn+p/0P26NC+30OvejWNcUHq1n5hgT1fujxt2jGCcc0mHN+Pp4goN/9nwPExE1d55olLgFfA4Gd8gUc4bKowiBgczTYNF1Oms/8FzFWWgSwQBdPujWaEmtMkgw9bZKv8UEPeIeeyk7wZWDB61lYQ7X5X9kbE6CwTfTS4thpDlqmggRYOoHIIFKD9+QdgJcGSQCPYRnJ3Rc8XP2CbX2FcrjjDKB4VnBoK+/04Lmv1q6YM=
+    # AWS_SECRET_ACCESS_KEY
+    - secure: edY/+tpJOfRuLq6SN3pBnsKnaJux49niN+iDezEo+dsEFt0CchPQAOQ09iqIBfbF3WHrVy1jqJLwVQVbt0bZR6h2d1eGEysGF2saSEL4wMlziZfKP2aEMuVwVPgLJzt3AeoMib2tCAcXOfV1kF/lsbib3gCR0Amgb1GG3MUulAPmrwGxlwIQJuNcErMrWvl4QpTuK8/uOHBMqURCQLJLHrrYKTLzgrmbUs+7+ugqt35/hYdEZEV4lqs65Ty35eytA7zOOHR31x7k3gPx/MZyuuBHMXL8vrw1VQpDCgClp0TiT3FPJGgjf2BmkJADaAgIn+9DdxGuZrlYDorbLEvtSkGkilobL+m7WS3STqyzM7i1+MpYNMlJO+7KyXPC+RxLBsC8j4neo8SXnFZxWC83tVvMFnWXXnHb8i2wnW3E5PpB3I3ptmEsaWMb18uQa0j/G4wAKzjrxGZjWiu7goEIFKOfMPrFRj3F2uifJnTO3e/TnoKJhkAPxOkNhF6AACkhNZ9Z41Gkvav/upZxBoz7ojOoTH4Tn+KyVCMpa90wzQGvdaMuSw/+0Uf80piPO/GYriiF0pAI4yHfm9+SqtmjRtItgp7Nk3fXjYOY3tKL8jBlEUYMItMped6mYTW4SC/d2ib0xyxSNISyCZKRWKyV3rbAr6F15TVZUT+kFvBTtc0=
+    - PATH=$HOME/.local/bin:$PATH
 before_install:
-  - sudo apt-get -y install python3-pip python3-setuptools apache2-utils
+  - sudo apt-get -y install python3-pip python3-setuptools apache2-utils python3-venv
+    chromium-chromedriver
 install:
   - sudo pip3 install -r requirements.txt
   - sudo pip3 install pyasn1 --upgrade
   - sudo pip3 install ldap3 parameterized bcrypt
   - sudo pip3 install requests --upgrade
+  - sudo pip3 install awscli
   - cd web-src
   - npm install
+  - npm install allure-commandline --save-dev
   - cd ..
+  - python3 -m venv e2e_venv
+  - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
 before_script:
   - cd src
-  - python3 -m unittest discover -s tests -p "*.py" -t .
+  #  - python3 -m unittest discover -s tests -p "*.py" -t .
   - cd ../web-src
   - npm run test:unit-ci
   - cd ..
 script:
   - python3 tools/build.py
+  - tools/run_e2e_tests.sh
+after_script:
+  - tools/report_allure.sh
 before_deploy:
-  - if ! [ "$BEFORE_DEPLOY_RUN" ]; then
-    export BEFORE_DEPLOY_RUN=1;
-
+  - |-
+    if ! [ "$BEFORE_DEPLOY_RUN" ]; then export BEFORE_DEPLOY_RUN=1;
     . tools/add_git_tag.sh
-
     fi
 deploy:
   - provider: releases
@@ -54,7 +65,7 @@ deploy:
     on:
       branch: master
   - provider: releases
-    name: $(unzip -qc build/script-server.zip version.txt)
+    name: "$(unzip -qc build/script-server.zip version.txt)"
     api_key: "$GITHUB_TOKEN"
     file: build/script-server.zip
     skip_cleanup: true
@@ -66,4 +77,4 @@ deploy:
     on:
       tags: false
       all_branches: true
-      condition: $TRAVIS_BRANCH =~ ^stable|master$
+      condition: "$TRAVIS_BRANCH =~ ^stable|master$"

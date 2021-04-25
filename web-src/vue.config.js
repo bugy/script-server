@@ -89,7 +89,14 @@ module.exports = {
                     ]
                 }
             },
-            browsers: ['Chrome', 'Firefox']
+            browsers: ['Chrome', 'Firefox'],
+
+            reporters: ['mocha', 'allure'],
+
+            allureReport: {
+                reportDir: '/tmp/allure_result',
+                useBrowserName: true
+            }
         }
     }
 };
