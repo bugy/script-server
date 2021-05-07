@@ -26,7 +26,7 @@
     <div v-if="hasErrors" v-show="!hideExecutionControls" class="validation-panel">
       <h6 class="header">Validation failed. Errors list:</h6>
       <ul class="validation-errors-list">
-        <li v-for="error in errors">{{ error }}</li>
+        <li v-for="error in shownErrors">{{ error }}</li>
       </ul>
     </div>
     <div v-if="downloadableFiles && (downloadableFiles.length > 0) && !scheduleMode" v-show="!hideExecutionControls"
@@ -72,7 +72,7 @@ export default {
     return {
       id: null,
       everStarted: false,
-      errors: [],
+      shownErrors: [],
       nextLogIndex: 0,
       lastInlineImages: {},
       scheduleMode: false,
@@ -112,7 +112,7 @@ export default {
     ...mapState('scripts', ['selectedScript']),
 
     hasErrors: function () {
-      return !isNull(this.errors) && (this.errors.length > 0);
+      return !isNull(this.shownErrors) && (this.shownErrors.length > 0);
     },
 
     formattedDescription: function () {
@@ -263,12 +263,12 @@ export default {
     },
 
     validatePreExecution: function () {
-      this.errors = [];
+      this.shownErrors = [];
 
       const errors = this.parameterErrors;
       if (!isEmptyObject(errors)) {
         forEachKeyValue(errors, (paramName, error) => {
-          this.errors.push(paramName + ': ' + error);
+          this.shownErrors.push(paramName + ': ' + error);
         });
         return false;
       }
@@ -402,6 +402,8 @@ export default {
     scriptConfig: {
       immediate: true,
       handler() {
+        this.shownErrors = []
+
         this.$nextTick(() => {
           // 200 is a rough height for headers,buttons, description, etc.
           const otherElemsHeight = 200;
