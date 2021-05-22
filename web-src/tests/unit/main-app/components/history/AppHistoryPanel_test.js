@@ -6,7 +6,7 @@ import {mount} from '@vue/test-utils';
 import {config as chaiConfig} from 'chai';
 import VueRouter from 'vue-router';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, vueTicks} from '../../../test_utils';
+import {attachToDocument, createScriptServerTestVue, vueTicks} from '../../../test_utils';
 
 chaiConfig.truncateThreshold = 0;
 
@@ -33,7 +33,7 @@ describe('Test AppHistoryPanel', function () {
         });
 
         historyPanel = mount(AppHistoryPanel, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             store,
             localVue,
             router

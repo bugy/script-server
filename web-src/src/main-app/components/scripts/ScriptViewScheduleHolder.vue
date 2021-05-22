@@ -8,9 +8,9 @@
 </template>
 
 <script>
-import {mapState} from "vuex";
-import {isNull} from "@/common/utils/common";
-import SchedulePanel from "@/main-app/components/schedule/SchedulePanel";
+import {mapState} from 'vuex';
+import {isNull} from '@/common/utils/common';
+import SchedulePanel from '@/main-app/components/schedule/SchedulePanel';
 
 export default {
   name: 'ScriptViewScheduleHolder',
@@ -120,7 +120,7 @@ div:not(.modal) > .schedule-panel {
   background-color: var(--background-color-level-4dp);
 }
 
-div:not(.modal) > .schedule-panel >>> .card-action {
+div > .schedule-panel >>> .card-action {
   background: none;
 }
 </style>

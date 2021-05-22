@@ -55,6 +55,19 @@
     font-size: 1.45rem;
 }
 
+.btn-icon-flat.btn-large {
+    width: 48px;
+    height: 48px;
+    line-height: 48px;
+    padding: 0;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.btn-icon-flat.btn-small i {
+    font-size: 1.75rem;
+}
+
 .btn-icon-flat:hover {
     background-color: var(--hover-color);
 }

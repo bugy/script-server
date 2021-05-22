@@ -7,7 +7,7 @@ import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import VueRouter from 'vue-router';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, triggerSingleClick, vueTicks} from '../../test_utils';
+import {attachToDocument, createScriptServerTestVue, triggerSingleClick, vueTicks} from '../../test_utils';
 
 
 chaiConfig.truncateThreshold = 0;
@@ -40,7 +40,7 @@ describe('Test ScriptConfig', function () {
             store,
             localVue,
             router,
-            attachToDocument: true
+            attachTo: attachToDocument()
         });
 
         await vueTicks();

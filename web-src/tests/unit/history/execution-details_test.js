@@ -6,7 +6,7 @@ import {mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
+import {attachToDocument, createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
 
 
 chaiConfig.truncateThreshold = 0;
@@ -36,7 +36,7 @@ describe('Test history details', function () {
         });
 
         executionDetails = mount(ExecutionDetails, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             store,
             localVue
         });

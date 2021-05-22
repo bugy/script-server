@@ -1,0 +1,3 @@
+input[type=radio]:checked + span {
+    color: var(--font-color-main)
+}

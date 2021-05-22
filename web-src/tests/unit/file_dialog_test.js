@@ -4,7 +4,7 @@ import FileDialog from '@/common/components/file_dialog'
 import {hasClass, isEmptyArray, toMap} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import {triggerDoubleClick, triggerKeyEvent, triggerSingleClick, vueTicks} from './test_utils';
+import {attachToDocument, triggerDoubleClick, triggerKeyEvent, triggerSingleClick, vueTicks} from './test_utils';
 
 chaiConfig.truncateThreshold = 0;
 
@@ -27,7 +27,7 @@ describe('Test FileDialog', function () {
         };
 
         this.fileDialog = mount(FileDialog, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             propsData: {
                 onClose: () => this.dialogClosed = true,
                 onFileSelect: (path) => this.chosenPath = path,

@@ -153,6 +153,51 @@ class TestFullHistoryUsersInit(unittest.TestCase):
         test_utils.cleanup()
 
 
+class TestCodeEditorUsersInit(unittest.TestCase):
+    def test_single_list(self):
+        config = _from_json({'access': {'code_editors': ['userX']}})
+        self.assertEqual(['userX'], config.code_editor_users)
+
+    def test_single_string(self):
+        config = _from_json({'access': {'code_editors': 'abc'}})
+        self.assertEqual(['abc'], config.code_editor_users)
+
+    def test_missing_when_no_access_section(self):
+        config = _from_json({})
+        self.assertEqual(config.admin_users, config.code_editor_users)
+
+    def test_missing_when_access_exist_without_code_editor_users(self):
+        config = _from_json({'access': {'allowed_users': ['user1', 'user2']}})
+        self.assertEqual(config.admin_users, config.code_editor_users)
+
+    def test_list_with_multiple_values(self):
+        config = _from_json({'access': {'code_editors': ['user1', 'user2', 'user3']}})
+        self.assertCountEqual(['user1', 'user2', 'user3'], config.code_editor_users)
+
+    def test_list_with_any_user(self):
+        config = _from_json({'access': {'code_editors': ['user1', '*', 'user3']}})
+        self.assertEqual([ANY_USER], config.code_editor_users)
+
+    def test_list_any_user_single_string(self):
+        config = _from_json({'access': {'code_editors': '*'}})
+        self.assertCountEqual([ANY_USER], config.code_editor_users)
+
+    def test_default_users_with_admin_section(self):
+        config = _from_json({'access': {'admin_users': ['admin_user', '@some_group']}})
+        self.assertCountEqual(config.admin_users, config.code_editor_users)
+
+    def test_users_with_admin_section(self):
+        config = _from_json({'access': {'admin_users': ['admin_user', '@some_group'],
+                                        'code_editors': ['another_user']}})
+        self.assertCountEqual(['another_user'], config.code_editor_users)
+
+    def setUp(self):
+        test_utils.setup()
+
+    def tearDown(self):
+        test_utils.cleanup()
+
+
 class TestMaxRequestSize(unittest.TestCase):
     def test_int_value(self):
         config = _from_json({'max_request_size': 5})

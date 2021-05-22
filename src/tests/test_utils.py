@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
+from auth.auth_base import Authenticator
 from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
 from react.properties import ObservableDict
@@ -503,3 +504,8 @@ class _IdGeneratorMock:
 class AsyncMock(MagicMock):
     async def __call__(self, *args, **kwargs):
         return super(AsyncMock, self).__call__(*args, **kwargs)
+
+
+class MockAuthenticator(Authenticator):
+    def authenticate(self, request_handler):
+        return request_handler.request.remote_ip

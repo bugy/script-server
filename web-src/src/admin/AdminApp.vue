@@ -24,6 +24,8 @@ import Vue from 'vue';
 import Vuex, {mapActions, mapState} from 'vuex';
 import scriptConfig from './store/script-config-module';
 import scripts from './store/scripts-module';
+import File_upload from '@/common/components/file_upload'
+import authModule from '@/common/store/auth';
 
 Vue.use(Vuex);
 
@@ -34,7 +36,8 @@ const store = new Vuex.Store({
   modules: {
     'history': executions(),
     scripts: scripts,
-    scriptConfig: scriptConfig
+    scriptConfig: scriptConfig,
+    auth: authModule
   },
   actions: {
     setSubheader({commit}, subheader) {
@@ -54,10 +57,13 @@ const store = new Vuex.Store({
 
 export default {
   name: 'AdminApp',
+  components: {File_upload},
   store,
 
   mounted() {
-    const instance = M.Tabs.init(this.$refs.tabs, {});
+    M.Tabs.init(this.$refs.tabs, {});
+
+    this.init()
   },
 
   computed: {
@@ -65,7 +71,8 @@ export default {
   },
 
   methods: {
-    ...mapActions(['setSubheader'])
+    ...mapActions(['setSubheader']),
+    ...mapActions('auth', ['init'])
   },
 
   watch: {
@@ -91,6 +98,7 @@ export default {
 .page-title {
   flex: 0 0 0;
   width: 100%;
+  display: flex;
 
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

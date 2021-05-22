@@ -125,3 +125,29 @@ export const mapArrayWrapper = (arrayWrapper, mapFunction) => {
 
     return result
 }
+
+export const awaitVisible = async (element, maxTimeout) => {
+    for (let awaited = 0; awaited < maxTimeout; awaited += 10) {
+        await timeout(10)
+
+        const style = window.getComputedStyle(element)
+        if ((style.opacity > 0) && (style.display !== 'none')) {
+            break
+        }
+    }
+
+    expect(element).toBeVisible()
+}
+
+export const awaitInvisible = async (element, maxTimeout) => {
+    for (let awaited = 0; awaited < maxTimeout; awaited += 10) {
+        await timeout(10)
+
+        const style = window.getComputedStyle(element)
+        if ((style.opacity === '0') || (style.display === 'none')) {
+            break
+        }
+    }
+
+    expect(element).not.toBeVisible()
+}

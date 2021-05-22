@@ -3,7 +3,7 @@ import ScriptView from '@/main-app/components/scripts/script-view';
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, vueTicks} from './test_utils';
+import {attachToDocument, createScriptServerTestVue, vueTicks} from './test_utils';
 
 chaiConfig.truncateThreshold = 0;
 
@@ -30,7 +30,7 @@ describe('Test Configuration of ScriptView', function () {
         this.store = store;
 
         scriptView = mount(ScriptView, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             store,
             localVue
         });

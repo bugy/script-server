@@ -5,15 +5,14 @@ export default {
         enabled: false,
         authenticated: true,
         admin: false,
-        username: null
+        username: null,
+        canEditCode: false
     },
     namespaced: true,
     actions: {
         init({commit}) {
             axiosInstance.get('auth/info').then(({data}) => {
-                const {username, admin, enabled} = data;
-
-                commit('SET_CONFIG', {username, admin, enabled})
+                commit('SET_CONFIG', data)
             });
         },
 
@@ -32,10 +31,11 @@ export default {
         }
     },
     mutations: {
-        SET_CONFIG(state, {username, admin, enabled}) {
+        SET_CONFIG(state, {username, admin, enabled, canEditCode}) {
             state.admin = admin;
             state.enabled = enabled;
             state.username = username;
+            state.canEditCode = canEditCode;
         },
 
         SET_AUTHENTICATED(state, authenticated) {

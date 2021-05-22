@@ -7,7 +7,8 @@ import TextArea from '@/common/components/TextArea';
 import {isBlankString, isNull, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {assert, config as chaiConfig} from 'chai';
-import {setChipListValue, vueTicks} from '../test_utils';
+import {attachToDocument, setChipListValue, vueTicks} from '../test_utils';
+import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
 
 chaiConfig.truncateThreshold = 0;
 
@@ -31,6 +32,8 @@ export const findField = (form, expectedName, failOnMissing = true) => {
         let fieldName;
         if (child.$options._componentTag === ChipsList.name) {
             fieldName = child.title;
+        } else if (child.$options._componentTag === ScriptField.name) {
+            fieldName = child.scriptPathField.name;
         } else {
             fieldName = child.$props.config.name;
         }
@@ -69,7 +72,7 @@ describe('Test ParameterConfigForm', function () {
         errors = [];
 
         form = mount(ParameterConfigForm, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             sync: false,
             propsData: {
                 value: {

@@ -242,7 +242,7 @@ class ExecutionServiceTest(unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.id_generator = _IdGeneratorMock()
-        self.authorizer = Authorizer(ANY_USER, [], [], EmptyGroupProvider())
+        self.authorizer = Authorizer(ANY_USER, [], [], [], EmptyGroupProvider())
         self.exec_services = []
         self.processes = {}
 
@@ -371,7 +371,7 @@ class ExecutionServiceAuthorizationTest(unittest.TestCase):
 
         executor._process_creator = create_process
 
-        authorizer = Authorizer([ANY_USER], ['admin_user'], ['history_user'], EmptyGroupProvider())
+        authorizer = Authorizer([ANY_USER], ['admin_user'], ['history_user'], [], EmptyGroupProvider())
         self.executor_service = ExecutionService(authorizer, _IdGeneratorMock())
 
         self.execution_id = _start(self.executor_service, self.owner_user.user_id)

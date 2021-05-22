@@ -104,10 +104,13 @@ def prepare_folder(folder_path):
         os.makedirs(path)
 
 
-def make_executable(filename):
-    st = os.stat(filename)
-    os.chmod(filename, st.st_mode | stat.S_IEXEC)
+def make_executable(file_path):
+    st = os.stat(file_path)
+    os.chmod(file_path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
+
+def is_executable(file_path):
+    return os.access(file_path, os.X_OK)
 
 def exists(filename, current_folder=None):
     path = normalize_path(filename, current_folder)
@@ -381,3 +384,25 @@ class FileMatcher:
                 result.append(SingleFileMatcher(pattern, working_dir))
 
         return result
+
+
+# Tries to decide if file is binary
+#   - based on common binary headers: https://www.garykessler.net/library/file_sigs.html
+#   - null bytes (are not very common in text files)
+def is_binary(path):
+    with open(path, 'rb') as f:
+        first_bytes = f.read(1024)
+
+        # Executable and Linking Format executable file (Linux/Unix)
+        if first_bytes.startswith(bytes.fromhex('7F454C46')):
+            return True
+
+        # Windows executable
+        if first_bytes.startswith(bytes.fromhex('4D5A')):
+            return True
+
+        # Files with null bytes are usually binary (except rare UTF-16 cases)
+        if b'\x00\x00' in first_bytes:
+            return True
+
+    return False

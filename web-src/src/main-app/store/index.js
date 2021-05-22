@@ -3,7 +3,7 @@ import {isNull, logError} from '@/common/utils/common';
 import get from 'lodash/get';
 import Vue from 'vue'
 import Vuex from 'vuex'
-import authModule from './auth';
+import authModule from '@/common/store/auth';
 import scheduleModule from './scriptSchedule';
 import pageModule from './page';
 

@@ -3,7 +3,15 @@
 import Combobox from '@/common/components/combobox'
 import {contains} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {flushPromises, setDeepProp, timeout, triggerSingleClick, vueTicks, wrapVModel} from './test_utils';
+import {
+    attachToDocument,
+    flushPromises,
+    setDeepProp,
+    timeout,
+    triggerSingleClick,
+    vueTicks,
+    wrapVModel
+} from './test_utils';
 
 
 describe('Test ComboBox', function () {
@@ -11,7 +19,7 @@ describe('Test ComboBox', function () {
 
     beforeEach(async function () {
         comboBox = mount(Combobox, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             propsData: {
                 config: {
                     required: false,

@@ -250,7 +250,7 @@ export default {
           {
             dropdownOptions: {
               constrainWidth: false,
-              dropdownContainer: this.dropdownContainer,
+              container: this.dropdownContainer,
               multiple: this.config.multiselect,
               onCloseEnd: () => {
                 if (this.$refs.selectField) {

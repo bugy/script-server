@@ -6,7 +6,7 @@ import MockAdapter from 'axios-mock-adapter';
 import cloneDeep from 'lodash/cloneDeep';
 import {WebSocket} from 'mock-socket';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, flushPromises} from '../../test_utils';
+import {createScriptServerTestVue, flushPromises, timeout} from '../../test_utils';
 
 let axiosMock;
 window.WebSocket = WebSocket;
@@ -74,6 +74,7 @@ describe('Test scriptExecutionManager', function () {
         mockActiveExecutions(executions);
         await store.dispatch('executions/init');
         await flushPromises();
+        await timeout(10)
     }
 
     function assertExecution(id, expectedName, parameterValues) {

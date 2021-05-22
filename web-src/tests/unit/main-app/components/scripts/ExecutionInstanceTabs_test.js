@@ -3,7 +3,7 @@ import ExecutionInstanceTabs from '@/main-app/components/scripts/ExecutionInstan
 import {mount} from '@vue/test-utils';
 import clone from 'lodash/clone';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, vueTicks} from '../../../test_utils';
+import {attachToDocument, createScriptServerTestVue, vueTicks} from '../../../test_utils';
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
@@ -38,7 +38,7 @@ describe('Test ExecutionInstanceTabs', function () {
         });
 
         executionTabs = mount(ExecutionInstanceTabs, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             store,
             localVue
         });

@@ -1,5 +1,5 @@
 <template>
-  <div :data-error="error" :title="config.description" class="input-field">
+  <div :data-error="error" :title="config.description" class="input-field textfield">
     <input :id="id"
            ref="textField"
            :autocomplete="autofillName"
@@ -183,6 +183,11 @@ export default {
       const data = Object.assign({}, ...this.config.values.map((x) => ({[x]: null})))
       this.autocompleteWrapper.updateData(data)
     },
+
+    focus() {
+      this.$refs.textField.focus()
+      this.triggerRevalidationOnWatch()
+    }
   }
 }
 

@@ -197,7 +197,7 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
                                               login_url='/login.html',
                                               cookie_secret='12345')
         application.auth = TornadoAuth(None)
-        application.authorizer = Authorizer(ANY_USER, [], [], EmptyGroupProvider())
+        application.authorizer = Authorizer(ANY_USER, [], [], [], EmptyGroupProvider())
         application.identification = IpBasedIdentification(TrustedIpValidator(['127.0.0.1']), None)
         application.config_service = ConfigService(application.authorizer, test_utils.temp_folder)
 

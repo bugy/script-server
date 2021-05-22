@@ -2,7 +2,7 @@
 import ScriptView from '@/main-app/components/scripts/script-view';
 import {mount} from '@vue/test-utils';
 import Vuex from 'vuex';
-import {createScriptServerTestVue} from '../../../test_utils'
+import {attachToDocument, createScriptServerTestVue} from '../../../test_utils'
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
@@ -46,7 +46,7 @@ describe('Test ScriptView', function () {
         });
 
         scriptView = mount(ScriptView, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             store,
             localVue
         });
@@ -72,7 +72,7 @@ describe('Test ScriptView', function () {
             };
 
             const newScriptView = mount(ScriptView, {
-                attachToDocument: true,
+                attachTo: attachToDocument(),
                 store,
                 localVue
             });

@@ -495,7 +495,7 @@ class TestLoggingService(unittest.TestCase):
     def setUp(self):
         test_utils.setup()
 
-        self.authorizer = Authorizer([], [], ['power_user'], EmptyGroupProvider())
+        self.authorizer = Authorizer([], [], ['power_user'], [], EmptyGroupProvider())
         self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), self.authorizer)
 
     def tearDown(self):
@@ -570,7 +570,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         executor._process_creator = _MockProcessWrapper
 
-        authorizer = Authorizer([], [], [], EmptyGroupProvider())
+        authorizer = Authorizer([], [], [], [], EmptyGroupProvider())
         self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), authorizer)
         self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
 
