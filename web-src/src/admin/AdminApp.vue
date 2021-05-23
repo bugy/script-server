@@ -1,17 +1,19 @@
 <template>
   <div class="admin-page">
     <div class="page-title primary-color-dark">
-      <a class="btn-flat left home-button" href="index.html">
-        <i class="material-icons">home</i>
-      </a>
-      <ul ref="tabs" class="tabs tabs-fixed-width">
-        <li class="tab">
-          <router-link to="/logs">Logs</router-link>
-        </li>
-        <li class="tab">
-          <router-link to="/scripts">Scripts</router-link>
-        </li>
-      </ul>
+      <div class="main-header">
+        <a class="btn-flat left home-button" href="index.html">
+          <i class="material-icons">home</i>
+        </a>
+        <ul ref="tabs" class="tabs tabs-fixed-width">
+          <li class="tab">
+            <router-link to="/logs">Logs</router-link>
+          </li>
+          <li class="tab">
+            <router-link to="/scripts">Scripts</router-link>
+          </li>
+        </ul>
+      </div>
       <div v-if="subheader" class="subheader">{{ subheader }}</div>
     </div>
     <router-view class="page-content"/>
@@ -98,12 +100,15 @@ export default {
 .page-title {
   flex: 0 0 0;
   width: 100%;
-  display: flex;
 
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 
   box-shadow: var(--shadow-4dp);
+}
+
+.main-header {
+  display: flex;
 }
 
 .tabs.tabs-fixed-width {
