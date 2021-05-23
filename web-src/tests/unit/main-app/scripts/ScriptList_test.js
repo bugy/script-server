@@ -4,13 +4,9 @@ import {hasClass, isBlankString} from '@/common/utils/common';
 import ScriptsList from '@/main-app/components/scripts/ScriptsList';
 import router from '@/main-app/router/router';
 import {mount} from '@vue/test-utils';
-import {assert, config as chaiConfig} from 'chai';
 import VueRouter from 'vue-router';
 import Vuex from 'vuex';
 import {attachToDocument, createScriptServerTestVue, triggerSingleClick, vueTicks} from '../../test_utils';
-
-
-chaiConfig.truncateThreshold = 0;
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
@@ -77,13 +73,13 @@ describe('Test ScriptConfig', function () {
     }
 
     function findGroupItem(groupName) {
-        let foundGroups = $(listComponent.vm.$el).find('.script-list-group').has('.script-group > span:contains("' + groupName + '")');
-        if (foundGroups.length > 1) {
-            assert.fail('More than 1 group item found: ' + groupName);
-        } else if (foundGroups.length === 0) {
-            assert.fail('Group item not found: ' + groupName);
-        }
-        return foundGroups.get(0);
+        let foundGroups = $(listComponent.vm.$el)
+            .find('.script-list-group')
+            .has('.script-group > span:contains("' + groupName + '")')
+            .toArray()
+
+        expect(foundGroups).toBeArrayOfSize(1)
+        return foundGroups[0];
     }
 
     function assertGroupItems(groupName, expectedTexts) {
@@ -91,7 +87,7 @@ describe('Test ScriptConfig', function () {
 
         let innerItems = $(foundGroup).find('.collection-item:not(.script-group)').toArray();
         let actualTexts = innerItems.map(item => getText(item));
-        assert.deepEqual(actualTexts, expectedTexts);
+        expect(actualTexts).toEqual(expectedTexts)
     }
 
     function assertOpenGroup(expectedOpenGroup, expectedItems) {
@@ -125,7 +121,7 @@ describe('Test ScriptConfig', function () {
 
             let texts = getTopLevelItems();
 
-            assert.deepEqual(texts, ['abc']);
+            expect(texts).toEqual(['abc'])
         });
 
         it('Test show multiple items', async function () {
@@ -135,7 +131,7 @@ describe('Test ScriptConfig', function () {
 
             let texts = getTopLevelItems();
 
-            assert.deepEqual(texts, ['abc', 'def', 'xyz']);
+            expect(texts).toEqual(['abc', 'def', 'xyz'])
         });
 
         it('Test show single item in group', async function () {
@@ -145,7 +141,7 @@ describe('Test ScriptConfig', function () {
 
             let texts = getTopLevelItems();
 
-            assert.deepEqual(texts, ['g1']);
+            expect(texts).toEqual(['g1'])
         });
 
         it('Test show multiple items in different groups', async function () {
@@ -158,7 +154,7 @@ describe('Test ScriptConfig', function () {
 
             let texts = getTopLevelItems();
 
-            assert.deepEqual(texts, ['g1', 'g2', 'g3']);
+            expect(texts).toEqual(['g1', 'g2', 'g3'])
         });
 
         it('Test show multiple items in different groups when empty', async function () {
@@ -171,7 +167,7 @@ describe('Test ScriptConfig', function () {
 
             let texts = getTopLevelItems();
 
-            assert.deepEqual(texts, ['abc', 'def', 'xyz']);
+            expect(texts).toEqual(['abc', 'def', 'xyz'])
         });
 
         it('Test show multiple items in same groups', async function () {
@@ -186,7 +182,7 @@ describe('Test ScriptConfig', function () {
 
             let texts = getTopLevelItems();
 
-            assert.deepEqual(texts, ['g1', 'g2', 'g3']);
+            expect(texts).toEqual(['g1', 'g2', 'g3'])
         });
 
         it('Test show items and groups mixed', async function () {
@@ -201,7 +197,7 @@ describe('Test ScriptConfig', function () {
 
             let texts = getTopLevelItems();
 
-            assert.deepEqual(texts, ['def', 'g2', 'g3', 'ghi']);
+            expect(texts).toEqual(['def', 'g2', 'g3', 'ghi'])
         });
     });
 

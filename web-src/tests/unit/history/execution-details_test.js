@@ -4,12 +4,9 @@ import historyModule from '@/common/store/executions-module';
 import {axiosInstance} from '@/common/utils/axios_utils';
 import {mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
-import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
 import {attachToDocument, createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
 
-
-chaiConfig.truncateThreshold = 0;
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
@@ -58,13 +55,13 @@ describe('Test history details', function () {
                     (child.$options._componentTag === 'readonly-field')
                     && (child.$props.title === fieldName));
 
-                assert.exists(foundChild, 'Failed to find field ' + fieldName);
-                assert.equal(foundChild.$props.value, expectedValue);
+                expect(foundChild).not.toBeNil()
+                expect(foundChild.$props.value).toEqual(expectedValue)
             }
 
             function assertLog(expectedLog) {
                 const actualLog = $(executionDetails.vm.$el).find('code').text();
-                assert.equal(actualLog, expectedLog);
+                expect(actualLog).toEqual(expectedLog)
             }
 
             it('test null execution', function () {

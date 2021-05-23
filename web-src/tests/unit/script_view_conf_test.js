@@ -1,11 +1,8 @@
 'use strict';
 import ScriptView from '@/main-app/components/scripts/script-view';
 import {mount} from '@vue/test-utils';
-import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
 import {attachToDocument, createScriptServerTestVue, vueTicks} from './test_utils';
-
-chaiConfig.truncateThreshold = 0;
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
@@ -44,22 +41,22 @@ describe('Test Configuration of ScriptView', function () {
 
         it('test simple text', async function () {
             this.store.state.scriptConfig.scriptConfig.description = 'some text';
-            assert.equal('some text', scriptView.vm.formattedDescription)
+            expect(scriptView.vm.formattedDescription).toBe('some text')
         });
 
         it('test bold', function () {
             this.store.state.scriptConfig.scriptConfig.description = 'some **bold** text';
-            assert.equal('some <strong>bold</strong> text', scriptView.vm.formattedDescription)
+            expect(scriptView.vm.formattedDescription).toBe('some <strong>bold</strong> text')
         });
 
         it('test explicit link', function () {
             this.store.state.scriptConfig.scriptConfig.description = 'some [link_text](https://google.com)';
-            assert.equal('some <a href="https://google.com">link_text</a>', scriptView.vm.formattedDescription)
+            expect(scriptView.vm.formattedDescription).toBe('some <a href="https://google.com">link_text</a>')
         });
 
         it('test new line', function () {
             this.store.state.scriptConfig.scriptConfig.description = 'line1\nline2';
-            assert.equal('line1<br>line2', scriptView.vm.formattedDescription)
+            expect(scriptView.vm.formattedDescription).toBe('line1<br>line2')
         });
     });
 

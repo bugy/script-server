@@ -3,12 +3,9 @@
 import ParamListItem from '@/admin/components/scripts-config/ParamListItem';
 import ScriptParamList from '@/admin/components/scripts-config/ScriptParamList';
 import {hasClass} from '@/common/utils/common';
-import {assert, config as chaiConfig} from 'chai';
 import {createVue, timeout, triggerSingleClick, vueTicks} from '../test_utils';
 import {setValueByUser} from './ParameterConfigForm_test';
 
-
-chaiConfig.truncateThreshold = 0;
 
 describe('Test ScriptParamList', function () {
     let list;
@@ -58,7 +55,7 @@ describe('Test ScriptParamList', function () {
 
     function clickOnParam(paramName) {
         let paramItem = findParamItem(paramName);
-        assert.exists(paramItem);
+        expect(paramItem).not.toBeNil()
 
         const index = list.$children.indexOf(paramItem);
         M.Collapsible.getInstance(list.$el).open(index);
@@ -66,9 +63,9 @@ describe('Test ScriptParamList', function () {
 
     function assertOpen(paramName) {
         let paramItem = findParamItem(paramName);
-        assert.exists(paramItem);
+        expect(paramItem).not.toBeNil()
 
-        assert.isTrue(hasClass(paramItem.$el, 'active'));
+        expect(hasClass(paramItem.$el, 'active')).toBeTrue()
     }
 
     function getButton(item, buttonName) {
@@ -85,14 +82,14 @@ describe('Test ScriptParamList', function () {
 
     function assertClosed(paramName) {
         let paramItem = findParamItem(paramName);
-        assert.exists(paramItem);
+        expect(paramItem).not.toBeNil()
 
-        assert.isFalse(hasClass(paramItem.$el, 'active'));
+        expect(hasClass(paramItem.$el, 'active')).toBeFalse()
     }
 
     async function setValue(paramName, fieldName, value) {
         let paramItem = findParamItem(paramName);
-        assert.exists(paramItem);
+        expect(paramItem).not.toBeNil()
 
         const paramForm = paramItem.$children[0];
         await setValueByUser(paramForm, fieldName, value)
@@ -100,14 +97,14 @@ describe('Test ScriptParamList', function () {
 
     describe('Test visualisation', function () {
         it('Test show parameters list', async function () {
-            assert.exists(findParamItem('param 1'));
-            assert.exists(findParamItem('param 2'));
-            assert.exists(findParamItem('param 3'));
+            expect(findParamItem('param 1')).not.toBeNil()
+            expect(findParamItem('param 2')).not.toBeNil()
+            expect(findParamItem('param 3')).not.toBeNil()
         });
 
         it('Test show add param button', async function () {
             const button = $(list.$el).find('li.add-param-item').get(0);
-            assert.exists(button);
+            expect(button).not.toBeNil()
         });
 
         it('Test expand parameter', async function () {
@@ -127,7 +124,7 @@ describe('Test ScriptParamList', function () {
         it('Test parameter title after prop change', async function () {
             list.$props.parameters[1].name = 'new name';
 
-            assert.exists(findParamItem('new name'));
+            expect(findParamItem('new name')).not.toBeNil()
         });
     });
 
@@ -135,61 +132,61 @@ describe('Test ScriptParamList', function () {
         it('Test move 2nd parameter up', async function () {
             await clickParamAction('param 2', 'arrow_upward');
 
-            assert.equal(list.$props.parameters[0].name, 'param 2');
+            expect(list.$props.parameters[0].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter up twice', async function () {
             await clickParamAction('param 2', 'arrow_upward');
             await clickParamAction('param 2', 'arrow_upward');
 
-            assert.equal(list.$props.parameters[0].name, 'param 2');
+            expect(list.$props.parameters[0].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter up and then first', async function () {
             await clickParamAction('param 2', 'arrow_upward');
             await clickParamAction('param 1', 'arrow_upward');
 
-            assert.equal(list.$props.parameters[0].name, 'param 1');
-            assert.equal(list.$props.parameters[1].name, 'param 2');
+            expect(list.$props.parameters[0].name).toBe('param 1')
+            expect(list.$props.parameters[1].name).toBe('param 2')
         });
 
         it('Test move 3rd parameter up twice', async function () {
             await clickParamAction('param 3', 'arrow_upward');
             await clickParamAction('param 3', 'arrow_upward');
 
-            assert.equal(list.$props.parameters[0].name, 'param 3');
-            assert.equal(list.$props.parameters[1].name, 'param 1');
-            assert.equal(list.$props.parameters[2].name, 'param 2');
+            expect(list.$props.parameters[0].name).toBe('param 3')
+            expect(list.$props.parameters[1].name).toBe('param 1')
+            expect(list.$props.parameters[2].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter down', async function () {
             await clickParamAction('param 2', 'arrow_downward');
 
-            assert.equal(list.$props.parameters[2].name, 'param 2');
+            expect(list.$props.parameters[2].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter down twice', async function () {
             await clickParamAction('param 2', 'arrow_downward');
             await clickParamAction('param 2', 'arrow_downward');
 
-            assert.equal(list.$props.parameters[2].name, 'param 2');
+            expect(list.$props.parameters[2].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter down and then last', async function () {
             await clickParamAction('param 2', 'arrow_downward');
             await clickParamAction('param 3', 'arrow_downward');
 
-            assert.equal(list.$props.parameters[1].name, 'param 2');
-            assert.equal(list.$props.parameters[2].name, 'param 3');
+            expect(list.$props.parameters[1].name).toBe('param 2')
+            expect(list.$props.parameters[2].name).toBe('param 3')
         });
 
         it('Test move first parameter down twice', async function () {
             await clickParamAction('param 1', 'arrow_downward');
             await clickParamAction('param 1', 'arrow_downward');
 
-            assert.equal(list.$props.parameters[0].name, 'param 2');
-            assert.equal(list.$props.parameters[1].name, 'param 3');
-            assert.equal(list.$props.parameters[2].name, 'param 1');
+            expect(list.$props.parameters[0].name).toBe('param 2')
+            expect(list.$props.parameters[1].name).toBe('param 3')
+            expect(list.$props.parameters[2].name).toBe('param 1')
         });
 
         it('Test move open parameter up', async function () {
@@ -232,25 +229,25 @@ describe('Test ScriptParamList', function () {
 
             await vueTicks();
 
-            assert.notExists(findParamItem('param 1'));
-            assert.exists(findParamItem('param 2'));
-            assert.exists(findParamItem('param 3'));
+            expect(findParamItem('param 1')).toBeNil()
+            expect(findParamItem('param 2')).not.toBeNil()
+            expect(findParamItem('param 3')).not.toBeNil()
         });
 
         it('Test delete parameter in the middle', async function () {
             await clickParamAction('param 2', 'delete');
 
-            assert.exists(findParamItem('param 1'));
-            assert.notExists(findParamItem('param 2'));
-            assert.exists(findParamItem('param 3'));
+            expect(findParamItem('param 1')).not.toBeNil()
+            expect(findParamItem('param 2')).toBeNil()
+            expect(findParamItem('param 3')).not.toBeNil()
         });
 
         it('Test delete parameter in the end', async function () {
             await clickParamAction('param 3', 'delete');
 
-            assert.exists(findParamItem('param 1'));
-            assert.exists(findParamItem('param 2'));
-            assert.notExists(findParamItem('param 3'));
+            expect(findParamItem('param 1')).not.toBeNil()
+            expect(findParamItem('param 2')).not.toBeNil()
+            expect(findParamItem('param 3')).toBeNil()
         });
 
         it('Test delete open parameter', async function () {
@@ -284,9 +281,9 @@ describe('Test ScriptParamList', function () {
 
             const toasts = $(list.$el.parentNode).find('div.toast');
 
-            assert.equal(toasts.length, 1);
-            assert.equal(toasts.find('span').text(), 'Deleted param 2');
-            assert.equal(toasts.find('button').text(), 'Undo');
+            expect(toasts.length).toBe(1)
+            expect(toasts.find('span').text()).toBe('Deleted param 2')
+            expect(toasts.find('button').text()).toBe('Undo');
         });
 
         it('Test open multiple toasts on delete', async function () {
@@ -298,10 +295,10 @@ describe('Test ScriptParamList', function () {
 
             const toasts = $(list.$el.parentNode).find('div.toast');
 
-            assert.equal(toasts.length, 3);
-            assert.equal($(toasts.get(0)).find('span').text(), 'Deleted param 2');
-            assert.equal($(toasts.get(1)).find('span').text(), 'Deleted param 1');
-            assert.equal($(toasts.get(2)).find('span').text(), 'Deleted param 3');
+            expect(toasts.length).toBe(3)
+            expect($(toasts.get(0)).find('span').text()).toBe('Deleted param 2')
+            expect($(toasts.get(1)).find('span').text()).toBe('Deleted param 1')
+            expect($(toasts.get(2)).find('span').text()).toBe('Deleted param 3')
         });
 
         it('Test undo button on toast', async function () {
@@ -314,10 +311,10 @@ describe('Test ScriptParamList', function () {
 
             await vueTicks();
 
-            assert.exists(findParamItem('param 2'));
-            assert.equal(list.$props.parameters[0].name, 'param 1');
-            assert.equal(list.$props.parameters[1].name, 'param 2');
-            assert.equal(list.$props.parameters[2].name, 'param 3');
+            expect(findParamItem('param 2')).not.toBeNil()
+            expect(list.$props.parameters[0].name).toBe('param 1')
+            expect(list.$props.parameters[1].name).toBe('param 2')
+            expect(list.$props.parameters[2].name).toBe('param 3')
         });
 
         it('Test undo button on toast after everything deleted', async function () {
@@ -332,8 +329,8 @@ describe('Test ScriptParamList', function () {
 
             await vueTicks();
 
-            assert.exists(findParamItem('param 2'));
-            assert.equal(list.$props.parameters[0].name, 'param 2');
+            expect(findParamItem('param 2')).not.toBeNil()
+            expect(list.$props.parameters[0].name).toBe('param 2')
         });
     });
 
@@ -345,7 +342,7 @@ describe('Test ScriptParamList', function () {
 
             await setValue('param 1', 'type', 'int');
             assertOpen('param 1');
-            assert.equal(list.$props.parameters[0].type, 'int');
+            expect(list.$props.parameters[0].type).toBe('int')
         });
     });
 
@@ -360,8 +357,8 @@ describe('Test ScriptParamList', function () {
 
             await vueTicks();
 
-            assert.equal(list.$props.parameters.length, 4);
-            assert.equal(list.$props.parameters[3].name, undefined);
+            expect(list.$props.parameters.length).toBe(4)
+            expect(list.$props.parameters[3].name).toBe(undefined)
 
             list.openingNewParam = false;
             await timeout(100);
@@ -374,10 +371,10 @@ describe('Test ScriptParamList', function () {
 
             await vueTicks();
 
-            assert.equal(list.$props.parameters.length, 6);
-            assert.equal(list.$props.parameters[3].name, undefined);
-            assert.equal(list.$props.parameters[4].name, undefined);
-            assert.equal(list.$props.parameters[5].name, undefined);
+            expect(list.$props.parameters.length).toBe(6)
+            expect(list.$props.parameters[3].name).toBe(undefined)
+            expect(list.$props.parameters[4].name).toBe(undefined)
+            expect(list.$props.parameters[5].name).toBe(undefined)
 
             list.openingNewParam = false;
             await timeout(100);

@@ -3,10 +3,7 @@
 import Textfield from '@/common/components/textfield'
 import {isEmptyString, setInputValue} from '@/common/utils/common';
 import {enableAutoDestroy, mount} from '@vue/test-utils';
-import {assert, config as chaiConfig} from 'chai';
 import {attachToDocument, mapArrayWrapper, setDeepProp, timeout, vueTicks, wrapVModel} from './test_utils';
-
-chaiConfig.truncateThreshold = 0;
 
 enableAutoDestroy(afterEach)
 
@@ -36,7 +33,7 @@ describe('Test TextField', function () {
     describe('Test config', function () {
 
         it('Test initial name', function () {
-            assert.equal('Text paparam', this.textfield.find('label').text());
+            expect(this.textfield.find('label').text()).toEqual('Text paparam')
         });
 
         it('Test change name', async function () {
@@ -44,11 +41,11 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('testName1', this.textfield.find('label').text());
+            expect(this.textfield.find('label').text()).toEqual('testName1')
         });
 
         it('Test initial required', function () {
-            assert.equal(false, this.textfield.find('input').element.required);
+            expect(this.textfield.find('input').element.required).toEqual(false)
         });
 
         it('Test change required', async function () {
@@ -56,11 +53,11 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal(true, this.textfield.find('input').element.required);
+            expect(this.textfield.find('input').element.required).toEqual(true)
         });
 
         it('Test initial field type', function () {
-            assert.equal('text', this.textfield.find('input').element.type);
+            expect(this.textfield.find('input').element.type).toEqual('text')
         });
 
         it('Test change field type to number', async function () {
@@ -68,7 +65,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('number', this.textfield.find('input').element.type);
+            expect(this.textfield.find('input').element.type).toEqual('number')
         });
 
         it('Test change field type to password', async function () {
@@ -76,7 +73,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('password', this.textfield.find('input').element.type);
+            expect(this.textfield.find('input').element.type).toEqual('password')
         });
     });
 
@@ -85,8 +82,8 @@ describe('Test TextField', function () {
         it('Test initial value', async function () {
             await vueTicks();
 
-            assert.equal(this.textfield.vm.value, 'Hello world');
-            assert.equal('Hello world', this.textfield.find('input').element.value);
+            expect(this.textfield.vm.value).toBe('Hello world')
+            expect(this.textfield.find('input').element.value).toBe('Hello world')
         });
 
         it('Test external value change', async function () {
@@ -94,8 +91,8 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal(this.textfield.vm.value, 'XYZ');
-            assert.equal('XYZ', this.textfield.find('input').element.value);
+            expect(this.textfield.vm.value).toBe('XYZ')
+            expect(this.textfield.find('input').element.value).toBe('XYZ')
         });
 
         it('Test change value by user', async function () {
@@ -104,8 +101,8 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal(this.textfield.vm.value, 'abc def');
-            assert.equal('abc def', inputField.value);
+            expect(this.textfield.vm.value).toBe('abc def')
+            expect(inputField.value).toBe('abc def')
         });
 
         it('Test empty value on init', async function () {
@@ -119,7 +116,7 @@ describe('Test TextField', function () {
                         value: ''
                     }
                 });
-                assert.equal(textfield.vm.value, '');
+                expect(textfield.vm.value).toBe('')
             } finally {
                 if (textfield) {
                     await vueTicks();
@@ -136,7 +133,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('required', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('required')
         });
 
         it('Test user set empty value when required', async function () {
@@ -148,7 +145,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('required', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('required')
         });
 
         it('Test set external value after empty when required', async function () {
@@ -160,7 +157,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('')
         });
 
         it('Test user set value after empty when required', async function () {
@@ -174,7 +171,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('')
         });
 
         it('Test set invalid external value when integer', async function () {
@@ -182,7 +179,7 @@ describe('Test TextField', function () {
             this.textfield.setProps({value: '1.5'});
             await vueTicks();
 
-            assert.equal('integer expected', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('integer expected')
         });
     });
 
@@ -194,9 +191,9 @@ describe('Test TextField', function () {
             await vueTicks();
 
             if (isEmptyString(expectedError)) {
-                assert.equal(expectedError, textfield.currentError);
+                expect(textfield.currentError).toBe(expectedError)
             } else {
-                assert.include(textfield.currentError, expectedError);
+                expect(textfield.currentError).toInclude(expectedError)
             }
         }
 

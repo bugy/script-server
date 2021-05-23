@@ -93,10 +93,22 @@ module.exports = {
 
             reporters: ['mocha', 'allure'],
 
+            frameworks: ['mocha'],
+
             allureReport: {
                 reportDir: '/tmp/allure_result',
                 useBrowserName: true
-            }
+            },
+
+            plugins: [
+                'karma-chrome-launcher',
+                'karma-firefox-launcher',
+                'karma-sourcemap-loader',
+                'karma-webpack',
+                'karma-mocha',
+                'karma-mocha-reporter',
+                'karma-allure-reporter',
+            ]
         }
     }
 };

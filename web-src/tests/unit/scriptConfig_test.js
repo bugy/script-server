@@ -1,6 +1,5 @@
 import {clearArray, removeElement, SocketClosedError} from '@/common/utils/common';
 import scriptConfig, {__RewireAPI__ as SocketRewireAPI} from '@/main-app/store/scriptConfig';
-import {assert} from 'chai';
 import Vuex from 'vuex';
 import {createScriptServerTestVue, timeout, vueTicks} from './test_utils'
 
@@ -163,8 +162,8 @@ describe('Test scriptConfig module', function () {
 
             sendEventFromServer(createConfigEvent(config));
 
-            assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
-            assert.deepEqual(store.state.scriptConfig.parameters, config.parameters);
+            expect(store.state.scriptConfig.scriptConfig).toEqual(config);
+            expect(store.state.scriptConfig.parameters).toEqual(config.parameters);
             expect(observers[0].path).toEndWith('?initWithValues=false')
         });
 
@@ -182,8 +181,8 @@ describe('Test scriptConfig module', function () {
 
             sendEventFromServer(createConfigEvent(config));
 
-            assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
-            assert.deepEqual(store.state.scriptConfig.parameters, config.parameters);
+            expect(store.state.scriptConfig.scriptConfig).toEqual(config);
+            expect(store.state.scriptConfig.parameters).toEqual(config.parameters);
         });
 
         it('Test add parameter', function () {
@@ -201,7 +200,7 @@ describe('Test scriptConfig module', function () {
             const expectedParameters = config.parameters.concat([newParameter]);
             newParameter.multiselect = true;
 
-            assert.deepEqual(store.state.scriptConfig.parameters, expectedParameters);
+            expect(store.state.scriptConfig.parameters).toEqual(expectedParameters)
         });
 
         it('Test remove parameter', function () {
@@ -216,7 +215,7 @@ describe('Test scriptConfig module', function () {
 
             config.parameters.splice(0, 1);
 
-            assert.deepEqual(store.state.scriptConfig.parameters, config.parameters);
+            expect(store.state.scriptConfig.parameters).toEqual(config.parameters)
         });
     });
 
@@ -228,8 +227,8 @@ describe('Test scriptConfig module', function () {
             const oldObserver = observers[0];
             sendSocketError(new SocketClosedError());
 
-            assert.isNull(store.state.scriptConfig.scriptConfig);
-            assert.equal(store.state.scriptConfig.loadError, 'Failed to connect to the server');
+            expect(store.state.scriptConfig.scriptConfig).toBeNil()
+            expect(store.state.scriptConfig.loadError).toBe('Failed to connect to the server')
         });
 
         it('Test disconnect after initial config', async function () {
@@ -245,9 +244,9 @@ describe('Test scriptConfig module', function () {
 
             const newObserver = observers[0];
 
-            assert.notEqual(newObserver, oldObserver);
-            assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
-            assert.isNull(store.state.scriptConfig.loadError);
+            expect(newObserver).not.toEqual(oldObserver)
+            expect(store.state.scriptConfig.scriptConfig).toEqual(config)
+            expect(store.state.scriptConfig.loadError).toBeNil()
         });
 
         it('Test reload config after reconnect', async function () {
@@ -259,14 +258,14 @@ describe('Test scriptConfig module', function () {
 
             await this.disconnectSocket(50);
 
-            assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
+            expect(store.state.scriptConfig.scriptConfig).toEqual(config)
             config.name = 'new name';
             config.parameters.push({'name': 'param3'});
 
             sendEventFromServer(createConfigEvent(config));
 
-            assert.deepEqual(store.state.scriptConfig.scriptConfig, config);
-            assert.deepEqual(store.state.scriptConfig.parameters, config.parameters);
+            expect(store.state.scriptConfig.scriptConfig).toEqual(config)
+            expect(store.state.scriptConfig.parameters).toEqual(config.parameters)
         });
     });
 
@@ -277,7 +276,7 @@ describe('Test scriptConfig module', function () {
 
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
-            assert.deepEqual(this.sentData, [createSentValueEvent('param1', 123, 1)]);
+            expect(this.sentData).toEqual([createSentValueEvent('param1', 123, 1)])
         });
 
         it('Test send same value multiple times', function () {
@@ -288,7 +287,7 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
-            assert.deepEqual(this.sentData, [createSentValueEvent('param1', 123, 1)]);
+            expect(this.sentData).toEqual([createSentValueEvent('param1', 123, 1)])
         });
 
         it('Test send same parameter different values', function () {
@@ -299,11 +298,11 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 456});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
-            assert.deepEqual(this.sentData, [
+            expect(this.sentData).toEqual([
                 createSentValueEvent('param1', 123, 1),
                 createSentValueEvent('param1', 456, 2),
                 createSentValueEvent('param1', 123, 3)
-            ]);
+            ])
         });
 
         it('Test send different parameters', function () {
@@ -313,10 +312,10 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param2', value: 123});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 'hello'});
 
-            assert.deepEqual(this.sentData, [
+            expect(this.sentData).toEqual([
                 createSentValueEvent('param2', 123, 1),
                 createSentValueEvent('param1', 'hello', 2)
-            ]);
+            ])
         });
 
         it('Test resend values on reconnect', async function () {
@@ -341,10 +340,10 @@ describe('Test scriptConfig module', function () {
 
             sendEventFromServer(createConfigEvent(config));
 
-            assert.deepEqual(this.sentData, [
+            expect(this.sentData).toEqual([
                 createSentValueEvent('param2', 123),
                 createSentValueEvent('param1', 'hello')
-            ]);
+            ])
         });
     });
 

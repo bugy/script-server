@@ -4,13 +4,10 @@ import ParameterConfigForm from '@/admin/components/scripts-config/ParameterConf
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
-import {isBlankString, isNull, setInputValue} from '@/common/utils/common';
+import {isBlankString, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {assert, config as chaiConfig} from 'chai';
 import {attachToDocument, setChipListValue, vueTicks} from '../test_utils';
 import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
-
-chaiConfig.truncateThreshold = 0;
 
 export async function setValueByUser(form, parameterName, value) {
     const childComponent = findField(form, parameterName);
@@ -44,7 +41,7 @@ export const findField = (form, expectedName, failOnMissing = true) => {
     }
 
     if (failOnMissing) {
-        assert.fail('Failed to find field: ' + expectedName);
+        throw Error('Failed to find field: ' + expectedName)
     }
 };
 
@@ -123,23 +120,20 @@ describe('Test ParameterConfigForm', function () {
 
     const assertOutputValue = (fieldName, expectedValue) => {
         const actualValue = form.vm.$props.value[fieldName];
-        assert.deepEqual(actualValue, expectedValue);
+        expect(actualValue).toEqual(expectedValue)
     };
 
     const assertLastError = (fieldName, expectedError) => {
         const foundError = errors.slice().reverse().find(error => error.fieldName === fieldName);
 
         if (isBlankString(expectedError)) {
-            assert.isTrue(isNull(foundError) || isBlankString(foundError.message),
-                'Expected no error, but was: ' + foundError.message);
+            expect(foundError?.message).toBeEmpty()
             return;
         }
 
-        if (isNull(foundError)) {
-            assert.fail(null, expectedError, 'Expected error "' + expectedError + '", but no errors found')
-        }
+        expect(foundError).not.toBeNil()
 
-        assert.equal(foundError.message, expectedError);
+        expect(foundError.message).toBe(expectedError)
     };
 
     describe('Test initial values', function () {
@@ -147,7 +141,7 @@ describe('Test ParameterConfigForm', function () {
         it('Test initial name', function () {
             const nameField = _findField('Name');
 
-            assert.equal('param 1', nameField.value);
+            expect(nameField.value).toBe('param 1')
         });
 
         it('Test simple parameters', async function () {
@@ -166,15 +160,15 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('param X', _findField('name').value);
-            assert.equal('my desc', _findField('description').value);
-            assert.equal('-x', _findField('param').value);
-            assert.equal('int', _findField('type').value);
-            assert.equal(true, _findField('without value').value);
-            assert.equal(true, _findField('required').value);
-            assert.isUndefined(_findField('constant', false));
-            assert.equal(true, _findField('secret value').value);
-            assert.equal('My_Param', _findField('env variable').value);
+            expect(_findField('name').value).toBe('param X')
+            expect(_findField('description').value).toBe('my desc')
+            expect(_findField('param').value).toBe('-x')
+            expect(_findField('type').value).toBe('int')
+            expect(_findField('without value').value).toBe(true)
+            expect(_findField('required').value).toBe(true)
+            expect(_findField('constant', false)).toBeNil()
+            expect(_findField('secret value').value).toBe(true)
+            expect(_findField('env variable').value).toBe('My_Param')
         });
 
         it('Test simple parameters when int', async function () {
@@ -188,9 +182,9 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('int', _findField('type').value);
-            assert.equal(-5, _findField('min').value);
-            assert.equal(1000, _findField('max').value);
+            expect(_findField('type').value).toBe('int')
+            expect(_findField('min').value.toString()).toBe('-5')
+            expect(_findField('max').value.toString()).toBe('1000')
         });
 
         it('Test simple parameters when multiselect argument_per_value', async function () {
@@ -203,9 +197,9 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('multiselect', _findField('type').value);
-            assert.equal('argument_per_value', _findField('Value split type').value);
-            assert.isUndefined(_findField('separator', false));
+            expect(_findField('type').value).toBe('multiselect')
+            expect(_findField('Value split type').value).toBe('argument_per_value')
+            expect(_findField('separator', false)).toBeNil()
         });
 
         it('Test simple parameters when multiselect and single_argument', async function () {
@@ -219,9 +213,9 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('multiselect', _findField('type').value);
-            assert.equal('single_argument', _findField('Value split type').value);
-            assert.equal('.', _findField('separator').value);
+            expect(_findField('type').value).toBe('multiselect')
+            expect(_findField('Value split type').value).toBe('single_argument')
+            expect(_findField('separator').value).toBe('.')
         });
 
         it('Test simple parameters when server file', async function () {
@@ -237,11 +231,11 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('server_file', _findField('type').value);
-            assert.equal('/tmp/', _findField('file directory').value);
-            assert.equal(true, _findField('recursive').value);
-            assert.equal('dir', _findField('file type').value);
-            assert.deepEqual(['txt', 'png'], _findField('allowed file extensions').value);
+            expect(_findField('type').value).toBe('server_file')
+            expect(_findField('file directory').value).toBe('/tmp/')
+            expect(_findField('recursive').value).toBe(true)
+            expect(_findField('file type').value).toBe('dir')
+            expect(_findField('allowed file extensions').value).toEqual(['txt', 'png'])
         });
 
         it('Test default value when int', async function () {
@@ -254,7 +248,7 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal(5, _findField('default value').value);
+            expect(_findField('default value').value).toBe('5')
         });
 
         it('Test default value when recursive file and default array', async function () {
@@ -268,7 +262,7 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('some/path/value', _findField('default value').value);
+            expect(_findField('default value').value).toBe('some/path/value')
         });
 
         it('Test default value when recursive file and default array with absolute path', async function () {
@@ -282,7 +276,7 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('/some/path/value', _findField('default value').value);
+            expect(_findField('default value').value).toBe('/some/path/value')
         });
 
         it('Test default value when recursive file and default string', async function () {
@@ -296,7 +290,7 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('/tmp/script-server/files', _findField('default value').value);
+            expect(_findField('default value').value).toBe('/tmp/script-server/files')
         });
 
         it('Test allowed values when array', async function () {
@@ -309,10 +303,10 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.isUndefined(_findField('script', false));
-            assert.deepEqual(['abc', '123', 'xyz'], _findField('allowed values').value);
-            assert.isFalse(_findField('load from script').value);
-            assert.isUndefined(_findField('enable bash operators', false));
+            expect(_findField('script', false)).toBeNil()
+            expect(_findField('allowed values').value).toEqual(['abc', '123', 'xyz'])
+            expect(_findField('load from script').value).toBeFalse()
+            expect(_findField('enable bash operators', false)).toBeNil()
         });
 
         it('Test allowed values when script', async function () {
@@ -325,10 +319,10 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.equal('ls ~/', _findField('script').value);
-            assert.isUndefined(_findField('allowed values', false));
-            assert.isTrue(_findField('load from script').value);
-            assert.isFalse(_findField('enable bash operators').value);
+            expect(_findField('script').value).toBe('ls ~/')
+            expect(_findField('allowed values', false)).toBeNil()
+            expect(_findField('load from script').value).toBeTrue()
+            expect(_findField('enable bash operators').value).toBeFalse()
         });
 
         it('Test allowed values when array and type editable_list', async function () {
@@ -341,9 +335,9 @@ describe('Test ParameterConfigForm', function () {
 
             await vueTicks();
 
-            assert.isUndefined(_findField('script', false));
-            assert.deepEqual(['abc', '123', 'xyz'], _findField('allowed values').value);
-            assert.isFalse(_findField('load from script').value);
+            expect(_findField('script', false)).toBeNil()
+            expect(_findField('allowed values').value).toEqual(['abc', '123', 'xyz'])
+            expect(_findField('load from script').value).toBeFalse()
         });
     });
 
@@ -561,137 +555,137 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test type enabled when no_value false', async function () {
             const inputField = _findFieldInputElement('Type');
-            assert.isFalse(inputField.disabled);
+            expect(inputField.disabled).toBeFalse()
         });
 
         it('Test type disabled when no_value set by props', async function () {
             await setPropsField('no_value', true);
 
             const inputField = _findFieldInputElement('Type');
-            assert.isTrue(inputField.disabled);
+            expect(inputField.disabled).toBeTrue()
         });
 
         it('Test type disabled when no_value set by user', async function () {
             await _setValueByUser('Without value', true);
 
             const inputField = _findFieldInputElement('Type');
-            assert.isTrue(inputField.disabled);
+            expect(inputField.disabled).toBeTrue()
         });
 
         it('Test no constant and default when file_upload set via props', async function () {
             await setPropsField('type', 'file_upload');
 
-            assert.isUndefined(_findField('Default value', false));
-            assert.isUndefined(_findField('Constant', false));
+            expect(_findField('Default value', false)).toBeNil()
+            expect(_findField('Constant', false)).toBeNil()
         });
 
         it('Test no constant and default when file_upload set by user', async function () {
             await _setValueByUser('Type', 'file_upload');
 
-            assert.isUndefined(_findField('Default value', false));
-            assert.isUndefined(_findField('Constant', false));
+            expect(_findField('Default value', false)).toBeNil()
+            expect(_findField('Constant', false)).toBeNil()
         });
 
         it('Test no description when constant set via props', async function () {
             await setPropsField('constant', true);
 
-            assert.isUndefined(_findField('Description', false));
+            expect(_findField('Description', false)).toBeNil()
         });
 
         it('Test no description when constant set by user', async function () {
             await _setValueByUser('Constant', true);
 
-            assert.isUndefined(_findField('Description', false));
+            expect(_findField('Description', false)).toBeNil()
         });
 
         it('Test min max when type int set via props', async function () {
             await setPropsField('type', 'int');
 
-            assert.isDefined(_findField('Min'));
-            assert.isDefined(_findField('Max'));
+            expect(_findField('Min')).not.toBeNil()
+            expect(_findField('Max')).not.toBeNil()
         });
 
         it('Test min max when type int set by user', async function () {
             await _setValueByUser('Type', 'int');
 
-            assert.isDefined(_findField('Min'));
-            assert.isDefined(_findField('Max'));
+            expect(_findField('Min')).not.toBeNil()
+            expect(_findField('Max')).not.toBeNil()
         });
 
         it('Test min max when type int and no_value set vie props', async function () {
             await setPropsField('type', 'int');
             await setPropsField('no_value', true);
 
-            assert.isUndefined(_findField('Min', false));
-            assert.isUndefined(_findField('Max', false));
+            expect(_findField('Min', false)).toBeNil()
+            expect(_findField('Max', false)).toBeNil()
         });
 
         it('Test min max when type int and no_value set by user', async function () {
             await _setValueByUser('Type', 'int');
             await _setValueByUser('Without value', true);
 
-            assert.isUndefined(_findField('Min', false));
-            assert.isUndefined(_findField('Max', false));
+            expect(_findField('Min', false)).toBeNil()
+            expect(_findField('Max', false)).toBeNil()
         });
 
         it('Test multiselect fields when type multiselect set via props', async function () {
             await setPropsField('type', 'multiselect');
 
-            assert.isDefined(_findField('Value split type'));
-            assert.isDefined(_findField('Separator'));
+            expect(_findField('Value split type')).not.toBeNil()
+            expect(_findField('Separator')).not.toBeNil()
         });
 
         it('Test multiselect fields when type multiselect set by user', async function () {
             await _setValueByUser('Type', 'multiselect');
 
-            assert.isDefined(_findField('Value split type'));
-            assert.isDefined(_findField('Separator'));
+            expect(_findField('Value split type')).not.toBeNil()
+            expect(_findField('Separator')).not.toBeNil()
         });
 
         it('Test server_file fields when type server_file set via props', async function () {
             await _setValueByUser('type', 'server_file');
 
-            assert.isDefined(_findField('File directory'));
-            assert.isDefined(_findField('Recursive'));
-            assert.isDefined(_findField('File type'));
-            assert.isDefined(_findField('Allowed file extensions'));
+            expect(_findField('File directory')).not.toBeNil()
+            expect(_findField('Recursive')).not.toBeNil()
+            expect(_findField('File type')).not.toBeNil()
+            expect(_findField('Allowed file extensions')).not.toBeNil()
         });
 
         it('Test server_file fields when type server_file set by user', async function () {
             await _setValueByUser('Type', 'server_file');
 
-            assert.isDefined(_findField('File directory'));
-            assert.isDefined(_findField('Recursive'));
-            assert.isDefined(_findField('File type'));
-            assert.isDefined(_findField('Allowed file extensions'));
+            expect(_findField('File directory')).not.toBeNil()
+            expect(_findField('Recursive')).not.toBeNil()
+            expect(_findField('File type')).not.toBeNil()
+            expect(_findField('Allowed file extensions')).not.toBeNil()
         });
 
         it('Test "param" required when no_value set via props', async function () {
             await setPropsField('no_value', true);
 
             const argField = _findFieldInputElement('Param');
-            assert.isTrue(argField.required);
+            expect(argField.required).toBeTrue()
         });
 
         it('Test "param" required when no_value set by user', async function () {
             await _setValueByUser('Without value', true);
 
             const argField = _findFieldInputElement('Param');
-            assert.isTrue(argField.required);
+            expect(argField.required).toBeTrue()
         });
 
         it('Test "default" field when constant set via props', async function () {
             await setPropsField('constant', true);
 
             const argField = _findFieldInputElement('Constant value');
-            assert.isTrue(argField.required);
+            expect(argField.required).toBeTrue()
         });
 
         it('Test "default" field when constant set by user', async function () {
             await _setValueByUser('Constant', true);
 
             const argField = _findFieldInputElement('Constant value');
-            assert.isTrue(argField.required);
+            expect(argField.required).toBeTrue()
         });
 
         it('Test "max" field when min set via props', async function () {
