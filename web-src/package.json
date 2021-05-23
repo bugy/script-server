@@ -19,6 +19,7 @@
     "vuex": "^3.1.2"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-optional-chaining": "^7.14.2",
     "@stryker-mutator/core": "^3.1.0",
     "@stryker-mutator/javascript-mutator": "^3.1.0",
     "@stryker-mutator/karma-runner": "^3.1.0",

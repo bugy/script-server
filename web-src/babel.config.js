@@ -4,7 +4,8 @@ module.exports = {
     ],
     env: {
         'test': {
-            'plugins': ['rewire']
+            'plugins': ['rewire',
+                '@babel/plugin-proposal-optional-chaining']
         }
     }
 };
