@@ -306,7 +306,7 @@ class ParameterModel(object):
             int_value = int(value)
 
             if (not is_empty(self.max)) and (int_value > int(self.max)):
-                return 'is longer than allowed value (' \
+                return 'is greater than allowed value (' \
                        + value_string + ' > ' + str(self.max) + ')'
 
             if (not is_empty(self.min)) and (int_value < int(self.min)):
