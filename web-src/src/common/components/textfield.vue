@@ -120,9 +120,20 @@ export default {
     },
     'config.values': {
       immediate: true,
-      handler() {
+      handler(dependantValue) {
         if (this.autocompleteWrapper) {
           this.updateAutocompleteData()
+        }
+
+        if (!isNull(dependantValue)) {
+          var value = dependantValue[0]
+        }
+
+        if (this.$refs.textField) {
+          this.value = value
+          this.$nextTick(function () {
+            this._doValidation(this.value);
+          }.bind(this));
         }
       }
     }

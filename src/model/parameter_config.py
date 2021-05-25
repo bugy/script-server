@@ -178,7 +178,7 @@ class ParameterModel(object):
             return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions,
                                  self.excluded_files_matcher)
 
-        if (type != 'list') and (type != PARAM_TYPE_MULTISELECT) and (type != PARAM_TYPE_EDITABLE_LIST):
+        if (type != 'list') and (type != 'text') and (type != PARAM_TYPE_MULTISELECT) and (type != PARAM_TYPE_EDITABLE_LIST):
             return NoneValuesProvider()
 
         if is_empty(values_config):
