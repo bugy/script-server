@@ -4,6 +4,7 @@ import os
 import re
 from string import Template
 
+from auth.authorization import is_same_user
 from execution.execution_service import ExecutionService
 from model.model_helper import AccessProhibitedException
 from utils import file_utils, audit_utils
@@ -332,7 +333,7 @@ class ExecutionLoggingService:
         if entry is None:
             return True
 
-        if entry.user_id == user_id:
+        if is_same_user(entry.user_id, user_id):
             return True
 
         if system_call:

@@ -66,19 +66,27 @@ class ExecutionServiceTest(unittest.TestCase):
 
         self.assertCountEqual([id1], execution_service.get_running_executions())
 
-    def test_active_executions_when_2_started(self):
+    @parameterized.expand([
+        (DEFAULT_USER_ID,),
+        (DEFAULT_USER_ID.upper(),),
+    ])
+    def test_active_executions_when_2_started(self, user_id):
         execution_service = self.create_execution_service()
         id1 = self._start(execution_service)
         id2 = self._start(execution_service)
 
-        self.assertCountEqual([id1, id2], execution_service.get_active_executions(DEFAULT_USER_ID))
+        self.assertCountEqual([id1, id2], execution_service.get_active_executions(user_id))
 
-    def test_active_executions_with_different_user(self):
+    @parameterized.expand([
+        ('another_user',),
+        ('ANOTHER_USER',),
+    ])
+    def test_active_executions_with_different_user(self, user_id):
         execution_service = self.create_execution_service()
         self._start(execution_service)
         self._start(execution_service)
 
-        self.assertCountEqual([], execution_service.get_active_executions('another_user'))
+        self.assertCountEqual([], execution_service.get_active_executions(user_id))
 
     def test_active_executions_when_2_started_and_1_cleanup(self):
         execution_service = self.create_execution_service()

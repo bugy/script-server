@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
+from parameterized import parameterized
+
 from auth.authorization import Authorizer, EmptyGroupProvider
 from auth.user import User
 from execution import executor
@@ -266,13 +268,17 @@ class TestLoggingService(unittest.TestCase):
         entries = self.logging_service.get_history_entries('userX')
         self.assertCountEqual([], entries)
 
-    def test_get_history_entries_only_for_current_user(self):
+    @parameterized.expand([
+        ('userA',),
+        ('USERa',),
+    ])
+    def test_get_history_entries_only_for_current_user(self, user_id):
         self.simulate_logging(execution_id='id1', user_id='userA')
         self.simulate_logging(execution_id='id2', user_id='userB')
         self.simulate_logging(execution_id='id3', user_id='userC')
         self.simulate_logging(execution_id='id4', user_id='userA')
 
-        entries = self._get_entries_sorted('userA')
+        entries = self._get_entries_sorted(user_id)
         self.assertEquals(2, len(entries))
 
         self.validate_history_entry(entry=entries[0], id='id1', user_id='userA')

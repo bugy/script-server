@@ -2,7 +2,7 @@ import logging
 from collections import namedtuple
 from typing import Optional, Dict, Callable, Any
 
-from auth.authorization import Authorizer
+from auth.authorization import Authorizer, is_same_user
 from auth.user import User
 from execution.executor import ScriptExecutor
 from model import script_config
@@ -140,7 +140,7 @@ class ExecutionService:
 
     @staticmethod
     def _can_access_execution(execution_info: _ExecutionInfo, user_id):
-        return (execution_info is not None) and (execution_info.owner_user.user_id == user_id)
+        return (execution_info is not None) and (is_same_user(execution_info.owner_user.user_id, user_id))
 
     def get_user_parameter_values(self, execution_id):
         return self._get_for_executor(execution_id,
