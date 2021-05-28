@@ -124,15 +124,18 @@ export default {
         if (this.autocompleteWrapper) {
           this.updateAutocompleteData()
         }
+        var textField = this.$refs.textField;
+        var value = dependantValue[0]
 
-        if (!isNull(dependantValue)) {
-          var value = dependantValue[0]
-        }
-
-        if (this.$refs.textField) {
+        if (!isNull(textField) && (textField.value === value)) {
+          this._doValidation(this.value);
+        } else {
           this.value = value
           this.$nextTick(function () {
-            this._doValidation(this.value);
+            if (textField) {
+              this.labelActive()
+              this._doValidation(this.value);
+            }
           }.bind(this));
         }
       }

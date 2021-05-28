@@ -96,7 +96,7 @@ class ParameterModel(object):
         self._validate_config()
 
         values_provider = self._create_values_provider(
-            config.get('values'),
+            config.get('values') or config.get('default') ,
             self.type,
             self.constant)
         self._values_provider = values_provider
