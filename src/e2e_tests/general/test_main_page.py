@@ -15,7 +15,6 @@ def test_home_page(browser, config_host):
     expect(is_displayed(home_page.sidebar_header), "Header on sidebar not found")
     expect(is_displayed(home_page.sidebar_history_button), "History button on sidebar not found")
     expect(is_displayed(home_page.sidebar_scripts_list), "Scripts list not found")
-    expect(is_displayed(home_page.sidebar_search_button), "Search button not found")
     expect(is_displayed(home_page.sidebar_header_link), "Header link not found")
     expect(not is_displayed(home_page.main_app_content), "App content is displayed")
 
@@ -51,3 +50,26 @@ def test_app_content(browser, config_host):
     assert_expectations()
 
 
+@severity(severity_level.CRITICAL)
+@allure.title("Check appeared and hidden search elements by default")
+def test_search_elements_by_default(browser, config_host):
+    home_page = Page(browser, config_host)
+
+    expect(is_displayed(home_page.sidebar_search_button), "Search button not found")
+    expect(not is_displayed(home_page.sidebar_clear_search_button), "Clear search button is displayed")
+    expect(not is_displayed(home_page.sidebar_search_input), "Search input field is displayed")
+
+    assert_expectations()
+
+
+@severity(severity_level.CRITICAL)
+@allure.title("Check appeared and hidden search elements after search button click")
+def test_search_elements_after_click(browser, config_host):
+    home_page = Page(browser, config_host)
+    home_page.sidebar_search_button.click()
+
+    expect(not is_displayed(home_page.sidebar_search_button), "Search button is displayed after click")
+    expect(is_displayed(home_page.sidebar_clear_search_button), "Clear search button not found after click")
+    expect(is_displayed(home_page.sidebar_search_input), "Search input field not found after click")
+
+    assert_expectations()

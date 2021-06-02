@@ -2,6 +2,7 @@ import time
 from abc import ABC
 import conftest
 import random
+import pytest
 
 from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException, TimeoutException
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
@@ -85,6 +86,11 @@ class Page(ABC):
     def all_script_links(self):
         return self.browser.find_elements_by_css_selector("a.collection-item.script-list-item")
 
+    @property
+    def all_groups(self):
+
+        return self.browser.find_elements_by_css_selector("div.script-list-group a span")
+
     def get_script_link_by_name(self, name):
         try:
             return self.browser.find_element_by_link_text(name)
@@ -147,7 +153,15 @@ class Page(ABC):
 
     @property
     def sidebar_search_button(self):
-        return self.find_element(".main-app-sidebar .search-button")
+        return self.find_element(".main-app-sidebar .search-button[alt=\"Search script\"]")
+
+    @property
+    def sidebar_clear_search_button(self):
+        return self.find_element(".main-app-sidebar .search-button[alt=\"Clear search\"]")
+
+    @property
+    def sidebar_search_input(self):
+        return self.find_element("input.search-field")
 
     @property
     def sidebar_header_link(self):
@@ -201,6 +215,20 @@ class Page(ABC):
     def add_new_tab_button(self):
         return self.find_element(".tab [title='Add another script instance']")
 
+    @property
+    def history_table(self):
+        return self.find_element("div.executions-log-table tr")
+
+    @property
+    def history_table_column_titles(self):
+        return ["ID", "Start Time", "User", "Script", "Status"]
+
+    def find_history_column_by_name(self, name):
+        try:
+           return self.browser.find_element_by_xpath("//th[contains(text(), \"{}\")]".format(name))
+        except NoSuchElementException:
+            return None
+
 
 class VeryParametrizedScript(Page):
     browser: RemoteWebDriver
@@ -245,6 +273,18 @@ class VeryParametrizedScript(Page):
     @property
     def parameter_multiple_selection(self):
         return self.find_input_by_label('Multiple selection')
+
+    @property
+    def parameter_multiple_selection_drop_down(self):
+        return self.find_element('ul.dropdown-content.select-dropdown.multiple-select-dropdown', get_parent_element(self.parameter_multiple_selection))
+
+    @property
+    def parameter_multiple_selection_drop_down_checked_elements(self):
+        return self.parameter_multiple_selection_drop_down.find_elements_by_css_selector('li.selected:not([class*=\"disabled\"])')
+
+    @property
+    def parameter_multiple_selection_drop_down_unchecked_elements(self):
+        return self.parameter_multiple_selection_drop_down.find_elements_by_css_selector('li:not([class*=\"selected\"]):not([class*=\"disabled\"])')
 
     @property
     def parameter_required_text(self):
