@@ -101,7 +101,7 @@ class _ScriptHandler:
         paths = [_extract_path(f) for f in config.output_files if predicate(f)]
         paths = [p for p in paths if p]
 
-        parameter_values = self.execution_service.get_user_parameter_values(execution_id)
+        parameter_values = self.execution_service.get_script_parameter_values(execution_id)
         all_audit_names = self.execution_service.get_all_audit_names(execution_id)
 
         audit_name = audit_utils.get_audit_name(all_audit_names)
