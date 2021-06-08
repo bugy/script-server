@@ -60,15 +60,28 @@ export default {
       }
 
       let ascending = this.ascending;
+      let column = this.sortColumn;
 
-      this.rows.sort(function(a, b) {
-        if (a[sortKey] > b[sortKey]) {
-          return ascending ? 1 : -1
-        } else if (a[sortKey] < b[sortKey]) {
-          return ascending ? -1 : 1
+      this.rows.sort((a, b) => {
+        if (column === 'id') {
+          let id_a = a[sortKey];
+          let id_b = b[sortKey];
+          return ascending ? id_a - id_b : id_b - id_a
+
+        } else if (column === 'startTimeString') {
+          let date_a = new Date(a[sortKey]);
+          let date_b = new Date(b[sortKey]);
+          return ascending ? date_a - date_b : date_b - date_a
+
+        } else {
+          if (a[sortKey] > b[sortKey]) {
+            return ascending ? 1 : -1
+          } else if (a[sortKey] < b[sortKey]) {
+            return ascending ? -1 : 1
+          }
+          return 0;
         }
-        return 0;
-      })
+      });
     }
   },
 
