@@ -74,9 +74,11 @@ export default {
           return ascending ? date_a - date_b : date_b - date_a
 
         } else {
-          if (a[sortKey] > b[sortKey]) {
+          let other_a = a[sortKey].toLowerCase()
+          let other_b = b[sortKey].toLowerCase()
+          if (other_a > other_b) {
             return ascending ? 1 : -1
-          } else if (a[sortKey] < b[sortKey]) {
+          } else if (other_a < other_b) {
             return ascending ? -1 : 1
           }
           return 0;
