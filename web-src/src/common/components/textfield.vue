@@ -153,7 +153,8 @@ export default {
       }
 
       if (!empty) {
-        var typeError = getValidByTypeError(value, this.config.type, this.config.min, this.config.max, this.config.max_length);
+        var typeError = getValidByTypeError(value, this.config.type, this.config.min, this.config.max,
+              this.config.max_length, this.config.regex);
         if (!isEmptyString(typeError)) {
           return typeError;
         }
@@ -191,8 +192,15 @@ export default {
   }
 }
 
-function getValidByTypeError(value, type, min, max, max_length) {
+function getValidByTypeError(value, type, min, max, max_length, regex) {
   if (type === 'text') {
+    if (regex) {
+        let regexPattern = new RegExp(regex.pattern);
+        let matchFound = regexPattern.test(value);
+        if (!matchFound) {
+          return regex.description
+        }
+      }
     if (max_length) {
       if (value.length > max_length) {
         return 'Max chars allowed: ' + max_length

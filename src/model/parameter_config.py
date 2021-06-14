@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
@@ -30,6 +31,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'min',
     'max',
     'max_length',
+    'regex',
     'constant',
     '_values_provider',
     'values',
@@ -74,6 +76,7 @@ class ParameterModel(object):
         self.min = config.get('min')
         self.max = config.get('max')
         self.max_length = config.get('max_length')
+        self.regex = config.get('regex')
         self.secure = read_bool_from_config('secure', config, default=False)
         self.separator = config.get('separator', ',')
         self.multiselect_argument_type = read_str_from_config(
@@ -279,6 +282,8 @@ class ParameterModel(object):
         if is_empty(value):
             if self.required and not ignore_required:
                 return 'is not specified'
+            if self.regex:
+                pass
             return None
 
         value_string = self.value_to_repr(value)
@@ -289,6 +294,13 @@ class ParameterModel(object):
             return None
 
         if self.type == 'text':
+            if self.regex is not None:
+                regex_pattern = self.regex.get('pattern', None)
+                if (not is_empty(regex_pattern)):
+                    regex_matched = bool(re.match(regex_pattern, value))
+                    if not regex_matched:
+                        return 'does not match regex pattern: ' + self.regex.get('description', regex_pattern)
+
             if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
                 return 'is longer than allowed char length (' \
                         + str(len(value)) + ' > ' + str(self.max_length) + ')'
