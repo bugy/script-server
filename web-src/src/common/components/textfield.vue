@@ -66,7 +66,7 @@ export default {
     },
 
     autofillName() {
-      return this.config.name.replace(/\s+/, '-')
+      return this.config?.name?.replace(/\s+/, '-')
     }
   },
 
