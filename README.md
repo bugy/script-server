@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/bugy/script-server.svg?branch=master)](https://travis-ci.org/bugy/script-server) [![Gitter](https://badges.gitter.im/script-server/community.svg)](https://gitter.im/script-server/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Build Status](https://travis-ci.com/bugy/script-server.svg?branch=master&status=passed)](https://travis-ci.com/bugy/script-server) [![Gitter](https://badges.gitter.im/script-server/community.svg)](https://gitter.im/script-server/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 # script-server
 Script-server is a Web UI for scripts.  
