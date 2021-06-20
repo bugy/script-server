@@ -74,12 +74,10 @@
                  @error="handleError('Excluded files', $event)"/>
     </div>
     <div v-if="selectedType === 'text' || selectedType === undefined" class="row">
-      <Textfield v-model="regex_pattern" :config="regexPatternField" class="col s4"
+      <Textfield v-model="regexConfigPattern" :config="regexPatternField" class="col s4"
                  @error="handleError(regexPatternField, $event)"/>
-      <Textfield v-model="regex_description" :config="regexDescriptionField" class="col s4"
+      <Textfield v-model="regexConfigDescription" :config="regexDescriptionField" class="col s4"
                  @error="handleError(regexDescriptionField, $event)"/>
-    </div>
-    <div v-if="selectedType === 'text' || selectedType === undefined" class="row">
       <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
                  @error="handleError(maxLengthField, $event)"/>
     </div>
@@ -154,8 +152,6 @@ export default {
       min: 'min',
       max: 'max',
       max_length: 'max_length',
-      regex_pattern: 'pattern',
-      regex_description: 'description',
       multiselectArgumentType: 'multiselect_argument_type',
       separator: 'separator',
       fileDir: 'file_dir',
@@ -191,8 +187,8 @@ export default {
       min: null,
       max: null,
       max_length: null,
-      regex_pattern: null,
-      regex_description: null,
+      regexConfigPattern: null,
+      regexConfigDescription: null,
       allowedValues: null,
       allowedValuesScript: null,
       allowedValuesFromScript: null,
@@ -249,8 +245,8 @@ export default {
           this.min = config['min'];
           this.max = config['max'];
           this.max_length = config['max_length'];
-          this.regex_pattern = get(config, 'regex.pattern', '');
-          this.regex_description = get(config, 'regex.description', '');
+          this.regexConfigPattern = get(config, 'regex.pattern', '');
+          this.regexConfigDescription = get(config, 'regex.description', '');
           this.constant = !!get(config, 'constant', false);
           this.secure = !!get(config, 'secure', false);
           this.multiselectArgumentType = get(config, 'multiselect_argument_type', 'single_argument');
@@ -336,6 +332,12 @@ export default {
     allowedValuesScriptShellEnabled() {
       this.updateAllowedValues();
     },
+    regexConfigPattern() {
+      this.updateRegexConfig();
+    },
+    regexConfigDescription() {
+      this.updateRegexConfig();
+    },
     defaultValue() {
       if (this.selectedType === 'multiselect') {
         updateValue(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
@@ -366,6 +368,12 @@ export default {
 
 
   methods: {
+    updateRegexConfig() {
+      updateValue(this.value, 'regex', {
+        pattern: this.regexConfigPattern,
+        description: this.regexConfigDescription
+      });
+    },
     updateAllowedValues() {
       if (this.allowedValuesFromScript) {
         updateValue(this.value, 'values', {

@@ -282,8 +282,6 @@ class ParameterModel(object):
         if is_empty(value):
             if self.required and not ignore_required:
                 return 'is not specified'
-            if self.regex:
-                pass
             return None
 
         value_string = self.value_to_repr(value)
@@ -297,7 +295,7 @@ class ParameterModel(object):
             if self.regex is not None:
                 regex_pattern = self.regex.get('pattern', None)
                 if (not is_empty(regex_pattern)):
-                    regex_matched = bool(re.match(regex_pattern, value))
+                    regex_matched = re.match(regex_pattern, value)
                     if not regex_matched:
                         return 'does not match regex pattern: ' + self.regex.get('description', regex_pattern)
 
@@ -523,6 +521,8 @@ def get_sorted_config(param_config):
                  'values',
                  'min',
                  'max',
+                 'max_length',
+                 'regex',
                  'multiselect_argument_type',
                  'separator',
                  'file_dir',

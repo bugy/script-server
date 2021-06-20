@@ -198,7 +198,11 @@ function getValidByTypeError(value, type, min, max, max_length, regex) {
         let regexPattern = new RegExp(regex.pattern);
         let matchFound = regexPattern.test(value);
         if (!matchFound) {
-          return regex.description
+          if (regex.description) {
+            return regex.description
+          } else {
+            return 'The input value is invalid'
+          }
         }
       }
     if (max_length) {
