@@ -9,7 +9,7 @@ from ldap3.utils.conv import escape_filter_chars
 
 from auth import auth_base
 from model import model_helper
-from utils import file_utils
+from utils import file_utils, custom_json
 from utils.string_utils import strip
 
 KNOWN_REJECTIONS = [
@@ -222,7 +222,7 @@ class LdapAuthenticator(auth_base.Authenticator):
             return {}
 
         content = file_utils.read_file(groups_file)
-        return json.loads(content)
+        return custom_json.loads(content)
 
     def _set_user_groups(self, user, groups):
         self._user_groups[user] = groups

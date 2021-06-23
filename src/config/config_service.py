@@ -190,7 +190,7 @@ class ConfigService:
 
     def _load_script_config(self, path, content_or_json_dict, user, parameter_values, skip_invalid_parameters):
         if isinstance(content_or_json_dict, str):
-            json_object = json.loads(content_or_json_dict)
+            json_object = custom_json.loads(content_or_json_dict)
         else:
             json_object = content_or_json_dict
         config = script_config.ConfigModel(

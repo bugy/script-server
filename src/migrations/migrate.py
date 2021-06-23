@@ -307,7 +307,7 @@ def _load_runner_files(conf_folder):
     for conf_file in conf_files:
         content = file_utils.read_file(conf_file)
         try:
-            json_object = json.loads(content, object_pairs_hook=OrderedDict)
+            json_object = custom_json.loads(content, object_pairs_hook=OrderedDict)
             result.append((conf_file, json_object, content))
         except Exception:
             LOGGER.exception('Failed to load file for migration: ' + conf_file)
