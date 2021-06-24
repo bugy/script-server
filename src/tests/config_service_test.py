@@ -32,9 +32,9 @@ class ConfigServiceTest(unittest.TestCase):
         self.assertCountEqual(['conf_x', 'conf_y', 'A B C'], conf_names)
 
     def test_list_configs_when_multiple_and_subfolders(self):
-        _create_script_config_file('conf_x', subfolder = 's1/')
-        _create_script_config_file('conf_y', subfolder = 's2/')
-        _create_script_config_file('ABC', subfolder = os.path.join('s1', 'inner/'))
+        _create_script_config_file('conf_x', subfolder = 's1')
+        _create_script_config_file('conf_y', subfolder = 's2')
+        _create_script_config_file('ABC', subfolder = os.path.join('s1', 'inner'))
 
         configs = self.config_service.list_configs(self.user)
         conf_names = [config.name for config in configs]
