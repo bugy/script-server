@@ -782,7 +782,7 @@ class ConfigServiceLoadCodeTest(unittest.TestCase):
 
 def _create_script_config_file(filename, *, name=None, **kwargs):
     conf_folder = os.path.join(test_utils.temp_folder, 'runners')
-    file_path = os.path.join(conf_folder, subfolder, filename + '.json')
+    file_path = os.path.join(conf_folder, filename + '.json')
 
     config = {'script_path': 'echo 123'}
     if name is not None:
