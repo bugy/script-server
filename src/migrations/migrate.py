@@ -12,6 +12,7 @@ from model import model_helper
 from utils import file_utils
 from utils.date_utils import sec_to_datetime, to_millis
 from utils.string_utils import is_blank
+import utils.custom_json as custom_json
 
 __migrations_registry = OrderedDict()
 
@@ -207,7 +208,7 @@ def __introduce_access_config(context):
         return
 
     content = file_utils.read_file(file_path)
-    json_object = json.loads(content, object_pairs_hook=OrderedDict)
+    json_object = custom_json.loads(content, object_pairs_hook=OrderedDict)
 
     def move_to_access(field, parent_object):
         if 'access' not in json_object:
@@ -346,7 +347,7 @@ def _load_runner_files(conf_folder):
     for conf_file in conf_files:
         content = file_utils.read_file(conf_file)
         try:
-            json_object = json.loads(content, object_pairs_hook=OrderedDict)
+            json_object = custom_json.loads(content, object_pairs_hook=OrderedDict)
             result.append((conf_file, json_object, content))
         except Exception:
             LOGGER.exception('Failed to load file for migration: ' + conf_file)

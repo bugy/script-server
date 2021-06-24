@@ -13,7 +13,7 @@ from execution.id_generator import IdGenerator
 from scheduling import scheduling_job
 from scheduling.schedule_config import read_schedule_config, InvalidScheduleException
 from scheduling.scheduling_job import SchedulingJob
-from utils import file_utils, date_utils
+from utils import file_utils, date_utils, custom_json
 
 SCRIPT_NAME_KEY = 'script_name'
 USER_KEY = 'user'
@@ -35,7 +35,7 @@ def restore_jobs(schedules_folder):
     for file in files:
         try:
             content = file_utils.read_file(os.path.join(schedules_folder, file))
-            job_json = json.loads(content)
+            job_json = custom_json.loads(content)
             ids.append(job_json['id'])
 
             job = scheduling_job.from_dict(job_json)

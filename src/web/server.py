@@ -34,7 +34,7 @@ from model.script_config import InvalidValueException, ParameterNotFoundExceptio
 from model.server_conf import ServerConfig, XSRF_PROTECTION_TOKEN, XSRF_PROTECTION_DISABLED, XSRF_PROTECTION_HEADER
 from scheduling.schedule_service import ScheduleService, UnavailableScriptException, InvalidScheduleException
 from utils import file_utils as file_utils
-from utils import tornado_utils, os_utils, env_utils
+from utils import tornado_utils, os_utils, env_utils, custom_json
 from utils.audit_utils import get_audit_name_from_request
 from utils.exceptions.missing_arg_exception import MissingArgumentException
 from utils.exceptions.not_found_exception import NotFoundException
@@ -713,7 +713,7 @@ class AddSchedule(StreamUploadRequestHandler):
             for key, value in self.form_reader.files.items():
                 parameter_values[key] = value.path
 
-        schedule_config = json.loads(parameter_values['__schedule_config'])
+        schedule_config = custom_json.loads(parameter_values['__schedule_config'])
         del parameter_values['__schedule_config']
 
         try:

@@ -1,4 +1,5 @@
 {
+  // Basic script that writes to a file
   "name": "Write to file",
   "script_path": "scripts/write_file.sh",
   "description": "This script does very simple change, putting \"I'm called\" into user home simple.txt file",

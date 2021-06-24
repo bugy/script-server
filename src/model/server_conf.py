@@ -8,6 +8,7 @@ from model import model_helper
 from model.model_helper import read_list, read_int_from_config, read_bool_from_config
 from model.trusted_ips import TrustedIpValidator
 from utils.string_utils import strip
+import utils.custom_json as custom_json
 
 LOGGER = logging.getLogger('server_conf')
 
@@ -68,7 +69,7 @@ def from_json(conf_path, temp_folder):
 
     config = ServerConfig()
 
-    json_object = json.loads(file_content)
+    json_object = custom_json.loads(file_content)
 
     address = "0.0.0.0"
     port = 5000
@@ -173,7 +174,7 @@ def create_authenticator(auth_object, temp_folder):
     else:
         raise Exception(auth_type + ' auth is not supported')
 
-    authenticator.auth_expiration_days = float(auth_object.get('expiration_days', 30)) 
+    authenticator.auth_expiration_days = float(auth_object.get('expiration_days', 30))
 
     authenticator.auth_type = auth_type
 

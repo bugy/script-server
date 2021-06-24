@@ -11,7 +11,7 @@ from model.model_helper import is_empty, fill_parameter_values, read_bool_from_c
     read_str_from_config, replace_auth_vars
 from model.parameter_config import ParameterModel
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
-from utils import file_utils
+from utils import file_utils, custom_json
 from utils.object_utils import merge_dicts
 
 OUTPUT_FORMAT_TERMINAL = 'terminal'
@@ -245,7 +245,7 @@ class ConfigModel:
         if os.path.exists(path):
             try:
                 file_content = file_utils.read_file(path)
-                return json.loads(file_content)
+                return custom_json.loads(file_content)
             except:
                 LOGGER.exception('Failed to load included file ' + path)
                 return None

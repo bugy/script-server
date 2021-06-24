@@ -13,7 +13,7 @@ from model import server_conf
 from model.model_helper import InvalidValueException
 from model.server_conf import _prepare_allowed_users
 from tests import test_utils
-from utils import file_utils
+from utils import file_utils, custom_json
 
 
 class TestPrepareAllowedUsers(unittest.TestCase):
@@ -233,6 +233,15 @@ class TestSimpleConfigs(unittest.TestCase):
         config = _from_json({})
         self.assertIs(True, config.enable_script_titles)
 
+    def test_comments_json(self):
+        config = _from_json(
+                custom_json.loads("""
+                    {
+                        // "title": "my server"
+                        "title": "my server2"
+                    }""")
+            )
+        self.assertEqual('my server2', config.title)
 
 class TestAuthConfig(unittest.TestCase):
     def test_google_oauth(self):

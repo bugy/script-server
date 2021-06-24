@@ -10,7 +10,7 @@ from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
 from model.script_config import get_sorted_config
-from utils import os_utils, file_utils, process_utils
+from utils import os_utils, file_utils, process_utils, custom_json
 from utils.file_utils import to_filename
 from utils.string_utils import is_blank, strip
 
@@ -170,7 +170,7 @@ class ConfigService:
 
         def load_script(path, content):
             try:
-                json_object = json.loads(content)
+                json_object = custom_json.loads(content)
                 short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
@@ -231,7 +231,7 @@ class ConfigService:
     def _find_config(self, name) -> Union[ConfigSearchResult, None]:
         def find_and_load(path, content):
             try:
-                json_object = json.loads(content)
+                json_object = custom_json.loads(content)
                 short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
@@ -254,7 +254,7 @@ class ConfigService:
     @staticmethod
     def _load_script_config(path, content_or_json_dict, user, parameter_values, skip_invalid_parameters):
         if isinstance(content_or_json_dict, str):
-            json_object = json.loads(content_or_json_dict)
+            json_object = custom_json.loads(content_or_json_dict)
         else:
             json_object = content_or_json_dict
         config = script_config.ConfigModel(
