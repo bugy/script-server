@@ -3,12 +3,9 @@ import AppHistoryPanel from '@/main-app/components/history/AppHistoryPanel';
 import router from '@/main-app/router/router';
 import pageModule from '@/main-app/store/page'
 import {mount} from '@vue/test-utils';
-import {config as chaiConfig} from 'chai';
 import VueRouter from 'vue-router';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, vueTicks} from '../../../test_utils';
-
-chaiConfig.truncateThreshold = 0;
+import {attachToDocument, createScriptServerTestVue, vueTicks} from '../../../test_utils';
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
@@ -33,7 +30,7 @@ describe('Test AppHistoryPanel', function () {
         });
 
         historyPanel = mount(AppHistoryPanel, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             store,
             localVue,
             router

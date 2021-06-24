@@ -20,7 +20,7 @@ import tornado.websocket
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from communications.alerts_service import AlertsService
-from config.config_service import ConfigService, ConfigNotAllowedException
+from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException
 from config.exceptions import InvalidConfigException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
@@ -31,14 +31,14 @@ from model.external_model import to_short_execution_log, to_long_execution_log
 from model.model_helper import is_empty, InvalidFileException, AccessProhibitedException
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException, ParameterNotFoundException
-from model.server_conf import ServerConfig
+from model.server_conf import ServerConfig, XSRF_PROTECTION_TOKEN, XSRF_PROTECTION_DISABLED, XSRF_PROTECTION_HEADER
 from scheduling.schedule_service import ScheduleService, UnavailableScriptException, InvalidScheduleException
 from utils import file_utils as file_utils
 from utils import tornado_utils, os_utils, env_utils, custom_json
 from utils.audit_utils import get_audit_name_from_request
 from utils.exceptions.missing_arg_exception import MissingArgumentException
 from utils.exceptions.not_found_exception import NotFoundException
-from utils.tornado_utils import respond_error, redirect_relative
+from utils.tornado_utils import respond_error, redirect_relative, get_form_file
 from web.script_config_socket import ScriptConfigSocket, active_config_models
 from web.streaming_form_reader import StreamingFormReader
 from web.web_auth_utils import check_authorization
@@ -88,6 +88,22 @@ class BaseRequestHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header('X-Frame-Options', 'DENY')
 
+        if self.application.server_config.xsrf_protection == XSRF_PROTECTION_TOKEN:
+            # This is needed to initialize cookie (by default tornado does it only on html template rendering)
+            # noinspection PyStatementEffect
+            self.xsrf_token
+
+    def check_xsrf_cookie(self):
+        xsrf_protection = self.application.server_config.xsrf_protection
+        if xsrf_protection == XSRF_PROTECTION_TOKEN:
+            return super().check_xsrf_cookie()
+
+        elif xsrf_protection == XSRF_PROTECTION_HEADER:
+            requested_with = self.request.headers.get('X-Requested-With')
+            if not requested_with:
+                raise tornado.web.HTTPError(403, 'X-Requested-With header is missing for XSRF protection')
+            return
+
     def write_error(self, status_code, **kwargs):
         if ('exc_info' in kwargs) and (kwargs['exc_info']):
             (type, value, traceback) = kwargs['exc_info']
@@ -130,29 +146,39 @@ class AdminUpdateScriptEndpoint(BaseRequestHandler):
     @requires_admin_rights
     @inject_user
     def post(self, user):
-        request = tornado_utils.get_request_body(self)
-        config = request.get('config')
+        (config, _, uploaded_script) = self.read_config_parameters()
 
         try:
-            self.application.config_service.create_config(user, config)
-        except (InvalidConfigException) as e:
+            self.application.config_service.create_config(user, config, uploaded_script)
+        except InvalidConfigException as e:
+            logging.warning('Failed to create script config', exc_info=True)
             raise tornado.web.HTTPError(422, reason=str(e))
+        except InvalidAccessException as e:
+            logging.warning('Failed to create script config', exc_info=True)
+            raise tornado.web.HTTPError(403, reason=str(e))
 
     @requires_admin_rights
     @inject_user
     def put(self, user):
-        request = tornado_utils.get_request_body(self)
-        config = request.get('config')
-        filename = request.get('filename')
+        (config, filename, uploaded_script) = self.read_config_parameters()
 
         try:
-            self.application.config_service.update_config(user, config, filename)
+            self.application.config_service.update_config(user, config, filename, uploaded_script)
         except (InvalidConfigException, InvalidFileException) as e:
             raise tornado.web.HTTPError(422, str(e))
         except ConfigNotAllowedException:
             LOGGER.warning('Admin access to the script "' + config['name'] + '" is denied for ' + user.get_audit_name())
             respond_error(self, 403, 'Access to the script is denied')
             return
+        except InvalidAccessException as e:
+            raise tornado.web.HTTPError(403, reason=str(e))
+
+    def read_config_parameters(self):
+        config = json.loads(self.get_argument('config'))
+        filename = self.get_argument('filename', default=None)
+        uploaded_script = get_form_file(self, 'uploadedScript')
+
+        return config, filename, uploaded_script
 
 
 class AdminGetScriptEndpoint(BaseRequestHandler):
@@ -170,6 +196,29 @@ class AdminGetScriptEndpoint(BaseRequestHandler):
             raise tornado.web.HTTPError(404, str('Failed to find config for name: ' + script_name))
 
         self.write(json.dumps(config))
+
+
+class AdminGetScriptCodeEndpoint(BaseRequestHandler):
+    @requires_admin_rights
+    @inject_user
+    def get(self, user, script_name):
+        try:
+            loaded_script = self.application.config_service.load_script_code(script_name, user)
+        except ConfigNotAllowedException:
+            LOGGER.warning('Admin access to the script "' + script_name + '" is denied for ' + user.get_audit_name())
+            respond_error(self, 403, 'Access to the script is denied')
+            return
+        except InvalidFileException as e:
+            LOGGER.warning('Failed to load script code for script ' + script_name, exc_info=True)
+            respond_error(self, 422, str(e))
+            return
+        except InvalidAccessException as e:
+            raise tornado.web.HTTPError(403, reason=str(e))
+
+        if loaded_script is None:
+            raise tornado.web.HTTPError(404, str('Failed to find config for name: ' + script_name))
+
+        self.write(json.dumps(loaded_script))
 
 
 class ScriptStop(BaseRequestHandler):
@@ -523,8 +572,10 @@ class LoginHandler(BaseRequestHandler):
 
 
 class AuthInfoHandler(BaseRequestHandler):
-    def get(self):
+    @inject_user
+    def get(self, user):
         auth = self.application.auth
+        authorizer = self.application.authorizer
 
         username = None
         if auth.is_enabled():
@@ -538,7 +589,8 @@ class AuthInfoHandler(BaseRequestHandler):
         info = {
             'enabled': auth.is_enabled(),
             'username': username,
-            'admin': admin_rights
+            'admin': admin_rights,
+            'canEditCode': authorizer.can_edit_code(user.user_id)
         }
 
         self.write(info)
@@ -707,7 +759,7 @@ def intercept_stop_when_running_scripts(io_loop, execution_service):
                 try:
                     LOGGER.info('Killing the running processes: ' + str(running_processes))
                     for id in running_processes:
-                        execution_service.kill_script(id)
+                        execution_service.kill_script_by_system(id)
                 except:
                     LOGGER.exception('Could not kill running scripts, trying to stop the server')
 
@@ -770,7 +822,8 @@ def init(server_config: ServerConfig,
                  DownloadResultFile,
                  {'path': downloads_folder}),
                 (r'/admin/scripts', AdminUpdateScriptEndpoint),
-                (r'/admin/scripts/(.*)', AdminGetScriptEndpoint),
+                (r'/admin/scripts/([^/]*)', AdminGetScriptEndpoint),
+                (r'/admin/scripts/([^/]*)/code', AdminGetScriptCodeEndpoint),
                 (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
 
     if auth.is_enabled():
@@ -786,7 +839,8 @@ def init(server_config: ServerConfig,
         "login_url": "/login.html",
         'websocket_ping_interval': 30,
         'websocket_ping_timeout': 300,
-        'compress_response': True
+        'compress_response': True,
+        'xsrf_cookies': server_config.xsrf_protection != XSRF_PROTECTION_DISABLED,
     }
 
     application = tornado.web.Application(handlers, **settings)

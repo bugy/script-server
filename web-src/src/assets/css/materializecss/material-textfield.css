@@ -29,3 +29,7 @@ input[type=search]:not(.browser-default),
 textarea.materialize-textarea {
     color: var(--font-color-main);
 }
+
+.script-server .autocomplete-content li .highlight {
+    color: var(--font-color-main);
+}

@@ -1,4 +1,3 @@
-import crypt
 import logging
 import os
 
@@ -108,6 +107,7 @@ class _BuiltItVerifier:
             return hashed_password == expected
 
         elif not os_utils.is_win():
+            import crypt
             hashed_password = crypt.crypt(password, existing_password[:2])
             return hashed_password == existing_password
 

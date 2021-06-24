@@ -78,3 +78,4 @@ web-src/chromedriver.log
 web-src/geckodriver.log
 
 venv/
+/venv2/

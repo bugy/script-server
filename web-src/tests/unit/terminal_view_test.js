@@ -3,10 +3,7 @@
 import {TerminalModel} from '@/common/components/terminal/ansi/terminal_model';
 import {Terminal} from '@/common/components/terminal/ansi/terminal_view';
 import {removeElement} from '@/common/utils/common';
-import {assert, config as chaiConfig} from 'chai';
 import {clearScreen, clearScreenDown, clearScreenUp, format, moveCursorUp, moveToPosition} from './terminal_test_utils';
-
-chaiConfig.truncateThreshold = 0;
 
 function styledNode(text, styles = []) {
     return {
@@ -87,23 +84,23 @@ describe('Test terminal view', function () {
     }
 
     function assertTextNode(element, text) {
-        assert.equal(3, element.nodeType);
-        assert.equal(text, getTextNodeText(element));
+        expect(element.nodeType).toBe(3)
+        expect(getTextNodeText(element)).toBe(text)
     }
 
     function assertAnchor(element, href) {
-        assert.equal('A', element.tagName);
-        assert.equal(href, element.href.replace(/\/+$/, ''));
-        assert.equal(href, element.innerText);
+        expect(element.tagName).toBe('A')
+        expect(element.href.replace(/\/+$/, '')).toBe(href)
+        expect(element.innerText).toBe(href)
     }
 
     function assertStyledNode(element, text, classes) {
-        assert.equal(1, element.nodeType);
-        assert.equal('SPAN', element.tagName);
-        assert.equal(text, getComplexNodeText(element));
+        expect(element.nodeType).toBe(1)
+        expect(element.tagName).toBe('SPAN')
+        expect(getComplexNodeText(element)).toBe(text)
 
         const actualClasses = getElementClasses(element);
-        assert.sameOrderedMembers(actualClasses, classes);
+        expect(actualClasses).toEqual(classes)
     }
 
     function assertTexts(expectedTexts, element) {
@@ -118,11 +115,11 @@ describe('Test terminal view', function () {
             actualTexts.push(lineText);
         }
 
-        assert.deepEqual(expectedTexts, actualTexts);
+        expect(expectedTexts).toEqual(actualTexts)
     }
 
     function assertLine(lineElement, expectedNodes) {
-        assert.equal('DIV', lineElement.tagName);
+        expect(lineElement.tagName).toBe('DIV')
 
         const actualNodes = [];
         for (const childNode of lineElement.childNodes) {
@@ -138,7 +135,7 @@ describe('Test terminal view', function () {
                 continue;
             }
 
-            assert.equal('SPAN', childNode.tagName, 'Unexpected styled element ' + childNode.innerHTML);
+            expect(childNode.tagName).toBe('SPAN')
 
             const classes = getElementClasses(childNode);
 
@@ -148,7 +145,7 @@ describe('Test terminal view', function () {
                     continue;
                 }
 
-                assert.equal('A', childNode.childNodes[0].tagName, 'Unexpected anchor structure: ' + childNode.innerHTML);
+                expect(childNode.childNodes[0].tagName).toBe('A')
                 actualNodes.push(anchorNode(text, classes));
                 continue;
             }
@@ -160,21 +157,21 @@ describe('Test terminal view', function () {
                     continue;
                 }
 
-                assert.equal('A', grandchild.tagName, 'Unexpected anchor structure: ' + childNode.innerHTML);
+                expect(grandchild.tagName).toBe('A')
                 grandChildrenNodes.push(anchorNode(getText(grandchild)));
             }
             actualNodes.push(styledComplexNode(classes, grandChildrenNodes));
         }
 
-        assert.deepEqual(expectedNodes, actualNodes);
+        expect(expectedNodes).toEqual(actualNodes)
     }
 
     function assertImageLine(lineElement, expectedSrc) {
-        assert.equal(lineElement.tagName, 'DIV');
+        expect(lineElement.tagName).toBe('DIV')
 
-        assert.equal(lineElement.childNodes.length, 1);
-        assert.equal(lineElement.childNodes[0].tagName, 'IMG');
-        assert.equal(lineElement.childNodes[0].getAttribute('src'), expectedSrc);
+        expect(lineElement.childNodes.length).toBe(1)
+        expect(lineElement.childNodes[0].tagName).toBe('IMG')
+        expect(lineElement.childNodes[0].getAttribute('src')).toBe(expectedSrc)
     }
 
     describe('change log content', function () {
@@ -182,7 +179,7 @@ describe('Test terminal view', function () {
         it('Test simple text', function () {
             this.model.write('some text');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
 
             assertLine(this.terminal.element.childNodes[0], [textNode('some text')]);
         });
@@ -190,14 +187,14 @@ describe('Test terminal view', function () {
         it('Test styled text', function () {
             this.model.write(format(31) + '1234');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
             assertLine(this.terminal.element.childNodes[0], [styledNode('1234', ['text_color_red'])]);
         });
 
         it('Test mixed styled text', function () {
             this.model.write('1234' + format(31, 1, 2) + 'abc' + format(42, 21) + '5' + format(0) + 'def');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
             const lineElement = this.terminal.element.childNodes[0];
 
             assertLine(this.terminal.element.childNodes[0], [
@@ -403,7 +400,7 @@ describe('Test terminal view', function () {
         it('Test clear all', function () {
             this.model.write('123\n456\n789\n' + moveToPosition(1, 1) + clearScreen() + 'abc');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
             assertLine(this.terminal.element.childNodes[0], [textNode('abc')]);
         });
 
@@ -411,14 +408,14 @@ describe('Test terminal view', function () {
             this.model.write('123\n456\n789\n' + moveToPosition(1, 1));
             this.model.write(clearScreen() + 'abc');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
             assertLine(this.terminal.element.childNodes[0], [textNode('abc')]);
         });
 
         it('Test clear to the bottom', function () {
             this.model.write('123\n45\n6\n7890\n' + moveToPosition(1, 1) + clearScreenDown() + 'abc\nd');
 
-            assert.equal(3, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(3)
             assertLine(this.terminal.element.childNodes[0], [textNode('123')]);
             assertLine(this.terminal.element.childNodes[1], [textNode('4abc')]);
             assertLine(this.terminal.element.childNodes[2], [textNode('d')]);
@@ -428,7 +425,7 @@ describe('Test terminal view', function () {
             this.model.write('123\n45\n6\n7890\n' + moveToPosition(1, 1));
             this.model.write(clearScreenDown() + 'abc\nd');
 
-            assert.equal(3, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(3)
             assertLine(this.terminal.element.childNodes[0], [textNode('123')]);
             assertLine(this.terminal.element.childNodes[1], [textNode('4abc')]);
             assertLine(this.terminal.element.childNodes[2], [textNode('d')]);
@@ -437,7 +434,7 @@ describe('Test terminal view', function () {
         it('Test clear to the bottom, when line below is empty', function () {
             this.model.write('123\n45\n' + clearScreenDown() + 'abc');
 
-            assert.equal(3, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(3)
             assertLine(this.terminal.element.childNodes[0], [textNode('123')]);
             assertLine(this.terminal.element.childNodes[1], [textNode('45')]);
             assertLine(this.terminal.element.childNodes[2], [textNode('abc')]);
@@ -447,7 +444,7 @@ describe('Test terminal view', function () {
             this.model.write('123\n45\n');
             this.model.write(clearScreenDown() + 'abc');
 
-            assert.equal(3, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(3)
             assertLine(this.terminal.element.childNodes[0], [textNode('123')]);
             assertLine(this.terminal.element.childNodes[1], [textNode('45')]);
             assertLine(this.terminal.element.childNodes[2], [textNode('abc')]);
@@ -457,7 +454,7 @@ describe('Test terminal view', function () {
         it('Test clear to the top', function () {
             this.model.write('123\n345\n67\n890\n' + moveToPosition(1, 1) + clearScreenUp() + 'abc\nd');
 
-            assert.equal(3, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(3)
             assertLine(this.terminal.element.childNodes[0], [textNode(' abc')]);
             assertLine(this.terminal.element.childNodes[1], [textNode('d7')]);
             assertLine(this.terminal.element.childNodes[2], [textNode('890')]);
@@ -467,7 +464,7 @@ describe('Test terminal view', function () {
             this.model.write('123\n345\n67\n890\n' + moveToPosition(1, 1));
             this.model.write(clearScreenUp() + 'abc\nd');
 
-            assert.equal(3, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(3)
             assertLine(this.terminal.element.childNodes[0], [textNode(' abc')]);
             assertLine(this.terminal.element.childNodes[1], [textNode('d7')]);
             assertLine(this.terminal.element.childNodes[2], [textNode('890')]);
@@ -480,7 +477,7 @@ describe('Test terminal view', function () {
             this.model.setInlineImage('/home/me/test.png', 'my-img.png');
             this.model.write('/home/me/test.png');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
             assertImageLine(this.terminal.element.childNodes[0], 'my-img.png');
         });
 
@@ -488,7 +485,7 @@ describe('Test terminal view', function () {
             this.model.write('/home/me/test.png');
             this.model.setInlineImage('/home/me/test.png', 'my-img.png');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
             assertImageLine(this.terminal.element.childNodes[0], 'my-img.png');
         });
 
@@ -498,7 +495,7 @@ describe('Test terminal view', function () {
             this.model.write('jkl\nmno');
             this.model.setInlineImage('/home/me/test.png', 'my-img.png');
 
-            assert.equal(6, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(6)
             assertImageLine(this.terminal.element.childNodes[3], 'my-img.png');
             assertLine(this.terminal.element.childNodes[2], [textNode('f')]);
             assertLine(this.terminal.element.childNodes[4], [textNode('ghijkl')]);
@@ -509,7 +506,7 @@ describe('Test terminal view', function () {
             this.model.setInlineImage('/home/me/test.png', downloadUrl);
             this.model.write('/home/me/test.png');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
             assertImageLine(this.terminal.element.childNodes[0], downloadUrl);
         });
 
@@ -518,7 +515,7 @@ describe('Test terminal view', function () {
             this.model.write('/home/me/test.png');
             this.model.removeInlineImage('/home/me/test.png');
 
-            assert.equal(1, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(1)
             assertLine(this.terminal.element.childNodes[0], [textNode('/home/me/test.png')]);
         });
 
@@ -530,7 +527,7 @@ describe('Test terminal view', function () {
             this.model.setInlineImage('/home/me/test2.png', '/images/img2.png');
             this.model.write('_ /home/me/test1.png _');
 
-            assert.equal(4, this.terminal.element.childNodes.length);
+            expect(this.terminal.element.childNodes.length).toBe(4)
             assertImageLine(this.terminal.element.childNodes[0], '/images/img1.png');
             assertImageLine(this.terminal.element.childNodes[1], '/images/img2.png');
             assertImageLine(this.terminal.element.childNodes[3], '/images/img1.png');

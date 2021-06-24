@@ -1,8 +1,8 @@
 import {isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
-import axios from 'axios';
 import Vue from 'vue';
 import router from '../router/router';
 import {scriptNameToHash} from '../utils/model_helper';
+import {axiosInstance} from '@/common/utils/axios_utils';
 
 export default {
     namespaced: true,
@@ -19,7 +19,7 @@ export default {
                 dispatch('selectScriptByHash');
             });
 
-            axios.get('scripts')
+            axiosInstance.get('scripts')
                 .then(({data}) => {
                     const {scripts} = data;
                     scripts.sort(function (script1, script2) {

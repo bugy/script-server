@@ -1,7 +1,5 @@
 import {isEmptyString, isNull, logError} from '@/common/utils/common';
-import axios from 'axios';
-
-export const axiosInstance = axios.create();
+import {axiosInstance} from '@/common/utils/axios_utils';
 
 const store = () => ({
     state: {
@@ -17,7 +15,7 @@ const store = () => ({
             commit('SET_LOADING', true);
             commit('SET_EXECUTION_DETAILS', {execution: null, id: null});
 
-            axios.get('history/execution_log/short').then(({data}) => {
+            axiosInstance.get('history/execution_log/short').then(({data}) => {
                 sortExecutionLogs(data);
 
                 let executions = data.map(log => translateExecutionLog(log));

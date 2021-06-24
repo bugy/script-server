@@ -1,7 +1,7 @@
 'use strict';
 import ScriptLoadingText, {__RewireAPI__ as CommonRewire} from '@/main-app/components/scripts/ScriptLoadingText';
 import {mount} from '@vue/test-utils';
-import {timeout, vueTicks} from '../../../test_utils';
+import {attachToDocument, timeout, vueTicks} from '../../../test_utils';
 
 const DEFAULT_DELAY = 10;
 
@@ -14,7 +14,7 @@ describe('Test ScriptLoadingText', function () {
 
     beforeEach(function () {
         loadingText = mount(ScriptLoadingText, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             props: {
                 delay: DEFAULT_DELAY
             }

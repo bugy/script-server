@@ -1,0 +1,25 @@
+.card {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-content {
+    flex: 1 1 1px;
+}
+
+.card-action {
+    display: flex;
+    justify-content: flex-end;
+    flex: 0 0 0;
+}
+
+.modal .card {
+    height: 100%;
+    background-color: var(--background-color-level-4dp);
+    margin: 0;
+}
+
+.modal .card-action {
+    background: none;
+    border-top-color: var(--separator-color);
+}

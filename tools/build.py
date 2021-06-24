@@ -15,7 +15,7 @@ VERSION_FILE = 'version.txt'
 BUILD_FOLDER = 'build'
 
 
-class BuildInfo():
+class BuildInfo:
     def __init__(self):
         self.files = set()
 
@@ -101,6 +101,7 @@ build_info.include(os.path.join('conf', 'logging.json'))
 build_info.include(os.path.join('web', '**'))
 build_info.include(os.path.join('conf', 'runners'))
 build_info.exclude(os.path.join('src', 'tests'))
+build_info.exclude(os.path.join('src', 'e2e_tests'))
 build_info.exclude('tools')
 build_info.exclude('samples')
 build_info.exclude(BUILD_FOLDER)

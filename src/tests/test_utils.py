@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
+from auth.auth_base import Authenticator
 from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
 from react.properties import ObservableDict
@@ -130,7 +131,7 @@ def create_script_param_config(
         no_value=None,
         constant=None,
         multiselect_separator=None,
-        multiple_arguments=None,
+        multiselect_argument_type=None,
         min=None,
         max=None,
         allowed_values=None,
@@ -139,8 +140,9 @@ def create_script_param_config(
         file_recursive=None,
         file_type=None,
         file_extensions=None,
-        repeat_param=None,
-        same_arg_param=None):
+        excluded_files=None,
+        same_arg_param=None,
+        values_script_shell=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -148,6 +150,8 @@ def create_script_param_config(
 
     if values_script is not None:
         conf['values'] = {'script': values_script}
+        if values_script_shell is not None:
+            conf['values']['shell'] = values_script_shell
 
     if default is not None:
         conf['default'] = default
@@ -173,8 +177,8 @@ def create_script_param_config(
     if multiselect_separator is not None:
         conf['separator'] = multiselect_separator
 
-    if multiple_arguments is not None:
-        conf['multiple_arguments'] = multiple_arguments
+    if multiselect_argument_type is not None:
+        conf['multiselect_argument_type'] = multiselect_argument_type
 
     if min is not None:
         conf['min'] = min
@@ -197,8 +201,8 @@ def create_script_param_config(
     if file_type is not None:
         conf['file_type'] = file_type
 
-    if repeat_param is not None:
-        conf['repeat_param'] = repeat_param
+    if excluded_files is not None:
+        conf['excluded_files'] = excluded_files
 
     if same_arg_param is not None:
         conf['same_arg_param'] = same_arg_param
@@ -260,7 +264,7 @@ def create_parameter_model(name=None,
                            no_value=None,
                            constant=None,
                            multiselect_separator=None,
-                           multiple_arguments=None,
+                           multiselect_argument_type=None,
                            min=None,
                            max=None,
                            allowed_values=None,
@@ -269,7 +273,8 @@ def create_parameter_model(name=None,
                            all_parameters=None,
                            file_dir=None,
                            file_recursive=None,
-                           other_param_values: ObservableDict = None):
+                           other_param_values: ObservableDict = None,
+                           values_script_shell=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -282,12 +287,13 @@ def create_parameter_model(name=None,
         no_value=no_value,
         constant=constant,
         multiselect_separator=multiselect_separator,
-        multiple_arguments=multiple_arguments,
+        multiselect_argument_type=multiselect_argument_type,
         min=min,
         max=max,
         allowed_values=allowed_values,
         file_dir=file_dir,
-        file_recursive=file_recursive)
+        file_recursive=file_recursive,
+        values_script_shell=values_script_shell)
 
     if all_parameters is None:
         all_parameters = []
@@ -498,3 +504,8 @@ class _IdGeneratorMock:
 class AsyncMock(MagicMock):
     async def __call__(self, *args, **kwargs):
         return super(AsyncMock, self).__call__(*args, **kwargs)
+
+
+class MockAuthenticator(Authenticator):
+    def authenticate(self, request_handler):
+        return request_handler.request.remote_ip

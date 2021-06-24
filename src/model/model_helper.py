@@ -1,11 +1,13 @@
 import logging
 import os
+import pathlib
 import re
 from datetime import datetime
 
 import utils.env_utils as env_utils
 from config.constants import FILE_TYPE_DIR, FILE_TYPE_FILE
 from utils import date_utils
+from utils.file_utils import FileMatcher
 from utils.string_utils import is_blank
 
 ENV_VAR_PREFIX = '$$'
@@ -151,7 +153,7 @@ def read_int_from_config(key, config_obj, *, default=None):
     raise InvalidValueTypeException('Invalid %s value: integer expected, but was: %s' % (key, repr(value)))
 
 
-def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False):
+def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False, allowed_values=None):
     """
     Reads string value from a config by the key
     If the value is missing, returns specified default value
@@ -161,6 +163,7 @@ def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False):
     :param key: key to read value from
     :param default: default value, if config value is missing
     :param blank_to_none: if value is blank, treat it as null
+    :param allowed_values: a list with allowed values
     :return: config_obj[key] if non None, default otherwise
     """
     value = config_obj.get(key)
@@ -172,6 +175,10 @@ def read_str_from_config(config_obj, key, *, default=None, blank_to_none=False):
         return default
 
     if isinstance(value, str):
+        if allowed_values and value not in allowed_values:
+            raise InvalidValueException(key, 'Invalid %s value: should be one of %s, but was: %s'
+                                        % (key, str(allowed_values), repr(value)))
+
         return value
 
     raise InvalidValueTypeException('Invalid %s value: string expected, but was: %s' % (key, repr(value)))
@@ -223,29 +230,35 @@ def normalize_extension(extension):
     return re.sub('^\.', '', extension).lower()
 
 
-def list_files(dir, file_type=None, file_extensions=None):
+def list_files(dir, *, file_type=None, file_extensions=None, excluded_files_matcher: FileMatcher = None):
     if not os.path.exists(dir) or not os.path.isdir(dir):
         raise InvalidFileException(dir, 'Directory not found')
 
     result = []
+
+    if excluded_files_matcher and excluded_files_matcher.has_match(pathlib.Path(dir)):
+        return result
 
     if not is_empty(file_extensions):
         file_type = FILE_TYPE_FILE
 
     sorted_files = sorted(os.listdir(dir), key=lambda s: s.casefold())
     for file in sorted_files:
-        file_path = os.path.join(dir, file)
+        file_path = pathlib.Path(dir, file)
 
         if file_type:
-            if file_type == FILE_TYPE_DIR and not os.path.isdir(file_path):
+            if file_type == FILE_TYPE_DIR and not file_path.is_dir():
                 continue
-            elif file_type == FILE_TYPE_FILE and not os.path.isfile(file_path):
+            elif file_type == FILE_TYPE_FILE and not file_path.is_file():
                 continue
 
-        if file_extensions and not os.path.isdir(file_path):
-            _, extension = os.path.splitext(file_path)
+        if file_extensions and file_path.is_file():
+            extension = file_path.suffix
             if normalize_extension(extension) not in file_extensions:
                 continue
+
+        if excluded_files_matcher and excluded_files_matcher.has_match(file_path):
+            continue
 
         result.append(file)
 

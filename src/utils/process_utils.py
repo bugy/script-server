@@ -10,8 +10,8 @@ from utils import string_utils
 LOGGER = logging.getLogger('script_server.process_utils')
 
 
-def invoke(command, work_dir='.', *, environment_variables=None, check_stderr=True):
-    if isinstance(command, str):
+def invoke(command, work_dir='.', *, environment_variables=None, check_stderr=True, shell=False):
+    if isinstance(command, str) and not shell:
         command = split_command(command, working_directory=work_dir)
 
     if environment_variables is not None:
@@ -24,7 +24,8 @@ def invoke(command, work_dir='.', *, environment_variables=None, check_stderr=Tr
                          stderr=subprocess.PIPE,
                          cwd=work_dir,
                          env=env,
-                         universal_newlines=True)
+                         universal_newlines=True,
+                         shell=shell)
 
     (output, error) = p.communicate()
 

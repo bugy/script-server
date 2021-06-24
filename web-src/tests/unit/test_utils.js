@@ -107,3 +107,47 @@ export const createScriptServerTestVue = () => {
     })
     return vue
 }
+
+export const attachToDocument = () => {
+    const element = document.createElement('div')
+    document.body.appendChild(element)
+    return element
+}
+
+export const mapArrayWrapper = (arrayWrapper, mapFunction) => {
+    const result = []
+
+    for (let i = 0; i < arrayWrapper.length; i++) {
+        const element = arrayWrapper.at(i)
+
+        result.push(mapFunction(element))
+    }
+
+    return result
+}
+
+export const awaitVisible = async (element, maxTimeout) => {
+    for (let awaited = 0; awaited < maxTimeout; awaited += 10) {
+        await timeout(10)
+
+        const style = window.getComputedStyle(element)
+        if ((style.opacity > 0) && (style.display !== 'none')) {
+            break
+        }
+    }
+
+    expect(element).toBeVisible()
+}
+
+export const awaitInvisible = async (element, maxTimeout) => {
+    for (let awaited = 0; awaited < maxTimeout; awaited += 10) {
+        await timeout(10)
+
+        const style = window.getComputedStyle(element)
+        if ((style.opacity === '0') || (style.display === 'none')) {
+            break
+        }
+    }
+
+    expect(element).not.toBeVisible()
+}

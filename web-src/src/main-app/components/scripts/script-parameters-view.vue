@@ -79,11 +79,12 @@ export default {
 
   flex-grow: 1;
   flex-shrink: 0;
-  flex-basis: 180px;
+  width: 180px;
   max-width: 220px;
 }
 
-.script-parameters-panel >>> .parameter input {
+.script-parameters-panel >>> .parameter input,
+.script-parameters-panel >>> .parameter .file-upload-field-value {
   margin: 0;
 
   font-size: 1rem;
@@ -112,6 +113,11 @@ export default {
 .script-parameters-panel >>> .input-field:after {
   top: 1.7em;
   left: 0.1em;
+}
+
+.script-parameters-panel >>> .file-upload-field .btn-icon-flat {
+  top: -7px;
+  right: -4px;
 }
 
 .script-parameters-panel >>> .dropdown-content {

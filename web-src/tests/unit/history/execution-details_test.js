@@ -1,25 +1,23 @@
 'use strict';
 import ExecutionDetails from '@/common/components/history/execution-details'
-import historyModule, {axiosInstance} from '@/common/store/executions-module';
+import historyModule from '@/common/store/executions-module';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import {mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
-import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
+import {attachToDocument, createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
 
-
-chaiConfig.truncateThreshold = 0;
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
-const axiosMock = new MockAdapter(axiosInstance);
+let axiosMock;
 
 
-function mockGetExecution(id, startTime, user, script, status, exitCode, command, log) {
+function mockGetExecution(id, startTime, user, script, status, exitCode, command, log, outputFormat = null) {
     axiosMock.onGet('history/execution_log/long/' + id)
         .reply(200, {
-            id, startTime, user, script, status, exitCode, command, log
+            id, startTime, user, script, status, exitCode, command, log, outputFormat
         });
 }
 
@@ -35,16 +33,19 @@ describe('Test history details', function () {
         });
 
         executionDetails = mount(ExecutionDetails, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             store,
             localVue
         });
+
+        axiosMock = new MockAdapter(axiosInstance)
 
         await vueTicks();
     });
 
     afterEach(function () {
         executionDetails.destroy();
+        axiosMock.restore()
     });
 
     describe('Test visualisation', function () {
@@ -54,13 +55,13 @@ describe('Test history details', function () {
                     (child.$options._componentTag === 'readonly-field')
                     && (child.$props.title === fieldName));
 
-                assert.exists(foundChild, 'Failed to find field ' + fieldName);
-                assert.equal(foundChild.$props.value, expectedValue);
+                expect(foundChild).not.toBeNil()
+                expect(foundChild.$props.value).toEqual(expectedValue)
             }
 
             function assertLog(expectedLog) {
                 const actualLog = $(executionDetails.vm.$el).find('code').text();
-                assert.equal(actualLog, expectedLog);
+                expect(actualLog).toEqual(expectedLog)
             }
 
             it('test null execution', function () {
@@ -120,6 +121,25 @@ describe('Test history details', function () {
                 assertField('Status', '');
                 assertField('Command', '');
                 assertLog('');
+            });
+
+            it('test outputFormat', async function () {
+                mockGetExecution('12345',
+                    '2019-12-25T12:30:01',
+                    'User X',
+                    'My script',
+                    'Finished',
+                    -15,
+                    'my_script.sh -a -b 2',
+                    '<b>some bold text</b>',
+                    'html');
+
+                executionDetails.setProps({'executionId': 12345});
+                await flushPromises();
+                await vueTicks();
+
+                const boldElement = executionDetails.get('b')
+                expect(boldElement.text()).toBe('some bold text')
             });
         }
     )

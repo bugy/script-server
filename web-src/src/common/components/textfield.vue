@@ -1,13 +1,13 @@
 <template>
-  <div :data-error="error" :title="config.description" class="input-field">
+  <div :data-error="error" :title="config.description" class="input-field textfield">
     <input :id="id"
            ref="textField"
-           :class="{validate : !disabled}"
+           :autocomplete="autofillName"
            :disabled="disabled"
            :required="config.required"
            :type="fieldType"
            :value="value"
-           :autocomplete="config.name"
+           :class="{validate : !disabled, autocomplete: autocomplete}"
            @input="inputFieldChanged"/>
     <label :for="id" v-bind:class="{ active: labelActive }">{{ config.name }}</label>
   </div>
@@ -15,6 +15,7 @@
 
 <script>
 import '@/common/materializecss/imports/input-fields';
+import '@/common/materializecss/imports/autocomplete';
 import {isBlankString, isEmptyString, isNull} from '@/common/utils/common';
 
 export default {
@@ -31,7 +32,8 @@ export default {
   data: function () {
     return {
       error: '',
-      id: null
+      id: null,
+      autocompleteWrapper: null
     }
   },
 
@@ -57,12 +59,33 @@ export default {
       }
 
       return false;
+    },
+
+    autocomplete() {
+      return this.config.type === 'editable_list'
+    },
+
+    autofillName() {
+      return this.config?.name?.replace(/\s+/, '-')
     }
   },
 
   mounted: function () {
     this.inputFieldChanged();
     this.id = this._uid;
+
+    if (this.autocomplete) {
+      this.autocompleteWrapper = M.Autocomplete.init(this.$refs.textField, {minLength: 0})
+      this.updateAutocompleteData()
+
+      this.$refs.textField.addEventListener('change', () => this.inputFieldChanged())
+    }
+  },
+
+  beforeDestroy: function () {
+    if (this.autocompleteWrapper) {
+      this.autocompleteWrapper.destroy();
+    }
   },
 
   watch: {
@@ -93,6 +116,14 @@ export default {
     'config.min': {
       handler() {
         this.triggerRevalidationOnWatch();
+      }
+    },
+    'config.values': {
+      immediate: true,
+      handler() {
+        if (this.autocompleteWrapper) {
+          this.updateAutocompleteData()
+        }
       }
     }
   },
@@ -146,6 +177,16 @@ export default {
           M.validate_field(cash(this.$refs.textField));
         }
       });
+    },
+
+    updateAutocompleteData() {
+      const data = Object.assign({}, ...this.config.values.map((x) => ({[x]: null})))
+      this.autocompleteWrapper.updateData(data)
+    },
+
+    focus() {
+      this.$refs.textField.focus()
+      this.triggerRevalidationOnWatch()
     }
   }
 }

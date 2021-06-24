@@ -14,7 +14,9 @@ from react.properties import ObservableList, ObservableDict, observable_fields, 
 from utils import file_utils, custom_json
 from utils.object_utils import merge_dicts
 
-OUTPUT_FORMATS = ['terminal', 'html', 'html_iframe', 'text']
+OUTPUT_FORMAT_TERMINAL = 'terminal'
+
+OUTPUT_FORMATS = [OUTPUT_FORMAT_TERMINAL, 'html', 'html_iframe', 'text']
 
 LOGGER = logging.getLogger('script_server.script_config')
 
@@ -401,7 +403,7 @@ def get_sorted_config(config):
 def read_output_format(config):
     output_format = config.get('output_format')
     if not output_format:
-        output_format = 'terminal'
+        output_format = OUTPUT_FORMAT_TERMINAL
 
     output_format = output_format.strip().lower()
     if output_format not in OUTPUT_FORMATS:
