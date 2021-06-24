@@ -11,7 +11,7 @@ from model.script_config import ConfigModel, InvalidValueException, _TemplatePro
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
 from tests.test_utils import create_script_param_config, create_parameter_model, create_files
-from utils import file_utils
+from utils import file_utils, custom_json
 
 DEF_AUDIT_NAME = '127.0.0.1'
 DEF_USERNAME = 'user1'
@@ -842,6 +842,32 @@ class GetSortedConfigTest(unittest.TestCase):
                            {'type': 'int', 'name': 'paramA'},
                            {'default': 'false', 'name': 'param1', 'no_value': True}],
             'name': 'Conf X'})
+
+        expected = OrderedDict([
+            ('name', 'Conf X'),
+            ('parameters', [
+                OrderedDict([('name', 'param2'), ('description', 'desc 1')]),
+                OrderedDict([('name', 'paramA'), ('type', 'int')]),
+                OrderedDict([('name', 'param1'), ('no_value', True), ('default', 'false')])
+            ]),
+        ])
+        self.assertEqual(expected, config)
+
+
+    def test_json_comments(self):
+        config = get_sorted_config(custom_json.loads(
+                """{
+                // Comment 1
+                "parameters": [
+                            // Comment 2
+                            {"name": "param2", "description": "desc 1"},
+                            {"type": "int", "name": "paramA"},
+                            {"default": "false", "name": "param1", "no_value": true}
+                            ],
+                // Comment 3
+                "name": "Conf X"
+                }""")
+            )
 
         expected = OrderedDict([
             ('name', 'Conf X'),
