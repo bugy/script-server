@@ -5,7 +5,8 @@
       <TextField v-model="group" :config="groupField" class="col s5 offset-s1"/>
     </div>
     <div class="row">
-      <TextField v-model="scriptPath" :config="scriptPathField" class="col s6"/>
+      <ScriptPathField :config-name="newName" :new-config="isNew" :original-path="value['script_path']"
+                       class="col s6" @change="updateScript"/>
       <TextField v-model="workingDirectory" :config="workDirField" class="col s5 offset-s1"/>
     </div>
     <div class="row">
@@ -60,24 +61,28 @@ import {
 } from './script-fields';
 import {allowAllAdminsField} from '@/admin/components/scripts-config/script-fields';
 import Combobox from '@/common/components/combobox'
+import ScriptPathField from '@/admin/components/scripts-config/script-edit/ScriptField'
+import {NEW_SCRIPT} from '@/admin/store/script-config-module'
+
 
 export default {
   name: 'ScriptConfigForm',
-  components: {Combobox, TextArea, ChipsList, TextField, CheckBox},
+  components: {ScriptPathField, Combobox, TextArea, ChipsList, TextField, CheckBox},
 
   props: {
     value: {
       type: Object,
       default: null
-    }
+    },
+    originalName: String
   },
 
   data() {
     return {
-      configCopy: null,
+      isNew: this.originalName === NEW_SCRIPT,
       newName: null,
       group: null,
-      scriptPath: null,
+      script: null,
       description: null,
       workingDirectory: null,
       requiresTerminal: null,
@@ -104,7 +109,6 @@ export default {
     const simpleFields = {
       'newName': 'name',
       'group': 'group',
-      'scriptPath': 'script_path',
       'description': 'description',
       'workingDirectory': 'working_directory',
       'requiresTerminal': 'requires_terminal',
@@ -129,7 +133,6 @@ export default {
       handler(config) {
         this.newName = config.name;
         this.group = config.group;
-        this.scriptPath = config['script_path'];
         this.description = config['description'];
         this.workingDirectory = config['working_directory'];
         this.requiresTerminal = get(config, 'requires_terminal', true);
@@ -161,6 +164,9 @@ export default {
   },
 
   methods: {
+    updateScript(newScriptObject) {
+      this.value['script'] = newScriptObject
+    },
     updateAllowedUsers() {
       this.updateAccessFieldInValue(this.allowAllUsers, 'allowedUsers', 'allowed_users');
     },
@@ -191,8 +197,7 @@ export default {
       }
       this[vmPropertyName] = users.filter(u => u !== '*');
       this[vmAllowAllPropertyName] = isNull(config[valuePropertyName]) || users.includes('*');
-    },
-
+    }
   }
 }
 </script>

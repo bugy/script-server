@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from execution.logging import HistoryEntry
 from model.external_model import to_short_execution_log, to_long_execution_log, server_conf_to_external, \
     parse_external_schedule
+from model.script_config import OUTPUT_FORMAT_TERMINAL
 from model.server_conf import ServerConfig
 
 
@@ -81,7 +82,7 @@ class TestHistoryEntry(unittest.TestCase):
         self._validate_translated_entry(translated_entries[2], 'id3', exit_code='13')
 
     def test_long_history_entry(self):
-        entry = self._create_history_entry('id1', command='ping localhost')
+        entry = self._create_history_entry('id1', command='ping localhost', output_format='html')
         long_entry = to_long_execution_log(entry, 'log text\nend', True)
 
         self._validate_translated_entry(
@@ -98,7 +99,8 @@ class TestHistoryEntry(unittest.TestCase):
                               script_name='my_script',
                               command='cmd',
                               start_time=None,
-                              exit_code='0'):
+                              exit_code='0',
+                              output_format=OUTPUT_FORMAT_TERMINAL):
         if id is None:
             id = str(self.random_instance.randint(0, 10000000))
 
@@ -116,6 +118,7 @@ class TestHistoryEntry(unittest.TestCase):
         entry.script_name = script_name
         entry.command = command
         entry.exit_code = exit_code
+        entry.output_format = output_format
 
         return entry
 
@@ -128,7 +131,8 @@ class TestHistoryEntry(unittest.TestCase):
                                    command=None,
                                    start_time_string=None,
                                    exit_code='0',
-                                   log=None):
+                                   log=None,
+                                   output_format=None):
         self.assertEqual(entry.get('id'), id)
         self.assertEqual(entry.get('user'), user)
         self.assertEqual(entry.get('script'), script_name)
@@ -136,6 +140,7 @@ class TestHistoryEntry(unittest.TestCase):
         self.assertEqual(entry.get('command'), command)
         self.assertEqual(entry.get('exitCode'), exit_code)
         self.assertEqual(entry.get('log'), log)
+        self.assertEqual(entry.get('output_format'), output_format)
 
         if start_time_string is not None:
             self.assertEqual(entry.get('startTime'), start_time_string)

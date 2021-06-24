@@ -3,7 +3,7 @@
     <div ref="scriptConfigContent" class="script-config-content">
       <div class="container">
         <div v-if="loadingError" class="error">{{ loadingError }}</div>
-        <ScriptConfigForm v-else-if="scriptConfig" v-model="scriptConfig"/>
+        <ScriptConfigForm v-else-if="scriptConfig" v-model="scriptConfig" :original-name="scriptName"/>
         <div v-if="!loadingError && scriptConfig">
           <h5>Parameters</h5>
           <ScriptParamList :parameters="scriptConfig.parameters"/>

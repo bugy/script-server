@@ -1,16 +1,14 @@
 import {isNull} from '@/common/utils/common';
-import scriptExecutionManagerModule, {
-    __RewireAPI__ as ExecutionManagerRewire,
-    axiosInstance
-} from '@/main-app/store/scriptExecutionManager';
+import scriptExecutionManagerModule, {__RewireAPI__ as ExecutionManagerRewire,} from '@/main-app/store/scriptExecutionManager';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import {STATUS_INITIALIZING} from '@/main-app/store/scriptExecutor';
 import MockAdapter from 'axios-mock-adapter';
 import cloneDeep from 'lodash/cloneDeep';
 import {WebSocket} from 'mock-socket';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, flushPromises} from '../../test_utils';
+import {createScriptServerTestVue, flushPromises, timeout} from '../../test_utils';
 
-const axiosMock = new MockAdapter(axiosInstance);
+let axiosMock;
 window.WebSocket = WebSocket;
 
 const localVue = createScriptServerTestVue();
@@ -65,12 +63,18 @@ describe('Test scriptExecutionManager', function () {
 
     beforeEach(async function () {
         store = createStore();
+        axiosMock = new MockAdapter(axiosInstance)
     });
+
+    afterEach(function () {
+        axiosMock.restore()
+    })
 
     async function setupInitialExecutors(executions) {
         mockActiveExecutions(executions);
         await store.dispatch('executions/init');
         await flushPromises();
+        await timeout(10)
     }
 
     function assertExecution(id, expectedName, parameterValues) {
@@ -236,6 +240,23 @@ describe('Test scriptExecutionManager', function () {
             expect(store.state.executions[123]).not.toBeNil();
             assertSelectedExecutor(123);
         });
+
+        it('Test selectExecutor check remove current if error', async function () {
+            store.state.scripts.selectedScript = 'abc';
+
+            await setupInitialExecutors([
+                {id: 123, scriptName: 'abc'},
+                {id: 456, scriptName: 'def'}])
+
+            store.dispatch('executions/123/setError')
+
+            await selectExecutor(456);
+
+            expect(store.state.executions.executors[123]).toBeNil();
+            expect(store.state.executions[123]).toBeNil();
+        });
+
+
     });
 
     describe('Test selectScript', function () {
@@ -305,6 +326,9 @@ function createMockExecutor(id, scriptName, parameterValues) {
             },
             setFinished({state}) {
                 state.status = 'finished';
+            },
+            setError({state}) {
+                state.status = 'error';
             }
         },
         mutations: {

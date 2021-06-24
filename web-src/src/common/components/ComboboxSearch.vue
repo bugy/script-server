@@ -5,7 +5,7 @@
            :value="value"
            @blur="focused = false"
            @focus="focused = true"
-           autocomplete="off"
+           autocomplete="one-time-code"
            @input="inputFieldChanged"/>
 
     <label :for="id" v-bind:class="{ active: labelActive }">Search</label>

@@ -95,6 +95,8 @@ export default {
     M.Modal.init(this.$refs.modal, {onCloseEnd: this.dialogClosed});
 
     this.isMounted = true;
+
+    this.validate(this.value)
   },
 
   beforeDestroy: function () {
@@ -104,21 +106,9 @@ export default {
 
   methods: {
     selectFile(path) {
-      this.error = this.getValidationError(path);
-
-      var inputField = this.$refs.inputField;
-      if (!isNull(inputField)) {
-        // setCustomValidity doesn't work since input is readonly
-        if (this.error) {
-          addClass(inputField, 'invalid');
-        } else {
-          removeClass(inputField, 'invalid');
-        }
-      }
-
       this.closeDialog();
 
-      this.$emit('error', this.error);
+      this.validate(path)
 
       if (!arraysEqual(this.value, path)) {
         this.$emit('input', path);
@@ -154,6 +144,22 @@ export default {
       this.$refs.fileDialog.setChosenFile(this.value);
       this.dialogOpened = true;
       this.$refs.fileDialog.focus();
+    },
+
+    validate(path) {
+      this.error = this.getValidationError(path);
+
+      const inputField = this.$refs.inputField;
+      if (!isNull(inputField)) {
+        // setCustomValidity doesn't work since input is readonly
+        if (this.error) {
+          addClass(inputField, 'invalid');
+        } else {
+          removeClass(inputField, 'invalid');
+        }
+      }
+
+      this.$emit('error', this.error);
     }
   }
 }

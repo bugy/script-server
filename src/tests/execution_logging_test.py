@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
+from parameterized import parameterized
+
 from auth.authorization import Authorizer, EmptyGroupProvider
 from auth.user import User
 from execution import executor
@@ -14,6 +16,7 @@ from execution.execution_service import ExecutionService
 from execution.logging import ScriptOutputLogger, ExecutionLoggingService, OUTPUT_STARTED_MARKER, \
     LogNameCreator, ExecutionLoggingController
 from model.model_helper import AccessProhibitedException
+from model.script_config import OUTPUT_FORMAT_TERMINAL
 from react.observable import Observable
 from tests import test_utils
 from tests.test_utils import _IdGeneratorMock, create_config_model, _MockProcessWrapper, create_audit_names, \
@@ -176,7 +179,8 @@ class TestLoggingService(unittest.TestCase):
                               script_name='My script',
                               log_lines=['some text'],
                               start_time_millis=start_time,
-                              command='./script.sh -p p1 --flag')
+                              command='./script.sh -p p1 --flag',
+                              output_format='html')
         entries = self.logging_service.get_history_entries('user1')
         self.assertEqual(1, len(entries))
 
@@ -186,7 +190,8 @@ class TestLoggingService(unittest.TestCase):
                                     user_name='user1',
                                     script_name='My script',
                                     start_time=start_time,
-                                    command='./script.sh -p p1 --flag')
+                                    command='./script.sh -p p1 --flag',
+                                    output_format='html')
 
     def test_no_history_for_wrong_file(self):
         log_path = os.path.join(test_utils.temp_folder, 'wrong.log')
@@ -263,13 +268,17 @@ class TestLoggingService(unittest.TestCase):
         entries = self.logging_service.get_history_entries('userX')
         self.assertCountEqual([], entries)
 
-    def test_get_history_entries_only_for_current_user(self):
+    @parameterized.expand([
+        ('userA',),
+        ('USERa',),
+    ])
+    def test_get_history_entries_only_for_current_user(self, user_id):
         self.simulate_logging(execution_id='id1', user_id='userA')
         self.simulate_logging(execution_id='id2', user_id='userB')
         self.simulate_logging(execution_id='id3', user_id='userC')
         self.simulate_logging(execution_id='id4', user_id='userA')
 
-        entries = self._get_entries_sorted('userA')
+        entries = self._get_entries_sorted(user_id)
         self.assertEquals(2, len(entries))
 
         self.validate_history_entry(entry=entries[0], id='id1', user_id='userA')
@@ -385,6 +394,7 @@ class TestLoggingService(unittest.TestCase):
                                script_name='my_script',
                                start_time='IGNORE',
                                command='cmd',
+                               output_format=OUTPUT_FORMAT_TERMINAL,
                                exit_code: Optional[int] = 0):
 
         if user_id is None:
@@ -395,6 +405,7 @@ class TestLoggingService(unittest.TestCase):
         self.assertEqual(user_id, entry.user_id)
         self.assertEqual(script_name, entry.script_name)
         self.assertEqual(command, entry.command)
+        self.assertEqual(output_format, entry.output_format)
         if start_time != 'IGNORE':
             self.assertEqual(ms_to_datetime(start_time), entry.start_time)
 
@@ -415,7 +426,8 @@ class TestLoggingService(unittest.TestCase):
                          log_lines=None,
                          start_time_millis=None,
                          exit_code=0,
-                         write_post_execution_info=True):
+                         write_post_execution_info=True,
+                         output_format=OUTPUT_FORMAT_TERMINAL):
 
         output_stream = Observable()
 
@@ -425,7 +437,8 @@ class TestLoggingService(unittest.TestCase):
                                           script_name=script_name,
                                           start_time_millis=start_time_millis,
                                           user_id=user_id,
-                                          user_name=user_name)
+                                          user_name=user_name,
+                                          output_format=output_format)
 
         if log_lines:
             for line in log_lines:
@@ -445,6 +458,7 @@ class TestLoggingService(unittest.TestCase):
                       user_id=None,
                       script_name='my_script',
                       command='cmd',
+                      output_format=OUTPUT_FORMAT_TERMINAL,
                       start_time_millis=None):
 
         if not execution_id:
@@ -462,6 +476,7 @@ class TestLoggingService(unittest.TestCase):
             command,
             output_stream,
             all_audit_names,
+            output_format,
             start_time_millis)
 
         return execution_id
@@ -486,7 +501,7 @@ class TestLoggingService(unittest.TestCase):
     def setUp(self):
         test_utils.setup()
 
-        self.authorizer = Authorizer([], [], ['power_user'], EmptyGroupProvider())
+        self.authorizer = Authorizer([], [], ['power_user'], [], EmptyGroupProvider())
         self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), self.authorizer)
 
     def tearDown(self):
@@ -561,7 +576,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         executor._process_creator = _MockProcessWrapper
 
-        authorizer = Authorizer([], [], [], EmptyGroupProvider())
+        authorizer = Authorizer([], [], [], [], EmptyGroupProvider())
         self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), authorizer)
         self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
 

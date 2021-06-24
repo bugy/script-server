@@ -62,6 +62,13 @@ def get_form_arguments(request_handler):
     return result
 
 
+def get_form_file(request_handler, argument_name):
+    files = request_handler.request.files.get(argument_name)
+    if files is None:
+        return None
+    return files[0]
+
+
 def get_request_body(request_handler):
     raw_request_body = request_handler.request.body.decode('UTF-8')
     if is_empty(raw_request_body):

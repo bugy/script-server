@@ -7,7 +7,7 @@ GROUP_PREFIX = '@'
 
 def _normalize_user(user):
     if user:
-        return user.lower()
+        return user.lower().strip()
     return user
 
 
@@ -22,10 +22,11 @@ def _normalize_users(allowed_users):
 
 
 class Authorizer:
-    def __init__(self, app_allowed_users, admin_users, full_history_users, groups_provider):
+    def __init__(self, app_allowed_users, admin_users, full_history_users, code_editor_users, groups_provider):
         self._app_allowed_users = _normalize_users(app_allowed_users)
         self._admin_users = _normalize_users(admin_users)
         self._full_history_users = _normalize_users(full_history_users)
+        self._code_editor_users = _normalize_users(code_editor_users)
 
         self._groups_provider = groups_provider
 
@@ -37,6 +38,9 @@ class Authorizer:
 
     def has_full_history_access(self, user_id):
         return self.is_admin(user_id) or self._is_allowed_internal(user_id, self._full_history_users)
+
+    def can_edit_code(self, user_id):
+        return self.is_admin(user_id) and self._is_allowed_internal(user_id, self._code_editor_users)
 
     def is_allowed(self, user_id, allowed_users):
         normalized_users = _normalize_users(allowed_users)
@@ -182,3 +186,7 @@ def _exclude_unknown_groups_from_admin_users(admin_users, known_groups):
         result.append(user)
 
     return result
+
+
+def is_same_user(user_id1, user_id2):
+    return _normalize_user(user_id1) == _normalize_user(user_id2)

@@ -3,7 +3,7 @@ import ExecutionInstanceTabs from '@/main-app/components/scripts/ExecutionInstan
 import {mount} from '@vue/test-utils';
 import clone from 'lodash/clone';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, vueTicks} from '../../../test_utils';
+import {attachToDocument, createScriptServerTestVue, vueTicks} from '../../../test_utils';
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
@@ -38,7 +38,7 @@ describe('Test ExecutionInstanceTabs', function () {
         });
 
         executionTabs = mount(ExecutionInstanceTabs, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             store,
             localVue
         });
@@ -85,7 +85,18 @@ describe('Test ExecutionInstanceTabs', function () {
     }
 
     function assertTab(tab, id, status, selected) {
-        let expectedText = status === 'finished' ? 'check' : 'lens';
+        let expectedText
+        switch (status) {
+            case 'finished':
+                expectedText = 'check'
+                break
+            case 'disconnected':
+            case 'error':
+                expectedText = 'error_outline'
+                break
+            default:
+                expectedText = 'lens'
+        }
         expectedText += id;
 
         expect(tab.text()).toBe(expectedText);
@@ -124,14 +135,18 @@ describe('Test ExecutionInstanceTabs', function () {
             await addExecutor(106, 'ghi');
             await addExecutor(107, 'abc');
             await addExecutor(108, 'xyz');
+            await addExecutor(109, 'abc', status = 'disconnected');
+            await addExecutor(110, 'abc', status = 'error');
             await selectExecutor(105);
 
             const tabs = executionTabs.findAll('li.executor-tab');
-            expect(tabs).toHaveLength(3);
+            expect(tabs).toHaveLength(5);
 
             assertTab(tabs.at(0), 101, 'running', false);
             assertTab(tabs.at(1), 105, 'finished', true);
             assertTab(tabs.at(2), 107, 'running', false);
+            assertTab(tabs.at(3), 109, 'error', false);
+            assertTab(tabs.at(4), 110, 'error', false);
         });
 
         it('test multiple tabs after changing script', async function () {

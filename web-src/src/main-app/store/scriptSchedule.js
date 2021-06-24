@@ -1,8 +1,6 @@
-import axios from 'axios';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import clone from 'lodash/clone';
-import {parametersToFormData} from "@/main-app/store/mainStoreHelper";
-
-export const axiosInstance = axios.create();
+import {parametersToFormData} from '@/main-app/store/mainStoreHelper';
 
 export default {
     state: {},

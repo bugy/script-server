@@ -1,6 +1,6 @@
 import {getWebsocketUrl, isNull, isWebsocketClosed} from '@/common/utils/common';
-import axios from 'axios';
 import Vue from 'vue';
+import {axiosInstance} from '@/common/utils/axios_utils';
 
 export const STATUS_INITIALIZING = 'initializing';
 export const STATUS_EXECUTING = 'executing';
@@ -57,7 +57,7 @@ export default (id, scriptName, parameterValues) => {
                     commit('SET_KILL_INTERVAL', {id: intervalId, timeoutSec: 5, killEnabled: false});
                 }
 
-                return axios.post('executions/stop/' + state.id);
+                return axiosInstance.post('executions/stop/' + state.id);
             },
 
             _tickKillInterval({state, commit}) {
@@ -82,7 +82,7 @@ export default (id, scriptName, parameterValues) => {
             },
 
             killExecution({state}) {
-                return axios.post('executions/kill/' + state.id);
+                return axiosInstance.post('executions/kill/' + state.id);
             },
 
             setInitialising({commit, dispatch}) {
@@ -112,7 +112,7 @@ export default (id, scriptName, parameterValues) => {
             },
 
             cleanup({state}) {
-                axios.post('executions/cleanup/' + state.id);
+                axiosInstance.post('executions/cleanup/' + state.id);
             },
 
             abort({dispatch}) {
@@ -229,7 +229,7 @@ function attachToWebsocket(internalState, state, commit, dispatch) {
     websocket.addEventListener('close', function (event) {
         let executionFinished = (event.code === 1000);
         if (!executionFinished) {
-            axios.get('executions/status/' + executionId)
+            axiosInstance.get('executions/status/' + executionId)
                 .then(({data: status}) => {
                     if (status === 'finished') {
                         dispatch('setStatus', STATUS_FINISHED);

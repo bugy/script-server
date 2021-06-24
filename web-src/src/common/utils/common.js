@@ -692,3 +692,15 @@ export function getElementsByTagNameRecursive(parent, tag) {
 
     return result;
 }
+
+export function getFileInputValue(fileField) {
+    const files = fileField.files;
+    let value;
+    if (files && (files.length > 0)) {
+        value = files[0];
+    } else {
+        value = null;
+    }
+
+    return value
+}

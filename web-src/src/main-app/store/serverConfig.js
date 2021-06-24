@@ -1,4 +1,4 @@
-import axios from 'axios';
+import {axiosInstance} from '@/common/utils/axios_utils';
 
 export default {
     namespaced: true,
@@ -19,7 +19,7 @@ export default {
 
     actions: {
         init({commit}) {
-            axios.get('conf').then(({data: config}) => {
+            axiosInstance.get('conf').then(({data: config}) => {
                 commit('SET_CONFIG', config);
             });
         }

@@ -187,7 +187,7 @@ text = '''
     </ul>
   </div><!-- /.blogroll -->
 
-  <div class="social" style="float: right; width: 175px;">
+  <div class="social" style="float: right; width: 175px;" onload=alert('test1')>
 
     <h2 style="color: #C74350; font-size: 1.429em; margin-bottom: .25em; padding: 0 3px;">social</h2>
     <ul  style="list-style: none; margin: 0;">
@@ -208,7 +208,10 @@ text = '''
     </ul>
   </div><!-- /.social -->
 </section><!-- /#extras -->
-
+<a href="javascript:alert('a-href)">Test XSS<a>
+<a href="javascript:alert('event-source')"><event-source src="data:application/x-dom-event-stream,Event:click%0Adata:XXX%0A%0A" /></a>
+<img src="javascript:alert('img')">
+<img src="http://url.to.file.which/not.exist" onerror=alert(document.cookie);>
 '''
 
 print(text)

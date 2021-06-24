@@ -3,14 +3,16 @@ import os
 from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
-from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR
+from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR, \
+    PARAM_TYPE_EDITABLE_LIST
 from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
     DependantScriptValuesProvider, NoneValuesProvider, FilesProvider
 from model import model_helper
 from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SECURE_MASK, \
-    normalize_extension, read_bool_from_config, InvalidValueException
+    normalize_extension, read_bool_from_config, InvalidValueException, read_str_from_config
 from react.properties import ObservableDict, observable_fields
 from utils import file_utils, string_utils, process_utils
+from utils.file_utils import FileMatcher
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('script_server.parameter_config')
@@ -18,7 +20,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
 
 @observable_fields(
     'param',
-    'repeat_param'
+    'same_arg_param'
     'env_var',
     'no_value',
     'description',
@@ -33,8 +35,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'values',
     'secure',
     'separator',
-    'multiple_arguments',
-    'same_arg_param',
+    'multiselect_argument_type',
     'file_dir',  # path relative to working dir (for execution)
     '_list_files_dir',  # file_dir, relative to the server path (for listing files)
     'file_type',
@@ -65,7 +66,7 @@ class ParameterModel(object):
         config = self._original_config
 
         self.param = config.get('param')
-        self.repeat_param = read_bool_from_config('repeat_param', config, default=True)
+        self.same_arg_param = read_bool_from_config('same_arg_param', config, default=False)
         self.env_var = config.get('env_var')
         self.no_value = read_bool_from_config('no_value', config, default=False)
         self.description = replace_auth_vars(config.get('description'), self._username, self._audit_name)
@@ -75,14 +76,18 @@ class ParameterModel(object):
         self.max_length = config.get('max_length')
         self.secure = read_bool_from_config('secure', config, default=False)
         self.separator = config.get('separator', ',')
-        self.multiple_arguments = read_bool_from_config('multiple_arguments', config, default=False)
-        self.same_arg_param = read_bool_from_config('same_arg_param', config, default=False)
+        self.multiselect_argument_type = read_str_from_config(
+            config,
+            'multiselect_argument_type',
+            default='single_argument',
+            allowed_values=['single_argument', 'argument_per_value', 'repeat_param_value'])
         self.default = _resolve_default(config.get('default'), self._username, self._audit_name, self._working_dir)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
         self.file_extensions = _resolve_file_extensions(config, 'file_extensions')
         self.file_type = _resolve_parameter_file_type(config, 'file_type', self.file_extensions)
         self.file_recursive = read_bool_from_config('file_recursive', config, default=False)
+        self.excluded_files_matcher = _resolve_excluded_files(config, 'excluded_files', self._list_files_dir)
 
         self.type = self._read_type(config)
 
@@ -170,9 +175,10 @@ class ParameterModel(object):
             return NoneValuesProvider()
 
         if self._is_plain_server_file():
-            return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions)
+            return FilesProvider(self._list_files_dir, self.file_type, self.file_extensions,
+                                 self.excluded_files_matcher)
 
-        if (type != 'list') and (type != PARAM_TYPE_MULTISELECT):
+        if (type != 'list') and (type != PARAM_TYPE_MULTISELECT) and (type != PARAM_TYPE_EDITABLE_LIST):
             return NoneValuesProvider()
 
         if is_empty(values_config):
@@ -182,12 +188,16 @@ class ParameterModel(object):
             return ConstValuesProvider(values_config)
 
         elif 'script' in values_config:
-            script = replace_auth_vars(values_config['script'], self._username, self._audit_name)
+            original_script = values_config['script']
+            has_variables = ('${' in original_script)
+
+            script = replace_auth_vars(original_script, self._username, self._audit_name)
+            shell = read_bool_from_config('shell', values_config, default=not has_variables)
 
             if '${' not in script:
-                return ScriptValuesProvider(script)
+                return ScriptValuesProvider(script, shell)
 
-            return DependantScriptValuesProvider(script, self._parameters_supplier)
+            return DependantScriptValuesProvider(script, self._parameters_supplier, shell)
 
         else:
             message = 'Unsupported "values" format for ' + self.name
@@ -255,10 +265,10 @@ class ParameterModel(object):
 
     def to_script_args(self, script_value):
         if self.type == PARAM_TYPE_MULTISELECT:
-            if self.multiple_arguments:
-                return script_value
-            else:
+            if self.multiselect_argument_type == 'single_argument':
                 return self.separator.join(script_value)
+            else:
+                return script_value
 
         return script_value
 
@@ -296,7 +306,7 @@ class ParameterModel(object):
             int_value = int(value)
 
             if (not is_empty(self.max)) and (int_value > int(self.max)):
-                return 'is longer than allowed value (' \
+                return 'is greater than allowed value (' \
                        + value_string + ' > ' + str(self.max) + ')'
 
             if (not is_empty(self.min)) and (int_value < int(self.min)):
@@ -352,11 +362,16 @@ class ParameterModel(object):
         result = []
 
         if is_empty(self.file_type) or self.file_type == FILE_TYPE_FILE:
-            files = model_helper.list_files(full_path, FILE_TYPE_FILE, self.file_extensions)
+            files = model_helper.list_files(full_path,
+                                            file_type=FILE_TYPE_FILE,
+                                            file_extensions=self.file_extensions,
+                                            excluded_files_matcher=self.excluded_files_matcher)
             for file in files:
                 result.append({'name': file, 'type': FILE_TYPE_FILE, 'readable': True})
 
-        dirs = model_helper.list_files(full_path, FILE_TYPE_DIR)
+        dirs = model_helper.list_files(full_path,
+                                       file_type=FILE_TYPE_DIR,
+                                       excluded_files_matcher=self.excluded_files_matcher)
         for dir in dirs:
             dir_path = os.path.join(full_path, dir)
 
@@ -382,6 +397,9 @@ class ParameterModel(object):
 
         full_path = self._build_list_file_path(path)
 
+        if self.excluded_files_matcher.has_match(full_path):
+            return 'Path ' + value_string + ' is excluded'
+
         if not os.path.exists(full_path):
             return 'Path ' + value_string + ' does not exist'
 
@@ -397,7 +415,10 @@ class ParameterModel(object):
             file = path[-1]
 
             dir_path = self._build_list_file_path(dir)
-            allowed_files = model_helper.list_files(dir_path, self.file_type, self.file_extensions)
+            allowed_files = model_helper.list_files(dir_path,
+                                                    file_type=self.file_type,
+                                                    file_extensions=self.file_extensions,
+                                                    excluded_files_matcher=self.excluded_files_matcher)
             if file not in allowed_files:
                 return 'Path ' + value_string + ' is not allowed'
 
@@ -422,11 +443,13 @@ def _resolve_default(default, username, audit_name, working_dir):
     if resolved_string_value == string_value:
         resolved_string_value = replace_auth_vars(string_value, username, audit_name)
 
-    if not script:
-        return resolved_string_value
+    if script:
+        has_variables = string_value != resolved_string_value
+        shell = read_bool_from_config('shell', default, default=not has_variables)
+        output = process_utils.invoke(resolved_string_value, working_dir, shell=shell)
+        return output.strip()
 
-    output = process_utils.invoke(resolved_string_value, working_dir)
-    return output.strip()
+    return resolved_string_value
 
 
 def _resolve_file_dir(config, key):
@@ -452,6 +475,15 @@ def _resolve_file_extensions(config, key):
     return [normalize_extension(e) for e in strip(result)]
 
 
+def _resolve_excluded_files(config, key, file_dir):
+    raw_patterns = model_helper.read_list(config, key)
+    if raw_patterns is None:
+        patterns = []
+    else:
+        patterns = [resolve_env_vars(e) for e in strip(raw_patterns)]
+    return FileMatcher(patterns, file_dir)
+
+
 def _resolve_parameter_file_type(config, key, file_extensions):
     if file_extensions:
         return FILE_TYPE_FILE
@@ -471,9 +503,21 @@ class WrongParameterUsageException(Exception):
 
 
 def get_sorted_config(param_config):
-    key_order = ['name', 'required', 'param', 'repeat_param', 'type', 'no_value', 'default', 'constant', 'description', 'secure',
-                 'values', 'min', 'max', 'multiple_arguments', 'same_arg_param', 'separator', 'file_dir', 'file_recursive', 'file_type',
-                 'file_extensions']
+    key_order = ['name', 'required',
+                 'param',
+                 'same_arg_param',
+                 'type', 'no_value', 'default', 'constant', 'description',
+                 'secure',
+                 'values',
+                 'min',
+                 'max',
+                 'multiselect_argument_type',
+                 'separator',
+                 'file_dir',
+                 'file_recursive',
+                 'file_type',
+                 'file_extensions',
+                 'excluded_files']
 
     def get_order(key):
         if key in key_order:

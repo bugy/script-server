@@ -1,16 +1,14 @@
 'use strict';
-import scripts, {axiosInstance} from '@/admin/store/scripts-module'
+import scripts from '@/admin/store/scripts-module'
+import {axiosInstance} from '@/common/utils/axios_utils';
 import MockAdapter from 'axios-mock-adapter';
-import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
 import {createScriptServerTestVue} from '../test_utils'
-
-chaiConfig.truncateThreshold = 0;
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
 
-const axiosMock = new MockAdapter(axiosInstance);
+let axiosMock;
 const flushPromises = () => new Promise(resolve => setTimeout(resolve));
 
 
@@ -28,29 +26,35 @@ describe('Test admin script module', function () {
                 scripts: scripts
             }
         });
+
+        axiosMock = new MockAdapter(axiosInstance)
     });
+
+    afterEach(function () {
+        axiosMock.restore()
+    })
 
     describe('Test load scripts', function () {
 
-            it('test load single script', async function () {
-                mockGetScripts([{'name': 'script1'}]);
+        it('test load single script', async function () {
+            mockGetScripts([{'name': 'script1'}]);
 
-                await store.dispatch('scripts/init');
-                await flushPromises();
+            await store.dispatch('scripts/init');
+            await flushPromises();
 
-                assert.deepEqual(store.state.scripts.scripts, ['script1']);
-                assert.isFalse(store.state.scripts.loading);
-            });
+            expect(store.state.scripts.scripts).toEqual(['script1'])
+            expect(store.state.scripts.loading).toBeFalse()
+        });
 
-            it('test load multiple unsorted scripts', async function () {
-                mockGetScripts([{'name': 'def', 'group': 'some_group'}, {'name': 'xyz'}, {'name': 'abc'}]);
+        it('test load multiple unsorted scripts', async function () {
+            mockGetScripts([{'name': 'def', 'group': 'some_group'}, {'name': 'xyz'}, {'name': 'abc'}]);
 
-                await store.dispatch('scripts/init');
-                await flushPromises();
+            await store.dispatch('scripts/init');
+            await flushPromises();
 
-                assert.deepEqual(store.state.scripts.scripts, ['abc', 'def', 'xyz']);
-                assert.isFalse(store.state.scripts.loading);
-            });
+            expect(store.state.scripts.scripts).toEqual(['abc', 'def', 'xyz'])
+            expect(store.state.scripts.loading).toBeFalse()
+        });
         }
     )
 });
