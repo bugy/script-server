@@ -85,11 +85,11 @@ class ExecutionService:
         return self._get_for_executor(execution_id, lambda e: e.get_return_code())
 
     def is_running(self, execution_id, user):
-        self.validate_execution_id(execution_id, user, only_active=False, allow_when_history_access=True)
-
         executor = self._executors.get(execution_id)  # type: ScriptExecutor
         if executor is None:
             return False
+
+        self.validate_execution_id(execution_id, user, only_active=False, allow_when_history_access=True)
 
         return not executor.is_finished()
 

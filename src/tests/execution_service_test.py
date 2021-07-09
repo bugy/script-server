@@ -42,6 +42,11 @@ class ExecutionServiceTest(unittest.TestCase):
 
         self.assertFalse(execution_service.is_running(execution_id, DEFAULT_USER))
 
+    def test_is_running_when_from_history(self):
+        execution_service = self.create_execution_service()
+
+        self.assertFalse(execution_service.is_running(123, DEFAULT_USER))
+
     def test_exit_code(self):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
