@@ -593,6 +593,31 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value('123')
         self.assertIsNone(error)
 
+    @parameterized.expand([
+        ('a\d', 'ab', 'some desc'),
+        ('a\d', '12', 'desc 2'),
+        ('a\d', 'a12', 'some long description'),
+        ('\d+\wa+', 'aaaa', 'some desc'),
+    ])
+    def test_regex_validation_when_fail_with_description(self, regex, value, description):
+        parameter = create_parameter_model('param', regex={'pattern': regex, 'description': description})
+
+        error = parameter.validate_value(value)
+        self.assert_error(error)
+        self.assertRegex(error, description)
+
+    @parameterized.expand([
+        ('a\d', 'a1',),
+        ('\da', '2a',),
+        ('a\d+', 'a12',),
+        ('\d+\wa+', '1Xaaaa'),
+    ])
+    def test_regex_validation_when_success(self, regex, value):
+        parameter = create_parameter_model('param', regex={'pattern': regex})
+
+        error = parameter.validate_value(value)
+        self.assertIsNone(error)
+
     @parameterized.expand([(False,), (True,), (None,)])
     def test_list_with_dependency_when_matches(self, shell):
         parameters = []

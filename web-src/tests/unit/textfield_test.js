@@ -181,6 +181,14 @@ describe('Test TextField', function () {
 
             expect(this.textfield.currentError).toBe('integer expected')
         });
+
+        it('Test set invalid external value when regex', async function () {
+            setDeepProp(this.textfield, 'config.regex', {pattern: 'a\\d\\db', description: 'test desc'});
+            this.textfield.setProps({value: 'a123'});
+            await vueTicks();
+
+            expect(this.textfield.currentError).toBe('test desc')
+        });
     });
 
     describe('Test IP validaton', function () {

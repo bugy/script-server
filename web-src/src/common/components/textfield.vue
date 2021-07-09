@@ -193,17 +193,17 @@ export default {
 }
 
 function getValidByTypeError(value, type, min, max, max_length, regex) {
-  if (type === 'text') {
+  if (!type || (type === 'text')) {
     if (regex) {
-        let regexPattern = new RegExp(regex.pattern);
-        let matchFound = regexPattern.test(value);
-        if (!matchFound) {
-          if (regex.description) {
-            return regex.description
-          } else {
-            return 'The input value is invalid'
-          }
+      let regexPattern = new RegExp(regex.pattern);
+      let matchFound = regexPattern.test(value);
+      if (!matchFound) {
+        if (regex.description) {
+          return regex.description
+        } else {
+          return 'The input value is invalid'
         }
+      }
       }
     if (max_length) {
       if (value.length > max_length) {

@@ -295,7 +295,7 @@ class ParameterModel(object):
             if self.regex is not None:
                 regex_pattern = self.regex.get('pattern', None)
                 if (not is_empty(regex_pattern)):
-                    regex_matched = re.match(regex_pattern, value)
+                    regex_matched = re.fullmatch(regex_pattern, value)
                     if not regex_matched:
                         return 'does not match regex pattern: ' + self.regex.get('description', regex_pattern)
 
