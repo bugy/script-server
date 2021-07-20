@@ -3,13 +3,9 @@
 import ScriptConfig from '@/admin/components/scripts-config/ScriptConfig';
 import ScriptConfigForm from '@/admin/components/scripts-config/ScriptConfigForm';
 import {mount} from '@vue/test-utils';
-import {assert, config as chaiConfig} from 'chai';
 import Vuex from 'vuex';
-import {createScriptServerTestVue, vueTicks} from '../test_utils';
+import {attachToDocument, createScriptServerTestVue, vueTicks} from '../test_utils';
 import {findField, setValueByUser} from './ParameterConfigForm_test';
-
-
-chaiConfig.truncateThreshold = 0;
 
 const localVue = createScriptServerTestVue();
 localVue.use(Vuex);
@@ -25,7 +21,7 @@ describe('Test ScriptConfig', function () {
                     namespaced: true,
                     state: {
                         scriptName: 'test_script',
-                        scriptConfig: {'name': 'test_script'}
+                        scriptConfig: {'name': 'test_script', 'script_path': 'ping'}
                     },
                     actions: {
                         init({commit, state}, scriptName) {
@@ -43,7 +39,7 @@ describe('Test ScriptConfig', function () {
         configComponent = mount(ScriptConfig, {
             store,
             localVue,
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             propsData: {scriptName: 'script1'}
         });
 
@@ -71,7 +67,6 @@ describe('Test ScriptConfig', function () {
             store.state.scriptConfig.scriptConfig = {
                 'name': 's1',
                 'group': 'important',
-                'script_path': 'ping',
                 'description': 'some desc',
                 'working_directory': '/home',
                 'requires_terminal': true,
@@ -81,14 +76,15 @@ describe('Test ScriptConfig', function () {
 
             await vueTicks();
 
-            assert.equal('s1', _findField('Script name').value);
-            assert.equal('important', _findField('Group').value);
-            assert.equal('ping', _findField('Script path').value);
-            assert.equal('some desc', _findField('Description').value);
-            assert.equal('/home', _findField('Working directory').value);
-            assert.equal(true, _findField('Enable pseudo-terminal').value);
-            assert.equal('script.json', _findField('Include config').value);
-            assert.equal('terminal', _findField('Output format').value);
+            expect(_findField('Script name').value).toBe('s1')
+            expect(_findField('Group').value).toBe('important')
+            expect(_findField('Description').value).toBe('some desc')
+            expect(_findField('Working directory').value).toBe('/home')
+            expect(_findField('Enable pseudo-terminal').value).toBe(true)
+            expect(_findField('Include config').value).toBe('script.json')
+            expect(_findField('Output format').value).toBe('terminal')
+
+            expect(configComponent.get('.path-textfield input').element.value).toBe('ping')
         });
     });
 
@@ -96,7 +92,15 @@ describe('Test ScriptConfig', function () {
         it('Test edit group', async function () {
             await _setValueByUser('Group', 'xyz');
 
-            assert.equal('xyz', store.state.scriptConfig.scriptConfig.group);
+            expect(store.state.scriptConfig.scriptConfig.group).toBe('xyz')
+        });
+    });
+
+    describe('Test edit script', function () {
+        it('Test simple edit', async function () {
+            await configComponent.get('.path-textfield input').setValue('echo 123')
+
+            expect(store.state.scriptConfig.scriptConfig.script).toEqual({mode: 'new_path', path: 'echo 123'})
         });
     });
 

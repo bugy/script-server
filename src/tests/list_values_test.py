@@ -1,21 +1,41 @@
 import os
 import unittest
 
+from parameterized import parameterized
+
 from config.script.list_values import DependantScriptValuesProvider, FilesProvider, ScriptValuesProvider
 from tests import test_utils
 from tests.test_utils import create_parameter_model
 from utils import file_utils
+from utils.process_utils import ExecutionException
 
 
 class ScriptValuesProviderTest(unittest.TestCase):
-    def test_ls_3_files(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_ls_3_files(self, shell):
         test_utils.create_files(['f1', 'f2', 'f3'])
-        provider = ScriptValuesProvider('ls "' + test_utils.temp_folder + '"')
+        provider = ScriptValuesProvider('ls "' + test_utils.temp_folder + '"',
+                                        shell=shell)
         self.assertEqual(['f1', 'f2', 'f3'], provider.get_values({}))
 
-    def test_ls_no_files(self):
-        provider = ScriptValuesProvider('ls "' + test_utils.temp_folder + '"')
+    @parameterized.expand([(True,), (False,)])
+    def test_ls_no_files(self, shell):
+        provider = ScriptValuesProvider('ls "' + test_utils.temp_folder + '"',
+                                        shell=shell)
         self.assertEqual([], provider.get_values({}))
+
+    def test_ls_3_files_when_bash_operator(self):
+        test_utils.create_files(['f1', 'f2', 'f3'])
+        self.assertRaises(ExecutionException,
+                          ScriptValuesProvider,
+                          'ls "' + test_utils.temp_folder + '" | grep 2',
+                          shell=False)
+
+    def test_ls_3_files_when_bash_operator_and_shell(self):
+        test_utils.create_files(['f1', 'f2', 'f3'])
+        provider = ScriptValuesProvider('ls "' + test_utils.temp_folder + '" | grep 2',
+                                        shell=True)
+        self.assertEqual(['f2'], provider.get_values({}))
 
     def setUp(self) -> None:
         super().setUp()
@@ -29,73 +49,109 @@ class ScriptValuesProviderTest(unittest.TestCase):
 
 
 class DependantScriptValuesProviderTest(unittest.TestCase):
-    def test_get_required_parameters_when_single_dependency(self):
-        values_provider = DependantScriptValuesProvider('ls ${param1}', self.create_parameters_supplier('param1'))
-        self.assertCountEqual(['param1'], values_provider.get_required_parameters())
 
-    def test_get_required_parameters_when_single_dependency_and_many_params(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_get_required_parameters_when_single_dependency(self, shell):
         values_provider = DependantScriptValuesProvider(
             'ls ${param1}',
-            self.create_parameters_supplier('param1', 'param2', 'param3'))
+            self.create_parameters_supplier('param1'),
+            shell=shell)
+
         self.assertCountEqual(['param1'], values_provider.get_required_parameters())
 
-    def test_get_required_parameters_when_multiple_dependencies(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_get_required_parameters_when_single_dependency_and_many_params(self, shell):
+        values_provider = DependantScriptValuesProvider(
+            'ls ${param1}',
+            self.create_parameters_supplier('param1', 'param2', 'param3'),
+            shell=shell)
+        self.assertCountEqual(['param1'], values_provider.get_required_parameters())
+
+    @parameterized.expand([(True,), (False,)])
+    def test_get_required_parameters_when_multiple_dependencies(self, shell):
         values_provider = DependantScriptValuesProvider(
             'ls ${param1}/${param2}',
-            self.create_parameters_supplier('param1', 'param2', 'param3'))
+            self.create_parameters_supplier('param1', 'param2', 'param3'),
+            shell=shell)
         self.assertCountEqual(['param1', 'param2'], values_provider.get_required_parameters())
 
-    def test_get_values_when_no_values(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_get_values_when_no_values(self, shell):
         values_provider = DependantScriptValuesProvider(
             'ls ${param1}',
-            self.create_parameters_supplier('param1'))
+            self.create_parameters_supplier('param1'),
+            shell=shell)
         self.assertEqual([], values_provider.get_values({}))
 
-    def test_get_values_when_single_parameter(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_get_values_when_single_parameter(self, shell):
         values_provider = DependantScriptValuesProvider(
             "echo '_${param1}_'",
-            self.create_parameters_supplier('param1'))
+            self.create_parameters_supplier('param1'),
+            shell=shell)
         self.assertEqual(['_hello world_'], values_provider.get_values({'param1': 'hello world'}))
 
-    def test_get_values_when_multiple_parameters(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_get_values_when_multiple_parameters(self, shell):
         files_path = os.path.join(test_utils.temp_folder, 'path1', 'path2')
         for i in range(0, 5):
             file_utils.write_file(os.path.join(files_path, 'f' + str(i) + '.txt'), 'test')
 
         values_provider = DependantScriptValuesProvider(
             'ls ' + test_utils.temp_folder + '/${param1}/${param2}',
-            self.create_parameters_supplier('param1', 'param2'))
+            self.create_parameters_supplier('param1', 'param2'),
+            shell=shell)
         self.assertEqual(['f0.txt', 'f1.txt', 'f2.txt', 'f3.txt', 'f4.txt'],
                          values_provider.get_values({'param1': 'path1', 'param2': 'path2'}))
 
-    def test_get_values_when_parameter_repeats(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_get_values_when_parameter_repeats(self, shell):
         values_provider = DependantScriptValuesProvider(
             "echo '_${param1}_\n' 'test\n' '+${param1}+'",
-            self.create_parameters_supplier('param1'))
+            self.create_parameters_supplier('param1'),
+            shell=shell)
         self.assertEqual(['_123_', ' test', ' +123+'], values_provider.get_values({'param1': '123'}))
 
-    def test_get_values_when_numeric_parameter(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_get_values_when_numeric_parameter(self, shell):
         values_provider = DependantScriptValuesProvider(
             "echo '_${param1}_'",
-            self.create_parameters_supplier('param1'))
+            self.create_parameters_supplier('param1'),
+            shell=shell)
         self.assertEqual(['_123_'], values_provider.get_values({'param1': 123}))
 
-    def test_get_values_when_newline_response(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_get_values_when_newline_response(self, shell):
         values_provider = DependantScriptValuesProvider(
             "ls '${param1}'",
-            self.create_parameters_supplier('param1'))
+            self.create_parameters_supplier('param1'),
+            shell=shell)
         self.assertEqual([], values_provider.get_values({'param1': test_utils.temp_folder}))
 
-    def test_no_code_injection(self):
+    @parameterized.expand([(True, ['1', '2']), (False, ['1 && echo 2'])])
+    def test_no_code_injection_for_and_operator(self, shell, expected_values):
         values_provider = DependantScriptValuesProvider(
             "echo ${param1}",
-            self.create_parameters_supplier('param1'))
-        self.assertEqual(['1 && echo 2'], values_provider.get_values({'param1': '1 && echo 2'}))
+            self.create_parameters_supplier('param1'),
+            shell=shell)
+        self.assertEqual(expected_values, values_provider.get_values({'param1': '1 && echo 2'}))
 
-    def test_script_fails(self):
+    @parameterized.expand([(True, ['y2', 'y3']), (False, [])])
+    def test_no_code_injection_for_pipe_operator(self, shell, expected_values):
+        test_utils.create_files(['x1', 'y2', 'y3'])
+
+        values_provider = DependantScriptValuesProvider(
+            "ls ${param1}",
+            self.create_parameters_supplier('param1'),
+            shell=shell)
+        self.assertEqual(expected_values, values_provider.get_values({'param1': test_utils.temp_folder + ' | grep y'}))
+
+    @parameterized.expand([(True,), (False,)])
+    def test_script_fails(self, shell):
         values_provider = DependantScriptValuesProvider(
             "echo2 ${param1}",
-            self.create_parameters_supplier('param1'))
+            self.create_parameters_supplier('param1'),
+            shell=shell)
         self.assertEqual([], values_provider.get_values({'param1': 'abc'}))
 
     def setUp(self):

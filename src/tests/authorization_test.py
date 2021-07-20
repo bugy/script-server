@@ -66,7 +66,7 @@ class TestIsAllowed(unittest.TestCase):
 
         self.user_groups = defaultdict(list)
 
-        self.authorizer = Authorizer([], [], [], self)
+        self.authorizer = Authorizer([], [], [], [], self)
 
 
 class TestIsAllowedInApp(unittest.TestCase):
@@ -96,7 +96,7 @@ class TestIsAllowedInApp(unittest.TestCase):
 
     def assertAllowed(self, user, allowed_users, expected_allowed, groups=None):
         group_provider = PreconfiguredGroupProvider(groups) if groups else EmptyGroupProvider()
-        authorizer = Authorizer(allowed_users, [], [], group_provider)
+        authorizer = Authorizer(allowed_users, [], [], [], group_provider)
 
         allowed = authorizer.is_allowed_in_app(user)
         if allowed != expected_allowed:
@@ -131,7 +131,7 @@ class TestIsAdmin(unittest.TestCase):
 
     def assertAdmin(self, user, admin_users, expected_allowed, groups=None):
         group_provider = PreconfiguredGroupProvider(groups) if groups else EmptyGroupProvider()
-        authorizer = Authorizer([], admin_users, [], group_provider)
+        authorizer = Authorizer([], admin_users, [], [], group_provider)
 
         allowed = authorizer.is_admin(user)
         if allowed != expected_allowed:
@@ -166,7 +166,7 @@ class TestHistoryAccess(unittest.TestCase):
 
     def assert_has_access(self, user, admin_users, history_access_users, expected_allowed, groups=None):
         group_provider = PreconfiguredGroupProvider(groups) if groups else EmptyGroupProvider()
-        authorizer = Authorizer([], admin_users, history_access_users, group_provider)
+        authorizer = Authorizer([], admin_users, history_access_users, [], group_provider)
 
         has_access = authorizer.has_full_history_access(user)
         if has_access != expected_allowed:

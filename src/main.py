@@ -91,6 +91,7 @@ def main():
         server_config.allowed_users,
         server_config.admin_users,
         server_config.full_history_users,
+        server_config.code_editor_users,
         group_provider)
 
     config_service = ConfigService(authorizer, CONFIG_FOLDER)

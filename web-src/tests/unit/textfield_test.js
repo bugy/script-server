@@ -2,11 +2,10 @@
 
 import Textfield from '@/common/components/textfield'
 import {isEmptyString, setInputValue} from '@/common/utils/common';
-import {mount} from '@vue/test-utils';
-import {assert, config as chaiConfig} from 'chai';
-import {setDeepProp, vueTicks, wrapVModel} from './test_utils';
+import {enableAutoDestroy, mount} from '@vue/test-utils';
+import {attachToDocument, mapArrayWrapper, setDeepProp, timeout, vueTicks, wrapVModel} from './test_utils';
 
-chaiConfig.truncateThreshold = 0;
+enableAutoDestroy(afterEach)
 
 describe('Test TextField', function () {
 
@@ -31,18 +30,10 @@ describe('Test TextField', function () {
         this.textfield = textfield;
     });
 
-    afterEach(async function () {
-        await vueTicks();
-        this.textfield.destroy();
-    });
-
-    after(function () {
-    });
-
     describe('Test config', function () {
 
         it('Test initial name', function () {
-            assert.equal('Text paparam', this.textfield.find('label').text());
+            expect(this.textfield.find('label').text()).toEqual('Text paparam')
         });
 
         it('Test change name', async function () {
@@ -50,11 +41,11 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('testName1', this.textfield.find('label').text());
+            expect(this.textfield.find('label').text()).toEqual('testName1')
         });
 
         it('Test initial required', function () {
-            assert.equal(false, this.textfield.find('input').element.required);
+            expect(this.textfield.find('input').element.required).toEqual(false)
         });
 
         it('Test change required', async function () {
@@ -62,11 +53,11 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal(true, this.textfield.find('input').element.required);
+            expect(this.textfield.find('input').element.required).toEqual(true)
         });
 
         it('Test initial field type', function () {
-            assert.equal('text', this.textfield.find('input').element.type);
+            expect(this.textfield.find('input').element.type).toEqual('text')
         });
 
         it('Test change field type to number', async function () {
@@ -74,7 +65,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('number', this.textfield.find('input').element.type);
+            expect(this.textfield.find('input').element.type).toEqual('number')
         });
 
         it('Test change field type to password', async function () {
@@ -82,7 +73,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('password', this.textfield.find('input').element.type);
+            expect(this.textfield.find('input').element.type).toEqual('password')
         });
     });
 
@@ -91,8 +82,8 @@ describe('Test TextField', function () {
         it('Test initial value', async function () {
             await vueTicks();
 
-            assert.equal(this.textfield.vm.value, 'Hello world');
-            assert.equal('Hello world', this.textfield.find('input').element.value);
+            expect(this.textfield.vm.value).toBe('Hello world')
+            expect(this.textfield.find('input').element.value).toBe('Hello world')
         });
 
         it('Test external value change', async function () {
@@ -100,8 +91,8 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal(this.textfield.vm.value, 'XYZ');
-            assert.equal('XYZ', this.textfield.find('input').element.value);
+            expect(this.textfield.vm.value).toBe('XYZ')
+            expect(this.textfield.find('input').element.value).toBe('XYZ')
         });
 
         it('Test change value by user', async function () {
@@ -110,8 +101,8 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal(this.textfield.vm.value, 'abc def');
-            assert.equal('abc def', inputField.value);
+            expect(this.textfield.vm.value).toBe('abc def')
+            expect(inputField.value).toBe('abc def')
         });
 
         it('Test empty value on init', async function () {
@@ -125,7 +116,7 @@ describe('Test TextField', function () {
                         value: ''
                     }
                 });
-                assert.equal(textfield.vm.value, '');
+                expect(textfield.vm.value).toBe('')
             } finally {
                 if (textfield) {
                     await vueTicks();
@@ -142,7 +133,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('required', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('required')
         });
 
         it('Test user set empty value when required', async function () {
@@ -154,7 +145,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('required', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('required')
         });
 
         it('Test set external value after empty when required', async function () {
@@ -166,7 +157,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('')
         });
 
         it('Test user set value after empty when required', async function () {
@@ -180,7 +171,7 @@ describe('Test TextField', function () {
 
             await vueTicks();
 
-            assert.equal('', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('')
         });
 
         it('Test set invalid external value when integer', async function () {
@@ -188,7 +179,7 @@ describe('Test TextField', function () {
             this.textfield.setProps({value: '1.5'});
             await vueTicks();
 
-            assert.equal('integer expected', this.textfield.currentError);
+            expect(this.textfield.currentError).toBe('integer expected')
         });
     });
 
@@ -200,9 +191,9 @@ describe('Test TextField', function () {
             await vueTicks();
 
             if (isEmptyString(expectedError)) {
-                assert.equal(expectedError, textfield.currentError);
+                expect(textfield.currentError).toBe(expectedError)
             } else {
-                assert.include(textfield.currentError, expectedError);
+                expect(textfield.currentError).toInclude(expectedError)
             }
         }
 
@@ -322,4 +313,103 @@ describe('Test TextField', function () {
             await testValidation(this.textfield, 'ip', 'ABCX::0', 'IPv4 or IPv6 expected')
         });
     });
+
+
+    describe('Test autocomplete', function () {
+        let autocompleteComponent
+
+        beforeEach(async function () {
+            autocompleteComponent = mount(Textfield, {
+                attachTo: attachToDocument(),
+                propsData: {
+                    config: {
+                        required: true,
+                        name: 'Text autocomplete',
+                        values: ['Value A', 'Value B', 'Value C'],
+                        type: 'editable_list'
+                    },
+                    value: ''
+                }
+            });
+            wrapVModel(autocompleteComponent);
+
+            await vueTicks()
+        });
+
+        async function clickOnInputField() {
+            await autocompleteComponent.find('input').trigger('click')
+            await timeout(150)
+        }
+
+        function getOptionTexts() {
+            const listElements = autocompleteComponent.findAll('ul li')
+            return mapArrayWrapper(listElements, wrapper => wrapper.text())
+        }
+
+        it('Test open dropdown on click', async function () {
+            await clickOnInputField()
+
+            expect(autocompleteComponent.find('input').classes()).toContain('autocomplete')
+
+            expect(autocompleteComponent.find('ul').element).toBeVisible()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Value A', 'Value B', 'Value C'])
+        });
+
+        it('Test open dropdown on click when input value matches all elements', async function () {
+            await autocompleteComponent.find('input').setValue('alu');
+
+            await clickOnInputField()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Value A', 'Value B', 'Value C'])
+
+            expect(autocompleteComponent.vm.value).toBe('alu')
+        });
+
+        it('Test open dropdown on click when input value matches single element', async function () {
+            await autocompleteComponent.find('input').setValue('B');
+
+            await clickOnInputField()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Value B'])
+
+            expect(autocompleteComponent.vm.value).toBe('B')
+        });
+
+        it('Test open dropdown on click when vm value matches single element', async function () {
+            await autocompleteComponent.setProps({value: 'B'});
+
+            await clickOnInputField()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Value B'])
+
+            expect(autocompleteComponent.vm.value).toBe('B')
+        });
+
+        it('Test select option from dropdown', async function () {
+            await clickOnInputField()
+
+            await autocompleteComponent.findAll('ul li').at(1).trigger('click')
+            await timeout(300)
+
+            expect(autocompleteComponent.find('ul').element).not.toBeVisible()
+            expect(autocompleteComponent.vm.value).toBe('Value B')
+        });
+
+        it('Test update values', async function () {
+            setDeepProp(autocompleteComponent, 'config.values', ['Abc', 'Def', 'Xyz']);
+            await vueTicks()
+
+            await clickOnInputField()
+
+            const options = getOptionTexts()
+            expect(options).toEqual(['Abc', 'Def', 'Xyz'])
+        });
+
+    })
+
 });

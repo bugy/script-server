@@ -4,20 +4,21 @@
       <Textfield v-model="name" :config="nameField" class="col s4" @error="handleError(nameField, $event)"/>
       <Checkbox v-model="required" :config="requiredField" class="col s3 offset-s1"
                 @error="handleError(requiredField, $event)"/>
-      <Checkbox v-model="secure" :config="secureField" class="col s3" @error="handleError(secureField, $event)"/>
-    </div>
-    <div class="row">
-      <Textfield v-model="arg" :config="argField" class="col s4" @error="handleError(argField, $event)"/>
-      <Checkbox v-model="noValue" :config="noValueField" class="col s3 offset-s1"
-                @error="handleError(noValueField, $event)"/>
       <Combobox v-model="type" :config="typeField" :disabled="noValue || constant"
                 :dropdownContainer="this.$el"
                 class="col s4" @error="handleError(typeField, $event)"/>
     </div>
     <div class="row">
+      <Textfield v-model="param" :config="paramField" class="col s4" @error="handleError(paramField, $event)"/>
+      <Checkbox v-model="noValue" :config="noValueField" class="col s3 offset-s1"
+                @error="handleError(noValueField, $event)"/>
+      <Checkbox v-if="!noValue" v-model="sameArgParam" :config="sameArgParamField"
+                class="col s3" @error="handleError(sameArgParamField, $event)"/>
+    </div>
+    <div class="row">
       <Textfield v-model="envVar" :config="envVarField" class="col s4" @error="handleError(envVarField, $event)"/>
-      <Checkbox v-if="!noValue" v-model="repeatParam" :config="repeatParamField"
-                class="col s3 offset-s1" @error="handleError(repeatParamField, $event)"/>
+      <Checkbox v-model="secure" :config="secureField" class="col s3 offset-s1"
+                @error="handleError(secureField, $event)"/>
     </div>
     <div v-if="selectedType !== 'file_upload' && !noValue" class="row">
       <Textfield v-model="defaultValue" :class="{s6: !isExtendedDefault, s8: isExtendedDefault}"
@@ -35,25 +36,27 @@
       <Textfield v-model="max" :config="maxField" class="col s6 offset-s1"
                  @error="handleError(maxField, $event)"/>
     </div>
-    <div v-if="(selectedType === 'list' || selectedType === 'multiselect')" class="row">
+    <div v-if="(selectedType === 'list' || selectedType === 'multiselect' || selectedType === 'editable_list')"
+         class="row">
       <Textfield v-if="allowedValuesFromScript" v-model="allowedValuesScript"
                  :config="allowedValuesScriptField"
-                 class="col s9" @error="handleError(allowedValuesScriptField, $event)"/>
-      <ChipsList v-else v-model="allowedValues" class="col s9" title="Allowed values"
+                 class="col s8" @error="handleError(allowedValuesScriptField, $event)"/>
+      <ChipsList v-else v-model="allowedValues" class="col s8" title="Allowed values"
                  @error="handleError('Allowed values', $event)"/>
       <Checkbox v-model="allowedValuesFromScript" :config="allowedValuesFromScriptField"
-                class="col s3"
+                class="col s2"
                 @error="handleError(allowedValuesFromScriptField, $event)"/>
+      <Checkbox v-if="allowedValuesFromScript" v-model="allowedValuesScriptShellEnabled"
+                :config="allowedValuesScriptShellEnabledField"
+                class="col s2"
+                @error="handleError(allowedValuesScriptShellEnabledField, $event)"/>
     </div>
     <div v-if="(selectedType === 'multiselect')" class="row">
-      <Checkbox v-model="multipleArguments" :config="multipleArgumentsField"
-                class="col s4"
-                @error="handleError(multipleArgumentsField, $event)"/>
-      <Checkbox v-if="multipleArguments" v-model="sameArgParam"
-                :config="sameArgParamField" class="col s3"
-                @error="handleError(sameArgParamField, $event)"/>
-      <Textfield v-if="!multipleArguments" v-model="separator"
-                 :config="separatorField" class="col s3"
+      <Combobox v-model="multiselectArgumentType" :config="multiselectArgumentTypeField"
+                class="col s4" @error="handleError(multiselectArgumentTypeField, $event)"/>
+
+      <Textfield v-if="!multiselectArgumentType || multiselectArgumentType ==='single_argument'" v-model="separator"
+                 :config="separatorField" class="col s2 offset-s1"
                  @error="handleError(separatorField, $event)"/>
     </div>
     <div v-if="(selectedType === 'server_file')" class="row">
@@ -66,11 +69,15 @@
       <ChipsList v-model="fileExtensions" class="col s12"
                  title="Allowed file extensions"
                  @error="handleError('Allowed file extensions', $event)"/>
-        </div>
-        <div class="row" v-if="selectedType === 'text' || selectedType === undefined">
-            <Textfield :config="maxLengthField" @error="handleError(maxLengthField, $event)" class="col s4" v-model="max_length"/>
-        </div>
-    </form>
+      <ChipsList v-model="excludedFiles" class="col s12"
+                 title="Excluded files"
+                 @error="handleError('Excluded files', $event)"/>
+    </div>
+    <div v-if="selectedType === 'text' || selectedType === undefined" class="row">
+      <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
+                 @error="handleError(maxLengthField, $event)"/>
+    </div>
+  </form>
 </template>
 
 <script>
@@ -79,13 +86,13 @@ import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
 import Textfield from '@/common/components/textfield';
-import {forEachKeyValue, isEmptyString} from '@/common/utils/common';
+import {forEachKeyValue, isEmptyArray, isEmptyString} from '@/common/utils/common';
 import get from 'lodash/get';
 import Vue from 'vue';
 import {
   allowedValuesFromScriptField,
   allowedValuesScriptField,
-  argField,
+  allowedValuesScriptShellEnabledField,
   constantField,
   defaultValueField,
   descriptionField,
@@ -95,11 +102,11 @@ import {
   maxField,
   maxLengthField,
   minField,
-  multipleArgumentsField,
+  multiselectArgumentTypeField,
   nameField,
   noValueField,
+  paramField,
   recursiveField,
-  repeatParamField,
   requiredField,
   sameArgParamField,
   secureField,
@@ -128,8 +135,8 @@ export default {
     const simpleFields = {
       name: 'name',
       description: 'description',
-      arg: 'param',
-      repeatParam: 'repeat_param',
+      param: 'param',
+      sameArgParam: 'same_arg_param',
       envVar: 'env_var',
       type: 'type',
       noValue: 'no_value',
@@ -139,8 +146,7 @@ export default {
       min: 'min',
       max: 'max',
       max_length: 'max_length',
-      multipleArguments: 'multiple_arguments',
-      sameArgParam: 'same_arg_param',
+      multiselectArgumentType: 'multiselect_argument_type',
       separator: 'separator',
       fileDir: 'file_dir',
       recursive: 'file_recursive',
@@ -165,8 +171,8 @@ export default {
   data() {
     return {
       name: null,
-      arg: null,
-      repeatParam: null,
+      param: null,
+      sameArgParam: null,
       envVar: null,
       type: null,
       noValue: null,
@@ -178,19 +184,19 @@ export default {
       allowedValues: null,
       allowedValuesScript: null,
       allowedValuesFromScript: null,
+      allowedValuesScriptShellEnabled: null,
       defaultValue: null,
       constant: null,
       secure: null,
-      multipleArguments: null,
-      sameArgParam: null,
       separator: null,
+      multiselectArgumentType: null,
       fileDir: null,
       recursive: null,
       fileType: null,
       fileExtensions: null,
+      excludedFiles: null,
       nameField,
-      argField: Object.assign({}, argField),
-      repeatParamField,
+      paramField: Object.assign({}, paramField),
       envVarField,
       typeField,
       noValueField,
@@ -204,12 +210,13 @@ export default {
       allowedValuesFromScriptField,
       defaultValueField: Object.assign({}, defaultValueField),
       constantField,
-      multipleArgumentsField,
       sameArgParamField,
+      multiselectArgumentTypeField,
       separatorField,
       fileDirField,
       recursiveField,
-      fileTypeField
+      fileTypeField,
+      allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField
     }
   },
 
@@ -220,8 +227,7 @@ export default {
         if (config) {
           this.name = config['name'];
           this.description = config['description'];
-          this.arg = config['param'];
-          this.repeatParam = !!get(config, 'repeat_param', true);
+          this.param = config['param'];
           this.envVar = config['env_var'];
           this.type = config['type'];
           this.noValue = get(config, 'no_value', false);
@@ -231,13 +237,14 @@ export default {
           this.max_length = config['max_length'];
           this.constant = !!get(config, 'constant', false);
           this.secure = !!get(config, 'secure', false);
-          this.multipleArguments = !!get(config, 'multiple_arguments', false);
+          this.multiselectArgumentType = get(config, 'multiselect_argument_type', 'single_argument');
           this.sameArgParam = !!get(config, 'same_arg_param', false);
           this.separator = get(config, 'separator', ',');
           this.fileDir = config['file_dir'];
           this.recursive = !!get(config, 'file_recursive', false);
           this.fileType = get(config, 'file_type', 'any');
           this.fileExtensions = get(config, 'file_extensions', []);
+          this.excludedFiles = get(config, 'excluded_files', []);
 
           const defaultValue = get(config, 'default', '');
           if (this.isRecursiveFile()) {
@@ -259,10 +266,12 @@ export default {
             this.allowedValues = allowedValues;
             this.allowedValuesFromScript = false;
             this.allowedValuesScript = '';
+            this.allowedValuesScriptShellEnabled = false
           } else {
             this.allowedValues = [];
             this.allowedValuesFromScript = true;
             this.allowedValuesScript = allowedValues['script'];
+            this.allowedValuesScriptShellEnabled = get(allowedValues, 'shell', false);
           }
         }
       }
@@ -270,7 +279,7 @@ export default {
     noValue: {
       immediate: true,
       handler(noValue) {
-        Vue.set(this.argField, 'required', noValue);
+        Vue.set(this.paramField, 'required', noValue);
       }
     },
     constant: {
@@ -286,7 +295,18 @@ export default {
       }
     },
     fileExtensions(fileExtensions) {
-      updateValue(this.value, 'file_extensions', fileExtensions);
+      if (isEmptyArray(fileExtensions)) {
+        this.$delete(this.value, 'file_extensions');
+      } else {
+        updateValue(this.value, 'file_extensions', fileExtensions);
+      }
+    },
+    excludedFiles(excludedFiles) {
+      if (isEmptyArray(excludedFiles)) {
+        this.$delete(this.value, 'excluded_files');
+      } else {
+        updateValue(this.value, 'excluded_files', excludedFiles);
+      }
     },
     allowedValuesFromScript() {
       this.updateAllowedValues();
@@ -295,6 +315,9 @@ export default {
       this.updateAllowedValues();
     },
     allowedValuesScript() {
+      this.updateAllowedValues();
+    },
+    allowedValuesScriptShellEnabled() {
       this.updateAllowedValues();
     },
     defaultValue() {
@@ -329,7 +352,10 @@ export default {
   methods: {
     updateAllowedValues() {
       if (this.allowedValuesFromScript) {
-        updateValue(this.value, 'values', {script: this.allowedValuesScript});
+        updateValue(this.value, 'values', {
+          script: this.allowedValuesScript,
+          shell: this.allowedValuesScriptShellEnabled
+        });
       } else {
         updateValue(this.value, 'values', this.allowedValues);
       }

@@ -1,19 +1,18 @@
-import axios from 'axios';
+import {axiosInstance} from '@/common/utils/axios_utils';
 
 export default {
     state: {
         enabled: false,
         authenticated: true,
         admin: false,
-        username: null
+        username: null,
+        canEditCode: false
     },
     namespaced: true,
     actions: {
         init({commit}) {
-            axios.get('auth/info').then(({data}) => {
-                const {username, admin, enabled} = data;
-
-                commit('SET_CONFIG', {username, admin, enabled})
+            axiosInstance.get('auth/info').then(({data}) => {
+                commit('SET_CONFIG', data)
             });
         },
 
@@ -22,7 +21,7 @@ export default {
         },
 
         logout({}) {
-            return axios.post('logout')
+            return axiosInstance.post('logout')
                 .catch(error => {
                     const {status} = error.response;
                     if (status !== 405) {
@@ -32,10 +31,11 @@ export default {
         }
     },
     mutations: {
-        SET_CONFIG(state, {username, admin, enabled}) {
+        SET_CONFIG(state, {username, admin, enabled, canEditCode}) {
             state.admin = admin;
             state.enabled = enabled;
             state.username = username;
+            state.canEditCode = canEditCode;
         },
 
         SET_AUTHENTICATED(state, authenticated) {

@@ -3,7 +3,15 @@
 import Combobox from '@/common/components/combobox'
 import {contains} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {flushPromises, setDeepProp, timeout, triggerSingleClick, vueTicks, wrapVModel} from './test_utils';
+import {
+    attachToDocument,
+    flushPromises,
+    setDeepProp,
+    timeout,
+    triggerSingleClick,
+    vueTicks,
+    wrapVModel
+} from './test_utils';
 
 
 describe('Test ComboBox', function () {
@@ -11,7 +19,7 @@ describe('Test ComboBox', function () {
 
     beforeEach(async function () {
         comboBox = mount(Combobox, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             propsData: {
                 config: {
                     required: false,
@@ -660,6 +668,38 @@ describe('Test ComboBox', function () {
 
             expect(comboBox.vm.value).toEqual(['Value A', 'Value C'])
             expect(comboBox.currentError).toBe('')
+        })
+    })
+
+    describe('Test loading', function () {
+        it('Test set loading true', async function () {
+            setDeepProp(comboBox, 'config.loading', true)
+            await vueTicks()
+
+            const input = comboBox.get('input.dropdown-trigger')
+            expect(input.attributes('disabled')).toBe('')
+
+            const dropdownArrow = comboBox.get('svg')
+            expect(dropdownArrow.element).not.toBeVisible()
+
+            const spinner = comboBox.get('.loading-spinner')
+            expect(spinner.element).toBeVisible()
+        })
+
+        it('Test set loading false', async function () {
+            setDeepProp(comboBox, 'config.loading', true)
+            await vueTicks()
+            setDeepProp(comboBox, 'config.loading', false)
+            await vueTicks()
+
+            const input = comboBox.get('input.dropdown-trigger')
+            expect(input.attributes('disabled')).toBeNil()
+
+            const dropdownArrow = comboBox.get('svg')
+            expect(dropdownArrow.element).toBeVisible()
+
+            const spinner = comboBox.find('.loading-spinner')
+            expect(spinner.exists()).toBeFalse()
         })
     })
 });

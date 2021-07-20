@@ -1,4 +1,5 @@
 PARAM_TYPE_SERVER_FILE = 'server_file'
 PARAM_TYPE_MULTISELECT = 'multiselect'
+PARAM_TYPE_EDITABLE_LIST = 'editable_list'
 FILE_TYPE_FILE = 'file'
 FILE_TYPE_DIR = 'dir'

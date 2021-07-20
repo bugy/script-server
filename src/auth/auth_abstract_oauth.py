@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import json
 import logging
 import os
@@ -64,7 +65,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
             self._validate_dump_file(self.dump_file)
 
         self._users = {}  # type: Dict[str, _UserState]
-        self._user_locks = defaultdict(lambda: threading.Lock())
+        self._user_locks = defaultdict(lambda: asyncio.locks.Lock())
 
         self.timer = None
         if self.dump_file:
@@ -221,7 +222,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
         if not ttl_expired:
             return
 
-        tornado.ioloop.IOLoop.current().add_callback(
+        tornado.ioloop.IOLoop.current().spawn_callback(
             self._do_update_user_auth_async,
             username,
             user_state,
@@ -230,7 +231,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
     async def _do_update_user_auth_async(self, username, user_state, access_token):
         lock = self._user_locks[username]
 
-        with lock:
+        async with lock:
             now = time.time()
 
             ttl_expired = (user_state.last_auth_update is None) \

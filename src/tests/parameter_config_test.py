@@ -1,6 +1,9 @@
+import inspect
 import os
 import unittest
 from collections import OrderedDict
+
+from parameterized import parameterized
 
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from model import parameter_config
@@ -8,6 +11,7 @@ from model.parameter_config import get_sorted_config
 from react.properties import ObservableDict
 from tests import test_utils
 from tests.test_utils import create_parameter_model, create_parameter_model_from_config
+from utils.process_utils import ExecutionException
 from utils.string_utils import is_blank
 
 DEF_USERNAME = 'my_user'
@@ -41,7 +45,7 @@ class ParameterModelInitTest(unittest.TestCase):
             'min': min,
             'max': max,
             'separator': separator,
-            'multiple_arguments': 'True',
+            'multiselect_argument_type': 'argument_per_value',
             'default': default,
             'type': type,
             'constant': 'false',
@@ -57,7 +61,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual(min, parameter_model.min)
         self.assertEqual(max, parameter_model.max)
         self.assertEqual(separator, parameter_model.separator)
-        self.assertEqual(True, parameter_model.multiple_arguments)
+        self.assertEqual('argument_per_value', parameter_model.multiselect_argument_type)
         self.assertEqual(default, parameter_model.default)
         self.assertEqual(type, parameter_model.type)
         self.assertEqual(False, parameter_model.constant)
@@ -109,6 +113,25 @@ class ParameterModelInitTest(unittest.TestCase):
             'values': {'script': 'echo "123\n" "456"'}})
         self.assertEqual(['123', ' 456'], parameter_model.values)
 
+    @parameterized.expand([
+        ('y2', None, ['y2', 'y3']),
+        ('y2', False, ['x1', 'y2', 'y3 | grep y']),
+        ('y2', True, ['y2', 'y3']),
+        ('${auth.username}', None, ['x1', 'my_user', 'y3 | grep y']),
+        ('${auth.username}', False, ['x1', 'my_user', 'y3 | grep y']),
+        ('${auth.username}', True, ['my_user', 'y3']),
+    ])
+    def test_values_from_script_with_bash_operator(self, second_value, shell, expected_values):
+        values = {'script': 'echo "x1\n""%s\n""y3" | grep y' % (second_value,)}
+        if shell is not None:
+            values['shell'] = shell
+
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'list',
+            'values': values})
+        self.assertEqual(expected_values, parameter_model.values)
+
     def test_values_from_script_win_newline(self):
         test_utils.set_win()
 
@@ -124,6 +147,13 @@ class ParameterModelInitTest(unittest.TestCase):
             'type': 'int',
             'values': {'script': 'echo "123\n" "456"'}})
         self.assertEqual(None, parameter_model.values)
+
+    def test_allowed_values_for_editable_list(self):
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'editable_list',
+            'values': {'script': 'echo "123\n" "456"'}})
+        self.assertEqual(['123', ' 456'], parameter_model.values)
 
     def test_ip_uppercase(self):
         parameter_model = _create_parameter_model({
@@ -169,7 +199,7 @@ class ParameterModelMapValueTest(unittest.TestCase):
         parameter_model = create_parameter_model('param1',
                                                  type=PARAM_TYPE_MULTISELECT,
                                                  allowed_values=['abc', 'def', '456'],
-                                                 multiple_arguments=True)
+                                                 multiselect_argument_type='argument_per_value')
         self.assertEqual(['abc', '456'], parameter_model.to_script_args(['abc', '456']))
 
     def test_map_to_script_args_multiselect_single_arg(self):
@@ -271,9 +301,26 @@ class TestDefaultValue(unittest.TestCase):
                                        username='TONY')
         self.assertEqual('xTONYx', default)
 
-    def test_script_value_with_shell_operators(self):
-        default = self.resolve_default({'script': 'echo 12345 | grep "1"'})
-        self.assertEqual('12345 | grep 1', default)
+    @parameterized.expand([
+        ('y', None, 'my_user\ny1'),
+        ('y', False, ExecutionException),
+        ('y', True, 'my_user\ny1'),
+        ('${auth.username}', None, ExecutionException),
+        ('${auth.username}', False, ExecutionException),
+        ('${auth.username}', True, 'my_user'),
+    ])
+    def test_script_value_with_shell_operators(self, grep_pattern, shell, expected_value):
+        test_utils.create_files(['x1', 'y1', 'my_user'])
+        config = {'script': 'ls "%s" | grep %s' % (test_utils.temp_folder, grep_pattern)}
+        if shell is not None:
+            config['shell'] = shell
+
+        if inspect.isclass(expected_value) and issubclass(expected_value, BaseException):
+            self.assertRaises(expected_value, self.resolve_default, config, username='my_user')
+        else:
+            default = self.resolve_default(config,
+                                           username='my_user')
+            self.assertEqual(expected_value, default)
 
     @staticmethod
     def resolve_default(value, *, username=None, audit_name=None, working_dir=None):
@@ -478,6 +525,13 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value('val4')
         self.assert_error(error)
 
+    def test_editable_list_parameter_when_not_matches(self):
+        parameter = create_parameter_model(
+            'param', type='editable_list', allowed_values=['val1', 'val2', 'val3'])
+
+        error = parameter.validate_value('val4')
+        self.assertIsNone(error)
+
     def test_multiselect_when_empty_string(self):
         parameter = create_parameter_model(
             'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
@@ -539,7 +593,8 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value('123')
         self.assertIsNone(error)
 
-    def test_list_with_dependency_when_matches(self):
+    @parameterized.expand([(False,), (True,), (None,)])
+    def test_list_with_dependency_when_matches(self, shell):
         parameters = []
         values = ObservableDict()
         dep_param = create_parameter_model('dep_param')
@@ -547,7 +602,8 @@ class TestSingleParameterValidation(unittest.TestCase):
                                            type='list',
                                            values_script="echo '${dep_param}_\n' '_${dep_param}_'",
                                            all_parameters=parameters,
-                                           other_param_values=values)
+                                           other_param_values=values,
+                                           values_script_shell=shell)
         parameters.extend([dep_param, parameter])
 
         values['dep_param'] = 'abc'

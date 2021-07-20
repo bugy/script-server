@@ -19,7 +19,7 @@
 </template>
 
 <script>
-import {isNull} from '@/common/utils/common';
+import {getFileInputValue, isNull} from '@/common/utils/common';
 
 export default {
   props: {
@@ -56,15 +56,8 @@ export default {
 
   methods: {
     updateValue() {
-      var fileField = this.$refs.fileField;
-
-      var files = fileField.files;
-      var value;
-      if (files && (files.length > 0)) {
-        value = files[0];
-      } else {
-        value = null;
-      }
+      const fileField = this.$refs.fileField;
+      let value = getFileInputValue(fileField)
 
       this.error = this.getValidationError(value);
       fileField.setCustomValidity(this.error);
@@ -95,8 +88,8 @@ input[type=file] {
 
 .btn-icon-flat {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: 0.5em;
+  right: 0;
   z-index: 1;
 }
 
@@ -109,18 +102,26 @@ label {
 }
 
 .file-upload-field-value {
-  position: relative;
-  display: block;
-  width: 100%;
+  position: static;
+  display: inline-block;
+  width: calc(100% - 24px);
   padding-right: 24px;
+  box-sizing: content-box;
 
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
+  vertical-align: bottom;
 
   /* same as text field */
   border-bottom: 1px solid var(--font-color-medium);;
-  height: 1.5rem;
+  height: 3rem;
+  line-height: 3rem;
+  font-size: 16px;
+  top: auto;
+  left: auto;
   color: inherit;
+  transform: none;
 }
 
 input[type="file"]:focus + * + .file-upload-field-value {

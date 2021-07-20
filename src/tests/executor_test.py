@@ -255,16 +255,9 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['val1; val2; hello world'], args_list)
 
     def test_parameter_multiselect_when_multiple_list_as_multiarg(self):
-        parameter = create_script_param_config('p1', type=PARAM_TYPE_MULTISELECT, multiple_arguments=True)
-        config = create_config_model('config_x', parameters=[parameter])
-
-        args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
-
-        self.assertEqual(['val1', 'val2', 'hello world'], args_list)
-
-    def test_parameter_noparam_multiselect_when_multiple_list_as_multiarg_without_space(self):
-        parameter = create_script_param_config('p1', type=PARAM_TYPE_MULTISELECT,
-                                                   multiple_arguments=True, repeat_param=False)
+        parameter = create_script_param_config('p1',
+                                               type=PARAM_TYPE_MULTISELECT,
+                                               multiselect_argument_type='argument_per_value')
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -272,7 +265,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['val1', 'val2', 'hello world'], args_list)
 
     def test_parameter_without_space(self):
-        parameter = create_script_param_config('p1', param='-p1=', repeat_param=False)
+        parameter = create_script_param_config('p1', param='-p1=', same_arg_param=True)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_string = self.build_command_args({'p1': "value"}, config)
@@ -280,7 +273,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1=value'], args_string)
 
     def test_parameter_int_without_space(self):
-        parameter = create_script_param_config('p1', param='-p1=', type='int', repeat_param=False)
+        parameter = create_script_param_config('p1', param='-p1=', type='int', same_arg_param=True)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_string = self.build_command_args({'p1': 10}, config)
@@ -288,35 +281,39 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1=10'], args_string)
 
     def test_parameter_multiselect_when_multiple_list_without_space(self):
-        parameter = create_script_param_config('p1', param='--p1=', type=PARAM_TYPE_MULTISELECT, repeat_param=False)
+        parameter = create_script_param_config('p1', param='--p1=', type=PARAM_TYPE_MULTISELECT, same_arg_param=True)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
 
         self.assertEqual(['--p1=val1,val2,hello world'], args_list)
 
-    def test_parameter_multiselect_when_multiple_list_as_multiarg_without_space(self):
+    def test_parameter_multiselect_when_multiple_list_and_argument_per_value_without_space(self):
         parameter = create_script_param_config('p1', param='--p1=',
-                                               type=PARAM_TYPE_MULTISELECT, multiple_arguments=True, repeat_param=False)
+                                               type=PARAM_TYPE_MULTISELECT,
+                                               multiselect_argument_type='argument_per_value',
+                                               same_arg_param=True)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
 
         self.assertEqual(['--p1=val1', 'val2', 'hello world'], args_list)
 
-    def test_parameter_multiselect_when_multiple_list_as_multiarg_same_arg_param(self):
+    def test_parameter_multiselect_when_multiple_list_as_multiarg_repeat_param(self):
         parameter = create_script_param_config('p1', param='-p1',
-                                               type=PARAM_TYPE_MULTISELECT, multiple_arguments=True, same_arg_param=True)
+                                               type=PARAM_TYPE_MULTISELECT,
+                                               multiselect_argument_type='repeat_param_value')
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
 
         self.assertEqual(['-p1', 'val1', '-p1', 'val2', '-p1', 'hello world'], args_list)
 
-    def test_parameter_multiselect_when_multiple_list_as_multiarg_same_arg_param_without_space(self):
+    def test_parameter_multiselect_when_multiple_list_as_multiarg_repeat_param_without_space(self):
         parameter = create_script_param_config('p1', param='--p1=',
-                                               type=PARAM_TYPE_MULTISELECT, multiple_arguments=True,
-                                               same_arg_param=True, repeat_param=False)
+                                               type=PARAM_TYPE_MULTISELECT,
+                                               multiselect_argument_type='repeat_param_value',
+                                               same_arg_param=True)
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -542,7 +539,7 @@ class GetSecureCommandTest(unittest.TestCase):
 
     def test_parameter_secure_multiselect_as_multiarg(self):
         parameter = create_script_param_config(
-            'p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT, multiple_arguments=True)
+            'p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT, multiselect_argument_type='argument_per_value')
 
         secure_command = self.get_secure_command([parameter], {'p1': ['one', 'two', 'three']})
 
@@ -556,9 +553,9 @@ class GetSecureCommandTest(unittest.TestCase):
 
         self.assertEqual('ls -p1', secure_command)
 
-    def test_parameter_multiselect_and_multiple_arguments(self):
+    def test_parameter_multiselect_and_argument_per_value(self):
         parameter = create_script_param_config(
-            'p1', param='-p1', type=PARAM_TYPE_MULTISELECT, multiple_arguments=True)
+            'p1', param='-p1', type=PARAM_TYPE_MULTISELECT, multiselect_argument_type='argument_per_value')
 
         secure_command = self.get_secure_command([parameter], {'p1': ['abc', 'def']})
 

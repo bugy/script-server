@@ -1,5 +1,4 @@
 import scriptSetup from '@/main-app/store/scriptSetup';
-import {assert} from 'chai';
 import Vuex from 'vuex';
 import cloneDeep from 'lodash/cloneDeep';
 import {createScriptServerTestVue} from './test_utils'
@@ -52,7 +51,7 @@ describe('Test scriptSetup module', function () {
             store.dispatch('scriptSetup/setParameterError', {parameterName: 'param1', errorMessage: 'Some problem'});
             store.dispatch('scriptSetup/setParameterValue', {parameterName: 'param1', value: 123});
 
-            assert.deepEqual(sentData, [createSentValue('param1', null)]);
+            expect(sentData).toEqual([createSentValue('param1', null)])
         });
 
         it('Test send invalid parameter and then valid', function () {
@@ -61,8 +60,8 @@ describe('Test scriptSetup module', function () {
             store.dispatch('scriptSetup/setParameterError', {parameterName: 'param1', errorMessage: ''});
             store.dispatch('scriptSetup/setParameterValue', {parameterName: 'param1', value: 456});
 
-            assert.deepEqual(sentData, [createSentValue('param1', null),
-                createSentValue('param1', 456)]);
+            expect(sentData).toEqual([createSentValue('param1', null),
+                createSentValue('param1', 456)])
         });
     });
 

@@ -1,9 +1,10 @@
 <template>
-  <div :data-error="error" :title="config.description" class="input-field combobox">
+  <div :class="{loading: loading}" :data-error="error" :title="config.description"
+       class="input-field combobox">
     <select
         :id="config.name"
         ref="selectField"
-        :disabled="disabled || (options.length === 0)"
+        :disabled="disabled || (options.length === 0) || loading"
         :multiple="config.multiselect"
         :required="config.required"
         class="validate">
@@ -26,6 +27,7 @@
     </select>
 
     <label :for="config.name">{{ config.name }}</label>
+    <CircleSpinner v-if="loading" class="loading-spinner"/>
 
     <ComboboxSearch v-if="searchEnabled" ref="comboboxSearch" :comboboxWrapper="comboboxWrapper"/>
   </div>
@@ -45,10 +47,11 @@ import {
 } from '@/common/utils/common';
 import ComboboxSearch from './ComboboxSearch';
 import Vue from 'vue'
+import CircleSpinner from '@/common/components/CircleSpinner'
 
 export default {
   name: 'Combobox',
-  components: {ComboboxSearch},
+  components: {CircleSpinner, ComboboxSearch},
   props: {
     'config': Object,
     'value': [String, Array],
@@ -79,6 +82,9 @@ export default {
   computed: {
     searchEnabled() {
       return !this.disabled && (this.options.length > 10);
+    },
+    loading() {
+      return this.config.loading
     }
   },
 
@@ -106,6 +112,10 @@ export default {
     },
 
     disabled() {
+      this.$nextTick(() => this.rebuildCombobox());
+    },
+
+    loading() {
       this.$nextTick(() => this.rebuildCombobox());
     },
 
@@ -240,7 +250,7 @@ export default {
           {
             dropdownOptions: {
               constrainWidth: false,
-              dropdownContainer: this.dropdownContainer,
+              container: this.dropdownContainer,
               multiple: this.config.multiselect,
               onCloseEnd: () => {
                 if (this.$refs.selectField) {
@@ -377,4 +387,27 @@ export default {
   top: 0;
   z-index: 1;
 }
+
+.combobox.loading >>> svg {
+  display: none;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+
+  position: absolute;
+  right: 2px;
+  top: 2px;
+}
+
+.loading-spinner >>> .spinner-layer {
+  border-color: var(--font-color-disabled);
+}
+
+.loading-spinner >>> .circle {
+  border-width: 2px;
+}
+
+
 </style>

@@ -3,10 +3,7 @@
 import FileDialog from '@/common/components/file_dialog'
 import {hasClass, isEmptyArray, toMap} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {assert, config as chaiConfig} from 'chai';
-import {triggerDoubleClick, triggerKeyEvent, triggerSingleClick, vueTicks} from './test_utils';
-
-chaiConfig.truncateThreshold = 0;
+import {attachToDocument, triggerDoubleClick, triggerKeyEvent, triggerSingleClick, vueTicks} from './test_utils';
 
 describe('Test FileDialog', function () {
     beforeEach(function () {
@@ -27,7 +24,7 @@ describe('Test FileDialog', function () {
         };
 
         this.fileDialog = mount(FileDialog, {
-            attachToDocument: true,
+            attachTo: attachToDocument(),
             propsData: {
                 onClose: () => this.dialogClosed = true,
                 onFileSelect: (path) => this.chosenPath = path,
@@ -93,7 +90,7 @@ describe('Test FileDialog', function () {
 
             const displayedNames = getDisplayedFileNames(this.fileDialog);
 
-            assert.sameMembers(expectedFiles, displayedNames);
+            expect(expectedFiles).toIncludeSameMembers(displayedNames);
         });
 
         it('Test order', async function () {
@@ -108,7 +105,7 @@ describe('Test FileDialog', function () {
 
             const displayedNames = getDisplayedFileNames(this.fileDialog);
 
-            assert.sameMembers(expectedFiles, displayedNames);
+            expect(expectedFiles).toEqual(displayedNames);
         });
 
         it('Test file types', async function () {
@@ -125,7 +122,7 @@ describe('Test FileDialog', function () {
             const elements = getFileElements(this.fileDialog);
             var fileTypes = toMap(elements, getFileElementName, getFileElementType);
 
-            assert.deepEqual(fileTypes, expectedFileTypes);
+            expect(fileTypes).toEqual(expectedFileTypes);
         });
 
         it('Test level 1', async function () {
@@ -136,7 +133,7 @@ describe('Test FileDialog', function () {
 
             const displayedNames = getDisplayedFileNames(this.fileDialog);
 
-            assert.sameMembers(expectedFiles, displayedNames);
+            expect(expectedFiles).toIncludeSameMembers(displayedNames);
         });
 
         it('Test level 4', async function () {
@@ -147,7 +144,7 @@ describe('Test FileDialog', function () {
 
             const displayedNames = getDisplayedFileNames(this.fileDialog);
 
-            assert.sameMembers(expectedFiles, displayedNames);
+            expect(expectedFiles).toIncludeSameMembers(displayedNames);
         });
     });
 
@@ -159,7 +156,7 @@ describe('Test FileDialog', function () {
             const logsElement = findFileElement('logs', this.fileDialog);
             triggerDoubleClick(logsElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['logs'])
+            expect(this.fileDialog.vm.path).toEqual(['logs'])
         });
 
         it('Test double click dir twice', async function () {
@@ -173,7 +170,7 @@ describe('Test FileDialog', function () {
             const tempElement = findFileElement('l_temp', this.fileDialog);
             triggerDoubleClick(tempElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['logs', 'l_temp'])
+            expect(this.fileDialog.vm.path).toEqual(['logs', 'l_temp'])
         });
 
         it('Test navigate on setChosenFile', async function () {
@@ -181,7 +178,7 @@ describe('Test FileDialog', function () {
 
             await vueTicks();
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp', 't_logs'])
+            expect(this.fileDialog.vm.path).toEqual(['temp', 't_logs'])
         });
 
         it('Test navigate breadcrumbs to home', async function () {
@@ -190,7 +187,7 @@ describe('Test FileDialog', function () {
             const homeElement = findBreadcrumbElement('home', this.fileDialog);
             triggerSingleClick(homeElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, [])
+            expect(this.fileDialog.vm.path).toEqual([])
         });
 
         it('Test navigate breadcrumbs to same, when 1 level', async function () {
@@ -199,7 +196,7 @@ describe('Test FileDialog', function () {
             const homeElement = findBreadcrumbElement('temp', this.fileDialog);
             triggerSingleClick(homeElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp'])
+            expect(this.fileDialog.vm.path).toEqual(['temp'])
         });
 
         it('Test navigate breadcrumbs to same', async function () {
@@ -208,7 +205,7 @@ describe('Test FileDialog', function () {
             const homeElement = findBreadcrumbElement('t_logs', this.fileDialog);
             triggerSingleClick(homeElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp', 't_logs'])
+            expect(this.fileDialog.vm.path).toEqual(['temp', 't_logs'])
         });
 
         it('Test navigate breadcrumbs to previous', async function () {
@@ -217,7 +214,7 @@ describe('Test FileDialog', function () {
             const homeElement = findBreadcrumbElement('temp', this.fileDialog);
             triggerSingleClick(homeElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp'])
+            expect(this.fileDialog.vm.path).toEqual(['temp'])
         });
 
         it('Test navigate ellipsized breadcrumbs to same', async function () {
@@ -226,7 +223,7 @@ describe('Test FileDialog', function () {
             const homeElement = findBreadcrumbElement('tttl_temp', this.fileDialog);
             triggerSingleClick(homeElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'])
+            expect(this.fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'])
         });
 
         it('Test navigate ellipsized breadcrumbs to previous', async function () {
@@ -235,7 +232,7 @@ describe('Test FileDialog', function () {
             const homeElement = findBreadcrumbElement('ttt_logs', this.fileDialog);
             triggerSingleClick(homeElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp', 't_temp', 'tt_temp', 'ttt_logs'])
+            expect(this.fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp', 'ttt_logs'])
         });
 
         it('Test navigate ellipsized breadcrumbs to ellipsis', async function () {
@@ -244,7 +241,7 @@ describe('Test FileDialog', function () {
             const homeElement = findBreadcrumbElement('...', this.fileDialog);
             triggerSingleClick(homeElement);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp', 't_temp', 'tt_temp'])
+            expect(this.fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp'])
         });
 
         it('Test navigate on backspace', async function () {
@@ -252,7 +249,7 @@ describe('Test FileDialog', function () {
 
             triggerKeyEvent(this.fileDialog.element, 'keyup', 8);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['temp'])
+            expect(this.fileDialog.vm.path).toEqual(['temp'])
         });
 
         it('Test navigate on enter', async function () {
@@ -261,7 +258,7 @@ describe('Test FileDialog', function () {
             triggerSingleClick(findFileElement('logs', this.fileDialog));
             triggerKeyEvent(this.fileDialog.element, 'keypress', 13);
 
-            assert.sameOrderedMembers(this.fileDialog.vm.path, ['logs'])
+            expect(this.fileDialog.vm.path).toEqual(['logs'])
         });
     });
 
@@ -271,7 +268,7 @@ describe('Test FileDialog', function () {
             await vueTicks();
 
             const breadcrumbs = getBreadcrumbNames(this.fileDialog);
-            assert.sameOrderedMembers(breadcrumbs, ['home'])
+            expect(breadcrumbs).toEqual(['home'])
         });
 
         it('Test breadcrumbs with 1 level', async function () {
@@ -279,7 +276,7 @@ describe('Test FileDialog', function () {
             await navigateTo([dir], this.fileDialog);
 
             const breadcrumbs = getBreadcrumbNames(this.fileDialog);
-            assert.sameOrderedMembers(breadcrumbs, ['home', dir])
+            expect(breadcrumbs).toEqual(['home', dir])
         });
 
         it('Test breadcrumbs with 2 levels', async function () {
@@ -287,7 +284,7 @@ describe('Test FileDialog', function () {
             await navigateTo(path, this.fileDialog);
 
             const breadcrumbs = getBreadcrumbNames(this.fileDialog);
-            assert.sameOrderedMembers(breadcrumbs, ['home', ...path])
+            expect(breadcrumbs).toEqual(['home', ...path])
         });
 
         it('Test breadcrumbs with 3 levels', async function () {
@@ -295,21 +292,21 @@ describe('Test FileDialog', function () {
             await navigateTo(path, this.fileDialog);
 
             const breadcrumbs = getBreadcrumbNames(this.fileDialog);
-            assert.sameOrderedMembers(breadcrumbs, ['home', ...path])
+            expect(breadcrumbs).toEqual(['home', ...path])
         });
 
         it('Test breadcrumbs with 4 levels', async function () {
             await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], this.fileDialog);
 
             const breadcrumbs = getBreadcrumbNames(this.fileDialog);
-            assert.sameOrderedMembers(breadcrumbs, ['home', '...', 'ttt_logs', 'tttl_temp'])
+            expect(breadcrumbs).toEqual(['home', '...', 'ttt_logs', 'tttl_temp'])
         });
 
         it('Test breadcrumbs with 5 levels', async function () {
             await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp', 'tttlt_temp'], this.fileDialog);
 
             const breadcrumbs = getBreadcrumbNames(this.fileDialog);
-            assert.sameOrderedMembers(breadcrumbs, ['home', '...', 'tttl_temp', 'tttlt_temp'])
+            expect(breadcrumbs).toEqual(['home', '...', 'tttl_temp', 'tttlt_temp'])
         });
     });
 
@@ -318,7 +315,7 @@ describe('Test FileDialog', function () {
         it('Test initial selection', async function () {
             await vueTicks();
 
-            assert.isNull(this.fileDialog.vm.selectedFile)
+            expect(this.fileDialog.vm.selectedFile).toBeNil()
         });
 
         it('Test select on click', async function () {
@@ -327,7 +324,7 @@ describe('Test FileDialog', function () {
             const filename = 'passwords.txt';
             triggerSingleClick(findFileElement(filename, this.fileDialog));
 
-            assert.equal(this.fileDialog.vm.selectedFile.name, filename);
+            expect(this.fileDialog.vm.selectedFile.name).toBe(filename)
         });
 
         it('Test select element', async function () {
@@ -339,8 +336,8 @@ describe('Test FileDialog', function () {
 
             const activeElement = findActiveFileElement(this.fileDialog);
 
-            assert.isNotNull(activeElement);
-            assert.equal(getFileElementName(activeElement), filename);
+            expect(activeElement).not.toBeNil()
+            expect(getFileElementName(activeElement)).toBe(filename)
         });
 
         it('Test select element on setChosenFile', async function () {
@@ -351,8 +348,8 @@ describe('Test FileDialog', function () {
 
             const activeElement = findActiveFileElement(this.fileDialog);
 
-            assert.isNotNull(activeElement);
-            assert.equal(getFileElementName(activeElement), filename);
+            expect(activeElement).not.toBeNil()
+            expect(getFileElementName(activeElement)).toBe(filename)
         });
 
         it('Test unselect element on setChosenFile([])', async function () {
@@ -363,7 +360,7 @@ describe('Test FileDialog', function () {
             await vueTicks();
 
             const activeElement = findActiveFileElement(this.fileDialog);
-            assert.isUndefined(activeElement);
+            expect(activeElement).toBeNil()
         });
 
         it('Test select element on setChosenFile, when not opened', async function () {
@@ -379,8 +376,8 @@ describe('Test FileDialog', function () {
 
             const activeElement = findActiveFileElement(this.fileDialog);
 
-            assert.isNotNull(activeElement);
-            assert.equal(getFileElementName(activeElement), filename);
+            expect(activeElement).not.toBeNil()
+            expect(getFileElementName(activeElement)).toBe(filename)
         });
     });
 });

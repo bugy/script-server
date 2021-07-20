@@ -1,7 +1,8 @@
 import {contains, forEachKeyValue, isEmptyArray, isEmptyValue} from '@/common/utils/common';
-import axios from 'axios';
 import clone from 'lodash/clone';
 import router from '../router/router'
+import {axiosInstance} from '@/common/utils/axios_utils';
+import {UPLOAD_MODE} from '@/admin/components/scripts-config/script-edit/ScriptEditDialog'
 
 const allowedEmptyValuesInParam = ['name'];
 
@@ -46,7 +47,7 @@ export default {
 
             commit('RESET', scriptName);
 
-            axios.get('admin/scripts/' + encodeURIComponent(scriptName))
+            axiosInstance.get('admin/scripts/' + encodeURIComponent(scriptName))
                 .then(({data}) => {
                     commit('SET_SCRIPT_CONFIG', {config: data.config, filename: data.filename});
                 })
@@ -56,20 +57,15 @@ export default {
         },
 
         save({dispatch, state}) {
-            const config = clone(state.scriptConfig);
             const oldName = state.scriptName;
+            const newName = state.scriptConfig.name;
 
-            removeEmptyValues(config);
+            const formData = prepareConfigForSave(state.scriptConfig, state.scriptFilename)
 
-            const axiosAction = state.new ? axios.post : axios.put;
+            const axiosAction = state.new ? axiosInstance.post : axiosInstance.put;
 
-            return axiosAction('admin/scripts', {
-                config,
-                filename: state.scriptFilename
-            })
+            return axiosAction('admin/scripts', formData)
                 .then(() => {
-                    const newName = config.name;
-
                     if (oldName === newName) {
                         dispatch('init', newName);
                     } else {
@@ -79,7 +75,7 @@ export default {
                     }
                 })
                 .catch(e => {
-                    if (e.response.status === 422) {
+                    if ((e.response.status === 422) || (e.response.status === 403)) {
                         e.userMessage = e.response.data;
                     }
                     throw e;
@@ -116,4 +112,22 @@ export default {
             state.error = null;
         }
     }
+}
+
+function prepareConfigForSave(scriptConfig, scriptFilename) {
+    const config = clone(scriptConfig);
+
+    removeEmptyValues(config);
+
+    const formData = new FormData()
+    if (config['script']['mode'] === UPLOAD_MODE) {
+        const uploadFile = config['script']['uploadFile']
+        formData.append('uploadedScript', uploadFile)
+        delete config['script']['uploadFile']
+    }
+
+    formData.append('config', JSON.stringify(config))
+    formData.append('filename', scriptFilename)
+
+    return formData
 }

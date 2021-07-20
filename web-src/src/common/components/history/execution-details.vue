@@ -7,7 +7,7 @@
       <readonly-field :value="fullStatus" class="readonly-field" title="Status"/>
       <readonly-field :value="command" class="long readonly-field" title="Command"/>
     </div>
-    <log-panel ref="logPanel" :autoscrollEnabled="false" class="log-panel"/>
+    <log-panel ref="logPanel" :autoscrollEnabled="false" :output-format="outputFormat" class="log-panel"/>
   </div>
 </template>
 
@@ -31,6 +31,7 @@ export default {
       startTime: '',
       fullStatus: '',
       command: '',
+      outputFormat: '',
       mounted: false
     };
   },
@@ -64,6 +65,7 @@ export default {
         this.startTime = selectedExecution.startTimeString;
         this.fullStatus = selectedExecution.fullStatus;
         this.command = selectedExecution.command;
+        this.outputFormat = selectedExecution.outputFormat;
         this.setLog(selectedExecution.log);
 
       } else {
@@ -72,6 +74,7 @@ export default {
         this.startTime = '';
         this.fullStatus = '';
         this.command = '';
+        this.outputFormat = null
         this.setLog('');
       }
     }

@@ -3,14 +3,16 @@ import '@/common/materializecss/imports/cards';
 import '@/common/materializecss/imports/input-fields';
 import '@/common/style_imports';
 import '@/common/style_imports.js';
+import get from 'lodash/get'
+import {axiosInstance} from '@/common/utils/axios_utils'
 import {
     addClass,
-    callHttp,
     contains,
     createTemplateElement,
     getQueryParameter,
     getUnparameterizedUrl,
     guid,
+    logError,
     removeClass,
     toQueryArgs
 } from '@/common/utils/common';
@@ -24,10 +26,9 @@ var loginUrl = 'login';
 window.onload = onLoad;
 
 function onLoad() {
-    callHttp('auth/config', null, 'GET', function (configResponse) {
-        var loginContainer = document.getElementById('login-content-container');
+    axiosInstance.get('auth/config').then(({data: config}) => {
+        const loginContainer = document.getElementById('login-content-container');
 
-        var config = JSON.parse(configResponse);
         if (config['type'] === 'google_oauth') {
             setupGoogleOAuth(loginContainer, config);
         } else if (config['type'] === 'gitlab') {
@@ -35,7 +36,7 @@ function onLoad() {
         } else {
             setupCredentials(loginContainer);
         }
-    });
+    })
 }
 
 function setupCredentials(loginContainer) {
@@ -153,7 +154,6 @@ function getLoginButton() {
 }
 
 function sendLoginRequest(formData) {
-    var request;
 
     var nextUrl = getQueryParameter(NEXT_URL_KEY);
     var nextUrlFragment = window.location.hash;
@@ -162,12 +162,12 @@ function sendLoginRequest(formData) {
         formData.append(NEXT_URL_KEY, nextUrl);
     }
 
-    var onSuccess = function () {
+    const onSuccess = function (response) {
         hideError();
         hideInfo();
         getLoginButton().removeAttribute('disabled');
 
-        var redirect = request.getResponseHeader('Location');
+        var redirect = response.headers['location']
         if (!redirect) {
             showError('Invalid server response. Please contact the administrator');
             return;
@@ -180,15 +180,18 @@ function sendLoginRequest(formData) {
         window.location = redirect;
     };
 
-    var onError = function (errorCode, errorText) {
+    const onError = function (error) {
+        const status = get(error, 'response.status');
+
         const loginButton = getLoginButton();
         loginButton.removeAttribute('disabled');
 
-        if (contains([400, 401, 403, 500], errorCode)) {
-            showError(errorText);
+        if (contains([400, 401, 403, 500], status)) {
+            showError(error.response.data);
 
         } else {
             showError('Unknown error occurred. Please contact the administrator');
+            logError(error)
         }
     };
 
@@ -197,7 +200,9 @@ function sendLoginRequest(formData) {
     const loginButton = getLoginButton();
     loginButton.setAttribute('disabled', 'disabled');
 
-    request = callHttp(loginUrl, formData, loginMethod, onSuccess, onError);
+    axiosInstance.post(loginUrl, formData, {maxRedirects: 0})
+        .then(onSuccess)
+        .catch(onError)
 }
 
 function showError(text) {
