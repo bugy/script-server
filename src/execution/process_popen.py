@@ -32,7 +32,8 @@ class POpenProcessWrapper(process_base.ProcessWrapper):
         if os_utils.is_win():
             (command, shell) = prepare_cmd_for_win(command)
 
-        env_variables = dict(os.environ, **self.env_variables)
+        env_variables = self.prepare_env_variables()
+
         self.process = subprocess.Popen(command,
                                         cwd=working_directory,
                                         stdin=subprocess.PIPE,

@@ -37,7 +37,7 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
     def start_execution(self, command, working_directory):
         master, slave = pty.openpty()
 
-        env_variables = dict(os.environ, **self.env_variables)
+        env_variables = self.prepare_env_variables()
 
         self.process = subprocess.Popen(command,
                                         cwd=working_directory,

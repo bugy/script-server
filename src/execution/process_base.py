@@ -1,10 +1,9 @@
 import abc
+import logging
 import os
 import signal
 import subprocess
 import threading
-
-import logging
 
 from react.observable import ReplayObservable
 from utils import os_utils
@@ -34,6 +33,12 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
 
         self.notify_finish_thread = threading.Thread(target=self.notify_finished)
         self.notify_finish_thread.start()
+
+    def prepare_env_variables(self):
+        env_variables = dict(os.environ, **self.env_variables)
+        if 'PYTHONUNBUFFERED' not in env_variables:
+            env_variables['PYTHONUNBUFFERED'] = '1'
+        return env_variables
 
     @abc.abstractmethod
     def pipe_process_output(self):
