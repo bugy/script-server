@@ -1,11 +1,13 @@
-from common.pages import VeryParametrizedScript
-import allure
-from common.pages import is_displayed, is_enabled, get_parent_element, get_underline_error_text, get_hidden_values_of_list, get_visible_values_of_list
-from delayed_assert import expect, assert_expectations
-from allure import severity, severity_level
-import string
 import random
+import string
 import sys
+
+import allure
+from allure import severity, severity_level
+from common.pages import VeryParametrizedScript
+from common.pages import is_displayed, is_enabled, get_underline_error_text, get_hidden_values_of_list, \
+    get_visible_values_of_list
+from delayed_assert import expect, assert_expectations
 from selenium.webdriver.common.keys import Keys
 
 search_request = "lo"
@@ -165,18 +167,26 @@ def test_input_key_text_in_simple_text(browser, config_host):
 def test_input_text_in_inc_params(browser, config_host):
     very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
 
-    random_srting1 = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(0, 254)))
-    very_parametrized_script_page.parameter_inc_param1.send_keys(random_srting1)
-    random_srting2 = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(0, 254)))
-    very_parametrized_script_page.parameter_inc_param2.send_keys(random_srting2)
-    expect(very_parametrized_script_page.parameter_inc_param1.get_attribute('value') == str(random_srting1), "Field text is not equal to input")
-    expect(get_underline_error_text(very_parametrized_script_page.parameter_inc_param1) == "", "Underline text error is not empty: " + str(get_underline_error_text(very_parametrized_script_page.parameter_inc_param1)))
+    random_string1 = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 254)))
+    very_parametrized_script_page.parameter_inc_param1.send_keys(random_string1)
+    random_string2 = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 254)))
+    very_parametrized_script_page.parameter_inc_param2.send_keys(random_string2)
+    expect(very_parametrized_script_page.parameter_inc_param1.get_attribute('value') == str(random_string1),
+           "Field text is not equal to input")
+    expect(get_underline_error_text(very_parametrized_script_page.parameter_inc_param1) == "",
+           "Underline text error is not empty: " + str(
+               get_underline_error_text(very_parametrized_script_page.parameter_inc_param1)))
     very_parametrized_script_page.parameter_inc_param1.send_keys(Keys.ENTER)
-    expect(very_parametrized_script_page.parameter_inc_param1.get_attribute("class") == "validate valid", "Class is not valid")
-    expect(very_parametrized_script_page.parameter_inc_param2.get_attribute('value') == str(random_srting2), "Field text is not equal to input")
-    expect(get_underline_error_text(very_parametrized_script_page.parameter_inc_param2) == "", "Underline text error is not empty: " + str(get_underline_error_text(very_parametrized_script_page.parameter_inc_param2)))
+    expect(very_parametrized_script_page.parameter_inc_param1.get_attribute("class") == "validate valid",
+           "Class is not valid")
+    expect(very_parametrized_script_page.parameter_inc_param2.get_attribute('value') == str(random_string2),
+           "Field text is not equal to input")
+    expect(get_underline_error_text(very_parametrized_script_page.parameter_inc_param2) == "",
+           "Underline text error is not empty: " + str(
+               get_underline_error_text(very_parametrized_script_page.parameter_inc_param2)))
     very_parametrized_script_page.parameter_inc_param2.send_keys(Keys.ENTER)
-    expect(very_parametrized_script_page.parameter_inc_param2.get_attribute("class") == "validate valid", "Class is not valid")
+    expect(very_parametrized_script_page.parameter_inc_param2.get_attribute("class") == "validate valid",
+           "Class is not valid")
 
     assert_expectations()
 
