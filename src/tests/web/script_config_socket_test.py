@@ -231,7 +231,8 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         test_utils.write_script_config(
             {
                 'parameters': [
-                    test_utils.create_script_param_config('included text 2')
+                    test_utils.create_script_param_config('included constant', constant=True, default='abc'),
+                    test_utils.create_script_param_config('included text 2'),
                 ]},
             'included')
 
