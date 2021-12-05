@@ -1,6 +1,6 @@
 {
   "name": "script-server",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "private": true,
   "dependencies": {
     "ace-builds": "^1.4.12",
