@@ -9,6 +9,7 @@ from common.pages import is_displayed, is_enabled, get_underline_error_text, get
     get_visible_values_of_list
 from delayed_assert import expect, assert_expectations
 from selenium.webdriver.common.keys import Keys
+import time
 
 search_request = "lo"
 
@@ -261,5 +262,36 @@ def test_check_search_results_in_command_based_list(browser, config_host):
     very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
     for element in get_visible_values_of_list(very_parametrized_script_page.command_based_list):
         expect(str(element.text).find(search_request) > -1)
+
+    assert_expectations()
+
+
+@severity(severity_level.NORMAL)
+@allure.title("Check Multiple selection")
+def test_check_multiple_selection(browser, config_host):
+    very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
+    very_parametrized_script_page.parameter_multiple_selection.click()
+
+    expect(is_displayed(very_parametrized_script_page.parameter_multiple_selection_drop_down), "Drop down for Multiple selection not found after click")
+    assert_expectations()
+
+
+@severity(severity_level.NORMAL)
+@allure.title("Check Multiple selection check/uncheck action")
+def test_check_multiple_selection_check_uncheck_action(browser, config_host):
+    very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
+
+    if len(very_parametrized_script_page.parameter_multiple_selection_drop_down_checked_elements) > 0:
+        random_option = random.choice(very_parametrized_script_page.parameter_multiple_selection_drop_down_checked_elements)
+        random_option.click()
+        expect("selected" not in random_option.get_attribute("class").split(" "), "Checked options stays selected after click on it")
+        random_option.click()
+        expect("selected" in random_option.get_attribute("class").split(" "), "Unchecked options stays not selected after click on it")
+    if len(very_parametrized_script_page.parameter_multiple_selection_drop_down_unchecked_elements) > 0:
+        random_option = random.choice(very_parametrized_script_page.parameter_multiple_selection_drop_down_unchecked_elements)
+        random_option.click()
+        expect("selected" in random_option.get_attribute("class").split(" "), "Unchecked options stays not selected after click on it")
+        random_option.click()
+        expect("selected" not in random_option.get_attribute("class").split(" "), "Checked options stays selected after click on it")
 
     assert_expectations()
