@@ -82,6 +82,7 @@ def create_version_file():
         new_version += '.' + str(npm_version[1] + 1)
         new_version += '.0-'
         new_version += current_branch + '@' + git_hash
+    print('version.txt version: ' + new_version + ', current_branch: ' + current_branch)
     file_utils.write_file(VERSION_FILE, new_version)
 
 
