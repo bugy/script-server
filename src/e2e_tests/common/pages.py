@@ -54,14 +54,15 @@ def get_parent_element(element):
 
 def get_visible_values_of_list(element):
     try:
-        return get_parent_element(element).find_elements_by_css_selector("li:not([class*=\"header\"]):not(.search-hidden)")
+        return get_parent_element(element).find_element(By.CSS_SELECTOR,
+                                                        "li:not([class*=\"header\"]):not(.search-hidden)")
     except (NoSuchElementException, ElementNotInteractableException):
         return None
 
 
 def get_hidden_values_of_list(element):
     try:
-        return get_parent_element(element).find_elements_by_css_selector("li:not([class*=\"header\"]).search-hidden")
+        return get_parent_element(element).find_element(By.CSS_SELECTOR, "li:not([class*=\"header\"]).search-hidden")
     except (NoSuchElementException, ElementNotInteractableException):
         return None
 
@@ -86,7 +87,7 @@ class Page(ABC):
 
     @property
     def all_script_links(self):
-        return self.browser.find_elements_by_css_selector("a.collection-item.script-list-item")
+        return self.browser.find_element(By.CSS_SELECTOR, "a.collection-item.script-list-item")
 
     def get_script_link_by_name(self, name):
         try:
@@ -104,7 +105,7 @@ class Page(ABC):
 
     def get_scripts_inside_group(self, group_link):
         try:
-            return get_parent_element(group_link).find_elements_by_css_selector("a")
+            return get_parent_element(group_link).find_element(By.CSS_SELECTOR, "a")
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
@@ -197,7 +198,7 @@ class Page(ABC):
 
     @property
     def executor_tabs(self):
-        return self.browser.find_elements_by_css_selector(".tab.executor-tab")
+        return self.browser.find_element(By.CSS_SELECTOR, ".tab.executor-tab")
 
     @property
     def active_executor_tab(self):
@@ -242,7 +243,7 @@ class VeryParametrizedScript(Page):
 
     @property
     def parameter_simple_list_drop_down_elements(self):
-        return self.parameter_simple_list_drop_down.find_elements_by_css_selector("li[id^=\"select-options\"]")
+        return self.parameter_simple_list_drop_down.find_element(By.CSS_SELECTOR, "li[id^=\"select-options\"]")
 
     @property
     def parameter_file_upload(self):
@@ -266,7 +267,7 @@ class VeryParametrizedScript(Page):
 
     @property
     def parameter_required_list_drop_down_elements(self):
-        return self.parameter_required_list.find_elements_by_css_selector("li[id^=\"select-options\"]")
+        return self.parameter_required_list.find_element(By.CSS_SELECTOR, "li[id^=\"select-options\"]")
 
     @property
     def parameter_constrained_int(self):
