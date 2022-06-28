@@ -1,12 +1,14 @@
+import random
 import time
 from abc import ABC
-import conftest
-import random
 
-from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException, TimeoutException
+import conftest
+from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, \
+    StaleElementReferenceException, TimeoutException
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+
 
 def is_displayed(element):
     try:
@@ -44,7 +46,7 @@ def is_disabled(element):
 
 def get_parent_element(element):
     try:
-        return element.find_element_by_xpath('..')
+        return element.find_element('xpath', '..')
     except (NoSuchElementException, ElementNotInteractableException):
         return None
 
@@ -65,7 +67,7 @@ def get_hidden_values_of_list(element):
 
 def get_underline_error_text(element):
     try:
-        return str(element.find_element_by_xpath("..").get_attribute("data-error"))
+        return str(element.find_element('xpath', "..").get_attribute("data-error"))
     except (NoSuchElementException, ElementNotInteractableException):
         return None
 
@@ -93,7 +95,9 @@ class Page(ABC):
 
     def get_scripts_group_by_name(self, name):
         try:
-            return self.browser.find_element_by_xpath("//span[contains(text(), '{}')]/parent::a[contains(@class,'collection-item')][contains(@class,'script-group')]".format(name))
+            return self.browser.find_element('xpath',
+                                             "//span[contains(text(), '{}')]/parent::a[contains(@class,'collection-item')][contains(@class,'script-group')]".format(
+                                                 name))
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
@@ -117,7 +121,8 @@ class Page(ABC):
 
     def find_input_by_label(self, label):
         try:
-            return self.browser.find_element_by_xpath("//label[contains(text(), '{}')]/parent::div//input".format(label))
+            return self.browser.find_element('xpath',
+                                             "//label[contains(text(), '{}')]/parent::div//input".format(label))
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
