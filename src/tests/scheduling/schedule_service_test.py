@@ -7,11 +7,13 @@ from unittest import TestCase
 from unittest.mock import patch, ANY, MagicMock
 
 from auth.user import User
+from config.config_service import ConfigService
 from scheduling import schedule_service
 from scheduling.schedule_config import ScheduleConfig, InvalidScheduleException
 from scheduling.schedule_service import ScheduleService, InvalidUserException, UnavailableScriptException
 from scheduling.scheduling_job import SchedulingJob
 from tests import test_utils
+from tests.test_utils import AnyUserAuthorizer
 from utils import date_utils, audit_utils, file_utils
 
 mocked_now = date_utils.parse_iso_datetime('2020-07-24T12:30:59.000000Z')
@@ -40,13 +42,14 @@ class ScheduleServiceTestCase(TestCase):
                                  schedule_method_job_arg.as_serializable_dict())
 
     def mock_schedule_model_with_secure_param(self):
-        model = test_utils.create_config_model('some-name', parameters=[{'name': 'p1', 'secure': True}])
-        model.schedulable = True
-
-        self.config_service.load_config_model.side_effect = lambda a, b, c: model
+        self.create_config('secure-config', parameters=[
+            {'name': 'p1', 'secure': True},
+            {'name': 'param_2', 'type': 'multiselect', 'values': ['hello', 'world', '1', '2', '3']},
+        ])
 
     def setUp(self) -> None:
         super().setUp()
+        test_utils.setup()
 
         self.patcher = patch('sched.scheduler')
         self.scheduler_mock = MagicMock()
@@ -55,11 +58,10 @@ class ScheduleServiceTestCase(TestCase):
         schedule_service._sleep = MagicMock()
         schedule_service._sleep.side_effect = lambda x: time.sleep(0.001)
 
-        self.unschedulable_scripts = set()
-        self.config_service = MagicMock()
-        self.config_service.load_config_model.side_effect = lambda name, b, c: test_utils.create_config_model(
-            name,
-            schedulable=name not in self.unschedulable_scripts)
+        self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder)
+
+        self.create_config('my_script_A')
+        self.create_config('unschedulable-script', scheduling_enabled=False)
 
         self.execution_service = MagicMock()
 
@@ -67,7 +69,21 @@ class ScheduleServiceTestCase(TestCase):
 
         date_utils._mocked_now = mocked_now
 
-        test_utils.setup()
+    def create_config(self, name, scheduling_enabled=True, parameters=None):
+        if parameters is None:
+            parameters = [
+                {'name': 'p1'},
+                {'name': 'param_2', 'type': 'multiselect', 'values': ['hello', 'world', '1', '2', '3']},
+            ]
+
+        test_utils.write_script_config(
+            {
+                'name': name,
+                'script_path': 'echo 1',
+                'parameters': parameters,
+                'scheduling': {'enabled': scheduling_enabled}
+            },
+            name)
 
     def tearDown(self) -> None:
         super().tearDown()
@@ -98,11 +114,14 @@ class TestScheduleServiceCreateJob(ScheduleServiceTestCase):
         jobs = []
 
         for i in range(1, 3):
+            script_name = 'script-' + str(i)
+            self.create_config(script_name)
+
             job_prototype = create_job(
                 user_id='user-' + str(i),
-                script_name='script-' + str(i),
+                script_name=script_name,
                 repeatable=i % 2 == 1,
-                parameter_values={'p1': 'hi', 'p2': i})
+                parameter_values={'p1': 'hi', 'param_2': [str(i)]})
             job_id = self.call_create_job(job_prototype)
 
             self.assertEqual(str(i), job_id)
@@ -121,8 +140,7 @@ class TestScheduleServiceCreateJob(ScheduleServiceTestCase):
             'abc', {}, {}, None)
 
     def test_create_job_when_not_schedulable(self):
-        job_prototype = create_job()
-        self.unschedulable_scripts.add('my_script_A')
+        job_prototype = create_job(script_name='unschedulable-script')
 
         self.assertRaisesRegex(
             UnavailableScriptException,
@@ -133,11 +151,11 @@ class TestScheduleServiceCreateJob(ScheduleServiceTestCase):
     def test_create_job_when_secure(self):
         self.mock_schedule_model_with_secure_param()
 
-        job_prototype = create_job()
+        job_prototype = create_job(script_name='secure-config')
 
         self.assertRaisesRegex(
             UnavailableScriptException,
-            'Script contains secure parameters',
+            'secure-config is not schedulable',
             self.call_create_job,
             job_prototype)
 
@@ -306,12 +324,11 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
 
     def test_execute_when_not_schedulable(self):
         job = create_job(id=1,
+                         script_name='unschedulable-script',
                          repeatable=True,
                          start_datetime=mocked_now - timedelta(seconds=1),
                          repeat_unit='days',
                          repeat_period=1)
-
-        self.unschedulable_scripts.add(job.script_name)
 
         self.schedule_service._execute_job(job)
 

@@ -84,7 +84,8 @@ class ScheduleService:
 
         id = self._id_generator.next_id()
 
-        job = SchedulingJob(id, user, schedule_config, script_name, parameter_values)
+        normalized_values = dict(config_model.parameter_values)
+        job = SchedulingJob(id, user, schedule_config, script_name, normalized_values)
 
         self.save_job(job)
 

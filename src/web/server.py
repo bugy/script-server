@@ -380,24 +380,21 @@ class ScriptExecute(StreamUploadRequestHandler):
                 for key, value in self.form_reader.files.items():
                     parameter_values[key] = value.path
 
-            try:
-                config_model.set_all_param_values(parameter_values)
-                normalized_values = dict(config_model.parameter_values)
-            except InvalidValueException as e:
-                message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
-                LOGGER.error(message)
-                respond_error(self, 400, message)
-                return
-
             all_audit_names = user.audit_names
             LOGGER.info('Calling script %s. User %s', script_name, all_audit_names)
 
             execution_id = self.application.execution_service.start_script(
                 config_model,
-                normalized_values,
+                parameter_values,
                 user)
 
             self.write(str(execution_id))
+
+        except InvalidValueException as e:
+            message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
+            LOGGER.error(message)
+            respond_error(self, 422, message)
+            return
 
         except ConfigNotAllowedException:
             LOGGER.warning('Access to the script "' + script_name + '" is denied for ' + audit_name)

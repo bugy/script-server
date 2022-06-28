@@ -284,9 +284,11 @@ class ParameterModel(object):
         value_string = self.value_to_repr(value)
 
         if self.no_value:
-            if value not in ['true', True, 'false', False]:
-                return 'should be boolean, but has value ' + value_string
-            return None
+            if isinstance(value, bool):
+                return None
+            if isinstance(value, str) and value.lower() in ['true', 'false']:
+                return None
+            return 'should be boolean, but has value ' + value_string
 
         if self.type == 'text':
             if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
