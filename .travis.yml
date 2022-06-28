@@ -1,6 +1,6 @@
 if: tag IS blank
 sudo: required
-dist: bionic
+dist: focal
 language: node_js
 node_js:
   - '15'
