@@ -5,6 +5,7 @@ from abc import ABC
 import conftest
 from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, \
     StaleElementReferenceException, TimeoutException
+from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
@@ -113,9 +114,9 @@ class Page(ABC):
     def find_element(self, selector, parent=None):
         try:
             if parent is not None:
-                return parent.find_element_by_css_selector(selector)
+                return parent.find_element(By.CSS_SELECTOR, selector)
             else:
-                return self.browser.find_element_by_css_selector(selector)
+                return self.browser.find_element(By.CSS_SELECTOR, selector)
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
