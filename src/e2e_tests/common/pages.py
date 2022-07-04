@@ -2,13 +2,14 @@ import random
 import time
 from abc import ABC
 
-import conftest
 from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, \
     StaleElementReferenceException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+
+import conftest
 
 
 def is_displayed(element):
@@ -91,15 +92,15 @@ class Page(ABC):
 
     def get_script_link_by_name(self, name):
         try:
-            return self.browser.find_element_by_link_text(name)
+            return self.browser.find_element(By.LINK_TEXT, name)
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
     def get_scripts_group_by_name(self, name):
         try:
-            return self.browser.find_elements('xpath',
-                                              "//span[contains(text(), '{}')]/parent::a[contains(@class,'collection-item')][contains(@class,'script-group')]".format(
-                                                  name))
+            return self.browser.find_element(By.XPATH,
+                                             "//span[contains(text(), '{}')]/parent::a[contains(@class,'collection-item')][contains(@class,'script-group')]".format(
+                                                 name))
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
@@ -290,12 +291,29 @@ class VeryParametrizedScript(Page):
         return self.find_input_by_label('Command-based list')
 
     @property
+    def parameter_list_with_search(self):
+        return self.find_input_by_label('List with search')
+
+    @property
     def command_based_list(self):
         return self.find_element("ul[id^=\"select-options\"]", get_parent_element(self.parameter_command_based_list))
 
     @property
-    def search_field_in_command_based_list(self):
-        return self.find_element("div.input-field.combobox-search input", get_parent_element(self.parameter_command_based_list))
+    def command_based_list_elements(self):
+        return self.command_based_list.find_elements(By.CSS_SELECTOR, 'li')
+
+    @property
+    def parameter_list_with_search_list(self):
+        return self.find_element("ul[id^=\"select-options\"]", get_parent_element(self.parameter_list_with_search))
+
+    @property
+    def parameter_list_with_search_elements(self):
+        return self.parameter_list_with_search_list.find_elements(By.CSS_SELECTOR, 'li')
+
+    @property
+    def search_field_in_list_with_search(self):
+        return self.find_element("div.input-field.combobox-search input",
+                                 get_parent_element(self.parameter_list_with_search))
 
     @property
     def parameter_secure_int(self):

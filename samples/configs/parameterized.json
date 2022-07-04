@@ -115,6 +115,28 @@
       }
     },
     {
+      "name": "List with search",
+      "param": "--lws",
+      "type": "list",
+      "values": [
+        "Apples",
+        "Blueberries",
+        "Bananas",
+        "Oranges",
+        "Dragon fruit",
+        "Mango",
+        "Avocado",
+        "Lychee",
+        "Pineapple",
+        "Strawberries",
+        "Durian",
+        "Cherries",
+        "Olives",
+        "Watermelon",
+        "Kiwi"
+      ]
+    },
+    {
       "name": "Secure Int",
       "type": "int",
       "description": "Parameter Nine",
