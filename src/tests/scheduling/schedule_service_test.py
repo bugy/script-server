@@ -64,12 +64,13 @@ class ScheduleServiceTestCase(TestCase):
         self.create_config('unschedulable-script', scheduling_enabled=False)
 
         self.execution_service = MagicMock()
+        self.execution_service.start_script.side_effect = lambda config, values, user: time.time_ns()
 
         self.schedule_service = ScheduleService(self.config_service, self.execution_service, test_utils.temp_folder)
 
         date_utils._mocked_now = mocked_now
 
-    def create_config(self, name, scheduling_enabled=True, parameters=None):
+    def create_config(self, name, scheduling_enabled=True, parameters=None, auto_cleanup=False):
         if parameters is None:
             parameters = [
                 {'name': 'p1'},
@@ -81,7 +82,7 @@ class ScheduleServiceTestCase(TestCase):
                 'name': name,
                 'script_path': 'echo 1',
                 'parameters': parameters,
-                'scheduling': {'enabled': scheduling_enabled}
+                'scheduling': {'enabled': scheduling_enabled, 'auto_cleanup': auto_cleanup}
             },
             name)
 
@@ -295,6 +296,7 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
 
         self.execution_service.start_script.assert_called_once_with(
             ANY, job.parameter_values, job.user)
+        self.execution_service.add_finish_listener.assert_not_called()
         self.assert_schedule_calls([])
 
     def test_execute_repeatable_job(self):
@@ -308,6 +310,7 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
 
         self.execution_service.start_script.assert_called_once_with(
             ANY, job.parameter_values, job.user)
+        self.execution_service.add_finish_listener.assert_not_called()
         self.assert_schedule_calls([(job, mocked_now_epoch + 86399)])
 
     def test_execute_when_fails(self):
@@ -337,6 +340,7 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
 
     def test_execute_when_has_secure_parameters(self):
         job = create_job(id=1,
+                         script_name='secure-config',
                          repeatable=True,
                          start_datetime=mocked_now - timedelta(seconds=1),
                          repeat_unit='days',
@@ -348,6 +352,34 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
 
         self.execution_service.start_script.assert_not_called()
         self.assert_schedule_calls([(job, mocked_now_epoch + 86399)])
+
+    def test_cleanup_execution(self):
+        self.create_config('script_with_cleanup', auto_cleanup=True)
+        job = create_job(id=1,
+                         script_name='script_with_cleanup',
+                         repeatable=False,
+                         start_datetime=mocked_now - timedelta(seconds=1))
+
+        finish_callback = None
+
+        def add_finish_listener(callback_param, execution_id):
+            self.assertIsNotNone(execution_id)
+            nonlocal finish_callback
+            finish_callback = callback_param
+
+        self.execution_service.add_finish_listener.side_effect = add_finish_listener
+
+        self.schedule_service._execute_job(job)
+
+        self.execution_service.start_script.assert_called_once_with(
+            ANY, job.parameter_values, job.user)
+        self.execution_service.cleanup_execution.assert_not_called()
+        self.assertIsNotNone(finish_callback)
+
+        # noinspection PyCallingNonCallable
+        finish_callback()
+
+        self.execution_service.cleanup_execution.assert_called_once_with(ANY, job.user)
 
 
 def create_job(id=None,

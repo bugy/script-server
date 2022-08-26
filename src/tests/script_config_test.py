@@ -913,6 +913,29 @@ class SchedulableConfigTest(unittest.TestCase):
 
         self.assertFalse(config_model.schedulable)
 
+    @parameterized.expand([
+        (True, True, [], True),
+        (False, True, [], True),
+        (True, False, [], False),
+        (False, False, [], False),
+        (True, True, ['test'], True),
+        (True, False, ['test'], False),
+        (True, None, [], True),
+        (False, None, [], True),
+        (True, None, ['test'], False),
+    ])
+    def test_auto_cleanup(self, scheduling_enabled, auto_cleanup, output_files, expected_result):
+        config = {
+            'scheduling': {'enabled': scheduling_enabled},
+            'output_files': output_files
+        }
+        if auto_cleanup is not None:
+            config['scheduling']['auto_cleanup'] = auto_cleanup
+
+        config_model = _create_config_model('some-name', config=config)
+
+        self.assertEqual(config_model.scheduling_auto_cleanup, expected_result)
+
     def tearDown(self) -> None:
         test_utils.cleanup()
 

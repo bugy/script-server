@@ -128,6 +128,12 @@ class ScheduleService:
 
             execution_id = self._execution_service.start_script(config, parameter_values, user)
             LOGGER.info('Started script #' + str(execution_id) + ' for ' + job.get_log_name())
+
+            if config.scheduling_auto_cleanup:
+                def cleanup():
+                    self._execution_service.cleanup_execution(execution_id, user)
+
+                self._execution_service.add_finish_listener(cleanup, execution_id)
         except:
             LOGGER.exception('Failed to execute ' + job.get_log_name())
 

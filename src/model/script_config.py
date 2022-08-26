@@ -1,4 +1,4 @@
-import json
+import logging
 import logging
 import os
 import re
@@ -56,6 +56,7 @@ class ConfigModel:
         self._username = username
         self._audit_name = audit_name
         self.schedulable = False
+        self.scheduling_auto_cleanup = True
 
         self.parameters = ObservableList()
         self.parameter_values = ObservableDict()
@@ -179,8 +180,11 @@ class ConfigModel:
 
         self.output_files = config.get('output_files', [])
 
-        if config.get('scheduling'):
-            self.schedulable = read_bool_from_config('enabled', config.get('scheduling'), default=False)
+        scheduling_config = config.get('scheduling')
+        if scheduling_config:
+            self.schedulable = read_bool_from_config('enabled', scheduling_config, default=False)
+            self.scheduling_auto_cleanup = read_bool_from_config(
+                'auto_cleanup', scheduling_config, default=not bool(self.output_files))
 
         if not self.script_command:
             raise Exception('No script_path is specified for ' + self.name)
