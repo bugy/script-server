@@ -10,7 +10,7 @@ from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
 from model.script_config import get_sorted_config
-from utils import os_utils, file_utils, process_utils, custom_json
+from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
 from utils.string_utils import is_blank, strip
 
@@ -170,7 +170,10 @@ class ConfigService:
 
         def load_script(path, content):
             try:
-                json_object = custom_json.loads(content)
+                if path.endswith('.yaml'):
+                    json_object = custom_yaml.loads(content)
+                else:
+                    json_object = custom_json.loads(content)
                 short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
@@ -205,7 +208,7 @@ class ConfigService:
         configs_dir = self._script_configs_folder
         files = os.listdir(configs_dir)
 
-        configs = [file for file in files if file.lower().endswith(".json")]
+        configs = [file for file in files if file.lower().endswith(".json") or file.lower().endswith(".yaml")]
 
         result = []
 
@@ -231,7 +234,10 @@ class ConfigService:
     def _find_config(self, name) -> Union[ConfigSearchResult, None]:
         def find_and_load(path, content):
             try:
-                json_object = custom_json.loads(content)
+                if path.endswith('.yaml'):
+                    json_object = custom_yaml.loads(content)
+                else:
+                    json_object = custom_json.loads(content)
                 short_config = script_config.read_short(path, json_object)
 
                 if short_config is None:
