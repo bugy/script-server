@@ -3,7 +3,7 @@
 import ParamListItem from '@/admin/components/scripts-config/ParamListItem';
 import ScriptParamList from '@/admin/components/scripts-config/ScriptParamList';
 import {hasClass} from '@/common/utils/common';
-import {createVue, timeout, triggerSingleClick, vueTicks} from '../test_utils';
+import {createScriptServerTestVue, createVue, timeout, triggerSingleClick, vueTicks} from '../test_utils';
 import {setValueByUser} from './ParameterConfigForm_test';
 
 
@@ -14,19 +14,22 @@ describe('Test ScriptParamList', function () {
     beforeEach(async function () {
         errors = [];
 
-        list = createVue(ScriptParamList, {
-            parameters: [
-                {
-                    'name': 'param 1',
-                    'description': 'some description'
-                },
-                {
-                    'name': 'param 2'
-                },
-                {
-                    'name': 'param 3'
-                }]
-        });
+        list = createVue(
+            ScriptParamList, {
+                parameters: [
+                    {
+                        'name': 'param 1',
+                        'description': 'some description'
+                    },
+                    {
+                        'name': 'param 2'
+                    },
+                    {
+                        'name': 'param 3'
+                    }]
+            },
+            null,
+            createScriptServerTestVue());
         await list.$nextTick();
     });
 
@@ -74,6 +77,9 @@ describe('Test ScriptParamList', function () {
 
     async function clickParamAction(paramName, action) {
         const item = findParamItem(paramName);
+        console.log('Found item for ' + paramName) // TODO remove
+        console.log(item) // TODO remove
+
         const button = getButton(item, action);
         triggerSingleClick(button);
 
