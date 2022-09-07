@@ -6,7 +6,7 @@ import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
 import {isBlankString, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {attachToDocument, setChipListValue, vueTicks} from '../test_utils';
+import {attachToDocument, createScriptServerTestVue, setChipListValue, vueTicks} from '../test_utils';
 import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
 
 export async function setValueByUser(form, parameterName, value) {
@@ -69,6 +69,7 @@ describe('Test ParameterConfigForm', function () {
         errors = [];
 
         form = mount(ParameterConfigForm, {
+            localVue: createScriptServerTestVue(),
             attachTo: attachToDocument(),
             sync: false,
             propsData: {
