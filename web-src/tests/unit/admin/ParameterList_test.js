@@ -72,22 +72,18 @@ describe('Test ScriptParamList', function () {
     }
 
     function getButton(item, buttonName) {
-        return $(item.$el).find('a:has(i:contains(' + buttonName + '))').get(0);
+        let icon = $(item.$el)
+            .find('a i')
+            .filter((index, elem) => elem.innerHTML.trim() === buttonName)
+            .get(0)
+
+        return icon.parentNode;
     }
 
     async function clickParamAction(paramName, action) {
         const item = findParamItem(paramName);
-        console.log('Found item for ' + paramName + ': ' + (!!item)) // TODO remove
-        console.log(item.$el.innerHTML) // TODO remove
-
-        let button2 = $(item.$el)
-            .find('a i')
-            .filter((index, elem) => elem.innerHTML.trim() === action)
-            .get(0);
-
+        
         const button = getButton(item, action);
-        console.log('Found button ' + action + ' for ' + paramName + ': ' + (!!button)) // TODO remove
-        console.log('Found button2 ' + action + ' for ' + paramName + ': ' + (!!button2)) // TODO remove
         triggerSingleClick(button);
 
         await vueTicks();
