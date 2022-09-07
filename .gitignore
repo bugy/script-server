@@ -79,3 +79,4 @@ web-src/geckodriver.log
 
 venv/
 /venv2/
+e2e_venv/

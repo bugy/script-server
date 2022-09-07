@@ -73,7 +73,7 @@
                  title="Excluded files"
                  @error="handleError('Excluded files', $event)"/>
     </div>
-    <div v-if="selectedType === 'text' || selectedType === undefined" class="row">
+    <div v-if="selectedType === 'text' || selectedType === undefined || selectedType === 'multiline_text'" class="row">
       <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
                  @error="handleError(maxLengthField, $event)"/>
     </div>

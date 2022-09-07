@@ -167,6 +167,12 @@ class ParameterModelInitTest(unittest.TestCase):
             'type': 'Ipv6'})
         self.assertEqual('ip6', parameter_model.type)
 
+    def test_multiline_text(self):
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'multiline_text'})
+        self.assertEqual('multiline_text', parameter_model.type)
+
     def tearDown(self):
         super().tearDown()
 
@@ -341,8 +347,9 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value(None)
         self.assertIsNone(error)
 
-    def test_string_parameter_when_value(self):
-        parameter = create_parameter_model('param')
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_value(self, param_type):
+        parameter = create_parameter_model('param', type=param_type)
 
         error = parameter.validate_value('val')
         self.assertIsNone(error)
@@ -353,8 +360,9 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value({})
         self.assert_error(error)
 
-    def test_required_parameter_when_empty(self):
-        parameter = create_parameter_model('param', required=True)
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_required_parameter_when_empty(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, required=True)
 
         error = parameter.validate_value('')
         self.assert_error(error)
@@ -664,6 +672,20 @@ class TestSingleParameterValidation(unittest.TestCase):
         parameter = create_parameter_model('param', type=PARAM_TYPE_SERVER_FILE, file_dir=test_utils.temp_folder)
 
         error = parameter.validate_value('my.dat')
+        self.assert_error(error)
+
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_max_length_ok(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, max_length=10)
+
+        error = parameter.validate_value('012345678\n')
+        self.assertIsNone(error)
+
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_max_length_violated(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, max_length=10)
+
+        error = parameter.validate_value('0123456789\n')
         self.assert_error(error)
 
     def assert_error(self, error):

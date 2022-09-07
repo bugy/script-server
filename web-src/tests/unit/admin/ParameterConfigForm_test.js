@@ -703,6 +703,22 @@ describe('Test ParameterConfigForm', function () {
             await _setValueByUser('Max', 4);
             assertLastError('Max', 'min: 5');
         });
+
+        it('Test "max_length" field for default type', async function () {
+            expect(_findField('Max characters length')).not.toBeNil()
+        });
+
+        it('Test "max_length" field for multiline_text type', async function () {
+            await _setValueByUser('Type', 'multiline_text')
+
+            expect(_findField('Max characters length')).not.toBeNil()
+        });
+
+        it('Test "max_length" field for int type', async function () {
+            await _setValueByUser('Type', 'int')
+
+            expect(_findField('Max characters length', false)).toBeNil()
+        });
     });
 
     describe('Test errors', function () {

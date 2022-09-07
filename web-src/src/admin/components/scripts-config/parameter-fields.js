@@ -20,7 +20,18 @@ export const envVarField = {
 export const typeField = {
     name: 'Type',
     type: 'list',
-    values: ['text', 'int', 'list', 'multiselect', 'editable_list', 'file_upload', 'server_file', 'ip', 'ip4', 'ip6']
+    values: [
+        'text',
+        'int',
+        'list',
+        'multiselect',
+        'editable_list',
+        'file_upload',
+        'server_file',
+        'multiline_text',
+        'ip',
+        'ip4',
+        'ip6']
 };
 
 export const noValueField = {

@@ -290,10 +290,10 @@ class ParameterModel(object):
                 return None
             return 'should be boolean, but has value ' + value_string
 
-        if self.type == 'text':
+        if self.type == 'text' or self.type == 'multiline_text':
             if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
                 return 'is longer than allowed char length (' \
-                        + str(len(value)) + ' > ' + str(self.max_length) + ')'
+                       + str(len(value)) + ' > ' + str(self.max_length) + ')'
             return None
 
         if self.type == 'file_upload':

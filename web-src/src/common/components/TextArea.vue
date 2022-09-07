@@ -10,13 +10,13 @@
             @input="textAreaChanged">
 
         </textarea>
-    <label :for="elementId">{{ config.name }}</label>
+    <label :class="{ active: labelActive }" :for="elementId">{{ config.name }}</label>
   </div>
 </template>
 
 <script>
 import '@/common/materializecss/imports/input-fields';
-import {isBlankString, isNull} from '@/common/utils/common';
+import {isBlankString, isEmptyString, isNull} from '@/common/utils/common';
 
 export default {
   name: 'TextArea',
@@ -63,7 +63,20 @@ export default {
   computed: {
     elementId() {
       return this._uid;
-    }
+    },
+
+    labelActive() {
+      if (!isEmptyString(this.value)) {
+        return true;
+      }
+
+      var textArea = this.$refs.textArea;
+      if (!isNull(textArea) && (textArea === document.activeElement)) {
+        return true;
+      }
+
+      return false;
+    },
   },
 
   methods: {
@@ -95,7 +108,11 @@ export default {
         return 'required';
       }
 
-      return '';
+      if (this.config.max_length && (value.length > this.config.max_length)) {
+        return 'Max chars allowed: ' + this.config.max_length
+      }
+
+      return null;
     }
 
   }
