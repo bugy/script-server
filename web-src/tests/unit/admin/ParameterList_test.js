@@ -80,7 +80,7 @@ describe('Test ScriptParamList', function () {
         console.log('Found item for ' + paramName + ': ' + (!!item)) // TODO remove
 
         const button = getButton(item, action);
-        console.log('Found button for ' + paramName + ': ' + (!!item)) // TODO remove
+        console.log('Found button for ' + paramName + ': ' + (!!button)) // TODO remove
         triggerSingleClick(button);
 
         await vueTicks();
