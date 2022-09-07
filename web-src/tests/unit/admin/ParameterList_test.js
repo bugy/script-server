@@ -80,7 +80,10 @@ describe('Test ScriptParamList', function () {
         console.log('Found item for ' + paramName + ': ' + (!!item)) // TODO remove
         console.log(item.$el.innerHTML) // TODO remove
 
-        let button2 = $(item.$el).find('i').filter(() => this.innerHTML.trim() === action).get(0);
+        let button2 = $(item.$el).find('i').filter(() => {
+            console.log(this.innerHTML.trim())
+            return (this.innerHTML.trim() === action)
+        }).get(0);
 
         const button = getButton(item, action);
         console.log('Found button ' + action + ' for ' + paramName + ': ' + (!!button)) // TODO remove
