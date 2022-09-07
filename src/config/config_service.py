@@ -10,7 +10,7 @@ from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
 from model.script_config import get_sorted_config
-from utils import os_utils, file_utils, process_utils, custom_json
+from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
 from utils.string_utils import is_blank, strip
 
@@ -160,6 +160,14 @@ class ConfigService:
         sorted_config = get_sorted_config(config)
         config_json = json.dumps(sorted_config, indent=2)
         file_utils.write_file(path, config_json)
+        
+    def load_config_file(self, path, content):
+        if path.endswith('.yaml'):
+            config_object = custom_yaml.loads(content)
+        else:            
+            config_object = custom_json.loads(content)
+            
+        return config_object
 
     def list_configs(self, user, mode=None):
         edit_mode = mode == 'edit'
@@ -170,8 +178,8 @@ class ConfigService:
 
         def load_script(path, content):
             try:
-                json_object = custom_json.loads(content)
-                short_config = script_config.read_short(path, json_object)
+                config_object = self.load_config_file(path, content)
+                short_config = script_config.read_short(path, config_object)
 
                 if short_config is None:
                     return None
@@ -205,7 +213,7 @@ class ConfigService:
         configs_dir = self._script_configs_folder
         files = os.listdir(configs_dir)
 
-        configs = [file for file in files if file.lower().endswith(".json")]
+        configs = [file for file in files if file.lower().endswith(".json") or file.lower().endswith(".yaml")]
 
         result = []
 
@@ -231,8 +239,8 @@ class ConfigService:
     def _find_config(self, name) -> Union[ConfigSearchResult, None]:
         def find_and_load(path, content):
             try:
-                json_object = custom_json.loads(content)
-                short_config = script_config.read_short(path, json_object)
+                config_object = self.load_config_file(path, content)
+                short_config = script_config.read_short(path, config_object)
 
                 if short_config is None:
                     return None
@@ -243,7 +251,7 @@ class ConfigService:
             if short_config.name != name.strip():
                 return None
 
-            raise StopIteration(ConfigSearchResult(short_config, path, json_object))
+            raise StopIteration(ConfigSearchResult(short_config, path, config_object))
 
         configs = self._visit_script_configs(find_and_load)
         if not configs:
