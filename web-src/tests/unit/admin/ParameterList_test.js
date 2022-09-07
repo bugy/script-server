@@ -78,6 +78,7 @@ describe('Test ScriptParamList', function () {
     async function clickParamAction(paramName, action) {
         const item = findParamItem(paramName);
         console.log('Found item for ' + paramName + ': ' + (!!item)) // TODO remove
+        console.log(item.$el.innerHTML) // TODO remove
 
         const button = getButton(item, action);
         console.log('Found button for ' + paramName + ': ' + (!!button)) // TODO remove
