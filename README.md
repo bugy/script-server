@@ -44,8 +44,6 @@ OS support:
 - Windows (additional). Light testing
 - macOS (additional). Light testing
 
-#### 
-
 ### Client-side
 
 Any more or less up to date browser with enabled JS
