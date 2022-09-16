@@ -72,7 +72,7 @@ For the usage please check [this ticket](https://github.com/bugy/script-server/i
 If you are making changes to web files, use `npm run build` or `npm run serve`
 
 ### A issue running on OpenBSD and maybe other UNIX systems
-See [A issue running on OpenBSD and maybe other UNIX systems](a_openbsd_issue.md).
+See [A issue running on OpenBSD and maybe other UNIX systems](https://github.com/bugy/script-server/wiki/OpenBSD-process-termination-issues).
 
 
 ## Setup and run
