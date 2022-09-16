@@ -69,6 +69,9 @@ For the usage please check [this ticket](https://github.com/bugy/script-server/i
 
 If you are making changes to web files, use `npm run build` or `npm run serve`
 
+### A issue running on OpenBSD and maybe other UNIX systems
+See [A issue running on OpenBSD and maybe other UNIX systems](https://github.com/bugy/script-server/wiki/OpenBSD-process-termination-issues).
+
 
 ## Setup and run
 1. Create configurations for your scripts in *conf/runners/* folder (see [script config page](https://github.com/bugy/script-server/wiki/Script-config) for details)
