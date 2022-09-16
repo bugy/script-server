@@ -23,7 +23,7 @@ You can apply this patch to `src/execution/process_base.py`:
 -                group_id = os.getpgid(self.get_process_id())
 -                os.killpg(group_id, signal.SIGTERM)
 +                psutil_self_proc = psutil.Process(self.get_process_id())
-+                # Send SIGKILL to child processes.
++                # Send SIGTERM to child processes.
 +                for curr_sub_proc in psutil_self_proc.children(recursive=True):
 +                    try:
 +                        curr_sub_proc.terminate()
@@ -61,7 +61,7 @@ You can apply this patch to `src/execution/process_base.py`:
 +                    except psutil.NoSuchProcess:
 +                        pass
 +
-+                # Send SIGTERM to self.
++                # Send SIGKILL to self.
 +                psutil_self_proc.kill()
 +
                  self._write_script_output('\n>> KILLED\n')
