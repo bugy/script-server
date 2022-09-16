@@ -44,6 +44,8 @@ OS support:
 - Windows (additional). Light testing
 - macOS (additional). Light testing
 
+#### 
+
 ### Client-side
 
 Any more or less up to date browser with enabled JS
@@ -68,6 +70,9 @@ For the usage please check [this ticket](https://github.com/bugy/script-server/i
 `init.py` script should be run after pulling any new changes
 
 If you are making changes to web files, use `npm run build` or `npm run serve`
+
+### A issue running on OpenBSD and maybe other UNIX systems
+See [A issue running on OpenBSD and maybe other UNIX systems](a_openbsd_issue.md).
 
 
 ## Setup and run
