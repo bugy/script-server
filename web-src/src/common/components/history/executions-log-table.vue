@@ -1,5 +1,17 @@
 <template>
   <div class="executions-log-table">
+    <div class="search-container">
+      <div class="search-panel">
+        <input ref="searchField" autocomplete="off" class="search-field"
+               name="searchField"
+               placeholder="Search"
+               v-model="searchText">
+        <input :alt="isClearSearchButton ? 'Clear search' : 'Search'" :src="searchImage"
+             class="search-button"
+             type="image"
+             @click="searchIconClickHandler">
+      </div>
+    </div>
     <table class="highlight striped">
       <thead>
       <tr>
@@ -11,7 +23,7 @@
       </tr>
       </thead>
       <tbody v-if="!loading">
-      <tr v-for="row in rows" :key="row.id" @click="rowClick(row)">
+      <tr v-for="row in filteredRows" :key="row.id" @click="rowClick(row)">
         <td>{{ row.id }}</td>
         <td>{{ row.startTimeString }}</td>
         <td>{{ row.user }}</td>
@@ -26,9 +38,15 @@
 
 <script>
 import {mapState} from 'vuex';
+import SearchPanel from '../../../main-app/components/SearchPanel'
+import ClearIcon from '@/assets/clear.png'
+import SearchIcon from '@/assets/search.png'
 
 export default {
   name: 'executions-log-table',
+  components: {
+    SearchPanel
+  },
   props: {
     rows: Array,
     'sortColumn': {
@@ -41,6 +59,26 @@ export default {
     },
     rowClick: {
       type: Function
+    }
+  },
+
+  data() {
+    return {
+      filteredRows: this.rows ? [...this.rows] : [],
+      searchText: ''
+    }
+  },
+
+  watch: {
+    rows: function(val, oldVal) {
+      this.searchText = '';
+      this.filterRows();
+      this.sort();
+    },
+
+    searchText: function(val, oldVal) {
+      this.filterRows();
+      this.sort();
     }
   },
 
@@ -59,23 +97,27 @@ export default {
         this.sortColumn = sortKey;
       }
 
+      this.sort();
+    },
+
+    sort: function() {
       let ascending = this.ascending;
       let column = this.sortColumn;
 
-      this.rows.sort((a, b) => {
+      this.filteredRows.sort((a, b) => {
         if (column === 'id') {
-          let id_a = a[sortKey];
-          let id_b = b[sortKey];
+          let id_a = a[column];
+          let id_b = b[column];
           return ascending ? id_a - id_b : id_b - id_a
 
         } else if (column === 'startTimeString') {
-          let date_a = new Date(a[sortKey]);
-          let date_b = new Date(b[sortKey]);
+          let date_a = new Date(a[column]);
+          let date_b = new Date(b[column]);
           return ascending ? date_a - date_b : date_b - date_a
 
         } else {
-          let other_a = a[sortKey].toLowerCase()
-          let other_b = b[sortKey].toLowerCase()
+          let other_a = a[column].toLowerCase()
+          let other_b = b[column].toLowerCase()
           if (other_a > other_b) {
             return ascending ? 1 : -1
           } else if (other_a < other_b) {
@@ -84,11 +126,43 @@ export default {
           return 0;
         }
       });
-    }
+    },
+
+    filterRows: function() {
+      let searchText = (this.searchText || '').toLowerCase();
+
+      if(this.rows === null) {
+        this.filteredRows = [];
+        return;
+      }
+
+      if(searchText === '') {
+        this.filteredRows = [...this.rows];
+      } else {
+        this.filteredRows = this.rows.filter((row) => {
+          return row.script.toLowerCase().includes(searchText) ||
+            row.user.toLowerCase().includes(searchText);
+        });
+      }
+    },
+
+    searchIconClickHandler() {
+      if (this.isClearSearchButton) {
+        this.searchText = '';
+      }
+    },
   },
 
   computed: {
-    ...mapState('history', ['loading'])
+    ...mapState('history', ['loading']),
+
+    isClearSearchButton() {
+      return this.searchText !== '';
+    },
+
+    searchImage() {
+      return this.isClearSearchButton ? ClearIcon : SearchIcon;
+    }
   }
 }
 </script>
@@ -148,5 +222,37 @@ export default {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 4px solid var(--font-color-main);
+}
+
+.search-container {
+  min-width: 200px;
+  width: 50%;
+}
+
+.search-panel {
+  display: flex;
+  padding: 5px;
+  border:  1px solid var(--primary-color);
+  border-radius: 4px;
+  background-color: var(--background-color-high-emphasis);
+}
+
+.search-button {
+  align-self: center;
+}
+
+input.search-field {
+  height: 1.5rem;
+  font-size: 1rem;
+  float: right;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+input.search-field:not([type]):focus {
+  border-bottom: 0;
+  box-shadow: none;
 }
 </style>
