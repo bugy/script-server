@@ -57,6 +57,9 @@ export default {
           });
         }
       }
+    },
+    'config.max_length'() {
+      this.doValidation(this.value)
     }
   },
 

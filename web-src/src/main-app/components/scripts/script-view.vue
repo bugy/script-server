@@ -60,7 +60,7 @@ import LogPanel from '@/common/components/log_panel'
 import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
 import ScheduleButton from '@/main-app/components/scripts/ScheduleButton';
 import ScriptLoadingText from '@/main-app/components/scripts/ScriptLoadingText';
-import marked from 'marked';
+import {marked} from 'marked';
 import {mapActions, mapState} from 'vuex'
 import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
 import ScriptParametersView from './script-parameters-view'
@@ -120,8 +120,8 @@ export default {
         return '';
       }
 
-      var descriptionHtml = DOMPurify.sanitize(marked(this.scriptDescription, {gfm: true, breaks: true}));
-      var paragraphRemoval = document.createElement('div');
+      const descriptionHtml = DOMPurify.sanitize(marked.parse(this.scriptDescription, {gfm: true, breaks: true}));
+      const paragraphRemoval = document.createElement('div');
       paragraphRemoval.innerHTML = descriptionHtml.trim();
 
       for (var i = 0; i < paragraphRemoval.childNodes.length; i++) {
