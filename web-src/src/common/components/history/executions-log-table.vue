@@ -64,23 +64,9 @@ export default {
 
   data() {
     return {
-      filteredRows: this.rows ? [...this.rows] : [],
       searchText: '',
       mySortColumn: this.sortColumn,
       myAscending: this.ascending
-    }
-  },
-
-  watch: {
-    rows: function(val, oldVal) {
-      this.searchText = '';
-      this.filterRows();
-      this.sort();
-    },
-
-    searchText: function(val, oldVal) {
-      this.filterRows();
-      this.sort();
     }
   },
 
@@ -92,21 +78,50 @@ export default {
     },
 
     sortBy: function (sortKey) {
-      if (this.sortColumn === sortKey) {
+      if (this.mySortColumn === sortKey) {
         this.myAscending = !this.myAscending;
       } else {
         this.myAscending = true;
-        this.sortColumn = sortKey;
+        this.mySortColumn = sortKey;
       }
-
-      this.sort();
     },
 
-    sort: function() {
-      let ascending = this.myAscending;
-      let column = this.sortColumn;
+    searchIconClickHandler() {
+      if (this.isClearSearchButton) {
+        this.searchText = '';
+      }
+    },
+  },
 
-      this.filteredRows.sort((a, b) => {
+  computed: {
+    ...mapState('history', ['loading']),
+
+    isClearSearchButton() {
+      return this.searchText !== '';
+    },
+
+    searchImage() {
+      return this.isClearSearchButton ? ClearIcon : SearchIcon;
+    },
+
+    filteredRows() {
+      let searchText = (this.searchText || '').trim().toLowerCase();
+      let resultRows;
+      if(!this.rows) {
+        resultRows = [];
+      } else if(searchText === '') {
+        resultRows = [...this.rows];
+      } else {
+        resultRows = this.rows.filter((row) => {
+          return row.script.toLowerCase().includes(searchText) ||
+            row.user.toLowerCase().includes(searchText);
+        });
+      }
+
+      let ascending = this.myAscending;
+      let column = this.mySortColumn;
+
+      return resultRows.sort((a, b) => {
         if (column === 'id') {
           let id_a = a[column];
           let id_b = b[column];
@@ -128,42 +143,6 @@ export default {
           return 0;
         }
       });
-    },
-
-    filterRows: function() {
-      let searchText = (this.searchText || '').toLowerCase();
-
-      if(this.rows === null) {
-        this.filteredRows = [];
-        return;
-      }
-
-      if(searchText === '') {
-        this.filteredRows = [...this.rows];
-      } else {
-        this.filteredRows = this.rows.filter((row) => {
-          return row.script.toLowerCase().includes(searchText) ||
-            row.user.toLowerCase().includes(searchText);
-        });
-      }
-    },
-
-    searchIconClickHandler() {
-      if (this.isClearSearchButton) {
-        this.searchText = '';
-      }
-    },
-  },
-
-  computed: {
-    ...mapState('history', ['loading']),
-
-    isClearSearchButton() {
-      return this.searchText !== '';
-    },
-
-    searchImage() {
-      return this.isClearSearchButton ? ClearIcon : SearchIcon;
     }
   }
 }
