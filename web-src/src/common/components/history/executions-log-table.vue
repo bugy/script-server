@@ -38,25 +38,13 @@
 
 <script>
 import {mapState} from 'vuex';
-import SearchPanel from '../../../main-app/components/SearchPanel'
 import ClearIcon from '@/assets/clear.png'
 import SearchIcon from '@/assets/search.png'
 
 export default {
   name: 'executions-log-table',
-  components: {
-    SearchPanel
-  },
   props: {
     rows: Array,
-    'sortColumn': {
-      type: String,
-      default: 'id'
-    },
-    'ascending': {
-      type: Boolean,
-      default: false
-    },
     rowClick: {
       type: Function
     }
@@ -65,24 +53,24 @@ export default {
   data() {
     return {
       searchText: '',
-      mySortColumn: this.sortColumn,
-      myAscending: this.ascending
+      sortColumn: 'id',
+      ascending: false
     }
   },
 
   methods: {
     showSort: function (sortKey) {
-      if (this.mySortColumn === sortKey) {
-        return this.myAscending ? 'sorted asc' : 'sorted desc'
+      if (this.sortColumn === sortKey) {
+        return this.ascending ? 'sorted asc' : 'sorted desc'
       }
     },
 
     sortBy: function (sortKey) {
-      if (this.mySortColumn === sortKey) {
-        this.myAscending = !this.myAscending;
+      if (this.sortColumn === sortKey) {
+        this.ascending = !this.ascending;
       } else {
-        this.myAscending = true;
-        this.mySortColumn = sortKey;
+        this.ascending = true;
+        this.sortColumn = sortKey;
       }
     },
 
@@ -118,8 +106,8 @@ export default {
         });
       }
 
-      let ascending = this.myAscending;
-      let column = this.mySortColumn;
+      let ascending = this.ascending;
+      let column = this.sortColumn;
 
       return resultRows.sort((a, b) => {
         if (column === 'id') {
