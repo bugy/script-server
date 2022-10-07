@@ -328,9 +328,25 @@ class TestDefaultValue(unittest.TestCase):
                                            username='my_user')
             self.assertEqual(expected_value, default)
 
+    @parameterized.expand([
+        ('multiselect', '123', '123'),
+        ('list', '123', '123'),
+        ('multiselect', '123\n', '123'),
+        ('multiselect', '123\n456', ['123', '456']),
+        ('list', '123\n456', '123\n456'),
+        ('multiselect', '\n123\n456\n', ['123', '456']),
+        ('multiselect', '\n123 \n \t 456\n', ['123', '456']),
+        ('multiselect', '123 \n \t 456\n789', ['123', '456', '789']),
+    ])
+    def test_script_value_when_multiselect_and_multiple_values(self, type, output, expected_value):
+        config = {'script': 'echo "' + output + '"'}
+
+        default = self.resolve_default(config, username='my_user', type=type)
+        self.assertEqual(expected_value, default)
+
     @staticmethod
-    def resolve_default(value, *, username=None, audit_name=None, working_dir=None):
-        return parameter_config._resolve_default(value, username, audit_name, working_dir)
+    def resolve_default(value, *, username=None, audit_name=None, working_dir=None, type=None):
+        return parameter_config._resolve_default(value, username, audit_name, working_dir, type)
 
     def setUp(self):
         test_utils.setup()

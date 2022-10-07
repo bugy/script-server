@@ -81,15 +81,19 @@ class ParameterModel(object):
             'multiselect_argument_type',
             default='single_argument',
             allowed_values=['single_argument', 'argument_per_value', 'repeat_param_value'])
-        self.default = _resolve_default(config.get('default'), self._username, self._audit_name, self._working_dir)
+        self.type = self._read_type(config)
+        self.default = _resolve_default(
+            config.get('default'),
+            self._username,
+            self._audit_name,
+            self._working_dir,
+            self.type)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
         self.file_extensions = _resolve_file_extensions(config, 'file_extensions')
         self.file_type = _resolve_parameter_file_type(config, 'file_type', self.file_extensions)
         self.file_recursive = read_bool_from_config('file_recursive', config, default=False)
         self.excluded_files_matcher = _resolve_excluded_files(config, 'excluded_files', self._list_files_dir)
-
-        self.type = self._read_type(config)
 
         self.constant = read_bool_from_config('constant', config, default=False)
 
@@ -428,7 +432,7 @@ class ParameterModel(object):
         return os.path.normpath(os.path.join(self._list_files_dir, *child_path))
 
 
-def _resolve_default(default, username, audit_name, working_dir):
+def _resolve_default(default, username, audit_name, working_dir, type):
     if not default:
         return default
 
@@ -449,7 +453,12 @@ def _resolve_default(default, username, audit_name, working_dir):
         has_variables = string_value != resolved_string_value
         shell = read_bool_from_config('shell', default, default=not has_variables)
         output = process_utils.invoke(resolved_string_value, working_dir, shell=shell)
-        return output.strip()
+        stripped_output = output.strip()
+
+        if type == PARAM_TYPE_MULTISELECT and '\n' in stripped_output:
+            return [line.strip() for line in stripped_output.split('\n') if not is_empty(line)]
+
+        return stripped_output
 
     return resolved_string_value
 
