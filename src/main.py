@@ -66,6 +66,12 @@ def main():
     logging_conf_file = os.path.join(CONFIG_FOLDER, 'logging.json')
     with open(logging_conf_file, 'rt') as f:
         log_config = json.load(f)
+        handlers = log_config.get('handlers')
+        if handlers:
+            file_handler = handlers.get('file')
+            if file_handler:
+                file_handler['filename'] = os.path.join(LOG_FOLDER, 'server.log')
+
         file_utils.prepare_folder(LOG_FOLDER)
 
         logging.config.dictConfig(log_config)

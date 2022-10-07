@@ -16,8 +16,7 @@
     "file": {
       "class": "logging.FileHandler",
       "level": "INFO",
-      "formatter": "simple",
-      "filename": "logs/server.log"
+      "formatter": "simple"
     }
   },
   "loggers": {
