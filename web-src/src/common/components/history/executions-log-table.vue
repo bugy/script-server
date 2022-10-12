@@ -200,28 +200,9 @@ export default {
 
 .search-panel {
   display: flex;
-  padding: 5px;
-  border:  1px solid var(--primary-color);
-  border-radius: 4px;
-  background-color: var(--background-color-high-emphasis);
 }
 
 .search-button {
   align-self: center;
-}
-
-input.search-field {
-  height: 1.5rem;
-  font-size: 1rem;
-  float: right;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  box-shadow: none;
-}
-
-input.search-field:not([type]):focus {
-  border-bottom: 0;
-  box-shadow: none;
 }
 </style>
