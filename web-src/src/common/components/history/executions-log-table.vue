@@ -75,9 +75,12 @@ export default {
     },
 
     searchIconClickHandler() {
-      if (this.isClearSearchButton) {
+      if (this.searchText !== '') {
         this.searchText = '';
       }
+      this.$nextTick(() => {
+        this.$refs.searchField.focus();
+      });
     },
   },
 
