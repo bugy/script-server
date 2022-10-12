@@ -28,6 +28,11 @@ class ShortConfig(object):
         self.admin_users = []
         self.group = None
 
+class GetShortConfigFailedError(object):
+    def __init__(self, path):
+      self.path = path
+      # self.group = 'Parsing failed'
+      self.cannotParse = True
 
 @observable_fields(
     'script_command',
