@@ -60,7 +60,7 @@ export default {
     },
 
     failedItems() {
-      const groupName = 'Failed to parse'
+      const groupName = 'Failed to parse (these files have invalid JSON structure)'
       const result = {name: groupName, isGroup: true, scripts: [...this.failedScripts], isActive: this.activeGroup == groupName}
       return result
     }
