@@ -9,6 +9,7 @@ export default {
 
     state: {
         scripts: [],
+        failedScripts: [],
         selectedScript: null,
         predefinedParameters: null
     },
@@ -21,12 +22,14 @@ export default {
 
             axiosInstance.get('scripts')
                 .then(({data}) => {
-                    const {scripts} = data;
+                    const scripts = data.scripts;
+                    const failedScripts = data.failed;
                     scripts.sort(function (script1, script2) {
                         return script1.name.toLowerCase().localeCompare(script2.name.toLowerCase());
                     });
 
                     commit('SET_SCRIPTS', scripts);
+                    commit('SET_FAILED_SCRIPTS', failedScripts);
                     dispatch('selectScriptByHash');
                 });
         },
@@ -71,6 +74,10 @@ export default {
     mutations: {
         SET_SCRIPTS(state, scripts) {
             state.scripts = scripts
+        },
+
+        SET_FAILED_SCRIPTS(state, failedScripts) {
+            state.failedScripts = failedScripts
         },
 
         SELECT_SCRIPT(state, {selectedScript, predefinedParameters}) {
