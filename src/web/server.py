@@ -137,16 +137,9 @@ class GetScripts(BaseRequestHandler):
 
         configs = self.application.config_service.list_configs(user, mode)
 
-        scripts = []
-        failed = []
+        scripts = [{'name': conf.name, 'group': conf.group} for conf in configs]
 
-        for conf in configs:
-            if hasattr(conf, 'cannotParse'):
-              failed.append({'path': conf.path })
-            else:
-              scripts.append({'name': conf.name, 'group': conf.group })
-
-        self.write(json.dumps({'scripts': scripts, 'failed': failed}))
+        self.write(json.dumps({'scripts': scripts}))
 
 
 class AdminUpdateScriptEndpoint(BaseRequestHandler):

@@ -9,8 +9,7 @@ from auth.authorization import Authorizer
 from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
-from model.script_config import get_sorted_config, GetShortConfigFailedError
-from src.model.script_config import ShortConfig
+from model.script_config import get_sorted_config, ShortConfig
 from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
 from utils.string_utils import is_blank, strip
@@ -177,7 +176,7 @@ class ConfigService:
 
         conf_service = self
 
-        def load_script(path, content) -> Union[ShortConfig, GetShortConfigFailedError]:
+        def load_script(path, content) -> ShortConfig:
             try:
                 config_object = self.load_config_file(path, content)
                 short_config = script_config.read_short(path, config_object)
@@ -194,7 +193,10 @@ class ConfigService:
                 return short_config
             except:
                 LOGGER.exception('Could not load script: ' + path)
-                return GetShortConfigFailedError(path)
+                failed_short_config = ShortConfig()
+                failed_short_config.name = path
+                failed_short_config.parsing_failed = True
+                return failed_short_config
 
         return self._visit_script_configs(load_script)
 
@@ -211,7 +213,7 @@ class ConfigService:
 
         return self._load_script_config(path, config_object, user, parameter_values, skip_invalid_parameters)
 
-    def _visit_script_configs(self, visitor) -> List[ Union[ShortConfig, GetShortConfigFailedError] ]:
+    def _visit_script_configs(self, visitor) -> List[ ShortConfig ]:
         configs_dir = self._script_configs_folder
         files = os.listdir(configs_dir)
 
