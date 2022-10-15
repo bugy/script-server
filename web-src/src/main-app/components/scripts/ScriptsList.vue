@@ -4,7 +4,6 @@
       <ScriptListGroup v-if="item.isGroup" :key="item.name" :group="item" @group-clicked="groupClicked($event)"/>
       <ScriptListItem v-else :key="item.name" :script="item"/>
     </template>
-    <ScriptFailedGroup :failedItems="failedItems" @group-clicked="groupClicked($event)"></ScriptFailedGroup>
   </div>
 </template>
 
@@ -12,12 +11,11 @@
 import {isBlankString, isEmptyString, isNull, removeElement} from '@/common/utils/common';
 import {mapState} from 'vuex';
 import ScriptListGroup from './ScriptListGroup';
-import ScriptFailedGroup from './ScriptFailedGroup';
 import ScriptListItem from './ScriptListItem';
 
 export default {
   name: 'ScriptsList',
-  components: {ScriptListGroup, ScriptListItem, ScriptFailedGroup},
+  components: {ScriptListGroup, ScriptListItem},
   props: {
     searchText: {
       type: String,
@@ -32,7 +30,7 @@ export default {
   },
 
   computed: {
-    ...mapState('scripts', ['scripts', 'selectedScript', 'failedScripts']),
+    ...mapState('scripts', ['scripts', 'selectedScript']),
 
     items() {
       let groups = this.scripts.filter(script => !isBlankString(script.group))
@@ -58,12 +56,6 @@ export default {
 
       return result;
     },
-
-    failedItems() {
-      const groupName = 'Failed to parse (these files have invalid JSON structure)'
-      const result = {name: groupName, isGroup: true, scripts: [...this.failedScripts], isActive: this.activeGroup == groupName}
-      return result
-    }
   },
   methods: {
     groupClicked(groupName) {
