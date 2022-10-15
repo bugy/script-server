@@ -9,7 +9,6 @@ export default {
 
     state: {
         scripts: [],
-        failedScripts: [],
         selectedScript: null,
         predefinedParameters: null
     },

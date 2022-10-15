@@ -31,22 +31,25 @@ export default {
 
 <style scoped>
 
-  .script-list-group .collection-item.script-group {
-    border: none;
-    display: flex;
-    flex-direction: row;
-    padding-right: 16px;
-    align-items: center;
-  }
-  .script-list-group .collection-item.script-group span {
-    flex: 1 1 auto;
-  }
-  .script-list-group .collection-item.script-group i {
-    flex: 0 0 auto;
-    line-height: 16px;
-  }
-  .script-list-group >>> .collection-item.script-list-item {
-    padding-left: 36px;
-  }
+.script-list-group .collection-item.script-group {
+  border: none;
+  display: flex;
+  flex-direction: row;
+  padding-right: 16px;
+  align-items: center;
+}
+
+.script-list-group .collection-item.script-group span {
+  flex: 1 1 auto;
+}
+
+.script-list-group .collection-item.script-group i {
+  flex: 0 0 auto;
+  line-height: 16px;
+}
+
+.script-list-group >>> .collection-item.script-list-item {
+  padding-left: 36px;
+}
 
 </style>

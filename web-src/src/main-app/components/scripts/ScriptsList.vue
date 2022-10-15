@@ -55,7 +55,7 @@ export default {
       result.sort((o1, o2) => o1.name.toLowerCase().localeCompare(o2.name.toLowerCase()));
 
       return result;
-    },
+    }
   },
   methods: {
     groupClicked(groupName) {
