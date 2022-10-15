@@ -336,7 +336,7 @@ def _load_runner_files(conf_folder):
     runners_folder = os.path.join(conf_folder, 'runners')
 
     if not os.path.exists(runners_folder):
-        return
+        return []
 
     conf_files = [os.path.join(runners_folder, file)
                   for file in os.listdir(runners_folder)
