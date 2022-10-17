@@ -6,7 +6,7 @@
 
     <div :class="descriptor.state" class="menu-item-state">
       <i class="material-icons check-icon">check</i>
-      <i class="material-icons failed-icon">cancel</i>
+      <i class="material-icons failed-icon">do_not_disturb_alt</i>
       <div class="preloader-wrapper active">
         <div class="spinner-layer">
           <div class="circle-clipper left">
