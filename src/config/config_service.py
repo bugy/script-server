@@ -2,8 +2,7 @@ import json
 import logging
 import os
 import re
-from collections import namedtuple
-from typing import List, Union
+from typing import List, NamedTuple, Union
 
 from auth.authorization import Authorizer
 from config.exceptions import InvalidConfigException
@@ -23,7 +22,10 @@ WORKING_DIR_FIELD = 'working_directory'
 
 LOGGER = logging.getLogger('config_service')
 
-ConfigSearchResult = namedtuple('ConfigSearchResult', ['short_config', 'path', 'config_object'])
+class ConfigSearchResult(NamedTuple):
+    short_config: ShortConfig
+    path: str
+    config_object: any
 
 
 def _script_name_to_file_name(script_name):
@@ -58,6 +60,9 @@ class ConfigService:
 
         if search_result is None:
             return None
+
+        if(search_result.short_config.parsing_failed == True):
+            raise BadConfigFileException()
 
         (short_config, path, config_object) = search_result
 
@@ -191,12 +196,13 @@ class ConfigService:
                     return None
 
                 return short_config
-            except:
-                LOGGER.exception('Could not load script: ' + path)
+            except json.decoder.JSONDecodeError:
                 failed_short_config = ShortConfig()
                 failed_short_config.name = path
                 failed_short_config.parsing_failed = True
                 return failed_short_config
+            except Exception:
+                LOGGER.exception('Could not load script: ' + path)
 
         return self._visit_script_configs(load_script)
 
@@ -205,6 +211,9 @@ class ConfigService:
 
         if search_result is None:
             return None
+
+        if(search_result.short_config.parsing_failed == True):
+          raise BadConfigFileException()
 
         (short_config, path, config_object) = search_result
 
@@ -240,15 +249,23 @@ class ConfigService:
 
         return result
 
-    def _find_config(self, name) -> Union[ConfigSearchResult, None]:
-        def find_and_load(path, content):
+    def _find_config(self, name) -> Union[ ConfigSearchResult , None]:
+        def find_and_load(path: str, content):
             try:
                 config_object = self.load_config_file(path, content)
                 short_config = script_config.read_short(path, config_object)
 
                 if short_config is None:
                     return None
-            except:
+            except json.decoder.JSONDecodeError:
+                if name == path:
+                  failed_short_config = ShortConfig()
+                  failed_short_config.name = path
+                  failed_short_config.parsing_failed = True
+                  raise StopIteration(ConfigSearchResult(failed_short_config, path, None))
+                else:
+                  return None
+            except Exception:
                 LOGGER.exception('Could not load script config: ' + path)
                 return None
 
@@ -366,5 +383,12 @@ class AdminAccessRequiredException(Exception):
 
 
 class InvalidAccessException(Exception):
+    def __init__(self, message=None):
+        super().__init__(message)
+
+
+class BadConfigFileException(Exception):
+    HTTP_CODE = 422
+    VERBOSE_ERROR = 'Cannot parse script config file'
     def __init__(self, message=None):
         super().__init__(message)

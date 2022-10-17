@@ -20,7 +20,7 @@ import tornado.websocket
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from communications.alerts_service import AlertsService
-from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException
+from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException, BadConfigFileException
 from config.exceptions import InvalidConfigException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
@@ -190,6 +190,10 @@ class AdminGetScriptEndpoint(BaseRequestHandler):
         except ConfigNotAllowedException:
             LOGGER.warning('Admin access to the script "' + script_name + '" is denied for ' + user.get_audit_name())
             respond_error(self, 403, 'Access to the script is denied')
+            return
+        except BadConfigFileException:
+            LOGGER.warning(BadConfigFileException.VERBOSE_ERROR + ' : ' + script_name)
+            respond_error(self, 422, BadConfigFileException.VERBOSE_ERROR)
             return
 
         if config is None:
@@ -400,6 +404,11 @@ class ScriptExecute(StreamUploadRequestHandler):
             LOGGER.warning('Access to the script "' + script_name + '" is denied for ' + audit_name)
             respond_error(self, 403, 'Access to the script is denied')
             return
+
+        except BadConfigFileException:
+            LOGGER.warning(BadConfigFileException.VERBOSE_ERROR + ' : ' + script_name)
+            respond_error(self, 422, BadConfigFileException.VERBOSE_ERROR)
+            return None
 
         except Exception as e:
             LOGGER.exception("Error while calling the script")
