@@ -8,6 +8,7 @@
       </router-link>
       <div class="collection">
         <router-link v-for="script in scripts" :key="script.name" :to="script.path" append
+                     v-bind:class="{'parsing-failed': script.parsingFailed}"
                      class="collection-item">
           {{ script.name }}
         </router-link>
@@ -37,7 +38,7 @@ export default {
   computed: {
     ...mapState('scripts', {
       scripts: state => {
-        return state.scripts ? state.scripts.map(s => ({name: s, path: encodeURIComponent(s)})) : []
+        return state.scripts ? state.scripts.map(s => ({name: s.name, path: encodeURIComponent(s.name), parsingFailed: s.parsingFailed})) : []
       },
       loading: 'loading'
     })
@@ -61,5 +62,14 @@ export default {
 
 .add-script-btn {
   margin-bottom: 1em;
+}
+
+.scripts-list .collection-item.parsing-failed {
+  color: var(--error-color);
+  /* I didn't find any good ways to disable a <router-link> */
+  pointer-events: none;
+}
+.scripts-list .collection-item.parsing-failed::before {
+  content: "Could not read config file: ";
 }
 </style>

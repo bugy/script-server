@@ -12,9 +12,9 @@ export default {
 
             axiosInstance.get('scripts', {params: {mode: 'edit'}}).then(({data}) => {
                 const {scripts} = data;
-                let scriptNames = scripts.map(s => s.name);
-                scriptNames.sort(function (name1, name2) {
-                    return name1.toLowerCase().localeCompare(name2.toLowerCase());
+                let scriptNames = scripts.map(s => ({ name: s.name, parsingFailed: s.parsing_failed }));
+                scriptNames.sort(function (e1, e2) {
+                    return e1.name.toLowerCase().localeCompare(e2.name.toLowerCase());
                 });
 
                 commit('SET_SCRIPTS', scriptNames);
