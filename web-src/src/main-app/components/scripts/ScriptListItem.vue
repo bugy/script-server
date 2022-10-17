@@ -6,7 +6,7 @@
 
     <div :class="descriptor.state" class="menu-item-state">
       <i class="material-icons check-icon">check</i>
-      <i class="material-icons failed-icon">close</i>
+      <i class="material-icons failed-icon">cancel</i>
       <div class="preloader-wrapper active">
         <div class="spinner-layer">
           <div class="circle-clipper left">
@@ -80,7 +80,7 @@ export default {
 
 .scripts-list .collection-item.parsing-failed {
   color: var(--error-color);
-  
+
 }
 
 .scripts-list .collection-item .menu-item-state {
