@@ -1,7 +1,7 @@
 <template>
   <router-link :to="'/' + descriptor.hash"
                class="collection-item waves-effect script-list-item"
-               v-bind:class="{ active: descriptor.active}">
+               v-bind:class="{ active: descriptor.active, 'parsing-failed': descriptor.parsingFailed}">
     {{ descriptor.name }}
 
     <div :class="descriptor.state" class="menu-item-state">
@@ -44,7 +44,8 @@ export default {
         name: this.script.name,
         state: this.getState(this.script.name),
         active: this.selectedScript === this.script.name,
-        hash: this.toHash(this.script.name)
+        hash: this.toHash(this.script.name),
+        parsingFailed: this.script.parsing_failed,
       }
     },
     ...mapState('scripts', ['selectedScript'])
@@ -72,6 +73,10 @@ export default {
 .scripts-list .collection-item {
   border: none;
   padding-right: 32px;
+}
+
+.scripts-list .collection-item.parsing-failed {
+  color: var(--error-color);
 }
 
 .scripts-list .collection-item .menu-item-state {
