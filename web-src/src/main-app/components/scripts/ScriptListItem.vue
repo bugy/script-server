@@ -6,6 +6,7 @@
 
     <div :class="descriptor.state" class="menu-item-state">
       <i class="material-icons check-icon">check</i>
+      <i class="material-icons failed-icon">close</i>
       <div class="preloader-wrapper active">
         <div class="spinner-layer">
           <div class="circle-clipper left">
@@ -54,6 +55,8 @@ export default {
     getState(scriptName) {
       let state = 'idle';
 
+      if(this.script.parsing_failed) return 'cannot-parse'
+
       forEachKeyValue(this.$store.state.executions.executors, function (id, executor) {
         if (executor.state.scriptName !== scriptName) {
           return;
@@ -77,6 +80,7 @@ export default {
 
 .scripts-list .collection-item.parsing-failed {
   color: var(--error-color);
+  
 }
 
 .scripts-list .collection-item .menu-item-state {
@@ -101,11 +105,15 @@ export default {
 }
 
 .scripts-list .collection-item .menu-item-state.executing,
-.scripts-list .collection-item .menu-item-state.finished {
+.scripts-list .collection-item .menu-item-state.finished,
+.scripts-list .collection-item .menu-item-state.cannot-parse {
   display: inline;
 }
 
-.scripts-list .collection-item .menu-item-state.executing > .check-icon {
+/* state: executing */
+
+.scripts-list .collection-item .menu-item-state.executing > .check-icon,
+.scripts-list .collection-item .menu-item-state.executing > .failed-icon {
   display: none;
 }
 
@@ -113,12 +121,27 @@ export default {
   display: block;
 }
 
+/* state: finished */
+
 .scripts-list .collection-item .menu-item-state.finished > .check-icon {
   display: block;
 }
 
-.scripts-list .collection-item .menu-item-state.finished > .preloader-wrapper {
+.scripts-list .collection-item .menu-item-state.finished > .preloader-wrapper,
+.scripts-list .collection-item .menu-item-state.finished > .failed-icon {
   display: none;
+}
+
+/* state: cannot-parse */
+
+.scripts-list .collection-item .menu-item-state.cannot-parse > .check-icon,
+.scripts-list .collection-item .menu-item-state.cannot-parse > .preloader-wrapper {
+  display: none;
+}
+
+
+.scripts-list .collection-item .menu-item-state.cannot-parse > .failed-icon {
+  display: block;
 }
 
 .scripts-list .collection-item .preloader-wrapper .spinner-layer {
