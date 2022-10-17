@@ -51,6 +51,7 @@ function sendReloadModelRequest(parameterValues, clientModelId, websocket, newSt
 }
 
 export const NOT_FOUND_ERROR_PREFIX = `Failed to find the script`;
+export const CANNOT_PARSE_ERROR_PREFIX = `Cannot parse script config file`;
 
 export default () => ({
     state: {
@@ -333,8 +334,14 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
             logError(error);
 
             if (error instanceof SocketClosedError) {
+              
+                if (error.code === 422) {
+                  commit('SET_ERROR', `${CANNOT_PARSE_ERROR_PREFIX} "${selectedScript}"`);
+                  return;
+                }
+                
                 console.log('Socket closed. code=' + error.code + ', reason=' + error.reason);
-
+              
                 if (isNull(state.scriptConfig)) {
                     commit('SET_ERROR', 'Failed to connect to the server');
                     return;
