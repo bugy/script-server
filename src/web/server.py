@@ -193,7 +193,7 @@ class AdminGetScriptEndpoint(BaseRequestHandler):
             return
         except BadConfigFileException:
             LOGGER.warning(BadConfigFileException.VERBOSE_ERROR + ' : ' + script_name)
-            respond_error(self, 422, BadConfigFileException.VERBOSE_ERROR)
+            respond_error(self, BadConfigFileException.HTTP_CODE, BadConfigFileException.VERBOSE_ERROR)
             return
 
         if config is None:

@@ -185,7 +185,7 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
             self.close(code=403, reason='Access to the script is denied')
             return None
         except BadConfigFileException:
-            self.close(code=422, reason=BadConfigFileException.VERBOSE_ERROR)
+            self.close(code=BadConfigFileException.HTTP_CODE, reason=BadConfigFileException.VERBOSE_ERROR)
             return None
         except Exception:
             message = 'Failed to load script config ' + config_name
