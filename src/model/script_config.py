@@ -29,7 +29,7 @@ class ShortConfig(object):
         self.group = None
         self.parsing_failed = False
 
-def create_failed_ShortConfig(path):
+def create_failed_short_config(path):
     failed_short_config = ShortConfig()
     failed_short_config.name = path
     with open(path) as f:

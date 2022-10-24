@@ -8,7 +8,7 @@ from auth.authorization import Authorizer
 from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
-from model.script_config import get_sorted_config, ShortConfig, create_failed_ShortConfig
+from model.script_config import get_sorted_config, ShortConfig, create_failed_short_config
 from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
 from utils.string_utils import is_blank, strip
@@ -197,7 +197,7 @@ class ConfigService:
 
                 return short_config
             except json.decoder.JSONDecodeError:
-                failed_short_config = create_failed_ShortConfig(path)
+                failed_short_config = create_failed_short_config(path)
                 return failed_short_config
             except Exception:
                 LOGGER.exception('Could not load script: ' + path)
@@ -257,7 +257,7 @@ class ConfigService:
                     return None
             except json.decoder.JSONDecodeError:
                 if name == path:
-                  failed_short_config = create_failed_ShortConfig(path)
+                  failed_short_config = create_failed_short_config(path)
                   raise StopIteration(ConfigSearchResult(failed_short_config, path, None))
                 else:
                   return None
