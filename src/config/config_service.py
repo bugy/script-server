@@ -197,6 +197,7 @@ class ConfigService:
 
                 return short_config
             except json.decoder.JSONDecodeError:
+                LOGGER.exception(BadConfigFileException.VERBOSE_ERROR + ' : ' + path)
                 failed_short_config = create_failed_short_config(path)
                 return failed_short_config
             except Exception:
