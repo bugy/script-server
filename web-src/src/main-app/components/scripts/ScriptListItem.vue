@@ -110,8 +110,6 @@ export default {
   display: inline;
 }
 
-/* state: executing */
-
 .scripts-list .collection-item .menu-item-state.executing > .check-icon,
 .scripts-list .collection-item .menu-item-state.executing > .failed-icon {
   display: none;
@@ -120,8 +118,6 @@ export default {
 .scripts-list .collection-item .menu-item-state.executing > .preloader-wrapper {
   display: block;
 }
-
-/* state: finished */
 
 .scripts-list .collection-item .menu-item-state.finished > .check-icon {
   display: block;
@@ -132,10 +128,7 @@ export default {
   display: none;
 }
 
-/* state: cannot-parse */
-
-.scripts-list .collection-item .menu-item-state.cannot-parse > .check-icon,
-.scripts-list .collection-item .menu-item-state.cannot-parse > .preloader-wrapper {
+.scripts-list .collection-item .menu-item-state.cannot-parse > .check-icon {
   display: none;
 }
 
