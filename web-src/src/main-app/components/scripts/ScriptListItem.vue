@@ -55,7 +55,9 @@ export default {
     getState(scriptName) {
       let state = 'idle';
 
-      if(this.script.parsing_failed) return 'cannot-parse'
+      if(this.script.parsing_failed) {
+        return 'cannot-parse'
+      }
 
       forEachKeyValue(this.$store.state.executions.executors, function (id, executor) {
         if (executor.state.scriptName !== scriptName) {
