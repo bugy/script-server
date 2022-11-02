@@ -49,7 +49,12 @@ export default {
   computed: {
     ...mapState('scripts', {
       scripts: state => {
-        return state.scripts ? state.scripts.map(s => ({name: s.name, path: encodeURIComponent(s.name), parsingFailed: s.parsingFailed})) : []
+        return state.scripts ? state.scripts.map(s => ({
+              name: s.name, 
+              path: encodeURIComponent(s.name), 
+              parsingFailed: s.parsingFailed
+              })) 
+              : []
       },
       loading: 'loading'
     })
