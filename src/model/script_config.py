@@ -34,7 +34,7 @@ def create_failed_short_config(path):
     failed_short_config.name = path
     with open(path) as f:
       if '"allowed_users"' in f.read():
-          failed_short_config.name = 'file with possibly restricted access'
+          failed_short_config.name = 'file with possibly restricted access (path hash ' + hex(hash(path)) + ')'
     failed_short_config.parsing_failed = True
     return failed_short_config
 
