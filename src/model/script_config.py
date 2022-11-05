@@ -29,14 +29,20 @@ class ShortConfig(object):
         self.group = None
         self.parsing_failed = False
 
+
 def create_failed_short_config(path):
     failed_short_config = ShortConfig()
-    failed_short_config.name = path
-    with open(path) as f:
-      if '"allowed_users"' in f.read():
-          failed_short_config.name = 'file with possibly restricted access (path hash ' + hex(hash(path)) + ')'
+    name = _build_name_from_path(path)
+    failed_short_config.name = name
     failed_short_config.parsing_failed = True
+
+    file_content = file_utils.read_file(path)
+    if '"allowed_users"' in file_content:
+        restricted_name = name[:2] + '...' + name[-2:]
+        failed_short_config.name = restricted_name + ' (restricted)'
+
     return failed_short_config
+
 
 @observable_fields(
     'script_command',
@@ -270,9 +276,14 @@ class ConfigModel:
 def _read_name(file_path, json_object):
     name = json_object.get('name')
     if not name:
-        filename = os.path.basename(file_path)
-        name = os.path.splitext(filename)[0]
+        name = _build_name_from_path(file_path)
 
+    return name.strip()
+
+
+def _build_name_from_path(file_path):
+    filename = os.path.basename(file_path)
+    name = os.path.splitext(filename)[0]
     return name.strip()
 
 

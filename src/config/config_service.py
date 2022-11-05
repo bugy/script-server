@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from typing import List, NamedTuple, Union
+from typing import NamedTuple, Optional
 
 from auth.authorization import Authorizer
 from config.exceptions import InvalidConfigException
@@ -60,9 +60,6 @@ class ConfigService:
 
         if search_result is None:
             return None
-
-        if(search_result.short_config.parsing_failed == True):
-            raise BadConfigFileException()
 
         (short_config, path, config_object) = search_result
 
@@ -165,13 +162,13 @@ class ConfigService:
         sorted_config = get_sorted_config(config)
         config_json = json.dumps(sorted_config, indent=2)
         file_utils.write_file(path, config_json)
-        
+
     def load_config_file(self, path, content):
         if path.endswith('.yaml'):
             config_object = custom_yaml.loads(content)
-        else:            
+        else:
             config_object = custom_json.loads(content)
-            
+
         return config_object
 
     def list_configs(self, user, mode=None):
@@ -181,7 +178,7 @@ class ConfigService:
 
         conf_service = self
 
-        def load_script(path, content) -> ShortConfig:
+        def load_script(path, content) -> Optional[ShortConfig]:
             try:
                 config_object = self.load_config_file(path, content)
                 short_config = script_config.read_short(path, config_object)
@@ -197,9 +194,8 @@ class ConfigService:
 
                 return short_config
             except json.decoder.JSONDecodeError:
-                LOGGER.exception(BadConfigFileException.VERBOSE_ERROR + ' : ' + path)
-                failed_short_config = create_failed_short_config(path)
-                return failed_short_config
+                LOGGER.exception(CorruptConfigFileException.VERBOSE_ERROR + ': ' + path)
+                return create_failed_short_config(path)
             except Exception:
                 LOGGER.exception('Could not load script: ' + path)
 
@@ -211,9 +207,6 @@ class ConfigService:
         if search_result is None:
             return None
 
-        if(search_result.short_config.parsing_failed == True):
-          raise BadConfigFileException()
-
         (short_config, path, config_object) = search_result
 
         if not self._can_access_script(user, short_config):
@@ -221,7 +214,7 @@ class ConfigService:
 
         return self._load_script_config(path, config_object, user, parameter_values, skip_invalid_parameters)
 
-    def _visit_script_configs(self, visitor) -> List[ ShortConfig ]:
+    def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
         files = os.listdir(configs_dir)
 
@@ -248,7 +241,7 @@ class ConfigService:
 
         return result
 
-    def _find_config(self, name) -> Union[ ConfigSearchResult , None]:
+    def _find_config(self, name) -> Optional[ConfigSearchResult]:
         def find_and_load(path: str, content):
             try:
                 config_object = self.load_config_file(path, content)
@@ -257,11 +250,9 @@ class ConfigService:
                 if short_config is None:
                     return None
             except json.decoder.JSONDecodeError:
-                if name == path:
-                  failed_short_config = create_failed_short_config(path)
-                  raise StopIteration(ConfigSearchResult(failed_short_config, path, None))
-                else:
-                  return None
+                short_config = create_failed_short_config(path)
+                config_object = None
+
             except Exception:
                 LOGGER.exception('Could not load script config: ' + path)
                 return None
@@ -275,7 +266,12 @@ class ConfigService:
         if not configs:
             return None
 
-        return configs[0]
+        found_config = configs[0]
+
+        if found_config.short_config.parsing_failed:
+            raise CorruptConfigFileException()
+
+        return found_config
 
     @staticmethod
     def _load_script_config(path, content_or_json_dict, user, parameter_values, skip_invalid_parameters):
@@ -384,8 +380,9 @@ class InvalidAccessException(Exception):
         super().__init__(message)
 
 
-class BadConfigFileException(Exception):
+class CorruptConfigFileException(Exception):
     HTTP_CODE = 422
     VERBOSE_ERROR = 'Cannot parse script config file'
-    def __init__(self, message=None):
+
+    def __init__(self, message=VERBOSE_ERROR):
         super().__init__(message)
