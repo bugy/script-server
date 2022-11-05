@@ -1,14 +1,15 @@
-import json
 import logging
 import os
 
+import utils.custom_json as custom_json
 import utils.file_utils as file_utils
 from auth.authorization import ANY_USER
 from model import model_helper
-from model.model_helper import read_list, read_int_from_config, read_bool_from_config
+from model.model_helper import read_list, read_int_from_config, read_bool_from_config, ENV_VAR_PREFIX
 from model.trusted_ips import TrustedIpValidator
+from utils.env_utils import EnvVariables
+from utils.process_utils import ProcessInvoker
 from utils.string_utils import strip
-import utils.custom_json as custom_json
 
 LOGGER = logging.getLogger('server_conf')
 
@@ -41,6 +42,8 @@ class ServerConfig(object):
         self.user_header_name = None
         self.secret_storage_file = None
         self.xsrf_protection = None
+        # noinspection PyTypeChecker
+        self.env_vars: EnvVariables = None
 
     def get_port(self):
         return self.port
@@ -59,6 +62,34 @@ class LoggingConfig:
     def __init__(self) -> None:
         self.filename_pattern = None
         self.date_format = None
+
+
+def _build_env_vars(json_object):
+    sensitive_config_paths = [
+        ['auth', 'secret'],
+        ['alerts', 'destinations', 'password'],
+        ['callbacks', 'destinations', 'password']
+    ]
+
+    sensitive_env_vars = []
+
+    def check_and_add_value(value):
+        if isinstance(value, str) and value.startswith(ENV_VAR_PREFIX):
+            sensitive_env_vars.append(value[2:])
+
+    for config_path in sensitive_config_paths:
+        value = model_helper.read_nested(json_object, config_path)
+        if value is None:
+            continue
+
+        if isinstance(value, str):
+            check_and_add_value(value)
+
+        if isinstance(value, list):
+            for value_element in value:
+                check_and_add_value(value_element)
+
+    return EnvVariables(os.environ, hidden_variables=sensitive_env_vars)
 
 
 def from_json(conf_path, temp_folder):
@@ -96,6 +127,8 @@ def from_json(conf_path, temp_folder):
         config.title = json_object.get('title')
     config.enable_script_titles = read_bool_from_config('enable_script_titles', json_object, default=True)
 
+    config.env_vars = _build_env_vars(json_object)
+
     access_config = json_object.get('access')
     if access_config:
         allowed_users = access_config.get('allowed_users')
@@ -108,7 +141,10 @@ def from_json(conf_path, temp_folder):
 
     auth_config = json_object.get('auth')
     if auth_config:
-        config.authenticator = create_authenticator(auth_config, temp_folder)
+        config.authenticator = create_authenticator(
+            auth_config,
+            temp_folder,
+            process_invoker=ProcessInvoker(config.env_vars))
 
         auth_type = config.authenticator.auth_type
         if auth_type == 'google_oauth' and allowed_users is None:
@@ -152,7 +188,7 @@ def from_json(conf_path, temp_folder):
     return config
 
 
-def create_authenticator(auth_object, temp_folder):
+def create_authenticator(auth_object, temp_folder, process_invoker: ProcessInvoker):
     auth_type = auth_object.get('type')
 
     if not auth_type:
@@ -170,7 +206,7 @@ def create_authenticator(auth_object, temp_folder):
         authenticator = GitlabOAuthAuthenticator(auth_object)
     elif auth_type == 'htpasswd':
         from auth.auth_htpasswd import HtpasswdAuthenticator
-        authenticator = HtpasswdAuthenticator(auth_object)
+        authenticator = HtpasswdAuthenticator(auth_object, process_invoker)
     else:
         raise Exception(auth_type + ' auth is not supported')
 

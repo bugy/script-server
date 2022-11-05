@@ -969,7 +969,7 @@ def _create_config_model(name, *,
     if working_dir is not None:
         result_config['working_directory'] = working_dir
 
-    model = ConfigModel(result_config, path, username, audit_name)
+    model = ConfigModel(result_config, path, username, audit_name, test_utils.process_invoker)
     if parameter_values is not None:
         model.set_all_param_values(parameter_values, skip_invalid_parameters=skip_invalid_parameters)
 

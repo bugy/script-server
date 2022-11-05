@@ -1,3 +1,4 @@
+import os
 import time
 import unittest
 
@@ -7,7 +8,7 @@ from execution.executor import ScriptExecutor, _build_env_variables, create_proc
 from react.observable import _StoringObserver, read_until_closed
 from tests import test_utils
 from tests.test_utils import _MockProcessWrapper, create_config_model, create_script_param_config, \
-    create_parameter_model
+    create_parameter_model, assert_contains_sub_dict
 
 BUFFER_FLUSH_WAIT_TIME = (executor.TIME_BUFFER_MS * 1.5) / 1000.0
 
@@ -26,7 +27,7 @@ class TestScriptExecutor(unittest.TestCase):
         process_wrapper = self.executor.process_wrapper
         self.assertEqual(None, process_wrapper.working_directory)
         self.assertEqual(['ls'], process_wrapper.command)
-        self.assertEqual({}, process_wrapper.env_variables)
+        self.assertEqual(os.environ, process_wrapper.all_env_variables)
 
     def test_start_with_one_value(self):
         config = create_config_model('config_x', parameters=[create_script_param_config('id')])
@@ -35,7 +36,9 @@ class TestScriptExecutor(unittest.TestCase):
 
         process_wrapper = self.executor.process_wrapper
         self.assertEqual(['ls', 918273], process_wrapper.command)
-        self.assertEqual({'PARAM_ID': '918273'}, process_wrapper.env_variables)
+        assert_contains_sub_dict(self,
+                                 process_wrapper.all_env_variables,
+                                 {'PARAM_ID': '918273'})
 
     def test_start_with_multiple_values(self):
         config = create_config_model('config_x', parameters=[
@@ -48,60 +51,59 @@ class TestScriptExecutor(unittest.TestCase):
 
         process_wrapper = self.executor.process_wrapper
         self.assertEqual(['ls', 918273, '-n', 'UserX', '--verbose'], process_wrapper.command)
-        self.assertEqual({'PARAM_ID': '918273', 'My_Name': 'UserX', 'PARAM_VERBOSE': 'true'},
-                         process_wrapper.env_variables)
+        assert_contains_sub_dict(self,
+                                 process_wrapper.all_env_variables,
+                                 {'PARAM_ID': '918273', 'My_Name': 'UserX', 'PARAM_VERBOSE': 'true'})
 
     def test_env_variables_when_pty(self):
-        test_utils.set_env_value('some_env', 'test')
+        with test_utils.custom_env('some_env', 'test'):
+            config = create_config_model(
+                'config_x',
+                script_command='tests/scripts/printenv.sh',
+                requires_terminal=True,
+                parameters=[
+                    create_script_param_config('id'),
+                    create_script_param_config('name', env_var='My_Name', param='-n'),
+                    create_script_param_config('verbose', param='--verbose', no_value=True),
+                ])
 
-        config = create_config_model(
-            'config_x',
-            script_command='tests/scripts/printenv.sh',
-            requires_terminal=True,
-            parameters=[
-                create_script_param_config('id'),
-                create_script_param_config('name', env_var='My_Name', param='-n'),
-                create_script_param_config('verbose', param='--verbose', no_value=True),
-            ])
+            executor._process_creator = create_process_wrapper
+            self.create_executor(config, {'id': '918273', 'name': 'UserX', 'verbose': True})
+            self.executor.start()
 
-        executor._process_creator = create_process_wrapper
-        self.create_executor(config, {'id': '918273', 'name': 'UserX', 'verbose': True})
-        self.executor.start()
+            data = read_until_closed(self.executor.get_raw_output_stream(), 100)
+            output = ''.join(data)
 
-        data = read_until_closed(self.executor.get_raw_output_stream(), 100)
-        output = ''.join(data)
-
-        variables = parse_env_variables(output)
-        self.assertEqual('918273', variables.get('PARAM_ID'))
-        self.assertEqual('UserX', variables.get('My_Name'))
-        self.assertEqual('true', variables.get('PARAM_VERBOSE'))
-        self.assertEqual('test', variables.get('some_env'))
+            variables = parse_env_variables(output)
+            self.assertEqual('918273', variables.get('PARAM_ID'))
+            self.assertEqual('UserX', variables.get('My_Name'))
+            self.assertEqual('true', variables.get('PARAM_VERBOSE'))
+            self.assertEqual('test', variables.get('some_env'))
 
     def test_env_variables_when_popen(self):
-        test_utils.set_env_value('some_env', 'test')
+        with test_utils.custom_env('some_env', 'test'):
+            config = create_config_model(
+                'config_x',
+                script_command='tests/scripts/printenv.sh',
+                requires_terminal=False,
+                parameters=[
+                    create_script_param_config('id'),
+                    create_script_param_config('name', env_var='My_Name', param='-n'),
+                    create_script_param_config('verbose', param='--verbose', no_value=True),
+                ])
 
-        config = create_config_model(
-            'config_x',
-            script_command='tests/scripts/printenv.sh',
-            requires_terminal=False,
-            parameters=[
-                create_script_param_config('id'),
-                create_script_param_config('name', env_var='My_Name', param='-n'),
-                create_script_param_config('verbose', param='--verbose', no_value=True),
-            ])
+            executor._process_creator = create_process_wrapper
+            self.create_executor(config, {'id': '918273', 'name': 'UserX', 'verbose': True})
+            self.executor.start()
 
-        executor._process_creator = create_process_wrapper
-        self.create_executor(config, {'id': '918273', 'name': 'UserX', 'verbose': True})
-        self.executor.start()
+            data = read_until_closed(self.executor.get_raw_output_stream(), 100)
+            output = ''.join(data)
 
-        data = read_until_closed(self.executor.get_raw_output_stream(), 100)
-        output = ''.join(data)
-
-        variables = parse_env_variables(output)
-        self.assertEqual('918273', variables.get('PARAM_ID'))
-        self.assertEqual('UserX', variables.get('My_Name'))
-        self.assertEqual('true', variables.get('PARAM_VERBOSE'))
-        self.assertEqual('test', variables.get('some_env'))
+            variables = parse_env_variables(output)
+            self.assertEqual('918273', variables.get('PARAM_ID'))
+            self.assertEqual('UserX', variables.get('My_Name'))
+            self.assertEqual('true', variables.get('PARAM_VERBOSE'))
+            self.assertEqual('test', variables.get('some_env'))
 
     def test_start_with_multiple_values_when_one_not_exist(self):
         config = create_config_model('config_x', parameters=[
@@ -113,11 +115,12 @@ class TestScriptExecutor(unittest.TestCase):
 
         process_wrapper = self.executor.process_wrapper
         self.assertEqual(['ls', 918273, '--verbose'], process_wrapper.command)
-        self.assertEqual({'PARAM_ID': '918273', 'PARAM_VERBOSE': 'true'},
-                         process_wrapper.env_variables)
+        assert_contains_sub_dict(self,
+                                 process_wrapper.all_env_variables,
+                                 {'PARAM_ID': '918273', 'PARAM_VERBOSE': 'true'})
 
     def create_executor(self, config, parameter_values):
-        self.executor = ScriptExecutor(config, parameter_values)
+        self.executor = ScriptExecutor(config, parameter_values, test_utils.env_variables)
 
     def setUp(self):
         executor._process_creator = _MockProcessWrapper
@@ -341,7 +344,7 @@ class TestBuildCommandArgs(unittest.TestCase):
         if config.script_command is None:
             config.script_command = 'ping'
 
-        script_executor = ScriptExecutor(config, param_values)
+        script_executor = ScriptExecutor(config, param_values, test_utils.env_variables)
         args_string = executor.build_command_args(script_executor.get_script_parameter_values(), config)
         return args_string
 
@@ -504,7 +507,7 @@ class TestProcessOutput(unittest.TestCase):
         if parameter_values is None:
             parameter_values = {}
 
-        self.executor = ScriptExecutor(config, parameter_values)
+        self.executor = ScriptExecutor(config, parameter_values, test_utils.env_variables)
         self.executor.start()
         return self.executor
 
@@ -594,7 +597,7 @@ class GetSecureCommandTest(unittest.TestCase):
 
     def get_secure_command(self, parameters, values):
         config = create_config_model('config_x', parameters=parameters)
-        executor = ScriptExecutor(config, values)
+        executor = ScriptExecutor(config, values, test_utils.env_variables)
         return executor.get_secure_command()
 
 

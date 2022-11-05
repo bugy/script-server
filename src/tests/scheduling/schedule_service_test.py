@@ -58,7 +58,7 @@ class ScheduleServiceTestCase(TestCase):
         schedule_service._sleep = MagicMock()
         schedule_service._sleep.side_effect = lambda x: time.sleep(0.001)
 
-        self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder)
+        self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder, test_utils.process_invoker)
 
         self.create_config('my_script_A')
         self.create_config('unschedulable-script', scheduling_enabled=False)

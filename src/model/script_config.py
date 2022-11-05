@@ -13,6 +13,7 @@ from model.parameter_config import ParameterModel
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
 from utils import file_utils, custom_json
 from utils.object_utils import merge_dicts
+from utils.process_utils import ProcessInvoker
 
 OUTPUT_FORMAT_TERMINAL = 'terminal'
 
@@ -45,6 +46,7 @@ class ConfigModel:
                  path,
                  username,
                  audit_name,
+                 process_invoker: ProcessInvoker,
                  pty_enabled_default=True):
         super().__init__()
 
@@ -52,6 +54,7 @@ class ConfigModel:
         self.name = short_config.name
         self._pty_enabled_default = pty_enabled_default
         self._config_folder = os.path.dirname(path)
+        self._process_invoker = process_invoker
 
         self._username = username
         self._audit_name = audit_name
@@ -153,6 +156,7 @@ class ConfigModel:
         for parameter_config in original_parameter_configs:
             parameter = ParameterModel(parameter_config, username, audit_name,
                                        lambda: self.parameters,
+                                       self._process_invoker,
                                        self.parameter_values,
                                        self.working_directory)
             self.parameters.append(parameter)
@@ -209,6 +213,7 @@ class ConfigModel:
                 if parameter is None:
                     parameter = ParameterModel(parameter_config, self._username, self._audit_name,
                                                lambda: self.parameters,
+                                               self._process_invoker,
                                                self.parameter_values,
                                                self.working_directory)
                     self.parameters.append(parameter)

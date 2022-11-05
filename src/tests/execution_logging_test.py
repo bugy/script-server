@@ -578,7 +578,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         authorizer = Authorizer([], [], [], [], EmptyGroupProvider())
         self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), authorizer)
-        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock(), test_utils.env_variables)
 
         self.controller = ExecutionLoggingController(self.executor_service, self.logging_service)
         self.controller.start()

@@ -389,7 +389,7 @@ class FileDownloadFeatureTest(unittest.TestCase):
         test_utils.setup()
 
         executor._process_creator = _MockProcessWrapper
-        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock(), test_utils.env_variables)
 
         self.feature = FileDownloadFeature(UserFileStorage(b'123456'), test_utils.temp_folder)
         self.feature.subscribe(self.executor_service)
@@ -423,7 +423,7 @@ class TestInlineImages(unittest.TestCase):
         test_utils.setup()
 
         executor._process_creator = _MockProcessWrapper
-        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock(), test_utils.env_variables)
 
         self.file_download_feature = file_download_feature.FileDownloadFeature(
             UserFileStorage(b'123456'), test_utils.temp_folder)

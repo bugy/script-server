@@ -7,6 +7,7 @@ from auth.user import User
 from execution.executor import ScriptExecutor
 from model import script_config
 from model.model_helper import is_empty, AccessProhibitedException
+from utils.env_utils import EnvVariables
 from utils.exceptions.missing_arg_exception import MissingArgumentException
 from utils.exceptions.not_found_exception import NotFoundException
 
@@ -17,7 +18,7 @@ _ExecutionInfo = namedtuple('_ExecutionInfo',
 
 
 class ExecutionService:
-    def __init__(self, authorizer, id_generator):
+    def __init__(self, authorizer, id_generator, env_vars: EnvVariables):
 
         self._id_generator = id_generator
         self._authorizer = authorizer  # type: Authorizer
@@ -32,6 +33,7 @@ class ExecutionService:
 
         self._finish_listeners = []
         self._start_listeners = []
+        self._env_vars = env_vars
 
     def get_active_executor(self, execution_id, user):
         self.validate_execution_id(execution_id, user, only_active=False)
@@ -46,7 +48,7 @@ class ExecutionService:
         config.set_all_param_values(values)
         normalized_values = dict(config.parameter_values)
 
-        executor = ScriptExecutor(config, normalized_values)
+        executor = ScriptExecutor(config, normalized_values, self._env_vars)
         execution_id = self._id_generator.next_id()
 
         audit_command = executor.get_secure_command()

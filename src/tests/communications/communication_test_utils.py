@@ -36,7 +36,7 @@ class CommunicatorsMock:
         def communicator_generator(name, mock_class):
             counter = 0
 
-            def creator(config):
+            def creator(*args):
                 nonlocal counter
                 counter += 1
                 communicator = mock_class(name + str(counter))

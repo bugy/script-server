@@ -105,7 +105,7 @@ class ConfigServiceTest(unittest.TestCase):
         test_utils.setup()
 
         self.user = User('ConfigServiceTest', {AUTH_USERNAME: 'ConfigServiceTest'})
-        self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder)
+        self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder, test_utils.process_invoker)
 
 
 class ConfigServiceAuthTest(unittest.TestCase):
@@ -189,7 +189,7 @@ class ConfigServiceAuthTest(unittest.TestCase):
         authorizer = Authorizer([], ['adm_user'], [], [], EmptyGroupProvider())
         self.user1 = User('user1', {})
         self.admin_user = User('adm_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
 
 def script_path(path):
@@ -222,7 +222,7 @@ class ConfigServiceCreateConfigTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
     def tearDown(self):
         super().tearDown()
@@ -389,7 +389,7 @@ class ConfigServiceUpdateConfigTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
         for suffix in 'XYZ':
             name = 'Conf ' + suffix
@@ -642,7 +642,7 @@ class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user'], [], [], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
     def tearDown(self):
         super().tearDown()
@@ -690,7 +690,7 @@ class ConfigServiceLoadCodeTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
         for pair in [('script.py', b'123'),
                      ('another.py', b'xyz'),

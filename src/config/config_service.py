@@ -12,6 +12,7 @@ from model.model_helper import InvalidFileException
 from model.script_config import get_sorted_config
 from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
+from utils.process_utils import ProcessInvoker
 from utils.string_utils import is_blank, strip
 
 SCRIPT_EDIT_CODE_MODE = 'new_code'
@@ -44,10 +45,11 @@ def _preprocess_incoming_config(config):
 
 
 class ConfigService:
-    def __init__(self, authorizer, conf_folder) -> None:
+    def __init__(self, authorizer, conf_folder, process_invoker: ProcessInvoker) -> None:
         self._authorizer = authorizer  # type: Authorizer
         self._script_configs_folder = os.path.join(conf_folder, 'runners')
         self._scripts_folder = os.path.join(conf_folder, 'scripts')
+        self._process_invoker = process_invoker
 
         file_utils.prepare_folder(self._script_configs_folder)
 
@@ -160,13 +162,13 @@ class ConfigService:
         sorted_config = get_sorted_config(config)
         config_json = json.dumps(sorted_config, indent=2)
         file_utils.write_file(path, config_json)
-        
+
     def load_config_file(self, path, content):
         if path.endswith('.yaml'):
             config_object = custom_yaml.loads(content)
-        else:            
+        else:
             config_object = custom_json.loads(content)
-            
+
         return config_object
 
     def list_configs(self, user, mode=None):
@@ -207,7 +209,13 @@ class ConfigService:
         if not self._can_access_script(user, short_config):
             raise ConfigNotAllowedException()
 
-        return self._load_script_config(path, config_object, user, parameter_values, skip_invalid_parameters)
+        return self._load_script_config(
+            path,
+            config_object,
+            user,
+            parameter_values,
+            skip_invalid_parameters,
+            self._process_invoker)
 
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
@@ -260,7 +268,14 @@ class ConfigService:
         return configs[0]
 
     @staticmethod
-    def _load_script_config(path, content_or_json_dict, user, parameter_values, skip_invalid_parameters):
+    def _load_script_config(
+            path,
+            content_or_json_dict,
+            user,
+            parameter_values,
+            skip_invalid_parameters,
+            process_invoker):
+
         if isinstance(content_or_json_dict, str):
             json_object = custom_json.loads(content_or_json_dict)
         else:
@@ -270,6 +285,7 @@ class ConfigService:
             path,
             user.get_username(),
             user.get_audit_name(),
+            process_invoker,
             pty_enabled_default=os_utils.is_pty_supported())
 
         if parameter_values is not None:

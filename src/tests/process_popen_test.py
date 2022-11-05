@@ -19,13 +19,23 @@ class TestEnvironmentVariables(unittest.TestCase):
         self.assertEqual('abc', env_dict.get('test'))
         self.assertEqual('/me/user', env_dict.get('HOME'))
 
+    def test_custom_variables_when_hidden(self):
+        with test_utils.custom_env({'MY_PASSWORD': 'qwerty', 'SOME_VAR': 'hi'}):
+            env_dict = self.execute_and_get_passed_env({'test': 'abc', 'HOME': '/me/user'})
+            self.assertEqual('abc', env_dict.get('test'))
+            self.assertEqual('/me/user', env_dict.get('HOME'))
+            self.assertNotIn('MY_PASSWORD', env_dict)
+            self.assertEqual('hi', env_dict.get('SOME_VAR'))
+
     def test_PYTHONUNBUFFERED(self):
         env_dict = self.execute_and_get_passed_env({})
         self.assertEqual('1', env_dict.get('PYTHONUNBUFFERED'))
 
     @staticmethod
     def execute_and_get_passed_env(custom_variables):
-        process_wrapper = POpenProcessWrapper('tests/scripts/printenv.sh', '.', custom_variables)
+        env_variables = test_utils.env_variables
+        process_wrapper = POpenProcessWrapper(
+            'tests/scripts/printenv.sh', '.', env_variables.build_env_vars(custom_variables))
         process_wrapper.start()
         thread = threading.Thread(target=process_wrapper.wait_finish, daemon=True)
         thread.start()

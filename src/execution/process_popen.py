@@ -23,8 +23,8 @@ def prepare_cmd_for_win(command):
 
 
 class POpenProcessWrapper(process_base.ProcessWrapper):
-    def __init__(self, command, working_directory, env_variables):
-        super().__init__(command, working_directory, env_variables)
+    def __init__(self, command, working_directory, all_env_variables):
+        super().__init__(command, working_directory, all_env_variables)
 
     def start_execution(self, command, working_directory):
         shell = False
@@ -96,3 +96,5 @@ class POpenProcessWrapper(process_base.ProcessWrapper):
 
         finally:
             self.output_stream.close()
+            self.process.stdout.close()
+            self.process.stdin.close()

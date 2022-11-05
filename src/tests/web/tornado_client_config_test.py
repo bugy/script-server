@@ -4,7 +4,6 @@ from unittest import mock
 
 from tornado import httpclient
 from tornado.httpclient import AsyncHTTPClient
-from tornado.util import Configurable
 
 from tests import test_utils
 from tests.test_utils import mock_object
@@ -18,31 +17,31 @@ class TestInitializeClient(unittest.TestCase):
         self.assert_proxy(None, None)
 
     def test_https_proxy_lowercase(self):
-        test_utils.set_env_value('https_proxy', 'https://my.proxy.com:8080/path')
+        test_utils.set_os_environ_value('https_proxy', 'https://my.proxy.com:8080/path')
         self.run_initialize()
 
         self.assert_proxy('my.proxy.com', 8080)
 
     def test_http_proxy_uppercase(self):
-        test_utils.set_env_value('HTTP_PROXY', 'http://localhost:12345')
+        test_utils.set_os_environ_value('HTTP_PROXY', 'http://localhost:12345')
         self.run_initialize()
 
         self.assert_proxy('localhost', 12345)
 
     def test_proxy_credentials(self):
-        test_utils.set_env_value('HTTP_PROXY', 'http://user999:qwerty@localhost:12345')
+        test_utils.set_os_environ_value('HTTP_PROXY', 'http://user999:qwerty@localhost:12345')
         self.run_initialize()
 
         self.assert_proxy('localhost', 12345, username='user999', password='qwerty')
 
     def test_default_port(self):
-        test_utils.set_env_value('HTTP_PROXY', 'http://192.168.1.1')
+        test_utils.set_os_environ_value('HTTP_PROXY', 'http://192.168.1.1')
         self.run_initialize()
 
         self.assert_proxy('192.168.1.1', 3128)
 
     def test_no_pycurl(self):
-        test_utils.set_env_value('HTTP_PROXY', 'http://192.168.1.1')
+        test_utils.set_os_environ_value('HTTP_PROXY', 'http://192.168.1.1')
         with mock.patch.dict(sys.modules, {'pycurl': None}):
             tornado_client_config.initialize()
 
