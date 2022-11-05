@@ -3,10 +3,10 @@ import argparse
 import os
 import sys
 
+sys.path.insert(1, os.path.join(sys.path[0], '..', 'src'))
+
 from utils.env_utils import EnvVariables
 from utils.process_utils import ProcessInvoker
-
-sys.path.insert(1, os.path.join(sys.path[0], '..', 'src'))
 
 
 def download_web_files(project_path):
