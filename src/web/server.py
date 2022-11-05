@@ -569,6 +569,7 @@ class LoginHandler(BaseRequestHandler):
 
 
 class AuthInfoHandler(BaseRequestHandler):
+    @check_authorization
     @inject_user
     def get(self, user):
         auth = self.application.auth
