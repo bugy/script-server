@@ -4,6 +4,7 @@ import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from typing import List
 
 from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
@@ -26,8 +27,8 @@ LOGGER = logging.getLogger('script_server.script_config')
 class ShortConfig:
     name: str
     group: str = None
-    allowed_users: list[str] = field(default_factory=list)
-    admin_users: list[str] = field(default_factory=list)
+    allowed_users: List[str] = field(default_factory=list)
+    admin_users: List[str] = field(default_factory=list)
     parsing_failed: bool = False
 
 
