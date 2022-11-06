@@ -3,6 +3,7 @@ import logging
 import os
 import re
 from collections import OrderedDict
+from dataclasses import dataclass, field
 
 from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
@@ -21,28 +22,24 @@ OUTPUT_FORMATS = [OUTPUT_FORMAT_TERMINAL, 'html', 'html_iframe', 'text']
 LOGGER = logging.getLogger('script_server.script_config')
 
 
-class ShortConfig(object):
-    def __init__(self):
-        self.name = None
-        self.allowed_users = []
-        self.admin_users = []
-        self.group = None
-        self.parsing_failed = False
+@dataclass
+class ShortConfig:
+    name: str
+    group: str = None
+    allowed_users: list[str] = field(default_factory=list)
+    admin_users: list[str] = field(default_factory=list)
+    parsing_failed: bool = False
 
 
 def create_failed_short_config(path, has_admin_rights):
-    failed_short_config = ShortConfig()
     name = _build_name_from_path(path)
-    failed_short_config.name = name
-    failed_short_config.parsing_failed = True
-
     if not has_admin_rights:
         file_content = file_utils.read_file(path)
         if '"allowed_users"' in file_content:
             restricted_name = name[:2] + '...' + name[-2:]
-            failed_short_config.name = restricted_name + ' (restricted)'
+            name = restricted_name + ' (restricted)'
 
-    return failed_short_config
+    return ShortConfig(name=name, parsing_failed=True)
 
 
 @observable_fields(
@@ -289,28 +286,26 @@ def _build_name_from_path(file_path):
 
 
 def read_short(file_path, json_object):
-    config = ShortConfig()
-
-    config.name = _read_name(file_path, json_object)
-    config.allowed_users = json_object.get('allowed_users')
-    config.admin_users = json_object.get('admin_users')
-    config.group = read_str_from_config(json_object, 'group', blank_to_none=True)
+    name = _read_name(file_path, json_object)
+    allowed_users = json_object.get('allowed_users')
+    admin_users = json_object.get('admin_users')
+    group = read_str_from_config(json_object, 'group', blank_to_none=True)
 
     hidden = read_bool_from_config('hidden', json_object, default=False)
     if hidden:
         return None
 
-    if config.allowed_users is None:
-        config.allowed_users = ANY_USER
-    elif (config.allowed_users == '*') or ('*' in config.allowed_users):
-        config.allowed_users = ANY_USER
+    if allowed_users is None:
+        allowed_users = ANY_USER
+    elif (allowed_users == '*') or ('*' in allowed_users):
+        allowed_users = ANY_USER
 
-    if config.admin_users is None:
-        config.admin_users = ANY_USER
-    elif (config.admin_users == '*') or ('*' in config.admin_users):
-        config.admin_users = ANY_USER
+    if admin_users is None:
+        admin_users = ANY_USER
+    elif (admin_users == '*') or ('*' in admin_users):
+        admin_users = ANY_USER
 
-    return config
+    return ShortConfig(name=name, group=group, allowed_users=allowed_users, admin_users=admin_users)
 
 
 class ParameterNotFoundException(Exception):

@@ -88,9 +88,9 @@ class ServerTest(TestCase):
 
         response = self.request('GET', 'http://127.0.0.1:12345/scripts')
         self.assertCountEqual([
-            {'name': 's1', 'group': None},
-            {'name': 's2', 'group': 'Xyz'},
-            {'name': 's3', 'group': None}],
+            {'name': 's1', 'group': None, 'parsing_failed': False},
+            {'name': 's2', 'group': 'Xyz', 'parsing_failed': False},
+            {'name': 's3', 'group': None, 'parsing_failed': False}],
             response['scripts'])
 
     @parameterized.expand([
