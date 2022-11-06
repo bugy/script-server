@@ -56,7 +56,7 @@ class ConfigService:
     def load_config(self, name, user):
         self._check_admin_access(user)
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
 
         if search_result is None:
             return None
@@ -77,7 +77,7 @@ class ConfigService:
 
         name = config['name']
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
         if search_result is not None:
             raise InvalidConfigException('Another config with the same name already exists')
 
@@ -108,7 +108,7 @@ class ConfigService:
 
         name = config['name']
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
         if (search_result is not None) and (os.path.basename(search_result.path) != filename):
             raise InvalidConfigException('Another script found with the same name: ' + name)
 
@@ -178,6 +178,8 @@ class ConfigService:
 
         conf_service = self
 
+        has_admin_rights = self._authorizer.is_admin(user.user_id)
+
         def load_script(path, content) -> Optional[ShortConfig]:
             try:
                 config_object = self.load_config_file(path, content)
@@ -195,14 +197,14 @@ class ConfigService:
                 return short_config
             except json.decoder.JSONDecodeError:
                 LOGGER.exception(CorruptConfigFileException.VERBOSE_ERROR + ': ' + path)
-                return create_failed_short_config(path)
+                return create_failed_short_config(path, has_admin_rights)
             except Exception:
                 LOGGER.exception('Could not load script: ' + path)
 
         return self._visit_script_configs(load_script)
 
     def load_config_model(self, name, user, parameter_values=None, skip_invalid_parameters=False):
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
 
         if search_result is None:
             return None
@@ -241,7 +243,9 @@ class ConfigService:
 
         return result
 
-    def _find_config(self, name) -> Optional[ConfigSearchResult]:
+    def _find_config(self, name, user) -> Optional[ConfigSearchResult]:
+        has_admin_rights = self._authorizer.is_admin(user.user_id)
+
         def find_and_load(path: str, content):
             try:
                 config_object = self.load_config_file(path, content)
@@ -250,7 +254,7 @@ class ConfigService:
                 if short_config is None:
                     return None
             except json.decoder.JSONDecodeError:
-                short_config = create_failed_short_config(path)
+                short_config = create_failed_short_config(path, has_admin_rights)
                 config_object = None
 
             except Exception:

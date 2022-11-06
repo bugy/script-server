@@ -30,16 +30,17 @@ class ShortConfig(object):
         self.parsing_failed = False
 
 
-def create_failed_short_config(path):
+def create_failed_short_config(path, has_admin_rights):
     failed_short_config = ShortConfig()
     name = _build_name_from_path(path)
     failed_short_config.name = name
     failed_short_config.parsing_failed = True
 
-    file_content = file_utils.read_file(path)
-    if '"allowed_users"' in file_content:
-        restricted_name = name[:2] + '...' + name[-2:]
-        failed_short_config.name = restricted_name + ' (restricted)'
+    if not has_admin_rights:
+        file_content = file_utils.read_file(path)
+        if '"allowed_users"' in file_content:
+            restricted_name = name[:2] + '...' + name[-2:]
+            failed_short_config.name = restricted_name + ' (restricted)'
 
     return failed_short_config
 
