@@ -359,7 +359,13 @@ class ConfigService:
                 code = script_config.get('code')
                 if code is None:
                     raise InvalidConfigException('script.code should be specified')
-                file_utils.write_file(script_path, code)
+
+                # Fix non-native OS line endings.
+                # From python docs:
+                #   Do not use os.linesep as a line terminator when writing files opened in text mode (the default);
+                #   use a single '\n' instead, on all platforms.
+                normalized_code = code.replace('\r\n', '\n').replace('\r', '\n')
+                file_utils.write_file(script_path, normalized_code)
 
             file_utils.make_executable(script_path)
 

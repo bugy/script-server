@@ -313,14 +313,21 @@ class ConfigServiceCreateConfigTest(unittest.TestCase):
 
         _validate_config(self, 'conf1.json', config)
 
-    def test_new_code(self):
-        config = _prepare_script_config_object('Conf X', script=new_code('abcdef', 'anything/my name.sh'))
+    @parameterized.expand([
+        ('abcdef', 'abcdef'),
+        ('abcdef\nxyz', 'abcdef\nxyz'),
+        ('abcdef\r\nxyz', 'abcdef\nxyz'),
+        ('abcdef\rxyz', 'abcdef\nxyz'),
+        ('abcdef\r\nxyz\rtest\ntest2', 'abcdef\nxyz\ntest\ntest2'),
+    ])
+    def test_new_code(self, code, expected_code):
+        config = _prepare_script_config_object('Conf X', script=new_code(code, 'anything/my name.sh'))
         self.config_service.create_config(self.admin_user, config, None)
 
         script_path = _default_script_path('my_name')
         self.assertEqual(config['script_path'], script_path)
         _validate_config(self, 'Conf_X.json', config)
-        _validate_code(self, script_path, 'abcdef')
+        _validate_code(self, script_path, expected_code)
         self.assertTrue(is_executable(script_path))
 
     def test_upload_code(self):
