@@ -20,7 +20,8 @@ import tornado.websocket
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from communications.alerts_service import AlertsService
-from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException, BadConfigFileException
+from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException, \
+    CorruptConfigFileException
 from config.exceptions import InvalidConfigException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
@@ -137,7 +138,7 @@ class GetScripts(BaseRequestHandler):
 
         configs = self.application.config_service.list_configs(user, mode)
 
-        scripts = [{'name': conf.name, 'group': conf.group, 'parsing_failed': conf.parsing_failed } for conf in configs]
+        scripts = [{'name': conf.name, 'group': conf.group, 'parsing_failed': conf.parsing_failed} for conf in configs]
 
         self.write(json.dumps({'scripts': scripts}))
 
@@ -191,9 +192,8 @@ class AdminGetScriptEndpoint(BaseRequestHandler):
             LOGGER.warning('Admin access to the script "' + script_name + '" is denied for ' + user.get_audit_name())
             respond_error(self, 403, 'Access to the script is denied')
             return
-        except BadConfigFileException:
-            LOGGER.warning(BadConfigFileException.VERBOSE_ERROR + ' : ' + script_name)
-            respond_error(self, BadConfigFileException.HTTP_CODE, BadConfigFileException.VERBOSE_ERROR)
+        except CorruptConfigFileException as e:
+            respond_error(self, CorruptConfigFileException.HTTP_CODE, str(e))
             return
 
         if config is None:
@@ -405,9 +405,8 @@ class ScriptExecute(StreamUploadRequestHandler):
             respond_error(self, 403, 'Access to the script is denied')
             return
 
-        except BadConfigFileException:
-            LOGGER.warning(BadConfigFileException.VERBOSE_ERROR + ' : ' + script_name)
-            respond_error(self, 422, BadConfigFileException.VERBOSE_ERROR)
+        except CorruptConfigFileException as e:
+            respond_error(self, CorruptConfigFileException.HTTP_CODE, str(e))
             return None
 
         except Exception as e:

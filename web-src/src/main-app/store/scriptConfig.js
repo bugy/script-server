@@ -1,5 +1,5 @@
 import {ReactiveWebSocket} from '@/common/connections/rxWebsocket';
-import clone from 'lodash/clone';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import {
     forEachKeyValue,
     HttpForbiddenError,
@@ -15,7 +15,7 @@ import {
     toDict,
     toQueryArgs
 } from '@/common/utils/common';
-import {axiosInstance} from '@/common/utils/axios_utils';
+import clone from 'lodash/clone';
 import Vue from 'vue';
 import {preprocessParameter} from '../utils/model_helper';
 
@@ -334,9 +334,9 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
             logError(error);
 
             if (error instanceof SocketClosedError) {
-              
+
                 if (error.code === 422) {
-                  commit('SET_ERROR', `${CANNOT_PARSE_ERROR_PREFIX} "${selectedScript}"`);
+                    commit('SET_ERROR', `${error.reason} "${selectedScript}"`);
                   return;
                 }
                 

@@ -8,19 +8,14 @@
       </router-link>
       <div class="collection">
 
-        <template v-for="script in scripts" >
-          <router-link :to="script.path" append
-                       :key="script.name" 
-                       v-if="!script.parsingFailed"
+        <template v-for="script in scripts">
+          <router-link :key="script.name"
+                       :class="{'parsing-failed': script.parsingFailed}"
+                       :to="script.path"
+                       append
                        class="collection-item">
             {{ script.name }}
           </router-link>
-          
-          <div v-else class="collection-item parsing-failed">
-            <code>
-              {{ script.name }}
-            </code>
-          </div>
         </template>
 
       </div>
@@ -49,12 +44,13 @@ export default {
   computed: {
     ...mapState('scripts', {
       scripts: state => {
-        return state.scripts ? state.scripts.map(s => ({
-              name: s.name, 
-              path: encodeURIComponent(s.name), 
+        return state.scripts
+            ? state.scripts.map(s => ({
+              name: s.name,
+              path: encodeURIComponent(s.name),
               parsingFailed: s.parsingFailed
-              })) 
-              : []
+            }))
+            : []
       },
       loading: 'loading'
     })
@@ -82,10 +78,11 @@ export default {
 
 .scripts-list .collection-item.parsing-failed {
   color: var(--error-color);
-  /* I didn't find any good ways to disable a <router-link> */
-  /* pointer-events: none; */
+  pointer-events: none;
 }
-.scripts-list .collection-item.parsing-failed::before {
-  content: "Could not read config file: ";
+
+.scripts-list .collection-item.parsing-failed::after {
+  content: '(failed to parse config file)';
 }
+
 </style>

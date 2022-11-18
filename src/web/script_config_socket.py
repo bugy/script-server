@@ -13,7 +13,7 @@ import tornado.websocket
 from tornado import gen
 
 from auth.user import User
-from config.config_service import ConfigNotAllowedException, BadConfigFileException
+from config.config_service import ConfigNotAllowedException, CorruptConfigFileException
 from model import external_model
 from model.external_model import parameter_to_external
 from model.model_helper import read_bool
@@ -184,8 +184,8 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
         except ConfigNotAllowedException:
             self.close(code=403, reason='Access to the script is denied')
             return None
-        except BadConfigFileException:
-            self.close(code=BadConfigFileException.HTTP_CODE, reason=BadConfigFileException.VERBOSE_ERROR)
+        except CorruptConfigFileException as e:
+            self.close(code=CorruptConfigFileException.HTTP_CODE, reason=str(e))
             return None
         except Exception:
             message = 'Failed to load script config ' + config_name
