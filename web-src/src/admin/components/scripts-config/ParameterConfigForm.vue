@@ -73,7 +73,7 @@
                  title="Excluded files"
                  @error="handleError('Excluded files', $event)"/>
     </div>
-    <div v-if="selectedType === 'text' || selectedType === undefined" class="row">
+    <div v-if="selectedType === 'text' || selectedType === undefined || selectedType === 'multiline_text'" class="row">
       <Textfield v-model="regexConfigPattern" :config="regexPatternField" class="col s4"
                  @error="handleError(regexPatternField, $event)"/>
       <Textfield v-model="regexConfigDescription" :config="regexDescriptionField" class="col s4"

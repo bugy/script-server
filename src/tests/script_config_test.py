@@ -11,7 +11,7 @@ from model.script_config import ConfigModel, InvalidValueException, _TemplatePro
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
 from tests.test_utils import create_script_param_config, create_parameter_model, create_files
-from utils import file_utils
+from utils import file_utils, custom_json
 
 DEF_AUDIT_NAME = '127.0.0.1'
 DEF_USERNAME = 'user1'
@@ -854,6 +854,32 @@ class GetSortedConfigTest(unittest.TestCase):
         self.assertEqual(expected, config)
 
 
+    def test_json_comments(self):
+        config = get_sorted_config(custom_json.loads(
+                """{
+                // Comment 1
+                "parameters": [
+                            // Comment 2
+                            {"name": "param2", "description": "desc 1"},
+                            {"type": "int", "name": "paramA"},
+                            {"default": "false", "name": "param1", "no_value": true}
+                            ],
+                // Comment 3
+                "name": "Conf X"
+                }""")
+            )
+
+        expected = OrderedDict([
+            ('name', 'Conf X'),
+            ('parameters', [
+                OrderedDict([('name', 'param2'), ('description', 'desc 1')]),
+                OrderedDict([('name', 'paramA'), ('type', 'int')]),
+                OrderedDict([('name', 'param1'), ('no_value', True), ('default', 'false')])
+            ]),
+        ])
+        self.assertEqual(expected, config)
+
+
 class SchedulableConfigTest(unittest.TestCase):
     def test_create_with_schedulable_false(self):
         config_model = _create_config_model('some-name', config={
@@ -886,6 +912,29 @@ class SchedulableConfigTest(unittest.TestCase):
         config_model.set_param_value('p1', another_path)
 
         self.assertFalse(config_model.schedulable)
+
+    @parameterized.expand([
+        (True, True, [], True),
+        (False, True, [], True),
+        (True, False, [], False),
+        (False, False, [], False),
+        (True, True, ['test'], True),
+        (True, False, ['test'], False),
+        (True, None, [], True),
+        (False, None, [], True),
+        (True, None, ['test'], False),
+    ])
+    def test_auto_cleanup(self, scheduling_enabled, auto_cleanup, output_files, expected_result):
+        config = {
+            'scheduling': {'enabled': scheduling_enabled},
+            'output_files': output_files
+        }
+        if auto_cleanup is not None:
+            config['scheduling']['auto_cleanup'] = auto_cleanup
+
+        config_model = _create_config_model('some-name', config=config)
+
+        self.assertEqual(config_model.scheduling_auto_cleanup, expected_result)
 
     def tearDown(self) -> None:
         test_utils.cleanup()
@@ -920,7 +969,7 @@ def _create_config_model(name, *,
     if working_dir is not None:
         result_config['working_directory'] = working_dir
 
-    model = ConfigModel(result_config, path, username, audit_name)
+    model = ConfigModel(result_config, path, username, audit_name, test_utils.process_invoker)
     if parameter_values is not None:
         model.set_all_param_values(parameter_values, skip_invalid_parameters=skip_invalid_parameters)
 

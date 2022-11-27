@@ -5,6 +5,7 @@ import {contains} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {
     attachToDocument,
+    createScriptServerTestVue,
     flushPromises,
     setDeepProp,
     timeout,
@@ -19,6 +20,7 @@ describe('Test ComboBox', function () {
 
     beforeEach(async function () {
         comboBox = mount(Combobox, {
+            localVue: createScriptServerTestVue(),
             attachTo: attachToDocument(),
             propsData: {
                 config: {

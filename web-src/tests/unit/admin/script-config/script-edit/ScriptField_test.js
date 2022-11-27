@@ -210,7 +210,7 @@ describe('Test ScriptField', function () {
 
             await setCodeValue(dialogWrapper, 'abcdef')
 
-            await dialogWrapper.findComponent(Combobox).setProps({value: 'bash'})
+            await dialogWrapper.findComponent(Combobox).find('select').setValue('bash')
 
             await clickButton(dialogWrapper, 'Cancel')
 
@@ -423,7 +423,7 @@ describe('Test ScriptField', function () {
 
             await setCodeValue(dialogWrapper, 'abcdef')
 
-            await dialogWrapper.findComponent(Combobox).setProps({value: 'bash'})
+            await dialogWrapper.findComponent(Combobox).find('select').setValue('bash')
 
             await clickButton(dialogWrapper, 'Cancel')
 

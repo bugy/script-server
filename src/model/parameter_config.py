@@ -12,8 +12,9 @@ from model import model_helper
 from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SECURE_MASK, \
     normalize_extension, read_bool_from_config, InvalidValueException, read_str_from_config
 from react.properties import ObservableDict, observable_fields
-from utils import file_utils, string_utils, process_utils
+from utils import file_utils, string_utils
 from utils.file_utils import FileMatcher
+from utils.process_utils import ProcessInvoker
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('script_server.parameter_config')
@@ -45,12 +46,14 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'file_recursive')
 class ParameterModel(object):
     def __init__(self, parameter_config, username, audit_name, other_params_supplier,
+                 process_invoker: ProcessInvoker,
                  other_param_values: ObservableDict = None,
                  working_dir=None):
         self._username = username
         self._audit_name = audit_name
         self._parameters_supplier = other_params_supplier
         self._working_dir = working_dir
+        self._process_invoker = process_invoker
 
         self.name = parameter_config.get('name')
 
@@ -84,15 +87,20 @@ class ParameterModel(object):
             'multiselect_argument_type',
             default='single_argument',
             allowed_values=['single_argument', 'argument_per_value', 'repeat_param_value'])
-        self.default = _resolve_default(config.get('default'), self._username, self._audit_name, self._working_dir)
+        self.type = self._read_type(config)
+        self.default = _resolve_default(
+            config.get('default'),
+            self._username,
+            self._audit_name,
+            self._working_dir,
+            self.type,
+            self._process_invoker)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
         self.file_extensions = _resolve_file_extensions(config, 'file_extensions')
         self.file_type = _resolve_parameter_file_type(config, 'file_type', self.file_extensions)
         self.file_recursive = read_bool_from_config('file_recursive', config, default=False)
         self.excluded_files_matcher = _resolve_excluded_files(config, 'excluded_files', self._list_files_dir)
-
-        self.type = self._read_type(config)
 
         self.constant = read_bool_from_config('constant', config, default=False)
 
@@ -198,9 +206,9 @@ class ParameterModel(object):
             shell = read_bool_from_config('shell', values_config, default=not has_variables)
 
             if '${' not in script:
-                return ScriptValuesProvider(script, shell)
+                return ScriptValuesProvider(script, shell, self._process_invoker)
 
-            return DependantScriptValuesProvider(script, self._parameters_supplier, shell)
+            return DependantScriptValuesProvider(script, self._parameters_supplier, shell, self._process_invoker)
 
         else:
             message = 'Unsupported "values" format for ' + self.name
@@ -287,21 +295,22 @@ class ParameterModel(object):
         value_string = self.value_to_repr(value)
 
         if self.no_value:
-            if value not in ['true', True, 'false', False]:
-                return 'should be boolean, but has value ' + value_string
-            return None
+            if isinstance(value, bool):
+                return None
+            if isinstance(value, str) and value.lower() in ['true', 'false']:
+                return None
+            return 'should be boolean, but has value ' + value_string
 
-        if self.type == 'text':
+        if self.type == 'text' or self.type == 'multiline_text':
             if self.regex is not None:
                 regex_pattern = self.regex.get('pattern', None)
-                if (not is_empty(regex_pattern)):
+                if not is_empty(regex_pattern):
                     regex_matched = re.fullmatch(regex_pattern, value)
                     if not regex_matched:
                         return 'does not match regex pattern: ' + self.regex.get('description', regex_pattern)
-
             if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
                 return 'is longer than allowed char length (' \
-                        + str(len(value)) + ' > ' + str(self.max_length) + ')'
+                       + str(len(value)) + ' > ' + str(self.max_length) + ')'
             return None
 
         if self.type == 'file_upload':
@@ -436,7 +445,7 @@ class ParameterModel(object):
         return os.path.normpath(os.path.join(self._list_files_dir, *child_path))
 
 
-def _resolve_default(default, username, audit_name, working_dir):
+def _resolve_default(default, username, audit_name, working_dir, type, process_invoker: ProcessInvoker):
     if not default:
         return default
 
@@ -456,8 +465,13 @@ def _resolve_default(default, username, audit_name, working_dir):
     if script:
         has_variables = string_value != resolved_string_value
         shell = read_bool_from_config('shell', default, default=not has_variables)
-        output = process_utils.invoke(resolved_string_value, working_dir, shell=shell)
-        return output.strip()
+        output = process_invoker.invoke(resolved_string_value, working_dir, shell=shell)
+        stripped_output = output.strip()
+
+        if type == PARAM_TYPE_MULTISELECT and '\n' in stripped_output:
+            return [line.strip() for line in stripped_output.split('\n') if not is_empty(line)]
+
+        return stripped_output
 
     return resolved_string_value
 

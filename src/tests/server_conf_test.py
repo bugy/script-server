@@ -9,11 +9,13 @@ from auth.auth_google_oauth import GoogleOauthAuthenticator
 from auth.auth_htpasswd import HtpasswdAuthenticator
 from auth.auth_ldap import LdapAuthenticator
 from auth.authorization import ANY_USER
+from communications.alerts_service import AlertsService
+from features.executions_callback_feature import ExecutionsCallbackFeature
 from model import server_conf
 from model.model_helper import InvalidValueException
 from model.server_conf import _prepare_allowed_users
 from tests import test_utils
-from utils import file_utils
+from utils import file_utils, custom_json
 
 
 class TestPrepareAllowedUsers(unittest.TestCase):
@@ -233,6 +235,16 @@ class TestSimpleConfigs(unittest.TestCase):
         config = _from_json({})
         self.assertIs(True, config.enable_script_titles)
 
+    def test_comments_json(self):
+        config = _from_json(
+            custom_json.loads("""
+                    {
+                        // "title": "my server"
+                        "title": "my server2"
+                    }""")
+        )
+        self.assertEqual('my server2', config.title)
+
 
 class TestAuthConfig(unittest.TestCase):
     def test_google_oauth(self):
@@ -333,6 +345,77 @@ class TestSecurityConfig(unittest.TestCase):
     def tearDown(self) -> None:
         super().tearDown()
         test_utils.cleanup()
+
+
+class TestEnvVariables(unittest.TestCase):
+
+    def setUp(self) -> None:
+        test_utils.set_os_environ_value('VAR1', 'abcd')
+        test_utils.set_os_environ_value('VAR2', 'xyz')
+        test_utils.set_os_environ_value('MY_SECRET', 'qwerty')
+        test_utils.set_os_environ_value('EMAIL_PWD', '1234509')
+        test_utils.set_os_environ_value('EMAIL_PWD_2', '007')
+
+    def tearDown(self):
+        test_utils.cleanup()
+
+    def test_default_config(self):
+        config = _from_json({})
+        env_vars = config.env_vars.build_env_vars()
+        self.assertEquals(env_vars, os.environ)
+
+    def test_config_when_safe_env_variables_used(self):
+        config = _from_json({'title': '$$VAR1', 'auth': {'type': 'ldap', 'url': '$$MY_SECRET'}})
+
+        env_vars = config.env_vars.build_env_vars()
+        self.assertEquals(env_vars, os.environ)
+        self.assertEqual('abcd', env_vars['VAR1'])
+        self.assertEqual('qwerty', env_vars['MY_SECRET'])
+
+        self.assertEquals(config.title, '$$VAR1')
+        self.assertEquals(config.authenticator.url, '$$MY_SECRET')
+
+    def test_config_when_unsafe_env_variables_used(self):
+        config = _from_json({
+            'title': '$$VAR1',
+            'auth': {'type': 'google_oauth', 'secret': '$$MY_SECRET', 'client_id': '$$VAR2'},
+            'alerts': {'destinations': [
+                self.create_email_destination('$$EMAIL_PWD'),
+                self.create_email_destination('$VAR2')
+            ]},
+            'callbacks': {'destinations': [
+                self.create_email_destination('$$EMAIL_PWD_2'),
+                self.create_email_destination('VAR1')
+            ]},
+            'access': {'allowed_users': '*'}
+        })
+
+        env_vars = config.env_vars.build_env_vars()
+        self.assertEqual('abcd', env_vars['VAR1'])
+        self.assertEqual('xyz', env_vars['VAR2'])
+        self.assertNotIn('MY_SECRET', env_vars)
+        self.assertNotIn('EMAIL_PWD', env_vars)
+        self.assertNotIn('EMAIL_PWD_2', env_vars)
+
+        self.assertEquals(config.title, '$$VAR1')
+        self.assertEquals(config.authenticator.secret, 'qwerty')
+
+        alert_destinations = AlertsService(config.alerts_config)._communication_service._destinations
+        self.assertEquals(alert_destinations[0]._communicator.password, '1234509')
+        self.assertEquals(alert_destinations[1]._communicator.password, '$VAR2')
+
+        # noinspection PyTypeChecker
+        callback_feature = ExecutionsCallbackFeature(None, config.callbacks_config, None)
+        callback_destinations = callback_feature._communication_service._destinations
+        self.assertEquals(callback_destinations[0]._communicator.password, '007')
+        self.assertEquals(callback_destinations[1]._communicator.password, 'VAR1')
+
+    def create_email_destination(self, password):
+        return {'type': 'email',
+                'password': password,
+                'to': 'some_address',
+                'from': 'some_address',
+                'server': 'some_server'}
 
 
 def _from_json(content):

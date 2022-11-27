@@ -23,8 +23,8 @@ def prepare_cmd_for_win(command):
 
 
 class POpenProcessWrapper(process_base.ProcessWrapper):
-    def __init__(self, command, working_directory, env_variables):
-        super().__init__(command, working_directory, env_variables)
+    def __init__(self, command, working_directory, all_env_variables):
+        super().__init__(command, working_directory, all_env_variables)
 
     def start_execution(self, command, working_directory):
         shell = False
@@ -32,7 +32,8 @@ class POpenProcessWrapper(process_base.ProcessWrapper):
         if os_utils.is_win():
             (command, shell) = prepare_cmd_for_win(command)
 
-        env_variables = dict(os.environ, **self.env_variables)
+        env_variables = self.prepare_env_variables()
+
         self.process = subprocess.Popen(command,
                                         cwd=working_directory,
                                         stdin=subprocess.PIPE,
@@ -95,3 +96,5 @@ class POpenProcessWrapper(process_base.ProcessWrapper):
 
         finally:
             self.output_stream.close()
+            self.process.stdout.close()
+            self.process.stdin.close()

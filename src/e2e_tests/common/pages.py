@@ -1,12 +1,16 @@
+import random
 import time
 from abc import ABC
-import conftest
-import random
 
-from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException, TimeoutException
+from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, \
+    StaleElementReferenceException, TimeoutException
+from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+
+import conftest
+
 
 def is_displayed(element):
     try:
@@ -44,28 +48,29 @@ def is_disabled(element):
 
 def get_parent_element(element):
     try:
-        return element.find_element_by_xpath('..')
+        return element.find_element('xpath', '..')
     except (NoSuchElementException, ElementNotInteractableException):
         return None
 
 
 def get_visible_values_of_list(element):
     try:
-        return get_parent_element(element).find_elements_by_css_selector("li:not([class*=\"header\"]):not(.search-hidden)")
+        return get_parent_element(element).find_elements(By.CSS_SELECTOR,
+                                                         "li:not([class*=\"header\"]):not(.search-hidden)")
     except (NoSuchElementException, ElementNotInteractableException):
         return None
 
 
 def get_hidden_values_of_list(element):
     try:
-        return get_parent_element(element).find_elements_by_css_selector("li:not([class*=\"header\"]).search-hidden")
+        return get_parent_element(element).find_elements(By.CSS_SELECTOR, "li:not([class*=\"header\"]).search-hidden")
     except (NoSuchElementException, ElementNotInteractableException):
         return None
 
 
 def get_underline_error_text(element):
     try:
-        return str(element.find_element_by_xpath("..").get_attribute("data-error"))
+        return str(element.find_element('xpath', "..").get_attribute("data-error"))
     except (NoSuchElementException, ElementNotInteractableException):
         return None
 
@@ -83,23 +88,25 @@ class Page(ABC):
 
     @property
     def all_script_links(self):
-        return self.browser.find_elements_by_css_selector("a.collection-item.script-list-item")
+        return self.browser.find_elements(By.CSS_SELECTOR, "a.collection-item.script-list-item")
 
     def get_script_link_by_name(self, name):
         try:
-            return self.browser.find_element_by_link_text(name)
+            return self.browser.find_element(By.LINK_TEXT, name)
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
     def get_scripts_group_by_name(self, name):
         try:
-            return self.browser.find_element_by_xpath("//span[contains(text(), '{}')]/parent::a[contains(@class,'collection-item')][contains(@class,'script-group')]".format(name))
+            return self.browser.find_element(By.XPATH,
+                                             "//span[contains(text(), '{}')]/parent::a[contains(@class,'collection-item')][contains(@class,'script-group')]".format(
+                                                 name))
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
     def get_scripts_inside_group(self, group_link):
         try:
-            return get_parent_element(group_link).find_elements_by_css_selector("a")
+            return get_parent_element(group_link).find_elements(By.CSS_SELECTOR, "a")
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
@@ -109,15 +116,16 @@ class Page(ABC):
     def find_element(self, selector, parent=None):
         try:
             if parent is not None:
-                return parent.find_element_by_css_selector(selector)
+                return parent.find_element(By.CSS_SELECTOR, selector)
             else:
-                return self.browser.find_element_by_css_selector(selector)
+                return self.browser.find_element(By.CSS_SELECTOR, selector)
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
     def find_input_by_label(self, label):
         try:
-            return self.browser.find_element_by_xpath("//label[contains(text(), '{}')]/parent::div//input".format(label))
+            return self.browser.find_element('xpath',
+                                             "//label[contains(text(), '{}')]/parent::div//input".format(label))
         except (NoSuchElementException, ElementNotInteractableException):
             return None
 
@@ -191,7 +199,7 @@ class Page(ABC):
 
     @property
     def executor_tabs(self):
-        return self.browser.find_elements_by_css_selector(".tab.executor-tab")
+        return self.browser.find_elements(By.CSS_SELECTOR, ".tab.executor-tab")
 
     @property
     def active_executor_tab(self):
@@ -236,7 +244,7 @@ class VeryParametrizedScript(Page):
 
     @property
     def parameter_simple_list_drop_down_elements(self):
-        return self.parameter_simple_list_drop_down.find_elements_by_css_selector("li[id^=\"select-options\"]")
+        return self.parameter_simple_list_drop_down.find_elements(By.CSS_SELECTOR, "li[id^=\"select-options\"]")
 
     @property
     def parameter_file_upload(self):
@@ -260,7 +268,7 @@ class VeryParametrizedScript(Page):
 
     @property
     def parameter_required_list_drop_down_elements(self):
-        return self.parameter_required_list.find_elements_by_css_selector("li[id^=\"select-options\"]")
+        return self.parameter_required_list.find_elements(By.CSS_SELECTOR, "li[id^=\"select-options\"]")
 
     @property
     def parameter_constrained_int(self):
@@ -283,12 +291,29 @@ class VeryParametrizedScript(Page):
         return self.find_input_by_label('Command-based list')
 
     @property
+    def parameter_list_with_search(self):
+        return self.find_input_by_label('List with search')
+
+    @property
     def command_based_list(self):
         return self.find_element("ul[id^=\"select-options\"]", get_parent_element(self.parameter_command_based_list))
 
     @property
-    def search_field_in_command_based_list(self):
-        return self.find_element("div.input-field.combobox-search input", get_parent_element(self.parameter_command_based_list))
+    def command_based_list_elements(self):
+        return self.command_based_list.find_elements(By.CSS_SELECTOR, 'li')
+
+    @property
+    def parameter_list_with_search_list(self):
+        return self.find_element("ul[id^=\"select-options\"]", get_parent_element(self.parameter_list_with_search))
+
+    @property
+    def parameter_list_with_search_elements(self):
+        return self.parameter_list_with_search_list.find_elements(By.CSS_SELECTOR, 'li')
+
+    @property
+    def search_field_in_list_with_search(self):
+        return self.find_element("div.input-field.combobox-search input",
+                                 get_parent_element(self.parameter_list_with_search))
 
     @property
     def parameter_secure_int(self):

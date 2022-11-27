@@ -154,11 +154,15 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
 
         class ParameterListener:
             def on_add(self, parameter, index):
-                socket._send_parameter_event('parameterAdded', parameter_to_external(parameter))
-                socket._subscribe_on_parameter(parameter)
+                external_parameter = parameter_to_external(parameter)
+                if external_parameter is not None:
+                    socket._send_parameter_event('parameterAdded', external_parameter)
+                    socket._subscribe_on_parameter(parameter)
 
             def on_remove(self, parameter):
-                socket._send_parameter_event('parameterRemoved', {'parameterName': parameter.name})
+                external_parameter = parameter_to_external(parameter)
+                if external_parameter is not None:
+                    socket._send_parameter_event('parameterRemoved', {'parameterName': external_parameter['name']})
 
         return ParameterListener()
 

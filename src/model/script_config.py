@@ -1,4 +1,4 @@
-import json
+import logging
 import logging
 import os
 import re
@@ -11,8 +11,9 @@ from model.model_helper import is_empty, fill_parameter_values, read_bool_from_c
     read_str_from_config, replace_auth_vars
 from model.parameter_config import ParameterModel
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
-from utils import file_utils
+from utils import file_utils, custom_json
 from utils.object_utils import merge_dicts
+from utils.process_utils import ProcessInvoker
 
 OUTPUT_FORMAT_TERMINAL = 'terminal'
 
@@ -45,6 +46,7 @@ class ConfigModel:
                  path,
                  username,
                  audit_name,
+                 process_invoker: ProcessInvoker,
                  pty_enabled_default=True):
         super().__init__()
 
@@ -52,10 +54,12 @@ class ConfigModel:
         self.name = short_config.name
         self._pty_enabled_default = pty_enabled_default
         self._config_folder = os.path.dirname(path)
+        self._process_invoker = process_invoker
 
         self._username = username
         self._audit_name = audit_name
         self.schedulable = False
+        self.scheduling_auto_cleanup = True
 
         self.parameters = ObservableList()
         self.parameter_values = ObservableDict()
@@ -152,6 +156,7 @@ class ConfigModel:
         for parameter_config in original_parameter_configs:
             parameter = ParameterModel(parameter_config, username, audit_name,
                                        lambda: self.parameters,
+                                       self._process_invoker,
                                        self.parameter_values,
                                        self.working_directory)
             self.parameters.append(parameter)
@@ -179,8 +184,11 @@ class ConfigModel:
 
         self.output_files = config.get('output_files', [])
 
-        if config.get('scheduling'):
-            self.schedulable = read_bool_from_config('enabled', config.get('scheduling'), default=False)
+        scheduling_config = config.get('scheduling')
+        if scheduling_config:
+            self.schedulable = read_bool_from_config('enabled', scheduling_config, default=False)
+            self.scheduling_auto_cleanup = read_bool_from_config(
+                'auto_cleanup', scheduling_config, default=not bool(self.output_files))
 
         if not self.script_command:
             raise Exception('No script_path is specified for ' + self.name)
@@ -205,6 +213,7 @@ class ConfigModel:
                 if parameter is None:
                     parameter = ParameterModel(parameter_config, self._username, self._audit_name,
                                                lambda: self.parameters,
+                                               self._process_invoker,
                                                self.parameter_values,
                                                self.working_directory)
                     self.parameters.append(parameter)
@@ -245,7 +254,7 @@ class ConfigModel:
         if os.path.exists(path):
             try:
                 file_content = file_utils.read_file(path)
-                return json.loads(file_content)
+                return custom_json.loads(file_content)
             except:
                 LOGGER.exception('Failed to load included file ' + path)
                 return None

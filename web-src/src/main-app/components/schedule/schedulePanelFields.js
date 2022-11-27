@@ -7,5 +7,5 @@ export const repeatPeriodField = {
 
 export const repeatTimeUnitField = {
     type: 'list',
-    values: ['hours', 'days', 'weeks', 'months']
+    values: ['minutes', 'hours', 'days', 'weeks', 'months']
 }

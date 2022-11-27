@@ -16,7 +16,7 @@ from config.exceptions import InvalidConfigException
 from model.model_helper import InvalidFileException
 from tests import test_utils
 from tests.test_utils import AnyUserAuthorizer
-from utils import file_utils
+from utils import file_utils, custom_json
 from utils.audit_utils import AUTH_USERNAME
 from utils.file_utils import is_executable
 from utils.string_utils import is_blank
@@ -105,7 +105,7 @@ class ConfigServiceTest(unittest.TestCase):
         test_utils.setup()
 
         self.user = User('ConfigServiceTest', {AUTH_USERNAME: 'ConfigServiceTest'})
-        self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder)
+        self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder, test_utils.process_invoker)
 
 
 class ConfigServiceAuthTest(unittest.TestCase):
@@ -189,7 +189,7 @@ class ConfigServiceAuthTest(unittest.TestCase):
         authorizer = Authorizer([], ['adm_user'], [], [], EmptyGroupProvider())
         self.user1 = User('user1', {})
         self.admin_user = User('adm_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
 
 def script_path(path):
@@ -222,7 +222,7 @@ class ConfigServiceCreateConfigTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
     def tearDown(self):
         super().tearDown()
@@ -313,14 +313,21 @@ class ConfigServiceCreateConfigTest(unittest.TestCase):
 
         _validate_config(self, 'conf1.json', config)
 
-    def test_new_code(self):
-        config = _prepare_script_config_object('Conf X', script=new_code('abcdef', 'anything/my name.sh'))
+    @parameterized.expand([
+        ('abcdef', 'abcdef'),
+        ('abcdef\nxyz', 'abcdef\nxyz'),
+        ('abcdef\r\nxyz', 'abcdef\nxyz'),
+        ('abcdef\rxyz', 'abcdef\nxyz'),
+        ('abcdef\r\nxyz\rtest\ntest2', 'abcdef\nxyz\ntest\ntest2'),
+    ])
+    def test_new_code(self, code, expected_code):
+        config = _prepare_script_config_object('Conf X', script=new_code(code, 'anything/my name.sh'))
         self.config_service.create_config(self.admin_user, config, None)
 
         script_path = _default_script_path('my_name')
         self.assertEqual(config['script_path'], script_path)
         _validate_config(self, 'Conf_X.json', config)
-        _validate_code(self, script_path, 'abcdef')
+        _validate_code(self, script_path, expected_code)
         self.assertTrue(is_executable(script_path))
 
     def test_upload_code(self):
@@ -389,7 +396,7 @@ class ConfigServiceUpdateConfigTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
         for suffix in 'XYZ':
             name = 'Conf ' + suffix
@@ -642,7 +649,7 @@ class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user'], [], [], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
     def tearDown(self):
         super().tearDown()
@@ -690,7 +697,7 @@ class ConfigServiceLoadCodeTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
         for pair in [('script.py', b'123'),
                      ('another.py', b'xyz'),
@@ -800,7 +807,7 @@ def _validate_config(test_case, expected_filename, expected_body):
     all_paths = str(os.listdir(configs_path))
     test_case.assertTrue(os.path.exists(path), 'Failed to find path ' + path + '. Existing paths: ' + all_paths)
 
-    actual_body = json.loads(file_utils.read_file(path))
+    actual_body = custom_json.loads(file_utils.read_file(path))
     test_case.assertEqual(expected_body, actual_body)
 
 

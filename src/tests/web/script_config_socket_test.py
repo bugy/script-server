@@ -199,7 +199,8 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         application.auth = TornadoAuth(None)
         application.authorizer = Authorizer(ANY_USER, [], [], [], EmptyGroupProvider())
         application.identification = IpBasedIdentification(TrustedIpValidator(['127.0.0.1']), None)
-        application.config_service = ConfigService(application.authorizer, test_utils.temp_folder)
+        application.config_service = ConfigService(
+            application.authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
         server = httpserver.HTTPServer(application)
         socket, self.port = testing.bind_unused_port()
@@ -231,7 +232,8 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         test_utils.write_script_config(
             {
                 'parameters': [
-                    test_utils.create_script_param_config('included text 2')
+                    test_utils.create_script_param_config('included constant', constant=True, default='abc'),
+                    test_utils.create_script_param_config('included text 2'),
                 ]},
             'included')
 

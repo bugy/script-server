@@ -2,10 +2,8 @@
 
 import Textfield from '@/common/components/textfield'
 import {isEmptyString, setInputValue} from '@/common/utils/common';
-import {enableAutoDestroy, mount} from '@vue/test-utils';
+import {mount} from '@vue/test-utils';
 import {attachToDocument, mapArrayWrapper, setDeepProp, timeout, vueTicks, wrapVModel} from './test_utils';
-
-enableAutoDestroy(afterEach)
 
 describe('Test TextField', function () {
 

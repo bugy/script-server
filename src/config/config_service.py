@@ -10,8 +10,9 @@ from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
 from model.script_config import get_sorted_config
-from utils import os_utils, file_utils, process_utils
+from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
+from utils.process_utils import ProcessInvoker
 from utils.string_utils import is_blank, strip
 
 SCRIPT_EDIT_CODE_MODE = 'new_code'
@@ -44,10 +45,11 @@ def _preprocess_incoming_config(config):
 
 
 class ConfigService:
-    def __init__(self, authorizer, conf_folder) -> None:
+    def __init__(self, authorizer, conf_folder, process_invoker: ProcessInvoker) -> None:
         self._authorizer = authorizer  # type: Authorizer
         self._script_configs_folder = os.path.join(conf_folder, 'runners')
         self._scripts_folder = os.path.join(conf_folder, 'scripts')
+        self._process_invoker = process_invoker
 
         file_utils.prepare_folder(self._script_configs_folder)
 
@@ -161,6 +163,14 @@ class ConfigService:
         config_json = json.dumps(sorted_config, indent=2)
         file_utils.write_file(path, config_json)
 
+    def load_config_file(self, path, content):
+        if path.endswith('.yaml'):
+            config_object = custom_yaml.loads(content)
+        else:
+            config_object = custom_json.loads(content)
+
+        return config_object
+
     def list_configs(self, user, mode=None):
         edit_mode = mode == 'edit'
         if edit_mode:
@@ -170,8 +180,8 @@ class ConfigService:
 
         def load_script(path, content):
             try:
-                json_object = json.loads(content)
-                short_config = script_config.read_short(path, json_object)
+                config_object = self.load_config_file(path, content)
+                short_config = script_config.read_short(path, config_object)
 
                 if short_config is None:
                     return None
@@ -199,13 +209,19 @@ class ConfigService:
         if not self._can_access_script(user, short_config):
             raise ConfigNotAllowedException()
 
-        return self._load_script_config(path, config_object, user, parameter_values, skip_invalid_parameters)
+        return self._load_script_config(
+            path,
+            config_object,
+            user,
+            parameter_values,
+            skip_invalid_parameters,
+            self._process_invoker)
 
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
         files = os.listdir(configs_dir)
 
-        configs = [file for file in files if file.lower().endswith(".json")]
+        configs = [file for file in files if file.lower().endswith(".json") or file.lower().endswith(".yaml")]
 
         result = []
 
@@ -231,8 +247,8 @@ class ConfigService:
     def _find_config(self, name) -> Union[ConfigSearchResult, None]:
         def find_and_load(path, content):
             try:
-                json_object = json.loads(content)
-                short_config = script_config.read_short(path, json_object)
+                config_object = self.load_config_file(path, content)
+                short_config = script_config.read_short(path, config_object)
 
                 if short_config is None:
                     return None
@@ -243,7 +259,7 @@ class ConfigService:
             if short_config.name != name.strip():
                 return None
 
-            raise StopIteration(ConfigSearchResult(short_config, path, json_object))
+            raise StopIteration(ConfigSearchResult(short_config, path, config_object))
 
         configs = self._visit_script_configs(find_and_load)
         if not configs:
@@ -252,9 +268,16 @@ class ConfigService:
         return configs[0]
 
     @staticmethod
-    def _load_script_config(path, content_or_json_dict, user, parameter_values, skip_invalid_parameters):
+    def _load_script_config(
+            path,
+            content_or_json_dict,
+            user,
+            parameter_values,
+            skip_invalid_parameters,
+            process_invoker):
+
         if isinstance(content_or_json_dict, str):
-            json_object = json.loads(content_or_json_dict)
+            json_object = custom_json.loads(content_or_json_dict)
         else:
             json_object = content_or_json_dict
         config = script_config.ConfigModel(
@@ -262,6 +285,7 @@ class ConfigService:
             path,
             user.get_username(),
             user.get_audit_name(),
+            process_invoker,
             pty_enabled_default=os_utils.is_pty_supported())
 
         if parameter_values is not None:
@@ -335,7 +359,13 @@ class ConfigService:
                 code = script_config.get('code')
                 if code is None:
                     raise InvalidConfigException('script.code should be specified')
-                file_utils.write_file(script_path, code)
+
+                # Fix non-native OS line endings.
+                # From python docs:
+                #   Do not use os.linesep as a line terminator when writing files opened in text mode (the default);
+                #   use a single '\n' instead, on all platforms.
+                normalized_code = code.replace('\r\n', '\n').replace('\r', '\n')
+                file_utils.write_file(script_path, normalized_code)
 
             file_utils.make_executable(script_path)
 

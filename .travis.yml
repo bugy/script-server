@@ -1,6 +1,6 @@
 if: tag IS blank
 sudo: required
-dist: bionic
+dist: focal
 language: node_js
 node_js:
   - '15'
@@ -40,7 +40,7 @@ install:
   - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
 before_script:
   - cd src
-  #  - python3 -m unittest discover -s tests -p "*.py" -t .
+  - python3 -m unittest discover -s tests -p "*.py" -t .
   - cd ../web-src
   - npm run test:unit-ci
   - cd ..

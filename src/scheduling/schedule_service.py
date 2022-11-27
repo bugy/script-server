@@ -13,7 +13,7 @@ from execution.id_generator import IdGenerator
 from scheduling import scheduling_job
 from scheduling.schedule_config import read_schedule_config, InvalidScheduleException
 from scheduling.scheduling_job import SchedulingJob
-from utils import file_utils, date_utils
+from utils import file_utils, date_utils, custom_json
 
 SCRIPT_NAME_KEY = 'script_name'
 USER_KEY = 'user'
@@ -35,7 +35,7 @@ def restore_jobs(schedules_folder):
     for file in files:
         try:
             content = file_utils.read_file(os.path.join(schedules_folder, file))
-            job_json = json.loads(content)
+            job_json = custom_json.loads(content)
             ids.append(job_json['id'])
 
             job = scheduling_job.from_dict(job_json)
@@ -84,7 +84,8 @@ class ScheduleService:
 
         id = self._id_generator.next_id()
 
-        job = SchedulingJob(id, user, schedule_config, script_name, parameter_values)
+        normalized_values = dict(config_model.parameter_values)
+        job = SchedulingJob(id, user, schedule_config, script_name, normalized_values)
 
         self.save_job(job)
 
@@ -127,6 +128,12 @@ class ScheduleService:
 
             execution_id = self._execution_service.start_script(config, parameter_values, user)
             LOGGER.info('Started script #' + str(execution_id) + ' for ' + job.get_log_name())
+
+            if config.scheduling_auto_cleanup:
+                def cleanup():
+                    self._execution_service.cleanup_execution(execution_id, user)
+
+                self._execution_service.add_finish_listener(cleanup, execution_id)
         except:
             LOGGER.exception('Failed to execute ' + job.get_log_name())
 

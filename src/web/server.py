@@ -34,7 +34,7 @@ from model.script_config import InvalidValueException, ParameterNotFoundExceptio
 from model.server_conf import ServerConfig, XSRF_PROTECTION_TOKEN, XSRF_PROTECTION_DISABLED, XSRF_PROTECTION_HEADER
 from scheduling.schedule_service import ScheduleService, UnavailableScriptException, InvalidScheduleException
 from utils import file_utils as file_utils
-from utils import tornado_utils, os_utils, env_utils
+from utils import tornado_utils, os_utils, env_utils, custom_json
 from utils.audit_utils import get_audit_name_from_request
 from utils.exceptions.missing_arg_exception import MissingArgumentException
 from utils.exceptions.not_found_exception import NotFoundException
@@ -380,24 +380,21 @@ class ScriptExecute(StreamUploadRequestHandler):
                 for key, value in self.form_reader.files.items():
                     parameter_values[key] = value.path
 
-            try:
-                config_model.set_all_param_values(parameter_values)
-                normalized_values = dict(config_model.parameter_values)
-            except InvalidValueException as e:
-                message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
-                LOGGER.error(message)
-                respond_error(self, 400, message)
-                return
-
             all_audit_names = user.audit_names
             LOGGER.info('Calling script %s. User %s', script_name, all_audit_names)
 
             execution_id = self.application.execution_service.start_script(
                 config_model,
-                normalized_values,
+                parameter_values,
                 user)
 
             self.write(str(execution_id))
+
+        except InvalidValueException as e:
+            message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
+            LOGGER.error(message)
+            respond_error(self, 422, message)
+            return
 
         except ConfigNotAllowedException:
             LOGGER.warning('Access to the script "' + script_name + '" is denied for ' + audit_name)
@@ -572,6 +569,7 @@ class LoginHandler(BaseRequestHandler):
 
 
 class AuthInfoHandler(BaseRequestHandler):
+    @check_authorization
     @inject_user
     def get(self, user):
         auth = self.application.auth
@@ -713,7 +711,7 @@ class AddSchedule(StreamUploadRequestHandler):
             for key, value in self.form_reader.files.items():
                 parameter_values[key] = value.path
 
-        schedule_config = json.loads(parameter_values['__schedule_config'])
+        schedule_config = custom_json.loads(parameter_values['__schedule_config'])
         del parameter_values['__schedule_config']
 
         try:
