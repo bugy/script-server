@@ -86,7 +86,7 @@ class ScriptExecutor:
         self.raw_output_stream = None
         self.protected_output_stream = None
 
-    def start(self):
+    def start(self, execution_id):
         if self.process_wrapper is not None:
             raise Exception('Executor already started')
 
@@ -94,7 +94,7 @@ class ScriptExecutor:
 
         script_args = build_command_args(parameter_values, self.config)
         command = self.script_base_command + script_args
-        env_variables = _build_env_variables(parameter_values, self.config.parameters)
+        env_variables = _build_env_variables(parameter_values, self.config.parameters, execution_id)
 
         all_env_variables = self._env_vars.build_env_vars(env_variables)
 
@@ -270,7 +270,7 @@ def _to_env_name(key):
     return 'PARAM_' + replaced.upper()
 
 
-def _build_env_variables(parameter_values, parameters):
+def _build_env_variables(parameter_values, parameters, execution_id):
     result = {}
     excluded = []
     for param_name, value in parameter_values.items():
@@ -301,6 +301,9 @@ def _build_env_variables(parameter_values, parameters):
             continue
 
         result[env_var] = str(value)
+
+    if 'EXECUTION_ID' not in result:
+        result['EXECUTION_ID'] = str(execution_id)
 
     return result
 

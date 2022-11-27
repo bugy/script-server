@@ -54,7 +54,7 @@ class ExecutionService:
         audit_command = executor.get_secure_command()
         LOGGER.info('Calling script #%s: %s', execution_id, audit_command)
 
-        executor.start()
+        executor.start(execution_id)
         self._executors[execution_id] = executor
         self._execution_infos[execution_id] = _ExecutionInfo(
             execution_id=execution_id,
