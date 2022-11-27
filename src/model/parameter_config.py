@@ -307,7 +307,8 @@ class ParameterModel(object):
                 if not is_empty(regex_pattern):
                     regex_matched = re.fullmatch(regex_pattern, value)
                     if not regex_matched:
-                        return 'does not match regex pattern: ' + self.regex.get('description', regex_pattern)
+                        description = self.regex.get('description') or regex_pattern
+                        return 'does not match regex pattern: ' + description
             if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
                 return 'is longer than allowed char length (' \
                        + str(len(value)) + ' > ' + str(self.max_length) + ')'

@@ -704,3 +704,18 @@ export function getFileInputValue(fileField) {
 
     return value
 }
+
+export function isFullRegexMatch(regex, value) {
+    let fullStringPattern = regex
+
+    if (!fullStringPattern.startsWith('^')) {
+        fullStringPattern = '^' + fullStringPattern
+    }
+
+    if (!fullStringPattern.endsWith('$')) {
+        fullStringPattern += '$'
+    }
+
+    const regexPattern = new RegExp(fullStringPattern)
+    return regexPattern.test(value)
+}

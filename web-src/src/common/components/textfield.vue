@@ -14,9 +14,9 @@
 </template>
 
 <script>
-import '@/common/materializecss/imports/input-fields';
 import '@/common/materializecss/imports/autocomplete';
-import {isBlankString, isEmptyString, isNull} from '@/common/utils/common';
+import '@/common/materializecss/imports/input-fields';
+import {isBlankString, isEmptyString, isFullRegexMatch, isNull} from '@/common/utils/common';
 
 export default {
   name: 'Textfield',
@@ -154,7 +154,7 @@ export default {
 
       if (!empty) {
         var typeError = getValidByTypeError(value, this.config.type, this.config.min, this.config.max,
-              this.config.max_length, this.config.regex);
+            this.config.max_length, this.config.regex);
         if (!isEmptyString(typeError)) {
           return typeError;
         }
@@ -195,16 +195,15 @@ export default {
 function getValidByTypeError(value, type, min, max, max_length, regex) {
   if (!type || (type === 'text')) {
     if (regex) {
-      let regexPattern = new RegExp(regex.pattern);
-      let matchFound = regexPattern.test(value);
-      if (!matchFound) {
+      let matches = isFullRegexMatch(regex.pattern, value);
+      if (!matches) {
         if (regex.description) {
           return regex.description
         } else {
-          return 'The input value is invalid'
+          return 'pattern mismatch'
         }
       }
-      }
+    }
     if (max_length) {
       if (value.length > max_length) {
         return 'Max chars allowed: ' + max_length
