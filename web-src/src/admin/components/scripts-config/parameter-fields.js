@@ -72,6 +72,16 @@ export const allowedValuesScriptField = {
     required: true
 };
 
+export const regexPatternField = {
+    name: 'RegExp pattern',
+    required: false
+};
+
+export const regexDescriptionField = {
+    name: 'RegExp description (optional)',
+    required: false
+};
+
 export const maxLengthField = {
     name: 'Max characters length',
     type: 'int'

@@ -256,22 +256,24 @@ def _text1():
     return {'name': 'text 1', 'description': None, 'withoutValue': False, 'required': True, 'default': None,
             'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
             'fileRecursive': False, 'fileType': None,
-            'requiredParameters': []
-            }
+            'requiredParameters': [],
+            'regex': None}
 
 
 def _list1():
     return {'name': 'list 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
             'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': ['A', 'B', 'C'],
             'secure': False, 'fileRecursive': False, 'fileType': None,
-            'requiredParameters': []}
+            'requiredParameters': [],
+            'regex': None}
 
 
 def _file1():
     return {'name': 'file 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
             'type': 'server_file', 'min': None, 'max': None, 'max_length': None, 'values': ['x', 'y', 'z'],
             'secure': False, 'fileRecursive': False, 'fileType': None,
-            'requiredParameters': []}
+            'requiredParameters': [],
+            'regex': None}
 
 
 def _list2(list2_values):
@@ -279,12 +281,14 @@ def _list2(list2_values):
             'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': list2_values,
             'secure': False,
             'fileRecursive': False, 'fileType': None,
-            'requiredParameters': ['file 1']}
+            'requiredParameters': ['file 1'],
+            'regex': None}
 
 
 def _included_text2():
     return {'name': 'included text 2', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
             'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
             'fileRecursive': False, 'fileType': None,
-            'requiredParameters': []
+            'requiredParameters': [],
+            'regex': None
             }

@@ -149,7 +149,8 @@ def create_script_param_config(
         excluded_files=None,
         same_arg_param=None,
         values_script_shell=None,
-        max_length=None):
+        max_length=None,
+        regex=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -213,6 +214,9 @@ def create_script_param_config(
 
     if same_arg_param is not None:
         conf['same_arg_param'] = same_arg_param
+
+    if regex is not None:
+        conf['regex'] = regex
 
     if max_length is not None:
         conf['max_length'] = max_length
@@ -285,7 +289,8 @@ def create_parameter_model(name=None,
                            file_recursive=None,
                            other_param_values: ObservableDict = None,
                            values_script_shell=None,
-                           max_length=None):
+                           max_length=None,
+                           regex=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -305,7 +310,8 @@ def create_parameter_model(name=None,
         file_dir=file_dir,
         file_recursive=file_recursive,
         values_script_shell=values_script_shell,
-        max_length=max_length)
+        max_length=max_length,
+        regex=regex)
 
     if all_parameters is None:
         all_parameters = []

@@ -179,6 +179,42 @@ describe('Test TextField', function () {
 
             expect(this.textfield.currentError).toBe('integer expected')
         });
+
+        it('Test set invalid external value when regex', async function () {
+            setDeepProp(this.textfield, 'config.regex', {pattern: 'a\\d\\db', description: 'test desc'});
+            this.textfield.setProps({value: 'a123'});
+            await vueTicks();
+
+            expect(this.textfield.currentError).toBe('test desc')
+        });
+
+        it('Test set invalid external value when regex fullstring match', async function () {
+            setDeepProp(this.textfield, 'config.regex', {pattern: 'a', description: 'test desc'});
+            this.textfield.setProps({value: 'wat'});
+            await vueTicks();
+
+            expect(this.textfield.currentError).toBe('test desc')
+        });
+
+        it('Test set invalid external value when regex fullstring match and no desc', async function () {
+            setDeepProp(this.textfield, 'config.regex', {pattern: 'a', description: ''});
+            this.textfield.setProps({value: 'a1a'});
+            await vueTicks();
+
+            expect(this.textfield.currentError).toBe('pattern mismatch')
+        });
+
+        it('Test user set invalid value when regex', async function () {
+            setDeepProp(this.textfield, 'config.regex', {pattern: 'a\\d\\db', description: 'test desc'});
+            await vueTicks();
+
+            const inputField = this.textfield.find('input').element;
+            setInputValue(inputField, 'a12XXX', true);
+
+            await vueTicks();
+
+            expect(this.textfield.currentError).toBe('test desc')
+        });
     });
 
     describe('Test IP validaton', function () {

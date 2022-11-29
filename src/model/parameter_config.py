@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
@@ -31,6 +32,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'min',
     'max',
     'max_length',
+    'regex',
     'constant',
     '_values_provider',
     'values',
@@ -77,6 +79,7 @@ class ParameterModel(object):
         self.min = config.get('min')
         self.max = config.get('max')
         self.max_length = config.get('max_length')
+        self.regex = config.get('regex')
         self.secure = read_bool_from_config('secure', config, default=False)
         self.separator = config.get('separator', ',')
         self.multiselect_argument_type = read_str_from_config(
@@ -299,6 +302,13 @@ class ParameterModel(object):
             return 'should be boolean, but has value ' + value_string
 
         if self.type == 'text' or self.type == 'multiline_text':
+            if self.regex is not None:
+                regex_pattern = self.regex.get('pattern', None)
+                if not is_empty(regex_pattern):
+                    regex_matched = re.fullmatch(regex_pattern, value)
+                    if not regex_matched:
+                        description = self.regex.get('description') or regex_pattern
+                        return 'does not match regex pattern: ' + description
             if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
                 return 'is longer than allowed char length (' \
                        + str(len(value)) + ' > ' + str(self.max_length) + ')'
@@ -526,6 +536,8 @@ def get_sorted_config(param_config):
                  'values',
                  'min',
                  'max',
+                 'max_length',
+                 'regex',
                  'multiselect_argument_type',
                  'separator',
                  'file_dir',
