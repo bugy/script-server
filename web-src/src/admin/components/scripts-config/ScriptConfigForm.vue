@@ -38,6 +38,11 @@
                 class="col s3 checkbox-field"/>
       <TextField v-model="includeScript" :config="includeScriptField" class="col s5 offset-s1"/>
     </div>
+
+    <div class="row">
+      <CheckBox v-model="globalInstances" :config="globalInstancesField"
+                class="col s3 checkbox-field"/>
+    </div>
   </form>
 </template>
 
@@ -56,6 +61,7 @@ import {
   nameField,
   outputFormatField,
   requiresTerminalField,
+  globalInstancesField,
   scriptPathField,
   workDirField
 } from './script-fields';
@@ -86,6 +92,7 @@ export default {
       description: null,
       workingDirectory: null,
       requiresTerminal: null,
+      globalInstances: null,
       includeScript: null,
       outputFormat: null,
       allowedUsers: [],
@@ -101,6 +108,7 @@ export default {
       allowAllAdminsField,
       outputFormatField,
       requiresTerminalField,
+      globalInstancesField,
       includeScriptField
     }
   },
@@ -125,6 +133,15 @@ export default {
         }
       });
     });
+
+    this.$watch('globalInstances', (globalInstances) => {
+      if (globalInstances) {
+        this.$set(this.value, 'access', {'shared_access': {'type': 'ALL_USERS'}});
+      } else {
+        this.$delete(this.value, 'access');
+      }
+    });
+
   },
 
   watch: {
@@ -136,13 +153,16 @@ export default {
         this.description = config['description'];
         this.workingDirectory = config['working_directory'];
         this.requiresTerminal = get(config, 'requires_terminal', true);
+        this.globalInstances = false;
+        if (config?.access?.shared_access?.type == "ALL_USERS"){
+          this.globalInstances = true;
+        }
         this.includeScript = config['include'];
         this.outputFormat = config['output_format'];
         this.updateAccessFieldInVm(config,
             'allowedUsers',
             'allowAllUsers',
             'allowed_users')
-
         this.updateAccessFieldInVm(config,
             'adminUsers',
             'allowAllAdmins',

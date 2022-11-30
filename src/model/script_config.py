@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
+from config.constants import SHARED_ACCESS_TYPE_ALL
 from model import parameter_config
 from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
     read_str_from_config, replace_auth_vars
@@ -179,6 +180,8 @@ class ConfigModel:
 
         required_terminal = read_bool_from_config('requires_terminal', config, default=self._pty_enabled_default)
         self.requires_terminal = required_terminal
+
+        self.access = config.get('access', {})
 
         self.output_format = read_output_format(config)
 
@@ -386,6 +389,7 @@ def get_sorted_config(config):
                  'group',
                  'allowed_users',
                  'admin_users',
+                 'access',
                  'schedulable',
                  'include',
                  'output_files',

@@ -37,3 +37,7 @@ export const includeScriptField = {
     name: 'Include config',
     description: 'Allows to include another shared config'
 };
+export const globalInstancesField = {
+    name: 'Shared Script Instances',
+    description: 'Allows script instances to be shared by all users'
+};

@@ -4,6 +4,7 @@ from typing import Optional, Dict, Callable, Any
 
 from auth.authorization import Authorizer, is_same_user
 from auth.user import User
+from config.constants import SHARED_ACCESS_TYPE_ALL
 from execution.executor import ScriptExecutor
 from model import script_config
 from model.model_helper import is_empty, AccessProhibitedException
@@ -145,7 +146,11 @@ class ExecutionService:
 
     @staticmethod
     def _can_access_execution(execution_info: _ExecutionInfo, user_id):
-        return (execution_info is not None) and (is_same_user(execution_info.owner_user.user_id, user_id))
+        if execution_info is None:
+            return False
+        shared_access_type = execution_info.config.access.get('shared_access', {}).get('type')
+        return (shared_access_type == SHARED_ACCESS_TYPE_ALL or \
+                is_same_user(execution_info.owner_user.user_id, user_id))
 
     def get_user_parameter_values(self, execution_id):
         return self._get_for_executor(execution_id,
