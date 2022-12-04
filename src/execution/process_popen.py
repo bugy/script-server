@@ -42,7 +42,8 @@ class POpenProcessWrapper(process_base.ProcessWrapper):
                                         start_new_session=True,
                                         universal_newlines=True,
                                         shell=shell,
-                                        env=env_variables)
+                                        env=env_variables,
+                                        errors='replace')
 
     def write_to_input(self, value):
         input_value = value

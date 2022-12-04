@@ -1,10 +1,9 @@
 import os
-import threading
 import unittest
 
 from execution.process_popen import prepare_cmd_for_win, POpenProcessWrapper
-from react.observable import read_until_closed
 from tests import test_utils
+from utils import file_utils
 
 
 class TestEnvironmentVariables(unittest.TestCase):
@@ -37,13 +36,26 @@ class TestEnvironmentVariables(unittest.TestCase):
         process_wrapper = POpenProcessWrapper(
             'tests/scripts/printenv.sh', '.', env_variables.build_env_vars(custom_variables))
         process_wrapper.start()
-        thread = threading.Thread(target=process_wrapper.wait_finish, daemon=True)
-        thread.start()
-        thread.join(timeout=0.1)
-        output = ''.join(read_until_closed(process_wrapper.output_stream))
+        output = test_utils.wait_and_read(process_wrapper)
         lines = output.split('\n')
         env_dict = {line.split('=', 2)[0]: line.split('=', 2)[1] for line in lines if '=' in line}
         return env_dict
+
+
+class TestExecution(unittest.TestCase):
+    def test(self):
+        file_path = os.path.join(test_utils.temp_folder, 'test.txt')
+        file_utils.write_file(file_path,
+                              b'g\xc3\xbcltig\n l\xc3\xa4uft ver\xc3\xa4ndert f\xc3\xbcr '
+                              b'\xc4ndern \nPr\xfcfung g\xc3\xbcltig l\xc3\xa4uft \xe0\xa0\x80 \xf0\x92\x80\x80!',
+                              byte_content=True)
+
+        process_wrapper = POpenProcessWrapper(['cat', 'test.txt'], test_utils.temp_folder, {})
+        process_wrapper.start()
+
+        output = test_utils.wait_and_read(process_wrapper)
+
+        self.assertEqual('gültig\n läuft verändert für �ndern \nPr�fung gültig läuft ࠀ 𒀀!', output)
 
 
 class TestPrepareForWindows(unittest.TestCase):

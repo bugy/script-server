@@ -13,6 +13,7 @@ import utils.os_utils as os_utils
 from auth.auth_base import Authenticator
 from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
+from react.observable import read_until_closed
 from react.properties import ObservableDict
 from utils import audit_utils
 from utils.env_utils import EnvVariables
@@ -480,6 +481,14 @@ def assert_contains_sub_dict(test_case: TestCase, big_dict: dict, sub_dict: dict
     for key_value in sub_dict.items():
         if key_value not in big_dict.items():
             test_case.fail(repr(big_dict) + ' does not contain ' + repr(sub_dict))
+
+
+def wait_and_read(process_wrapper):
+    thread = threading.Thread(target=process_wrapper.wait_finish, daemon=True)
+    thread.start()
+    thread.join(timeout=0.1)
+
+    return ''.join(read_until_closed(process_wrapper.output_stream))
 
 
 class _MockProcessWrapper(ProcessWrapper):
