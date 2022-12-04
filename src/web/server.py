@@ -313,9 +313,13 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
     def prepare_download_url(self, file):
         downloads_folder = self.application.downloads_folder
         relative_path = file_utils.relative_path(file, downloads_folder)
-        url_path = relative_path.replace(os.path.sep, '/')
-        url_path = 'result_files/' + url_path
-        return url_path
+
+        filename = tornado.escape.url_escape(os.path.basename(relative_path))
+        relative_dir = os.path.dirname(relative_path).replace(os.path.sep, '/')
+
+        url_path = relative_dir + '/' + filename
+
+        return 'result_files/' + url_path
 
     def handle_exception_on_open(self, e):
         (status_code, message) = exception_to_code_and_message(e)
