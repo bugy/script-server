@@ -144,6 +144,13 @@ class ExecutionServiceTest(unittest.TestCase):
 
         self.assertFalse(execution_service.can_access(execution_id, DEFAULT_USER_ID))
 
+    def test_can_access_different_user_shared_access(self):
+        execution_service = self.create_execution_service()
+        execution_id = self._start(execution_service)
+        execution_service._execution_infos[execution_id].config.access = {'shared_access': {'type': 'ALL_USERS'}}
+
+        self.assertTrue(execution_service.can_access(execution_id, 'another_user'))
+
     def test_get_audit_name(self):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
