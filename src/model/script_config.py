@@ -122,7 +122,11 @@ class ConfigModel:
                 if required_parameters and any(r not in processed for r in required_parameters):
                     continue
 
-                value = parameter.normalize_user_value(param_values.get(parameter.name))
+                if parameter.constant:
+                    value = parameter.default
+                else:
+                    value = parameter.normalize_user_value(param_values.get(parameter.name))
+
                 validation_error = parameter.validate_value(value)
                 if validation_error:
                     if skip_invalid_parameters:
