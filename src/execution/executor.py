@@ -71,8 +71,9 @@ def _wrap_values(user_values, parameters):
 
 
 class ScriptExecutor:
-    def __init__(self, config, parameter_values, env_vars: EnvVariables):
+    def __init__(self, config, parameter_values, env_vars: EnvVariables, audit=None):
         self.config = config
+        self.audit = audit
         self._env_vars = env_vars
         self._parameter_values = _wrap_values(parameter_values, config.parameters)
         self._working_directory = _normalize_working_dir(config.working_directory)
@@ -94,7 +95,7 @@ class ScriptExecutor:
 
         script_args = build_command_args(parameter_values, self.config)
         command = self.script_base_command + script_args
-        env_variables = _build_env_variables(parameter_values, self.config.parameters, execution_id)
+        env_variables = _build_env_variables(parameter_values, self.config.parameters, execution_id, self.audit)
 
         all_env_variables = self._env_vars.build_env_vars(env_variables)
 
@@ -270,7 +271,7 @@ def _to_env_name(key):
     return 'PARAM_' + replaced.upper()
 
 
-def _build_env_variables(parameter_values, parameters, execution_id):
+def _build_env_variables(parameter_values, parameters, execution_id, audit=None):
     result = {}
     excluded = []
     for param_name, value in parameter_values.items():
@@ -304,7 +305,13 @@ def _build_env_variables(parameter_values, parameters, execution_id):
 
     if 'EXECUTION_ID' not in result:
         result['EXECUTION_ID'] = str(execution_id)
-
+    if audit is not None:
+        audit_value = audit.as_serializable_dict()
+        if 'EXECUTION_AUDIT_USER_ID' not in result:
+            result['EXECUTION_AUDIT_USER_ID'] = str(audit_value['user_id'])
+        for key in audit_value['audit_names']:
+            if 'EXECUTION_AUDIT_'+key.upper() not in result:
+                result['EXECUTION_AUDIT_'+key.upper()] = audit_value['audit_names'][key]
     return result
 
 

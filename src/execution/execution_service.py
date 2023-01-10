@@ -49,7 +49,7 @@ class ExecutionService:
         config.set_all_param_values(values)
         normalized_values = dict(config.parameter_values)
 
-        executor = ScriptExecutor(config, normalized_values, self._env_vars)
+        executor = ScriptExecutor(config, normalized_values, self._env_vars, audit=user)
         execution_id = self._id_generator.next_id()
 
         audit_command = executor.get_secure_command()
