@@ -9,6 +9,10 @@ cache:
     - web-src/node_modules
 addons:
   chrome: stable
+  apt:
+    update: true
+    packages:
+      - libu2f-udev
 env:
   global:
     - OWNER=${TRAVIS_REPO_SLUG%/*}
