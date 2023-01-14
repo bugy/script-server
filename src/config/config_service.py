@@ -2,14 +2,13 @@ import json
 import logging
 import os
 import re
-from collections import namedtuple
-from typing import Union
+from typing import NamedTuple, Optional
 
 from auth.authorization import Authorizer
 from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
-from model.script_config import get_sorted_config
+from model.script_config import get_sorted_config, ShortConfig, create_failed_short_config
 from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
 from utils.process_utils import ProcessInvoker
@@ -24,7 +23,10 @@ WORKING_DIR_FIELD = 'working_directory'
 
 LOGGER = logging.getLogger('config_service')
 
-ConfigSearchResult = namedtuple('ConfigSearchResult', ['short_config', 'path', 'config_object'])
+class ConfigSearchResult(NamedTuple):
+    short_config: ShortConfig
+    path: str
+    config_object: any
 
 
 def _script_name_to_file_name(script_name):
@@ -56,7 +58,7 @@ class ConfigService:
     def load_config(self, name, user):
         self._check_admin_access(user)
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
 
         if search_result is None:
             return None
@@ -77,7 +79,7 @@ class ConfigService:
 
         name = config['name']
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
         if search_result is not None:
             raise InvalidConfigException('Another config with the same name already exists')
 
@@ -108,7 +110,7 @@ class ConfigService:
 
         name = config['name']
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
         if (search_result is not None) and (os.path.basename(search_result.path) != filename):
             raise InvalidConfigException('Another script found with the same name: ' + name)
 
@@ -178,7 +180,9 @@ class ConfigService:
 
         conf_service = self
 
-        def load_script(path, content):
+        has_admin_rights = self._authorizer.is_admin(user.user_id)
+
+        def load_script(path, content) -> Optional[ShortConfig]:
             try:
                 config_object = self.load_config_file(path, content)
                 short_config = script_config.read_short(path, config_object)
@@ -193,13 +197,16 @@ class ConfigService:
                     return None
 
                 return short_config
-            except:
+            except json.decoder.JSONDecodeError:
+                LOGGER.exception(CorruptConfigFileException.VERBOSE_ERROR + ': ' + path)
+                return create_failed_short_config(path, has_admin_rights)
+            except Exception:
                 LOGGER.exception('Could not load script: ' + path)
 
         return self._visit_script_configs(load_script)
 
     def load_config_model(self, name, user, parameter_values=None, skip_invalid_parameters=False):
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
 
         if search_result is None:
             return None
@@ -244,15 +251,21 @@ class ConfigService:
 
         return result
 
-    def _find_config(self, name) -> Union[ConfigSearchResult, None]:
-        def find_and_load(path, content):
+    def _find_config(self, name, user) -> Optional[ConfigSearchResult]:
+        has_admin_rights = self._authorizer.is_admin(user.user_id)
+
+        def find_and_load(path: str, content):
             try:
                 config_object = self.load_config_file(path, content)
                 short_config = script_config.read_short(path, config_object)
 
                 if short_config is None:
                     return None
-            except:
+            except json.decoder.JSONDecodeError:
+                short_config = create_failed_short_config(path, has_admin_rights)
+                config_object = None
+
+            except Exception:
                 LOGGER.exception('Could not load script config: ' + path)
                 return None
 
@@ -265,7 +278,12 @@ class ConfigService:
         if not configs:
             return None
 
-        return configs[0]
+        found_config = configs[0]
+
+        if found_config.short_config.parsing_failed:
+            raise CorruptConfigFileException()
+
+        return found_config
 
     @staticmethod
     def _load_script_config(
@@ -385,4 +403,12 @@ class AdminAccessRequiredException(Exception):
 
 class InvalidAccessException(Exception):
     def __init__(self, message=None):
+        super().__init__(message)
+
+
+class CorruptConfigFileException(Exception):
+    HTTP_CODE = 422
+    VERBOSE_ERROR = 'Cannot parse script config file'
+
+    def __init__(self, message=VERBOSE_ERROR):
         super().__init__(message)

@@ -8,14 +8,14 @@ from shutil import copyfile
 from parameterized import parameterized
 from tornado.httputil import HTTPFile
 
-from auth.authorization import Authorizer, EmptyGroupProvider
+from auth.authorization import Authorizer, EmptyGroupProvider, ANY_USER
 from auth.user import User
 from config.config_service import ConfigService, ConfigNotAllowedException, AdminAccessRequiredException, \
     InvalidAccessException
 from config.exceptions import InvalidConfigException
 from model.model_helper import InvalidFileException
+from model.script_config import ShortConfig
 from tests import test_utils
-from tests.test_utils import AnyUserAuthorizer
 from utils import file_utils, custom_json
 from utils.audit_utils import AUTH_USERNAME
 from utils.file_utils import is_executable
@@ -56,14 +56,23 @@ class ConfigServiceTest(unittest.TestCase):
         configs = self.config_service.list_configs(self.user)
         self.assertEqual([], configs)
 
-    def test_list_configs_when_one_broken(self):
+    @parameterized.expand([
+        (False, 'hello', 'broken'),
+        (True, 'hello', 'broken'),
+        (False, '"allowed_users"', 'br...en (restricted)'),
+        (True, '"allowed_users"', 'broken'),
+    ])
+    def test_list_configs_when_one_broken(self, is_admin, content, expected_name):
         broken_conf_path = _create_script_config_file('broken')
-        file_utils.write_file(broken_conf_path, '{ hello ?')
+        file_utils.write_file(broken_conf_path, '{ ' + content + ' ?')
         _create_script_config_file('correct')
 
-        configs = self.config_service.list_configs(self.user)
-        self.assertEqual(1, len(configs))
+        configs = self.config_service.list_configs(self.admin_user if is_admin else self.user)
+        self.assertEqual(2, len(configs))
         self.assertEqual('correct', configs[0].name)
+
+        expected_broken_config = ShortConfig(name=expected_name, parsing_failed=True)
+        self.assertEqual(expected_broken_config, configs[1])
 
     def test_list_hidden_config(self):
         _create_script_config_file('conf_x', hidden=True)
@@ -105,7 +114,9 @@ class ConfigServiceTest(unittest.TestCase):
         test_utils.setup()
 
         self.user = User('ConfigServiceTest', {AUTH_USERNAME: 'ConfigServiceTest'})
-        self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder, test_utils.process_invoker)
+        self.admin_user = User('admin_user', {AUTH_USERNAME: 'The Admin'})
+        authorizer = Authorizer(ANY_USER, ['admin_user'], [], [], EmptyGroupProvider())
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
 
 class ConfigServiceAuthTest(unittest.TestCase):

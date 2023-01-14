@@ -1,5 +1,5 @@
 import {ReactiveWebSocket} from '@/common/connections/rxWebsocket';
-import clone from 'lodash/clone';
+import {axiosInstance} from '@/common/utils/axios_utils';
 import {
     forEachKeyValue,
     HttpForbiddenError,
@@ -15,7 +15,7 @@ import {
     toDict,
     toQueryArgs
 } from '@/common/utils/common';
-import {axiosInstance} from '@/common/utils/axios_utils';
+import clone from 'lodash/clone';
 import Vue from 'vue';
 import {preprocessParameter} from '../utils/model_helper';
 
@@ -51,6 +51,7 @@ function sendReloadModelRequest(parameterValues, clientModelId, websocket, newSt
 }
 
 export const NOT_FOUND_ERROR_PREFIX = `Failed to find the script`;
+export const CANNOT_PARSE_ERROR_PREFIX = `Cannot parse script config file`;
 
 export default () => ({
     state: {
@@ -333,8 +334,14 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
             logError(error);
 
             if (error instanceof SocketClosedError) {
-                console.log('Socket closed. code=' + error.code + ', reason=' + error.reason);
 
+                if (error.code === 422) {
+                    commit('SET_ERROR', `${error.reason} "${selectedScript}"`);
+                  return;
+                }
+                
+                console.log('Socket closed. code=' + error.code + ', reason=' + error.reason);
+              
                 if (isNull(state.scriptConfig)) {
                     commit('SET_ERROR', 'Failed to connect to the server');
                     return;
