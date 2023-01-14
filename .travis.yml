@@ -25,7 +25,7 @@ env:
     - PATH=$HOME/.local/bin:$PATH
 before_install:
   - sudo apt-get -y install python3-pip python3-setuptools apache2-utils python3-venv
-    chromium-chromedriver
+    chromium-browser chromium-chromedriver
 install:
   - sudo pip3 install -r requirements.txt
   - sudo pip3 install pyasn1 --upgrade
