@@ -8,6 +8,7 @@ from typing import List
 
 from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
+from config.constants import SHARED_ACCESS_TYPE_ALL
 from model import parameter_config
 from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
     read_str_from_config, replace_auth_vars
@@ -15,6 +16,7 @@ from model.parameter_config import ParameterModel
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
 from utils import file_utils, custom_json
 from utils.object_utils import merge_dicts
+from utils.process_utils import ProcessInvoker
 
 OUTPUT_FORMAT_TERMINAL = 'terminal'
 
@@ -59,6 +61,7 @@ class ConfigModel:
                  path,
                  username,
                  audit_name,
+                 process_invoker: ProcessInvoker,
                  pty_enabled_default=True):
         super().__init__()
 
@@ -66,6 +69,7 @@ class ConfigModel:
         self.name = short_config.name
         self._pty_enabled_default = pty_enabled_default
         self._config_folder = os.path.dirname(path)
+        self._process_invoker = process_invoker
 
         self._username = username
         self._audit_name = audit_name
@@ -132,7 +136,11 @@ class ConfigModel:
                 if required_parameters and any(r not in processed for r in required_parameters):
                     continue
 
-                value = parameter.normalize_user_value(param_values.get(parameter.name))
+                if parameter.constant:
+                    value = parameter.default
+                else:
+                    value = parameter.normalize_user_value(param_values.get(parameter.name))
+
                 validation_error = parameter.validate_value(value)
                 if validation_error:
                     if skip_invalid_parameters:
@@ -167,6 +175,7 @@ class ConfigModel:
         for parameter_config in original_parameter_configs:
             parameter = ParameterModel(parameter_config, username, audit_name,
                                        lambda: self.parameters,
+                                       self._process_invoker,
                                        self.parameter_values,
                                        self.working_directory)
             self.parameters.append(parameter)
@@ -189,6 +198,8 @@ class ConfigModel:
 
         required_terminal = read_bool_from_config('requires_terminal', config, default=self._pty_enabled_default)
         self.requires_terminal = required_terminal
+
+        self.access = config.get('access', {})
 
         self.output_format = read_output_format(config)
 
@@ -223,6 +234,7 @@ class ConfigModel:
                 if parameter is None:
                     parameter = ParameterModel(parameter_config, self._username, self._audit_name,
                                                lambda: self.parameters,
+                                               self._process_invoker,
                                                self.parameter_values,
                                                self.working_directory)
                     self.parameters.append(parameter)
@@ -398,6 +410,7 @@ def get_sorted_config(config):
                  'group',
                  'allowed_users',
                  'admin_users',
+                 'access',
                  'schedulable',
                  'include',
                  'output_files',

@@ -8,7 +8,7 @@
 </template>
 
 <script>
-import {isBlankString, isEmptyString, isNull, removeElement} from '@/common/utils/common';
+import {isBlankString, isEmptyArray, isEmptyString, isNull, removeElement} from '@/common/utils/common';
 import {mapState} from 'vuex';
 import ScriptListGroup from './ScriptListGroup';
 import ScriptListItem from './ScriptListItem';
@@ -51,7 +51,9 @@ export default {
         removeElement(foundScripts, script);
       }
 
-      const result = foundScripts.concat(groups);
+      const foundGroups = groups.filter(group => !isEmptyArray(group.scripts))
+
+      const result = foundScripts.concat(foundGroups);
       result.sort((o1, o2) => o1.name.toLowerCase().localeCompare(o2.name.toLowerCase()));
 
       return result;

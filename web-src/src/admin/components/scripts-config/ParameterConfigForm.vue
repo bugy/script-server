@@ -74,6 +74,10 @@
                  @error="handleError('Excluded files', $event)"/>
     </div>
     <div v-if="selectedType === 'text' || selectedType === undefined || selectedType === 'multiline_text'" class="row">
+      <Textfield v-model="regexConfigPattern" :config="regexPatternField" class="col s4"
+                 @error="handleError(regexPatternField, $event)"/>
+      <Textfield v-model="regexConfigDescription" :config="regexDescriptionField" class="col s4"
+                 @error="handleError(regexDescriptionField, $event)"/>
       <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
                  @error="handleError(maxLengthField, $event)"/>
     </div>
@@ -101,6 +105,8 @@ import {
   fileTypeField,
   maxField,
   maxLengthField,
+  regexPatternField,
+  regexDescriptionField,
   minField,
   multiselectArgumentTypeField,
   nameField,
@@ -181,6 +187,8 @@ export default {
       min: null,
       max: null,
       max_length: null,
+      regexConfigPattern: null,
+      regexConfigDescription: null,
       allowedValues: null,
       allowedValuesScript: null,
       allowedValuesFromScript: null,
@@ -206,6 +214,8 @@ export default {
       minField,
       maxField: Object.assign({}, maxField),
       maxLengthField,
+      regexPatternField,
+      regexDescriptionField,
       allowedValuesScriptField,
       allowedValuesFromScriptField,
       defaultValueField: Object.assign({}, defaultValueField),
@@ -235,6 +245,8 @@ export default {
           this.min = config['min'];
           this.max = config['max'];
           this.max_length = config['max_length'];
+          this.regexConfigPattern = get(config, 'regex.pattern', '');
+          this.regexConfigDescription = get(config, 'regex.description', '');
           this.constant = !!get(config, 'constant', false);
           this.secure = !!get(config, 'secure', false);
           this.multiselectArgumentType = get(config, 'multiselect_argument_type', 'single_argument');
@@ -320,6 +332,12 @@ export default {
     allowedValuesScriptShellEnabled() {
       this.updateAllowedValues();
     },
+    regexConfigPattern() {
+      this.updateRegexConfig();
+    },
+    regexConfigDescription() {
+      this.updateRegexConfig();
+    },
     defaultValue() {
       if (this.selectedType === 'multiselect') {
         updateValue(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
@@ -350,6 +368,12 @@ export default {
 
 
   methods: {
+    updateRegexConfig() {
+      updateValue(this.value, 'regex', {
+        pattern: this.regexConfigPattern,
+        description: this.regexConfigDescription
+      });
+    },
     updateAllowedValues() {
       if (this.allowedValuesFromScript) {
         updateValue(this.value, 'values', {

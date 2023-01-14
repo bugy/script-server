@@ -136,5 +136,38 @@ describe('Test ScriptConfig', function () {
         });
     });
 
+    describe('Test show shared instances access', function () {
+        it('Test show shared instances access unchecked', async function () {
+            store.state.scriptConfig.scriptConfig = {};
+
+            await vueTicks();
+
+            expect(_findField('Shared Script Instances').value).toBe(false);
+        });
+
+        it('Test show shared instances access checked', async function () {
+            store.state.scriptConfig.scriptConfig = {
+                'access': {'shared_access': {'type': 'ALL_USERS'}}
+            };
+
+            await vueTicks();
+
+            expect(_findField('Shared Script Instances').value).toBe(true);
+        });
+    });
+
+    describe('Test edit global_instances', function () {
+        it('Test update global_instances manually unchecked', async function () {
+            await _setValueByUser('Shared Script Instances', false);
+
+            expect(typeof store.state.scriptConfig.scriptConfig.access).toEqual('undefined');
+        });
+
+        it('Test update global_instances manually checked', async function () {
+            await _setValueByUser('Shared Script Instances', true);
+
+            expect(store.state.scriptConfig.scriptConfig.access).toEqual({'shared_access': {'type': 'ALL_USERS'}});
+        });
+    });
 
 });

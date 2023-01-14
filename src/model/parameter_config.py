@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
@@ -11,8 +12,9 @@ from model import model_helper
 from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SECURE_MASK, \
     normalize_extension, read_bool_from_config, InvalidValueException, read_str_from_config
 from react.properties import ObservableDict, observable_fields
-from utils import file_utils, string_utils, process_utils
+from utils import file_utils, string_utils
 from utils.file_utils import FileMatcher
+from utils.process_utils import ProcessInvoker
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('script_server.parameter_config')
@@ -30,6 +32,7 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'min',
     'max',
     'max_length',
+    'regex',
     'constant',
     '_values_provider',
     'values',
@@ -43,12 +46,14 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'file_recursive')
 class ParameterModel(object):
     def __init__(self, parameter_config, username, audit_name, other_params_supplier,
+                 process_invoker: ProcessInvoker,
                  other_param_values: ObservableDict = None,
                  working_dir=None):
         self._username = username
         self._audit_name = audit_name
         self._parameters_supplier = other_params_supplier
         self._working_dir = working_dir
+        self._process_invoker = process_invoker
 
         self.name = parameter_config.get('name')
 
@@ -74,6 +79,7 @@ class ParameterModel(object):
         self.min = config.get('min')
         self.max = config.get('max')
         self.max_length = config.get('max_length')
+        self.regex = config.get('regex')
         self.secure = read_bool_from_config('secure', config, default=False)
         self.separator = config.get('separator', ',')
         self.multiselect_argument_type = read_str_from_config(
@@ -87,7 +93,8 @@ class ParameterModel(object):
             self._username,
             self._audit_name,
             self._working_dir,
-            self.type)
+            self.type,
+            self._process_invoker)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
         self.file_extensions = _resolve_file_extensions(config, 'file_extensions')
@@ -199,9 +206,9 @@ class ParameterModel(object):
             shell = read_bool_from_config('shell', values_config, default=not has_variables)
 
             if '${' not in script:
-                return ScriptValuesProvider(script, shell)
+                return ScriptValuesProvider(script, shell, self._process_invoker)
 
-            return DependantScriptValuesProvider(script, self._parameters_supplier, shell)
+            return DependantScriptValuesProvider(script, self._parameters_supplier, shell, self._process_invoker)
 
         else:
             message = 'Unsupported "values" format for ' + self.name
@@ -295,6 +302,13 @@ class ParameterModel(object):
             return 'should be boolean, but has value ' + value_string
 
         if self.type == 'text' or self.type == 'multiline_text':
+            if self.regex is not None:
+                regex_pattern = self.regex.get('pattern', None)
+                if not is_empty(regex_pattern):
+                    regex_matched = re.fullmatch(regex_pattern, value)
+                    if not regex_matched:
+                        description = self.regex.get('description') or regex_pattern
+                        return 'does not match regex pattern: ' + description
             if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
                 return 'is longer than allowed char length (' \
                        + str(len(value)) + ' > ' + str(self.max_length) + ')'
@@ -432,7 +446,7 @@ class ParameterModel(object):
         return os.path.normpath(os.path.join(self._list_files_dir, *child_path))
 
 
-def _resolve_default(default, username, audit_name, working_dir, type):
+def _resolve_default(default, username, audit_name, working_dir, type, process_invoker: ProcessInvoker):
     if not default:
         return default
 
@@ -452,7 +466,7 @@ def _resolve_default(default, username, audit_name, working_dir, type):
     if script:
         has_variables = string_value != resolved_string_value
         shell = read_bool_from_config('shell', default, default=not has_variables)
-        output = process_utils.invoke(resolved_string_value, working_dir, shell=shell)
+        output = process_invoker.invoke(resolved_string_value, working_dir, shell=shell)
         stripped_output = output.strip()
 
         if type == PARAM_TYPE_MULTISELECT and '\n' in stripped_output:
@@ -522,6 +536,8 @@ def get_sorted_config(param_config):
                  'values',
                  'min',
                  'max',
+                 'max_length',
+                 'regex',
                  'multiselect_argument_type',
                  'separator',
                  'file_dir',

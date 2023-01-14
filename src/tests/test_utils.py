@@ -13,11 +13,18 @@ import utils.os_utils as os_utils
 from auth.auth_base import Authenticator
 from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
+from react.observable import read_until_closed
 from react.properties import ObservableDict
 from utils import audit_utils
+from utils.env_utils import EnvVariables
+from utils.process_utils import ProcessInvoker
 
 temp_folder = 'tests_temp'
 _original_env = {}
+
+_hidden_variables = ['MY_PASSWORD', 'SOME_SECRET']
+env_variables = EnvVariables(os.environ, hidden_variables=_hidden_variables)
+process_invoker = ProcessInvoker(env_variables)
 
 
 def create_file(filepath, *, overwrite=False, text='test text'):
@@ -143,7 +150,8 @@ def create_script_param_config(
         excluded_files=None,
         same_arg_param=None,
         values_script_shell=None,
-        max_length=None):
+        max_length=None,
+        regex=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -208,6 +216,9 @@ def create_script_param_config(
     if same_arg_param is not None:
         conf['same_arg_param'] = same_arg_param
 
+    if regex is not None:
+        conf['regex'] = regex
+
     if max_length is not None:
         conf['max_length'] = max_length
 
@@ -249,7 +260,7 @@ def create_config_model(name, *,
 
     result_config['script_path'] = script_command
 
-    model = ConfigModel(result_config, path, username, audit_name)
+    model = ConfigModel(result_config, path, username, audit_name, process_invoker)
     if parameter_values is not None:
         model.set_all_param_values(model)
 
@@ -279,7 +290,8 @@ def create_parameter_model(name=None,
                            file_recursive=None,
                            other_param_values: ObservableDict = None,
                            values_script_shell=None,
-                           max_length=None):
+                           max_length=None,
+                           regex=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -299,7 +311,8 @@ def create_parameter_model(name=None,
         file_dir=file_dir,
         file_recursive=file_recursive,
         values_script_shell=values_script_shell,
-        max_length=max_length)
+        max_length=max_length,
+        regex=regex)
 
     if all_parameters is None:
         all_parameters = []
@@ -308,7 +321,8 @@ def create_parameter_model(name=None,
                           username,
                           audit_name,
                           lambda: all_parameters,
-                          other_param_values=other_param_values)
+                          other_param_values=other_param_values,
+                          process_invoker=process_invoker)
 
 
 def create_simple_parameter_configs(names):
@@ -327,7 +341,13 @@ def create_parameter_model_from_config(config,
     if config is None:
         config = {}
 
-    return ParameterModel(config, username, audit_name, all_parameters, working_dir=working_dir)
+    return ParameterModel(
+        config,
+        username,
+        audit_name,
+        all_parameters,
+        working_dir=working_dir,
+        process_invoker=process_invoker)
 
 
 def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostname=None):
@@ -343,7 +363,42 @@ def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostnam
     return result
 
 
-def set_env_value(key, value):
+class CustomEnvScope:
+    def __init__(self, key_values) -> None:
+        self._key_values = key_values
+        self._original_process_invoker = process_invoker
+        self._original_env_vars = env_variables
+
+    def __enter__(self):
+        global env_variables
+        global process_invoker
+        global _hidden_variables
+        env_variables = EnvVariables(os.environ, extra_variables=self._key_values, hidden_variables=_hidden_variables)
+        process_invoker = ProcessInvoker(env_variables)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        global env_variables
+        global process_invoker
+        env_variables = self._original_env_vars
+        process_invoker = self._original_process_invoker
+
+
+def custom_env(*args):
+    if len(args) == 0:
+        raise Exception('No env variables are specified')
+
+    if len(args) == 1 and isinstance(args[0], dict):
+        key_values = args[0]
+    elif len(args) % 2 != 0:
+        raise Exception('Even number of arguments is expected')
+    else:
+        key_values = {args[i]: args[i + 1] for i in range(0, len(args), 2)}
+
+    return CustomEnvScope(key_values)
+
+
+def set_os_environ_value(key, value):
     if key not in _original_env:
         if key in os.environ:
             _original_env[key] = value
@@ -420,6 +475,20 @@ def assert_dir_files(expected_files, dir_path, test_case: TestCase):
     actual_files = sorted(os.listdir(dir_path))
 
     test_case.assertSequenceEqual(expected_files_sorted, actual_files)
+
+
+def assert_contains_sub_dict(test_case: TestCase, big_dict: dict, sub_dict: dict):
+    for key_value in sub_dict.items():
+        if key_value not in big_dict.items():
+            test_case.fail(repr(big_dict) + ' does not contain ' + repr(sub_dict))
+
+
+def wait_and_read(process_wrapper):
+    thread = threading.Thread(target=process_wrapper.wait_finish, daemon=True)
+    thread.start()
+    thread.join(timeout=0.1)
+
+    return ''.join(read_until_closed(process_wrapper.output_stream))
 
 
 class _MockProcessWrapper(ProcessWrapper):

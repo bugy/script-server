@@ -78,7 +78,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual(False, parameter_model.constant)
 
     def test_default_value_from_env(self):
-        test_utils.set_env_value('my_env_var', 'sky')
+        test_utils.set_os_environ_value('my_env_var', 'sky')
 
         parameter_model = _create_parameter_model({
             'name': 'def_param',
@@ -86,7 +86,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual('sky', parameter_model.default)
 
     def test_default_value_from_env_when_missing(self):
-        test_utils.set_env_value('my_env_var', 'earth')
+        test_utils.set_os_environ_value('my_env_var', 'earth')
 
         self.assertRaisesRegex(
             Exception,
@@ -249,7 +249,7 @@ class TestDefaultValue(unittest.TestCase):
         self.assertEqual(default, True)
 
     def test_env_variable(self):
-        test_utils.set_env_value('test_val', 'text')
+        test_utils.set_os_environ_value('test_val', 'text')
 
         default = self.resolve_default('$$test_val')
 
@@ -296,7 +296,7 @@ class TestDefaultValue(unittest.TestCase):
         self.assertEqual(abs_temp_path, default)
 
     def test_script_value_when_env_var(self):
-        test_utils.set_env_value('my_command', 'echo "Hello world"')
+        test_utils.set_os_environ_value('my_command', 'echo "Hello world"')
 
         default = self.resolve_default({'script': '$$my_command'}, working_dir=test_utils.temp_folder)
         self.assertEqual('Hello world', default)
@@ -346,7 +346,13 @@ class TestDefaultValue(unittest.TestCase):
 
     @staticmethod
     def resolve_default(value, *, username=None, audit_name=None, working_dir=None, type=None):
-        return parameter_config._resolve_default(value, username, audit_name, working_dir, type)
+        return parameter_config._resolve_default(
+            value,
+            username,
+            audit_name,
+            working_dir,
+            type,
+            test_utils.process_invoker)
 
     def setUp(self):
         test_utils.setup()
@@ -615,6 +621,33 @@ class TestSingleParameterValidation(unittest.TestCase):
         parameter = create_parameter_model('param', type='list', values_script="echo '123\r\n' 'abc'")
 
         error = parameter.validate_value('123')
+        self.assertIsNone(error)
+
+    @parameterized.expand([
+        ('a\d', 'ab', 'some desc', 'some desc'),
+        ('a\d', '12', 'desc 2', 'desc 2'),
+        ('a\d', 'a12', 'some long description', 'some long description'),
+        ('\d+\wa+', 'aaaa', 'some desc', 'some desc'),
+        ('\d+\wa+', 'aaaa', None, '\d+\wa+'),
+    ])
+    def test_regex_validation_when_fail_with_description(self, regex, value, description, expected_description):
+        parameter = create_parameter_model('param', regex={'pattern': regex, 'description': description})
+
+        error = parameter.validate_value(value)
+        self.assert_error(error)
+        self.assertEqual(error, "does not match regex pattern: " + expected_description)
+
+    @parameterized.expand([
+        ('a\d', 'a1',),
+        ('\da', '2a',),
+        ('a\d+', 'a12',),
+        ('\d+\wa+', '1Xaaaa'),
+        (None, '1Xaaaa'),
+    ])
+    def test_regex_validation_when_success(self, regex, value):
+        parameter = create_parameter_model('param', regex={'pattern': regex})
+
+        error = parameter.validate_value(value)
         self.assertIsNone(error)
 
     @parameterized.expand([(False,), (True,), (None,)])

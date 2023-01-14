@@ -20,6 +20,7 @@ from files.user_file_storage import UserFileStorage
 from model import server_conf
 from scheduling.schedule_service import ScheduleService
 from utils import tool_utils, file_utils
+from utils.process_utils import ProcessInvoker
 from utils.tool_utils import InvalidWebBuildException
 from web import server
 from web.client import tornado_client_config
@@ -100,7 +101,9 @@ def main():
         server_config.code_editor_users,
         group_provider)
 
-    config_service = ConfigService(authorizer, CONFIG_FOLDER)
+    process_invoker = ProcessInvoker(server_config.env_vars)
+
+    config_service = ConfigService(authorizer, CONFIG_FOLDER, process_invoker)
 
     alerts_service = AlertsService(server_config.alerts_config)
     alerts_service = alerts_service
@@ -114,7 +117,7 @@ def main():
     existing_ids = [entry.id for entry in execution_logging_service.get_history_entries(None, system_call=True)]
     id_generator = IdGenerator(existing_ids)
 
-    execution_service = ExecutionService(authorizer, id_generator)
+    execution_service = ExecutionService(authorizer, id_generator, server_config.env_vars)
 
     execution_logging_controller = ExecutionLoggingController(execution_service, execution_logging_service)
     execution_logging_controller.start()
@@ -127,7 +130,9 @@ def main():
     alerter_feature = FailAlerterFeature(execution_service, alerts_service)
     alerter_feature.start()
 
-    executions_callback_feature = ExecutionsCallbackFeature(execution_service, server_config.callbacks_config)
+    executions_callback_feature = ExecutionsCallbackFeature(
+        execution_service, server_config.callbacks_config, process_invoker)
+
     executions_callback_feature.start()
 
     schedule_service = ScheduleService(config_service, execution_service, CONFIG_FOLDER)

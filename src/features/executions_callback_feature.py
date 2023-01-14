@@ -5,6 +5,7 @@ from communications.communicaton_service import CommunicationsService
 from communications.destination_script import ScriptDestination
 from execution.execution_service import ExecutionService
 from model.model_helper import read_bool_from_config, read_list
+from utils.process_utils import ProcessInvoker
 
 LOGGER = logging.getLogger('script_server.execution_callbacks')
 
@@ -12,7 +13,7 @@ _EXIT_CODE_FIELD = 'exit_code'
 _DEFAULT_NOTIFICATION_FIELDS = ['execution_id', 'pid', 'script_name', 'user', _EXIT_CODE_FIELD]
 
 
-def _init_destinations(destinations_config):
+def _init_destinations(destinations_config, process_invoker: ProcessInvoker):
     destinations = []
 
     for destination_config in destinations_config:
@@ -25,7 +26,7 @@ def _init_destinations(destinations_config):
             import communications.destination_http as http
             destination = http.HttpDestination(destination_config)
         elif destination_type == 'script':
-            destination = ScriptDestination(destination_config)
+            destination = ScriptDestination(destination_config, process_invoker)
         else:
             raise Exception('Unknown destination type: ' + destination_type)
 
@@ -37,7 +38,8 @@ def _init_destinations(destinations_config):
 class ExecutionsCallbackFeature:
     def __init__(self,
                  execution_service: ExecutionService,
-                 config):
+                 config,
+                 process_invoker: ProcessInvoker):
         self._execution_service = execution_service
 
         if config is None:
@@ -55,7 +57,7 @@ class ExecutionsCallbackFeature:
             self.notify_on_finish = False
             return
 
-        destinations = _init_destinations(destinations_config)
+        destinations = _init_destinations(destinations_config, process_invoker)
         self._communication_service = CommunicationsService(destinations)
 
         self.notification_fields = read_list(config, 'notification_fields', default=_DEFAULT_NOTIFICATION_FIELDS)

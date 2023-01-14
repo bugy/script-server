@@ -10,13 +10,14 @@ from utils import os_utils
 
 LOGGER = logging.getLogger('script_server.process_base')
 
+
 class ProcessWrapper(metaclass=abc.ABCMeta):
-    def __init__(self, command, working_directory, env_variables):
+    def __init__(self, command, working_directory, all_env_variables: dict):
         self.process = None
 
         self.working_directory = working_directory
         self.command = command
-        self.env_variables = env_variables
+        self.all_env_variables = all_env_variables
 
         self.finish_listeners = []
 
@@ -35,7 +36,7 @@ class ProcessWrapper(metaclass=abc.ABCMeta):
         self.notify_finish_thread.start()
 
     def prepare_env_variables(self):
-        env_variables = dict(os.environ, **self.env_variables)
+        env_variables = dict(**self.all_env_variables)
         if 'PYTHONUNBUFFERED' not in env_variables:
             env_variables['PYTHONUNBUFFERED'] = '1'
         return env_variables

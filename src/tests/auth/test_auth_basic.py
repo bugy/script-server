@@ -1,5 +1,6 @@
 import sys
 from unittest import TestCase, mock
+from unittest.mock import patch
 
 from parameterized import parameterized_class
 
@@ -8,6 +9,7 @@ from auth.auth_htpasswd import HtpasswdAuthenticator, _HtpasswdVerifier, _BuiltI
 from model.server_conf import InvalidServerConfigException
 from tests import test_utils
 from utils import os_utils
+from utils.process_utils import ProcessInvoker
 
 htpasswd_content = """
 user_md5_1:$apr1$ZNlsZi/u$mCrlk4G9CqrMh04WErcck0
@@ -132,20 +134,22 @@ class TestHtpasswdAuthenticator(TestCase):
             self._assert_rejected(username, password, authenticator)
 
     def test_missing_htpasswd_path_config(self):
-        self.assertRaisesRegex(Exception, 'is required attribute', HtpasswdAuthenticator, {})
+        self.assertRaisesRegex(Exception, 'is required attribute', HtpasswdAuthenticator, {}, None)
 
     def test_htpasswd_file_not_exist(self):
         self.assertRaisesRegex(InvalidServerConfigException, 'htpasswd path does not exist', HtpasswdAuthenticator,
-                               {'htpasswd_path': 'some/path'})
+                               {'htpasswd_path': 'some/path'}, None)
 
     def test_missing_bcrypt_and_htpasswd(self):
-        with mock.patch('auth.auth_htpasswd.process_utils.invoke') as invoke_mock:
+        with patch.object(ProcessInvoker, 'invoke') as invoke_mock:
             invoke_mock.side_effect = FileNotFoundError('Program not found')
 
             with mock.patch.dict(sys.modules, {'bcrypt': None}):
                 self.assertRaisesRegex(InvalidServerConfigException,
                                        'Please either install htpasswd utility or python bcrypt package',
-                                       HtpasswdAuthenticator, {'htpasswd_path': self.file_path})
+                                       HtpasswdAuthenticator,
+                                       {'htpasswd_path': self.file_path},
+                                       test_utils.process_invoker)
 
     def _assert_authenticated(self, username, password, authenticator):
         try:
@@ -171,17 +175,18 @@ class TestHtpasswdAuthenticator(TestCase):
             self.fail('Authorization for ' + username + ' failed with exception: ' + str(e))
 
     def _create_authenticator(self, config):
+        process_invoker = test_utils.process_invoker
         if self.verifier == 'htpasswd':
             with mock.patch.dict(sys.modules, {'bcrypt': None}):
-                authenticator = HtpasswdAuthenticator(config)
+                authenticator = HtpasswdAuthenticator(config, process_invoker)
 
             self.assertIsInstance(authenticator.verifier, _HtpasswdVerifier)
             return authenticator
 
         elif self.verifier == 'built_in':
-            with mock.patch('auth.auth_htpasswd.process_utils.invoke') as invoke_mock:
+            with patch.object(ProcessInvoker, 'invoke') as invoke_mock:
                 invoke_mock.side_effect = FileNotFoundError('Program not found')
-                authenticator = HtpasswdAuthenticator(config)
+                authenticator = HtpasswdAuthenticator(config, process_invoker)
 
             self.assertIsInstance(authenticator.verifier, _BuiltItVerifier)
             return authenticator
