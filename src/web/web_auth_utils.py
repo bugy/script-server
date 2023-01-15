@@ -40,7 +40,12 @@ def check_authorization(func):
             if isinstance(self, tornado.websocket.WebSocketHandler):
                 self.close(code=code, reason=message)
             else:
-                raise tornado.web.HTTPError(code, message)
+                if isinstance(self, tornado.web.StaticFileHandler) and request_path.lower().endswith('.html'):
+                    login_url += "?" + urlencode(dict(next=request_path, redirectReason='prohibited'))
+                    redirect_relative(login_url, self)
+                    return
+                else:
+                    raise tornado.web.HTTPError(code, message)
 
         if authenticated and access_allowed:
             return func(self, *args, **kwargs)
