@@ -8,11 +8,11 @@ from typing import List
 
 from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
-from config.constants import SHARED_ACCESS_TYPE_ALL
 from model import parameter_config
 from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
     read_str_from_config, replace_auth_vars
 from model.parameter_config import ParameterModel
+from model.server_conf import LoggingConfig
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
 from utils import file_utils, custom_json
 from utils.object_utils import merge_dicts
@@ -90,6 +90,8 @@ class ConfigModel:
         self.parameters.subscribe(self)
 
         self._init_parameters(username, audit_name)
+
+        self.logging_config = LoggingConfig.from_json(config_object.get('logging'))
 
         for parameter in self.parameters:
             self.parameter_values[parameter.name] = parameter.default

@@ -13,6 +13,7 @@ import utils.os_utils as os_utils
 from auth.auth_base import Authenticator
 from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
+from model.server_conf import LoggingConfig
 from react.observable import read_until_closed
 from react.properties import ObservableDict
 from utils import audit_utils
@@ -235,7 +236,9 @@ def create_config_model(name, *,
                         script_command='ls',
                         output_files=None,
                         requires_terminal=None,
-                        schedulable=True):
+                        schedulable=True,
+                        logging_config: LoggingConfig = None,
+                        output_format=None):
     result_config = {}
 
     if config:
@@ -257,6 +260,14 @@ def create_config_model(name, *,
 
     if schedulable is not None:
         result_config['scheduling'] = {'enabled': schedulable}
+
+    if output_format:
+        result_config['output_format'] = output_format
+
+    if logging_config is not None:
+        result_config['logging'] = {
+            'execution_file': logging_config.filename_pattern,
+            'execution_date_format': logging_config.date_format}
 
     result_config['script_path'] = script_command
 

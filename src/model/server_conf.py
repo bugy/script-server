@@ -59,9 +59,20 @@ class ServerConfig(object):
 
 
 class LoggingConfig:
-    def __init__(self) -> None:
-        self.filename_pattern = None
-        self.date_format = None
+    def __init__(self, filename_pattern=None, date_format=None) -> None:
+        self.filename_pattern = filename_pattern
+        self.date_format = date_format
+
+    @classmethod
+    def from_json(cls, json_config):
+        config = LoggingConfig()
+
+        if json_config:
+            json_logging_config = json_config
+            config.filename_pattern = json_logging_config.get('execution_file')
+            config.date_format = json_logging_config.get('execution_date_format')
+
+        return config
 
 
 def _build_env_vars(json_object):
@@ -172,7 +183,7 @@ def from_json(conf_path, temp_folder):
     config.allowed_users = _prepare_allowed_users(allowed_users, admin_users, user_groups)
     config.alerts_config = json_object.get('alerts')
     config.callbacks_config = json_object.get('callbacks')
-    config.logging_config = parse_logging_config(json_object)
+    config.logging_config = LoggingConfig.from_json(json_object.get('logging'))
     config.user_groups = user_groups
     config.admin_users = admin_users
     config.full_history_users = full_history_users
@@ -239,17 +250,6 @@ def _prepare_allowed_users(allowed_users, admin_users, user_groups):
                 coerced_users.update(users)
 
     return list(coerced_users)
-
-
-def parse_logging_config(json_object):
-    config = LoggingConfig()
-
-    if json_object.get('logging'):
-        json_logging_config = json_object.get('logging')
-        config.filename_pattern = json_logging_config.get('execution_file')
-        config.date_format = json_logging_config.get('execution_date_format')
-
-    return config
 
 
 def _parse_admin_users(json_object, default_admins=None):
