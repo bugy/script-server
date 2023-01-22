@@ -91,8 +91,6 @@ class ConfigModel:
 
         self._init_parameters(username, audit_name)
 
-        self.logging_config = LoggingConfig.from_json(config_object.get('logging'))
-
         for parameter in self.parameters:
             self.parameter_values[parameter.name] = parameter.default
 
@@ -212,6 +210,8 @@ class ConfigModel:
             self.schedulable = read_bool_from_config('enabled', scheduling_config, default=False)
             self.scheduling_auto_cleanup = read_bool_from_config(
                 'auto_cleanup', scheduling_config, default=not bool(self.output_files))
+
+        self.logging_config = LoggingConfig.from_json(config.get('logging'))
 
         if not self.script_command:
             raise Exception('No script_path is specified for ' + self.name)
