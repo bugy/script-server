@@ -41,3 +41,14 @@ export const globalInstancesField = {
     name: 'Shared Script Instances',
     description: 'Allows script instances to be shared by all users'
 };
+
+export const schedulingEnabledField = {
+    name: 'Enabled',
+    description: 'Enables possibility to schedule scripts'
+};
+
+export const schedulingAutoCleanupField = {
+    name: 'Auto cleanup',
+    description: 'Mark finished scripts as seen by user, i.e. remove from active tabs. '
+        + 'Always disabled when output_files are specified'
+};

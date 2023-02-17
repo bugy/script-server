@@ -5,7 +5,7 @@
           :is="getComponentType(parameter)"
           :key="parameter.name"
           :config="parameter"
-          :value="parameterValues[parameter.name]"
+          :value="getParameterValue(parameter)"
           :class="{'inline': isInline(parameter)}"
           class="parameter"
           :forceValue="forcedValueParameters.includes(parameter.name)"
@@ -20,10 +20,11 @@ import Checkbox from '@/common/components/checkbox'
 import Combobox from '@/common/components/combobox'
 import FileUpload from '@/common/components/file_upload'
 import ServerFileField from '@/common/components/server_file_field'
+import TextArea from '@/common/components/TextArea'
 import Textfield from '@/common/components/textfield'
+import {isNull} from '@/common/utils/common';
 import {mapActions, mapState} from 'vuex'
 import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
-import TextArea from '@/common/components/TextArea'
 
 export default {
   name: 'script-parameters-view',
@@ -69,6 +70,19 @@ export default {
 
     setParameterValue(parameterName, value) {
       this.setParameterValueInStore({parameterName, value});
+    },
+
+    getParameterValue(parameter) {
+      const value = this.parameterValues[parameter.name];
+      if (!isNull(value)) {
+        return value;
+      }
+
+      if (parameter.withoutValue) {
+        return false;
+      }
+
+      return value;
     }
   }
 }

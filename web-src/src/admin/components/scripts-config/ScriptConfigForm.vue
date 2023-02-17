@@ -12,25 +12,6 @@
     <div class="row">
       <TextArea v-model="description" :config="descriptionField" class="col s12"/>
     </div>
-    <div class="row">
-      <div v-if="allowAllUsers" class="input-field col s9">
-        <input id="allowed_users_disabled" disabled type="text" value="All users">
-        <label class="active" for="allowed_users_disabled">Allowed users</label>
-      </div>
-      <ChipsList v-else v-model="allowedUsers" class="col s9" title="Allowed users"/>
-      <CheckBox v-model="allowAllUsers" :config="allowAllField"
-                class="col s2 offset-s1 checkbox-field"/>
-    </div>
-
-    <div class="row">
-      <div v-if="allowAllAdmins" class="input-field col s9">
-        <input id="admin_users_disabled" disabled type="text" value="Any admin">
-        <label class="active" for="admin_users_disabled">Admin users</label>
-      </div>
-      <ChipsList v-else v-model="adminUsers" class="col s9" title="Admin users"/>
-      <CheckBox v-model="allowAllAdmins" :config="allowAllAdminsField"
-                class="col s2 offset-s1 checkbox-field"/>
-    </div>
 
     <div class="row">
       <Combobox v-model="outputFormat" :config="outputFormatField" class="col s3"/>
@@ -39,16 +20,56 @@
       <TextField v-model="includeScript" :config="includeScriptField" class="col s5 offset-s1"/>
     </div>
 
-    <div class="row">
-      <CheckBox v-model="globalInstances" :config="globalInstancesField"
-                class="col s3 checkbox-field"/>
+    <div>
+      <h5>Access</h5>
+      <div class="row">
+        <div v-if="allowAllUsers" class="input-field col s9">
+          <input id="allowed_users_disabled" disabled type="text" value="All users">
+          <label class="active" for="allowed_users_disabled">Allowed users</label>
+        </div>
+        <ChipsList v-else v-model="allowedUsers" class="col s9" title="Allowed users"/>
+        <CheckBox v-model="allowAllUsers" :config="allowAllField"
+                  class="col s2 offset-s1 checkbox-field"/>
+      </div>
+      <div class="row">
+        <div v-if="allowAllAdmins" class="input-field col s9">
+          <input id="admin_users_disabled" disabled type="text" value="Any admin">
+          <label class="active" for="admin_users_disabled">Admin users</label>
+        </div>
+        <ChipsList v-else v-model="adminUsers" class="col s9" title="Admin users"/>
+        <CheckBox v-model="allowAllAdmins" :config="allowAllAdminsField"
+                  class="col s2 offset-s1 checkbox-field"/>
+      </div>
+      <div class="row">
+        <CheckBox v-model="globalInstances" :config="globalInstancesField"
+                  class="col s3 checkbox-field"/>
+      </div>
     </div>
+
+    <div>
+      <h5>Scheduling</h5>
+      <div class="row">
+        <div class="col s12">This section allows users to schedule scripts to be executed in the future.</div>
+      </div>
+      <div class="row">
+        <CheckBox v-model="schedulingEnabled" :config="schedulingEnabledField"
+                  class="col s3 checkbox-field"/>
+        <CheckBox v-model="schedulingAutoCleanup" :config="schedulingAutoCleanupField"
+                  :disabled="schedulingAutoCleanupDisabled || !schedulingEnabled"
+                  class="col s3 checkbox-field"/>
+      </div>
+    </div>
+
   </form>
 </template>
 
 <script>
+import ScriptPathField from '@/admin/components/scripts-config/script-edit/ScriptField'
+import {allowAllAdminsField} from '@/admin/components/scripts-config/script-fields';
+import {NEW_SCRIPT} from '@/admin/store/script-config-module'
 import CheckBox from '@/common/components/checkbox';
 import ChipsList from '@/common/components/ChipsList';
+import Combobox from '@/common/components/combobox'
 import TextArea from '@/common/components/TextArea';
 import TextField from '@/common/components/textfield'
 import {forEachKeyValue, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
@@ -56,19 +77,17 @@ import get from 'lodash/get';
 import {
   allowAllField,
   descriptionField,
+  globalInstancesField,
   groupField,
   includeScriptField,
   nameField,
   outputFormatField,
   requiresTerminalField,
-  globalInstancesField,
+  schedulingAutoCleanupField,
+  schedulingEnabledField,
   scriptPathField,
   workDirField
 } from './script-fields';
-import {allowAllAdminsField} from '@/admin/components/scripts-config/script-fields';
-import Combobox from '@/common/components/combobox'
-import ScriptPathField from '@/admin/components/scripts-config/script-edit/ScriptField'
-import {NEW_SCRIPT} from '@/admin/store/script-config-module'
 
 
 export default {
@@ -93,6 +112,9 @@ export default {
       workingDirectory: null,
       requiresTerminal: null,
       globalInstances: null,
+      schedulingEnabled: null,
+      schedulingAutoCleanup: null,
+      schedulingAutoCleanupDisabled: null,
       includeScript: null,
       outputFormat: null,
       allowedUsers: [],
@@ -109,6 +131,8 @@ export default {
       outputFormatField,
       requiresTerminalField,
       globalInstancesField,
+      schedulingEnabledField,
+      schedulingAutoCleanupField,
       includeScriptField
     }
   },
@@ -133,15 +157,6 @@ export default {
         }
       });
     });
-
-    this.$watch('globalInstances', (globalInstances) => {
-      if (globalInstances) {
-        this.$set(this.value, 'access', {'shared_access': {'type': 'ALL_USERS'}});
-      } else {
-        this.$delete(this.value, 'access');
-      }
-    });
-
   },
 
   watch: {
@@ -153,12 +168,14 @@ export default {
         this.description = config['description'];
         this.workingDirectory = config['working_directory'];
         this.requiresTerminal = get(config, 'requires_terminal', true);
-        this.globalInstances = false;
-        if (config?.access?.shared_access?.type == "ALL_USERS"){
-          this.globalInstances = true;
-        }
+        this.globalInstances = config?.access?.shared_access?.type === 'ALL_USERS';
         this.includeScript = config['include'];
         this.outputFormat = config['output_format'];
+
+        this.schedulingEnabled = config.scheduling?.enabled === true
+        this.schedulingAutoCleanupDisabled = !isEmptyArray(config['output_files'])
+        this.schedulingAutoCleanup = this.schedulingAutoCleanupDisabled ? false : config.scheduling?.['auto_cleanup']
+
         this.updateAccessFieldInVm(config,
             'allowedUsers',
             'allowAllUsers',
@@ -180,6 +197,19 @@ export default {
     },
     adminUsers() {
       this.updateAdminUsers();
+    },
+    globalInstances() {
+      if (this.globalInstances) {
+        this.$set(this.value, 'access', {'shared_access': {'type': 'ALL_USERS'}});
+      } else {
+        this.$delete(this.value, 'access');
+      }
+    },
+    schedulingEnabled() {
+      this.updateScheduling()
+    },
+    schedulingAutoCleanup() {
+      this.updateScheduling()
     }
   },
 
@@ -217,6 +247,17 @@ export default {
       }
       this[vmPropertyName] = users.filter(u => u !== '*');
       this[vmAllowAllPropertyName] = isNull(config[valuePropertyName]) || users.includes('*');
+    },
+    updateScheduling() {
+      if (this.schedulingEnabled) {
+        const schedulingConf = {'enabled': this.schedulingEnabled}
+        if (!isNull(this.schedulingAutoCleanup) && (!this.schedulingAutoCleanupDisabled)) {
+          schedulingConf['auto_cleanup'] = this.schedulingAutoCleanup
+        }
+        this.$set(this.value, 'scheduling', schedulingConf)
+      } else {
+        this.$delete(this.value, 'scheduling')
+      }
     }
   }
 }

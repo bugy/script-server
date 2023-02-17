@@ -418,6 +418,7 @@ def get_sorted_config(config):
                  'output_files',
                  'requires_terminal',
                  'output_format',
+                 'scheduling',
                  'parameters']
 
     def get_order(key):

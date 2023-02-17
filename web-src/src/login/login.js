@@ -124,8 +124,6 @@ function processCurrentOauthState() {
     var queryStateToken = getQueryParameter('state');
     if (oauthState || oauthResponseCode) {
         if (!oauthState && oauthResponseCode) {
-            console.log('oauth_state=' + oauthState);
-            console.log('oauthResponseCode=' + oauthResponseCode);
             showError('Invalid client state. Please try to relogin');
             return;
         }

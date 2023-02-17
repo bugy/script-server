@@ -396,6 +396,7 @@ export function setInputValue(inputField, value, triggerEvent) {
 
     if (inputField.type === 'checkbox') {
         inputField.checked = value;
+        inputField.indeterminate = isNull(value)
     } else {
         inputField.value = value;
     }
