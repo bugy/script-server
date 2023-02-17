@@ -7,6 +7,8 @@ fi
 
 if [ "$TRAVIS_BRANCH" == "master" ]; then
     export NEW_GIT_TAG='dev'
+    git tag -d 'dev'
+    git push --delete origin 'dev'
 
 elif [ "$TRAVIS_BRANCH" == "stable" ]; then
     version=`unzip -qc build/script-server.zip version.txt`

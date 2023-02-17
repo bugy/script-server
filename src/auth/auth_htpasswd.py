@@ -4,31 +4,31 @@ import os
 from auth import auth_base
 from model import model_helper
 from model.server_conf import InvalidServerConfigException
-from utils import process_utils, encryption_utils, os_utils
-from utils.process_utils import ExecutionException
+from utils import encryption_utils, os_utils
+from utils.process_utils import ExecutionException, ProcessInvoker
 from utils.string_utils import is_blank
 
 LOGGER = logging.getLogger('script_server.HtpasswdAuthenticator')
 
 
-def _select_verifier(htpasswd_path):
-    if _HtpasswdVerifier.is_installed():
+def _select_verifier(htpasswd_path, process_invoker: ProcessInvoker):
+    if _HtpasswdVerifier.is_installed(process_invoker):
         LOGGER.info('Using htpasswd utility for password verification')
-        return _HtpasswdVerifier(htpasswd_path)
+        return _HtpasswdVerifier(htpasswd_path, process_invoker)
 
     LOGGER.info('Using built-in encoder for password verification')
     return _BuiltItVerifier(htpasswd_path)
 
 
 class HtpasswdAuthenticator(auth_base.Authenticator):
-    def __init__(self, params_dict):
+    def __init__(self, params_dict, process_invoker: ProcessInvoker):
         super().__init__()
 
         htpasswd_path = model_helper.read_obligatory(params_dict, 'htpasswd_path', ' for htpasswd auth')
         if not os.path.exists(htpasswd_path):
             raise InvalidServerConfigException('htpasswd path does not exist: ' + htpasswd_path)
 
-        self.verifier = _select_verifier(htpasswd_path)
+        self.verifier = _select_verifier(htpasswd_path, process_invoker)
 
     def authenticate(self, request_handler):
         username = request_handler.get_argument('username')
@@ -48,12 +48,13 @@ class HtpasswdAuthenticator(auth_base.Authenticator):
 
 class _HtpasswdVerifier:
 
-    def __init__(self, file_path) -> None:
+    def __init__(self, file_path, process_invoker: ProcessInvoker) -> None:
         self.path = file_path
+        self._process_invoker = process_invoker
 
     def verify(self, username, password):
         try:
-            process_utils.invoke(['htpasswd', '-bv', self.path, username, password], check_stderr=False)
+            self._process_invoker.invoke(['htpasswd', '-bv', self.path, username, password], check_stderr=False)
             return True
 
         except ExecutionException as e:
@@ -62,9 +63,9 @@ class _HtpasswdVerifier:
             raise e
 
     @staticmethod
-    def is_installed():
+    def is_installed(process_invoker: ProcessInvoker):
         try:
-            output = process_utils.invoke(['htpasswd', '-nbp', 'some_user', 'some_password'], check_stderr=False)
+            output = process_invoker.invoke(['htpasswd', '-nbp', 'some_user', 'some_password'], check_stderr=False)
             return output.strip().endswith('some_user:some_password')
         except FileNotFoundError:
             return False

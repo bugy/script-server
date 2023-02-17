@@ -479,6 +479,21 @@ class ConfigModelIncludeTest(unittest.TestCase):
 
         self.assertEqual(values, config_model.parameter_values)
 
+    def test_set_all_values_for_dependant_on_constant(self):
+        included_path = test_utils.write_script_config({'parameters': [
+            create_script_param_config('included_param1', values_script='echo ${p1}'),
+        ]}, 'included')
+        config_model = _create_config_model(
+            'main_conf',
+            config={
+                'include': included_path,
+                'parameters': [create_script_param_config('p1', constant=True, default='t1\nt2\nt3')]})
+
+        values = {'included_param1': 't2'}
+        config_model.set_all_param_values(values)
+
+        self.assertEqual({'included_param1': 't2', 'p1': 't1\nt2\nt3'}, config_model.parameter_values)
+
     def test_dynamic_include_add_parameter_with_default(self):
         (config_model, included_path) = self.prepare_config_model_with_included([
             create_script_param_config('included_param', default='abc 123')
@@ -853,21 +868,20 @@ class GetSortedConfigTest(unittest.TestCase):
         ])
         self.assertEqual(expected, config)
 
-
     def test_json_comments(self):
         config = get_sorted_config(custom_json.loads(
-                """{
-                // Comment 1
-                "parameters": [
-                            // Comment 2
-                            {"name": "param2", "description": "desc 1"},
-                            {"type": "int", "name": "paramA"},
-                            {"default": "false", "name": "param1", "no_value": true}
-                            ],
-                // Comment 3
-                "name": "Conf X"
-                }""")
-            )
+            """{
+            // Comment 1
+            "parameters": [
+                        // Comment 2
+                        {"name": "param2", "description": "desc 1"},
+                        {"type": "int", "name": "paramA"},
+                        {"default": "false", "name": "param1", "no_value": true}
+                        ],
+            // Comment 3
+            "name": "Conf X"
+            }""")
+        )
 
         expected = OrderedDict([
             ('name', 'Conf X'),
@@ -913,6 +927,29 @@ class SchedulableConfigTest(unittest.TestCase):
 
         self.assertFalse(config_model.schedulable)
 
+    @parameterized.expand([
+        (True, True, [], True),
+        (False, True, [], True),
+        (True, False, [], False),
+        (False, False, [], False),
+        (True, True, ['test'], True),
+        (True, False, ['test'], False),
+        (True, None, [], True),
+        (False, None, [], True),
+        (True, None, ['test'], False),
+    ])
+    def test_auto_cleanup(self, scheduling_enabled, auto_cleanup, output_files, expected_result):
+        config = {
+            'scheduling': {'enabled': scheduling_enabled},
+            'output_files': output_files
+        }
+        if auto_cleanup is not None:
+            config['scheduling']['auto_cleanup'] = auto_cleanup
+
+        config_model = _create_config_model('some-name', config=config)
+
+        self.assertEqual(config_model.scheduling_auto_cleanup, expected_result)
+
     def tearDown(self) -> None:
         test_utils.cleanup()
 
@@ -946,7 +983,7 @@ def _create_config_model(name, *,
     if working_dir is not None:
         result_config['working_directory'] = working_dir
 
-    model = ConfigModel(result_config, path, username, audit_name)
+    model = ConfigModel(result_config, path, username, audit_name, test_utils.process_invoker)
     if parameter_values is not None:
         model.set_all_param_values(parameter_values, skip_invalid_parameters=skip_invalid_parameters)
 

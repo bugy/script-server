@@ -15,13 +15,15 @@ class ScriptValuesProviderTest(unittest.TestCase):
     def test_ls_3_files(self, shell):
         test_utils.create_files(['f1', 'f2', 'f3'])
         provider = ScriptValuesProvider('ls "' + test_utils.temp_folder + '"',
-                                        shell=shell)
+                                        shell=shell,
+                                        process_invoker=test_utils.process_invoker)
         self.assertEqual(['f1', 'f2', 'f3'], provider.get_values({}))
 
     @parameterized.expand([(True,), (False,)])
     def test_ls_no_files(self, shell):
         provider = ScriptValuesProvider('ls "' + test_utils.temp_folder + '"',
-                                        shell=shell)
+                                        shell=shell,
+                                        process_invoker=test_utils.process_invoker)
         self.assertEqual([], provider.get_values({}))
 
     def test_ls_3_files_when_bash_operator(self):
@@ -29,12 +31,14 @@ class ScriptValuesProviderTest(unittest.TestCase):
         self.assertRaises(ExecutionException,
                           ScriptValuesProvider,
                           'ls "' + test_utils.temp_folder + '" | grep 2',
-                          shell=False)
+                          shell=False,
+                          process_invoker=test_utils.process_invoker)
 
     def test_ls_3_files_when_bash_operator_and_shell(self):
         test_utils.create_files(['f1', 'f2', 'f3'])
         provider = ScriptValuesProvider('ls "' + test_utils.temp_folder + '" | grep 2',
-                                        shell=True)
+                                        shell=True,
+                                        process_invoker=test_utils.process_invoker)
         self.assertEqual(['f2'], provider.get_values({}))
 
     def setUp(self) -> None:
@@ -55,7 +59,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             'ls ${param1}',
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
 
         self.assertCountEqual(['param1'], values_provider.get_required_parameters())
 
@@ -64,7 +69,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             'ls ${param1}',
             self.create_parameters_supplier('param1', 'param2', 'param3'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertCountEqual(['param1'], values_provider.get_required_parameters())
 
     @parameterized.expand([(True,), (False,)])
@@ -72,7 +78,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             'ls ${param1}/${param2}',
             self.create_parameters_supplier('param1', 'param2', 'param3'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertCountEqual(['param1', 'param2'], values_provider.get_required_parameters())
 
     @parameterized.expand([(True,), (False,)])
@@ -80,7 +87,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             'ls ${param1}',
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual([], values_provider.get_values({}))
 
     @parameterized.expand([(True,), (False,)])
@@ -88,7 +96,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             "echo '_${param1}_'",
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual(['_hello world_'], values_provider.get_values({'param1': 'hello world'}))
 
     @parameterized.expand([(True,), (False,)])
@@ -100,7 +109,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             'ls ' + test_utils.temp_folder + '/${param1}/${param2}',
             self.create_parameters_supplier('param1', 'param2'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual(['f0.txt', 'f1.txt', 'f2.txt', 'f3.txt', 'f4.txt'],
                          values_provider.get_values({'param1': 'path1', 'param2': 'path2'}))
 
@@ -109,7 +119,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             "echo '_${param1}_\n' 'test\n' '+${param1}+'",
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual(['_123_', ' test', ' +123+'], values_provider.get_values({'param1': '123'}))
 
     @parameterized.expand([(True,), (False,)])
@@ -117,7 +128,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             "echo '_${param1}_'",
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual(['_123_'], values_provider.get_values({'param1': 123}))
 
     @parameterized.expand([(True,), (False,)])
@@ -125,7 +137,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             "ls '${param1}'",
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual([], values_provider.get_values({'param1': test_utils.temp_folder}))
 
     @parameterized.expand([(True, ['1', '2']), (False, ['1 && echo 2'])])
@@ -133,7 +146,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             "echo ${param1}",
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual(expected_values, values_provider.get_values({'param1': '1 && echo 2'}))
 
     @parameterized.expand([(True, ['y2', 'y3']), (False, [])])
@@ -143,7 +157,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             "ls ${param1}",
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual(expected_values, values_provider.get_values({'param1': test_utils.temp_folder + ' | grep y'}))
 
     @parameterized.expand([(True,), (False,)])
@@ -151,7 +166,8 @@ class DependantScriptValuesProviderTest(unittest.TestCase):
         values_provider = DependantScriptValuesProvider(
             "echo2 ${param1}",
             self.create_parameters_supplier('param1'),
-            shell=shell)
+            shell=shell,
+            process_invoker=test_utils.process_invoker)
         self.assertEqual([], values_provider.get_values({'param1': 'abc'}))
 
     def setUp(self):

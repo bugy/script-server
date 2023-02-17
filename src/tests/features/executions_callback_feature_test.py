@@ -5,6 +5,7 @@ from collections import defaultdict, OrderedDict
 from auth.user import User
 from communications import destination_email
 from features.executions_callback_feature import ExecutionsCallbackFeature
+from tests import test_utils
 from tests.communications.communication_test_utils import mock_communicators
 from tests.test_utils import create_config_model
 from utils.string_utils import values_to_string
@@ -41,7 +42,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
 
     def test_init_empty_config(self):
         # noinspection PyTypeChecker
-        feature = ExecutionsCallbackFeature(self, None)
+        feature = ExecutionsCallbackFeature(self, None, test_utils.process_invoker)
         self.assertFalse(feature.notify_on_start)
 
     def test_default_on_start(self):
@@ -187,7 +188,7 @@ class TestExecutionsCallbackFeature(unittest.TestCase):
             config['notification_fields'] = notification_fields
 
         # noinspection PyTypeChecker
-        self.callback_feature = ExecutionsCallbackFeature(self, config)
+        self.callback_feature = ExecutionsCallbackFeature(self, config, test_utils.process_invoker)
         return self.callback_feature
 
     def assert_created_destinations(self, expected_names):

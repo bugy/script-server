@@ -6,7 +6,8 @@
           :key="parameter.name"
           :config="parameter"
           :value="parameterValues[parameter.name]"
-          class="inline parameter"
+          :class="{'inline': isInline(parameter)}"
+          class="parameter"
           :forceValue="forcedValueParameters.includes(parameter.name)"
           @error="handleError(parameter, $event)"
           @input="setParameterValue(parameter.name, $event)"/>
@@ -22,6 +23,7 @@ import ServerFileField from '@/common/components/server_file_field'
 import Textfield from '@/common/components/textfield'
 import {mapActions, mapState} from 'vuex'
 import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
+import TextArea from '@/common/components/TextArea'
 
 export default {
   name: 'script-parameters-view',
@@ -50,9 +52,15 @@ export default {
         return Combobox;
       } else if (parameter.type === 'file_upload') {
         return FileUpload;
+      } else if (parameter.type === 'multiline_text') {
+        return TextArea;
       } else {
         return Textfield;
       }
+    },
+
+    isInline(parameter) {
+      return parameter.type !== 'multiline_text'
     },
 
     handleError(parameter, error) {
@@ -84,12 +92,26 @@ export default {
 }
 
 .script-parameters-panel >>> .parameter input,
+.script-parameters-panel >>> .parameter textarea,
 .script-parameters-panel >>> .parameter .file-upload-field-value {
   margin: 0;
 
   font-size: 1rem;
   height: 1.5em;
   line-height: 1.5em;
+}
+
+.script-parameters-panel >>> .parameter:not(.inline) {
+  flex-basis: 100%;
+  max-width: 100%;
+}
+
+.script-parameters-panel >>> .parameter textarea {
+  padding-bottom: 0;
+  padding-top: 0;
+
+  min-height: 1.5em;
+  box-sizing: content-box;
 }
 
 .script-parameters-panel >>> .parameter > label {

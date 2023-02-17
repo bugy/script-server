@@ -78,7 +78,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual(False, parameter_model.constant)
 
     def test_default_value_from_env(self):
-        test_utils.set_env_value('my_env_var', 'sky')
+        test_utils.set_os_environ_value('my_env_var', 'sky')
 
         parameter_model = _create_parameter_model({
             'name': 'def_param',
@@ -86,7 +86,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual('sky', parameter_model.default)
 
     def test_default_value_from_env_when_missing(self):
-        test_utils.set_env_value('my_env_var', 'earth')
+        test_utils.set_os_environ_value('my_env_var', 'earth')
 
         self.assertRaisesRegex(
             Exception,
@@ -167,6 +167,12 @@ class ParameterModelInitTest(unittest.TestCase):
             'type': 'Ipv6'})
         self.assertEqual('ip6', parameter_model.type)
 
+    def test_multiline_text(self):
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'multiline_text'})
+        self.assertEqual('multiline_text', parameter_model.type)
+
     def tearDown(self):
         super().tearDown()
 
@@ -243,7 +249,7 @@ class TestDefaultValue(unittest.TestCase):
         self.assertEqual(default, True)
 
     def test_env_variable(self):
-        test_utils.set_env_value('test_val', 'text')
+        test_utils.set_os_environ_value('test_val', 'text')
 
         default = self.resolve_default('$$test_val')
 
@@ -290,7 +296,7 @@ class TestDefaultValue(unittest.TestCase):
         self.assertEqual(abs_temp_path, default)
 
     def test_script_value_when_env_var(self):
-        test_utils.set_env_value('my_command', 'echo "Hello world"')
+        test_utils.set_os_environ_value('my_command', 'echo "Hello world"')
 
         default = self.resolve_default({'script': '$$my_command'}, working_dir=test_utils.temp_folder)
         self.assertEqual('Hello world', default)
@@ -322,9 +328,31 @@ class TestDefaultValue(unittest.TestCase):
                                            username='my_user')
             self.assertEqual(expected_value, default)
 
+    @parameterized.expand([
+        ('multiselect', '123', '123'),
+        ('list', '123', '123'),
+        ('multiselect', '123\n', '123'),
+        ('multiselect', '123\n456', ['123', '456']),
+        ('list', '123\n456', '123\n456'),
+        ('multiselect', '\n123\n456\n', ['123', '456']),
+        ('multiselect', '\n123 \n \t 456\n', ['123', '456']),
+        ('multiselect', '123 \n \t 456\n789', ['123', '456', '789']),
+    ])
+    def test_script_value_when_multiselect_and_multiple_values(self, type, output, expected_value):
+        config = {'script': 'echo "' + output + '"'}
+
+        default = self.resolve_default(config, username='my_user', type=type)
+        self.assertEqual(expected_value, default)
+
     @staticmethod
-    def resolve_default(value, *, username=None, audit_name=None, working_dir=None):
-        return parameter_config._resolve_default(value, username, audit_name, working_dir)
+    def resolve_default(value, *, username=None, audit_name=None, working_dir=None, type=None):
+        return parameter_config._resolve_default(
+            value,
+            username,
+            audit_name,
+            working_dir,
+            type,
+            test_utils.process_invoker)
 
     def setUp(self):
         test_utils.setup()
@@ -341,8 +369,9 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value(None)
         self.assertIsNone(error)
 
-    def test_string_parameter_when_value(self):
-        parameter = create_parameter_model('param')
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_value(self, param_type):
+        parameter = create_parameter_model('param', type=param_type)
 
         error = parameter.validate_value('val')
         self.assertIsNone(error)
@@ -353,8 +382,9 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value({})
         self.assert_error(error)
 
-    def test_required_parameter_when_empty(self):
-        parameter = create_parameter_model('param', required=True)
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_required_parameter_when_empty(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, required=True)
 
         error = parameter.validate_value('')
         self.assert_error(error)
@@ -593,6 +623,33 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = parameter.validate_value('123')
         self.assertIsNone(error)
 
+    @parameterized.expand([
+        ('a\d', 'ab', 'some desc', 'some desc'),
+        ('a\d', '12', 'desc 2', 'desc 2'),
+        ('a\d', 'a12', 'some long description', 'some long description'),
+        ('\d+\wa+', 'aaaa', 'some desc', 'some desc'),
+        ('\d+\wa+', 'aaaa', None, '\d+\wa+'),
+    ])
+    def test_regex_validation_when_fail_with_description(self, regex, value, description, expected_description):
+        parameter = create_parameter_model('param', regex={'pattern': regex, 'description': description})
+
+        error = parameter.validate_value(value)
+        self.assert_error(error)
+        self.assertEqual(error, "does not match regex pattern: " + expected_description)
+
+    @parameterized.expand([
+        ('a\d', 'a1',),
+        ('\da', '2a',),
+        ('a\d+', 'a12',),
+        ('\d+\wa+', '1Xaaaa'),
+        (None, '1Xaaaa'),
+    ])
+    def test_regex_validation_when_success(self, regex, value):
+        parameter = create_parameter_model('param', regex={'pattern': regex})
+
+        error = parameter.validate_value(value)
+        self.assertIsNone(error)
+
     @parameterized.expand([(False,), (True,), (None,)])
     def test_list_with_dependency_when_matches(self, shell):
         parameters = []
@@ -664,6 +721,20 @@ class TestSingleParameterValidation(unittest.TestCase):
         parameter = create_parameter_model('param', type=PARAM_TYPE_SERVER_FILE, file_dir=test_utils.temp_folder)
 
         error = parameter.validate_value('my.dat')
+        self.assert_error(error)
+
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_max_length_ok(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, max_length=10)
+
+        error = parameter.validate_value('012345678\n')
+        self.assertIsNone(error)
+
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_max_length_violated(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, max_length=10)
+
+        error = parameter.validate_value('0123456789\n')
         self.assert_error(error)
 
     def assert_error(self, error):

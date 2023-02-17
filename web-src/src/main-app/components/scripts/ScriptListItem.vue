@@ -1,11 +1,13 @@
 <template>
   <router-link :to="'/' + descriptor.hash"
                class="collection-item waves-effect script-list-item"
-               v-bind:class="{ active: descriptor.active}">
+               :class="{ active: descriptor.active, 'parsing-failed': descriptor.parsingFailed}"
+               :title="descriptor.parsingFailed ? 'Failed to parse config file' : ''">
     {{ descriptor.name }}
 
     <div :class="descriptor.state" class="menu-item-state">
       <i class="material-icons check-icon">check</i>
+      <i class="material-icons failed-icon">priority_high</i>
       <div class="preloader-wrapper active">
         <div class="spinner-layer">
           <div class="circle-clipper left">
@@ -44,7 +46,8 @@ export default {
         name: this.script.name,
         state: this.getState(this.script.name),
         active: this.selectedScript === this.script.name,
-        hash: this.toHash(this.script.name)
+        hash: this.toHash(this.script.name),
+        parsingFailed: this.script.parsing_failed
       }
     },
     ...mapState('scripts', ['selectedScript'])
@@ -52,6 +55,10 @@ export default {
   methods: {
     getState(scriptName) {
       let state = 'idle';
+
+      if (this.script.parsing_failed) {
+        return 'cannot-parse'
+      }
 
       forEachKeyValue(this.$store.state.executions.executors, function (id, executor) {
         if (executor.state.scriptName !== scriptName) {
@@ -72,6 +79,10 @@ export default {
 .scripts-list .collection-item {
   border: none;
   padding-right: 32px;
+}
+
+.scripts-list .collection-item.parsing-failed {
+  color: var(--font-color-disabled);
 }
 
 .scripts-list .collection-item .menu-item-state {
@@ -96,11 +107,14 @@ export default {
 }
 
 .scripts-list .collection-item .menu-item-state.executing,
-.scripts-list .collection-item .menu-item-state.finished {
+.scripts-list .collection-item .menu-item-state.finished,
+.scripts-list .collection-item .menu-item-state.cannot-parse {
   display: inline;
 }
 
-.scripts-list .collection-item .menu-item-state.executing > .check-icon {
+.scripts-list .collection-item .menu-item-state > .check-icon,
+.scripts-list .collection-item .menu-item-state > .preloader-wrapper,
+.scripts-list .collection-item .menu-item-state > .failed-icon {
   display: none;
 }
 
@@ -112,8 +126,8 @@ export default {
   display: block;
 }
 
-.scripts-list .collection-item .menu-item-state.finished > .preloader-wrapper {
-  display: none;
+.scripts-list .collection-item .menu-item-state.cannot-parse > .failed-icon {
+  display: block;
 }
 
 .scripts-list .collection-item .preloader-wrapper .spinner-layer {

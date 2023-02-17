@@ -9,6 +9,9 @@
       <p v-else-if="scriptLoadError && notFound">
         Failed to load script info: script '{{ selectedScript }}' not found
       </p>
+      <p v-else-if="scriptLoadError && cannotParse">
+        Cannot parse script config file, please contact the administrator
+      </p>
       <p v-else-if="scriptLoadError">
         Failed to load script info. Try to reload the page. Error message:
         <br>
@@ -21,7 +24,7 @@
 <script>
 import {isEmptyString} from '@/common/utils/common';
 import {mapActions, mapState} from 'vuex';
-import {NOT_FOUND_ERROR_PREFIX} from '../../store/scriptConfig';
+import {CANNOT_PARSE_ERROR_PREFIX, NOT_FOUND_ERROR_PREFIX} from '../../store/scriptConfig';
 import ScriptView from './script-view';
 
 export default {
@@ -34,6 +37,9 @@ export default {
     },
     notFound() {
       return !isEmptyString(this.scriptLoadError) && this.scriptLoadError.startsWith(NOT_FOUND_ERROR_PREFIX);
+    },
+    cannotParse() {
+      return !isEmptyString(this.scriptLoadError) && this.scriptLoadError.startsWith(CANNOT_PARSE_ERROR_PREFIX); 
     },
     ...mapState('auth', ['authenticated']),
     ...mapState('scriptConfig', {scriptLoadError: 'loadError', loading: 'loading'}),

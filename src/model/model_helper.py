@@ -288,3 +288,36 @@ class InvalidValueTypeException(Exception):
 class AccessProhibitedException(Exception):
     def __init__(self, message) -> None:
         super().__init__(message)
+
+
+def read_nested(json_object, path):
+    first_path_element = path[0]
+    value = json_object.get(first_path_element)
+
+    if len(path) == 1:
+        return value
+
+    if value is None:
+        return None
+
+    if isinstance(value, dict):
+        return read_nested(value, path[1:])
+
+    if isinstance(value, list):
+        result = []
+
+        for value_element in value:
+            nested_value = read_nested(value_element, path[1:])
+            if isinstance(nested_value, list):
+                result.extend(nested_value)
+            elif nested_value is not None:
+                result.append(nested_value)
+
+        if not result:
+            return None
+        if len(result) == 1:
+            return result[0]
+
+        return result
+
+    return None

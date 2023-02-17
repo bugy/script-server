@@ -19,8 +19,8 @@ def _read_repeat_unit(incoming_schedule_config):
     if is_blank(repeat_unit):
         raise InvalidScheduleException('repeat_unit is required for repeatable schedule')
 
-    if repeat_unit.lower() not in ['hours', 'days', 'weeks', 'months']:
-        raise InvalidScheduleException('repeat_unit should be one of: hours, days, weeks, months')
+    if repeat_unit.lower() not in ['minutes', 'hours', 'days', 'weeks', 'months']:
+        raise InvalidScheduleException('repeat_unit should be one of: minutes, hours, days, weeks, months')
 
     return repeat_unit.lower()
 
@@ -95,7 +95,13 @@ class ScheduleConfig:
         if not self.repeatable:
             return self.start_datetime
 
-        if self.repeat_unit == 'hours':
+        if self.repeat_unit == 'minutes':
+            next_time_func = lambda start, iteration_index: \
+                start + timedelta(minutes=self.repeat_period * iteration_index)
+            get_initial_multiplier = lambda start: \
+                ((now - start).seconds // 60 + (now - start).days * 1440) \
+                // self.repeat_period
+        elif self.repeat_unit == 'hours':
             next_time_func = lambda start, iteration_index: start + timedelta(
                 hours=self.repeat_period * iteration_index)
 

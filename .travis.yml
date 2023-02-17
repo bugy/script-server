@@ -1,6 +1,6 @@
 if: tag IS blank
 sudo: required
-dist: bionic
+dist: focal
 language: node_js
 node_js:
   - '15'
@@ -9,6 +9,10 @@ cache:
     - web-src/node_modules
 addons:
   chrome: stable
+  apt:
+    update: true
+    packages:
+      - libu2f-udev
 env:
   global:
     - OWNER=${TRAVIS_REPO_SLUG%/*}
@@ -25,7 +29,7 @@ env:
     - PATH=$HOME/.local/bin:$PATH
 before_install:
   - sudo apt-get -y install python3-pip python3-setuptools apache2-utils python3-venv
-    chromium-chromedriver
+    chromium-browser chromium-chromedriver
 install:
   - sudo pip3 install -r requirements.txt
   - sudo pip3 install pyasn1 --upgrade
@@ -40,7 +44,7 @@ install:
   - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
 before_script:
   - cd src
-  #  - python3 -m unittest discover -s tests -p "*.py" -t .
+  - python3 -m unittest discover -s tests -p "*.py" -t .
   - cd ../web-src
   - npm run test:unit-ci
   - cd ..

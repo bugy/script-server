@@ -32,7 +32,7 @@ ace.config.setModuleUrl('ace/mode/javascript', require('file-loader!ace-builds/s
 ace.config.setModuleUrl('ace/mode/python', require('file-loader!ace-builds/src-noconflict/mode-python.js'))
 ace.config.setModuleUrl('ace/mode/sh', require('file-loader!ace-builds/src-noconflict/mode-sh.js'))
 ace.config.setModuleUrl('ace/mode/powershell', require('file-loader!ace-builds/src-noconflict/mode-powershell.js'))
-ace.config.setModuleUrl('ace/mode/perl6', require('file-loader!ace-builds/src-noconflict/mode-perl6.js'))
+ace.config.setModuleUrl('ace/mode/raku', require('file-loader!ace-builds/src-noconflict/mode-raku.js'))
 ace.config.setModuleUrl('ace/mode/r', require('file-loader!ace-builds/src-noconflict/mode-r.js'))
 
 
@@ -40,7 +40,7 @@ const allowedLanguages = {
   'python': {aceName: 'python', extensions: ['py'], shebang: '#!/usr/bin/env python\n'},
   'bash': {aceName: 'sh', extensions: ['sh'], shebang: '#!/bin/bash\n'},
   'powershell': {aceName: 'powershell', extensions: ['ps1', 'psc1'], shebang: '#!/usr/bin/env pwsh\n'},
-  'perl': {aceName: 'perl6', extensions: ['pl'], shebang: '#!/usr/bin/env perl\n'},
+  'perl': {aceName: 'raku', extensions: ['pl'], shebang: '#!/usr/bin/env perl\n'},
   'R': {aceName: 'r', extensions: ['r'], shebang: '#!/usr/bin/env Rscript\n'}
 }
 

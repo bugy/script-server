@@ -144,6 +144,13 @@ class ExecutionServiceTest(unittest.TestCase):
 
         self.assertFalse(execution_service.can_access(execution_id, DEFAULT_USER_ID))
 
+    def test_can_access_different_user_shared_access(self):
+        execution_service = self.create_execution_service()
+        execution_id = self._start(execution_service)
+        execution_service._execution_infos[execution_id].config.access = {'shared_access': {'type': 'ALL_USERS'}}
+
+        self.assertTrue(execution_service.can_access(execution_id, 'another_user'))
+
     def test_get_audit_name(self):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
@@ -245,7 +252,7 @@ class ExecutionServiceTest(unittest.TestCase):
         file_download_feature = mock_object()
         file_download_feature.is_downloadable = lambda x: False
 
-        execution_service = ExecutionService(self.authorizer, self.id_generator)
+        execution_service = ExecutionService(self.authorizer, self.id_generator, test_utils.env_variables)
         self.exec_services.append(execution_service)
         return execution_service
 
@@ -385,7 +392,7 @@ class ExecutionServiceAuthorizationTest(unittest.TestCase):
         executor._process_creator = create_process
 
         authorizer = Authorizer([ANY_USER], ['admin_user'], ['history_user'], [], EmptyGroupProvider())
-        self.executor_service = ExecutionService(authorizer, _IdGeneratorMock())
+        self.executor_service = ExecutionService(authorizer, _IdGeneratorMock(), test_utils.env_variables)
 
         self.execution_id = _start(self.executor_service, self.owner_user.user_id)
 
@@ -423,5 +430,6 @@ def _create_script_config(parameter_configs):
         {'name': 'script_x',
          'script_path': 'ls',
          'parameters': parameter_configs},
-        'script_x.json', 'user1', 'localhost')
+        'script_x.json', 'user1', 'localhost',
+        test_utils.process_invoker)
     return config

@@ -1,16 +1,17 @@
 import communications.destination_base as destination_base
 from model.model_helper import read_obligatory
 from utils import process_utils
+from utils.process_utils import ProcessInvoker
 from utils.string_utils import values_to_string
 
 
-def _create_communicator(params_dict):
-    return ScriptCommunicator(params_dict)
+def _create_communicator(params_dict, process_invoker):
+    return ScriptCommunicator(params_dict, process_invoker)
 
 
 class ScriptDestination(destination_base.Destination):
-    def __init__(self, params_dict):
-        self._communicator = _create_communicator(params_dict)
+    def __init__(self, params_dict, process_invoker: ProcessInvoker):
+        self._communicator = _create_communicator(params_dict, process_invoker)
 
     def send(self, title, body, files=None):
         environment_variables = None
@@ -35,13 +36,14 @@ class ScriptDestination(destination_base.Destination):
 
 
 class ScriptCommunicator:
-    def __init__(self, params_dict):
+    def __init__(self, params_dict, process_invoker: ProcessInvoker):
         command_config = read_obligatory(params_dict, 'command', ' for Script callback')
         self.command = process_utils.split_command(command_config)
+        self._process_invoker = process_invoker
 
     def send(self, parameters, environment_variables=None):
         full_command = self.command + parameters
-        process_utils.invoke(full_command, environment_variables=environment_variables)
+        self._process_invoker.invoke(full_command, environment_variables=environment_variables)
 
     def __str__(self, *args, **kwargs):
         return 'Script: ' + str(self.command)

@@ -28,23 +28,25 @@ _sleep = time.sleep
 
 def restore_jobs(schedules_folder):
     files = [file for file in os.listdir(schedules_folder) if file.endswith('.json')]
+    files.sort()
 
-    job_dict = {}
+    job_path_dict = {}
     ids = []  # list of ALL ids, including broken configs
 
     for file in files:
         try:
-            content = file_utils.read_file(os.path.join(schedules_folder, file))
+            job_path = os.path.join(schedules_folder, file)
+            content = file_utils.read_file(job_path)
             job_json = custom_json.loads(content)
             ids.append(job_json['id'])
 
             job = scheduling_job.from_dict(job_json)
 
-            job_dict[job.id] = job
+            job_path_dict[job_path] = job
         except:
             LOGGER.exception('Failed to parse schedule file: ' + file)
 
-    return job_dict, ids
+    return job_path_dict, ids
 
 
 class ScheduleService:
@@ -60,15 +62,14 @@ class ScheduleService:
         self._execution_service = execution_service
 
         (jobs, ids) = restore_jobs(self._schedules_folder)
-        self._scheduled_executions = jobs
         self._id_generator = IdGenerator(ids)
         self.stopped = False
 
         self.scheduler = sched.scheduler(timefunc=time.time)
         self._start_scheduler()
 
-        for job in jobs.values():
-            self.schedule_job(job)
+        for job_path, job in jobs.items():
+            self.schedule_job(job, job_path)
 
     def create_job(self, script_name, parameter_values, incoming_schedule_config, user: User):
         if user is None:
@@ -84,11 +85,12 @@ class ScheduleService:
 
         id = self._id_generator.next_id()
 
-        job = SchedulingJob(id, user, schedule_config, script_name, parameter_values)
+        normalized_values = dict(config_model.parameter_values)
+        job = SchedulingJob(id, user, schedule_config, script_name, normalized_values)
 
-        self.save_job(job)
+        job_path = self.save_job(job)
 
-        self.schedule_job(job)
+        self.schedule_job(job, job_path)
 
         return id
 
@@ -102,7 +104,7 @@ class ScheduleService:
                 raise UnavailableScriptException(
                     'Script contains secure parameters (' + parameter.str_name() + '), this is not supported')
 
-    def schedule_job(self, job: SchedulingJob):
+    def schedule_job(self, job: SchedulingJob, job_path):
         schedule = job.schedule
 
         if not schedule.repeatable and date_utils.is_past(schedule.start_datetime):
@@ -112,10 +114,14 @@ class ScheduleService:
         LOGGER.info(
             'Scheduling ' + job.get_log_name() + ' at ' + next_datetime.astimezone(tz=None).strftime('%H:%M, %d %B %Y'))
 
-        self.scheduler.enterabs(next_datetime.timestamp(), 1, self._execute_job, (job,))
+        self.scheduler.enterabs(next_datetime.timestamp(), 1, self._execute_job, (job, job_path))
 
-    def _execute_job(self, job: SchedulingJob):
+    def _execute_job(self, job: SchedulingJob, job_path):
         LOGGER.info('Executing ' + job.get_log_name())
+
+        if not os.path.exists(job_path):
+            LOGGER.info(job.get_log_name() + ' was removed, skipping execution')
+            return
 
         script_name = job.script_name
         parameter_values = job.parameter_values
@@ -127,19 +133,28 @@ class ScheduleService:
 
             execution_id = self._execution_service.start_script(config, parameter_values, user)
             LOGGER.info('Started script #' + str(execution_id) + ' for ' + job.get_log_name())
+
+            if config.scheduling_auto_cleanup:
+                def cleanup():
+                    self._execution_service.cleanup_execution(execution_id, user)
+
+                self._execution_service.add_finish_listener(cleanup, execution_id)
         except:
             LOGGER.exception('Failed to execute ' + job.get_log_name())
 
-        self.schedule_job(job)
+        self.schedule_job(job, job_path)
 
     def save_job(self, job: SchedulingJob):
         user = job.user
         script_name = job.script_name
 
         filename = file_utils.to_filename('%s_%s_%s.json' % (script_name, user.get_audit_name(), job.id))
+        path = os.path.join(self._schedules_folder, filename)
         file_utils.write_file(
-            os.path.join(self._schedules_folder, filename),
+            path,
             json.dumps(job.as_serializable_dict(), indent=2))
+
+        return path
 
     def _start_scheduler(self):
         def scheduler_loop():
