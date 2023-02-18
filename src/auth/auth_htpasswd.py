@@ -45,6 +45,22 @@ class HtpasswdAuthenticator(auth_base.Authenticator):
 
         return username
 
+    def perform_basic_auth(self, user, password):
+        self._authenticate_internal(user, password)
+        return True
+
+    def _authenticate_internal(self, username, password):
+        auth_error = auth_base.AuthRejectedError('Invalid credentials')
+
+        if password is None:
+            LOGGER.warning('Password was not provided for user ' + username)
+            raise auth_error
+
+        if not self.verifier.verify(username, password):
+            raise auth_error
+
+        return username
+
 
 class _HtpasswdVerifier:
 

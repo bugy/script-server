@@ -8,6 +8,7 @@ from unittest.mock import patch, MagicMock
 
 import requests
 from parameterized import parameterized
+from requests.auth import HTTPBasicAuth
 from tornado.ioloop import IOLoop
 from tornado.web import create_signed_value
 
@@ -230,16 +231,40 @@ class ServerTest(TestCase):
         script_content = file_utils.read_file(script_path)
         self.assertEqual('abcdef', script_content)
 
+    def test_on_fly_auth(self):
+        self.start_server(12345, '127.0.0.1')
+
+    def test_get_scripts_when_basic_auth(self):
+        self.start_server(12345, '127.0.0.1')
+
+        test_utils.write_script_config({'name': 's1'}, 's1', self.runners_folder)
+
+        response = self.request('GET',
+                                'http://127.0.0.1:12345/scripts',
+                                session=requests.Session(),
+                                auth=HTTPBasicAuth('normal_user', 'qwerty'))
+        self.assertCountEqual([
+            {'name': 's1', 'group': None, 'parsing_failed': False}],
+            response['scripts'])
+
+    def test_get_scripts_when_basic_auth_failure(self):
+        self.start_server(12345, '127.0.0.1')
+
+        test_utils.write_script_config({'name': 's1'}, 's1', self.runners_folder)
+
+        response = requests.get('http://127.0.0.1:12345/scripts', auth=HTTPBasicAuth('normal_user', 'wrong_pass'))
+        self.assertEquals(401, response.status_code)
+
     @staticmethod
     def get_xsrf_token(session):
         response = session.get('http://127.0.0.1:12345/admin/scripts')
         return response.cookies.get('_xsrf')
 
-    def request(self, method, url, session=None):
+    def request(self, method, url, session=None, auth=None):
         if session is None:
             session = self._user_session
 
-        response = session.request(method, url)
+        response = session.request(method, url, auth=auth)
         self.assertEqual(200, response.status_code, 'Failed to execute request: ' + response.text)
         return response.json()
 
@@ -261,8 +286,11 @@ class ServerTest(TestCase):
 
         cookie_secret = b'cookie_secret'
 
+        authenticator = MockAuthenticator()
+        authenticator.add_user('normal_user', 'qwerty')
+
         server.init(config,
-                    MockAuthenticator(),
+                    authenticator,
                     authorizer,
                     execution_service,
                     MagicMock(),

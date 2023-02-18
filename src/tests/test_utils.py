@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
-from auth.auth_base import Authenticator
+from auth.auth_base import Authenticator, AuthRejectedError
 from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
 from model.server_conf import LoggingConfig
@@ -593,5 +593,22 @@ class AsyncMock(MagicMock):
 
 
 class MockAuthenticator(Authenticator):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._users = {}
+
     def authenticate(self, request_handler):
-        return request_handler.request.remote_ip
+        raise AuthRejectedError('Not implemented')
+
+    def perform_basic_auth(self, user, password):
+        if user not in self._users:
+            raise AuthRejectedError('Invalid user ' + user)
+
+        if self._users[user] != password:
+            raise AuthRejectedError('Invalid password for user ' + user)
+
+        return True
+
+    def add_user(self, username, password):
+        self._users[username] = password

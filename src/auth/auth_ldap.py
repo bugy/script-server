@@ -110,6 +110,13 @@ class LdapAuthenticator(auth_base.Authenticator):
         username = request_handler.get_argument('username')
         password = request_handler.get_argument('password')
 
+        return self._authenticate_internal(username, password)
+
+    def perform_basic_auth(self, user, password):
+        self._authenticate_internal(user, password)
+        return True
+
+    def _authenticate_internal(self, username, password):
         LOGGER.info('Logging in user ' + username)
 
         if self.username_template:

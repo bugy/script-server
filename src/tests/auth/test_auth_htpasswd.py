@@ -133,6 +133,22 @@ class TestHtpasswdAuthenticator(TestCase):
             password = username_passwords[username]
             self._assert_rejected(username, password, authenticator)
 
+    def test_basic_auth_when_success(self):
+        authenticator = self._create_authenticator({'htpasswd_path': self.file_path})
+
+        auth_result = authenticator.perform_basic_auth('user_md5_1', '111')
+        self.assertEqual(True, auth_result)
+
+    def test_basic_auth_when_failure(self):
+        authenticator = self._create_authenticator({'htpasswd_path': self.file_path})
+
+        self.assertRaisesRegex(
+            AuthRejectedError,
+            'Invalid credentials',
+            authenticator.perform_basic_auth,
+            'user_md5_1',
+            'wrong')
+
     def test_missing_htpasswd_path_config(self):
         self.assertRaisesRegex(Exception, 'is required attribute', HtpasswdAuthenticator, {}, None)
 
