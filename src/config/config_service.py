@@ -226,7 +226,7 @@ class ConfigService:
 
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
-        files = os.listdir(configs_dir)
+        files = sorted(os.listdir(configs_dir))
 
         configs = [file for file in files if file.lower().endswith(".json") or file.lower().endswith(".yaml")]
 

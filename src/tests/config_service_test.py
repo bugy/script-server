@@ -69,10 +69,10 @@ class ConfigServiceTest(unittest.TestCase):
 
         configs = self.config_service.list_configs(self.admin_user if is_admin else self.user)
         self.assertEqual(2, len(configs))
-        self.assertEqual('correct', configs[0].name)
+        self.assertEqual('correct', configs[1].name)
 
         expected_broken_config = ShortConfig(name=expected_name, parsing_failed=True)
-        self.assertEqual(expected_broken_config, configs[1])
+        self.assertEqual(expected_broken_config, configs[0])
 
     def test_list_hidden_config(self):
         _create_script_config_file('conf_x', hidden=True)
