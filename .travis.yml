@@ -42,6 +42,10 @@ install:
   - cd ..
   - python3 -m venv e2e_venv
   - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
+  - sudo which pip3
+  - which pip3
+  - which python3
+  - exit -1
 before_script:
   - cd src
   - python3 -m unittest discover -s tests -p "*.py" -t .
