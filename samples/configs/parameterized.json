@@ -41,7 +41,10 @@
       "name": "File upload",
       "param": "--file_upload",
       "type": "file_upload",
-      "description": "File upload testing"
+      "description": "File upload testing",
+      "ui": {
+        "width_weight": 2
+      }
     },
     {
       "name": "Multiple selection",
@@ -268,6 +271,11 @@
         "Value B",
         "Value C"
       ]
+    },
+    {
+      "name": "Multiline test",
+      "param": "--multiline_text",
+      "type": "multiline_text"
     }
   ]
 }

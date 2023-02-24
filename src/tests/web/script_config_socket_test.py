@@ -257,7 +257,8 @@ def _text1():
             'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
             'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
-            'regex': None}
+            'regex': None,
+            'ui': {'widthWeight': None}}
 
 
 def _list1():
@@ -265,7 +266,8 @@ def _list1():
             'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': ['A', 'B', 'C'],
             'secure': False, 'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
-            'regex': None}
+            'regex': None,
+            'ui': {'widthWeight': None}}
 
 
 def _file1():
@@ -273,7 +275,8 @@ def _file1():
             'type': 'server_file', 'min': None, 'max': None, 'max_length': None, 'values': ['x', 'y', 'z'],
             'secure': False, 'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
-            'regex': None}
+            'regex': None,
+            'ui': {'widthWeight': None}}
 
 
 def _list2(list2_values):
@@ -282,7 +285,8 @@ def _list2(list2_values):
             'secure': False,
             'fileRecursive': False, 'fileType': None,
             'requiredParameters': ['file 1'],
-            'regex': None}
+            'regex': None,
+            'ui': {'widthWeight': None}}
 
 
 def _included_text2():
@@ -290,5 +294,6 @@ def _included_text2():
             'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
             'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
-            'regex': None
+            'regex': None,
+            'ui': {'widthWeight': None}
             }

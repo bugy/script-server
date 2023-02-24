@@ -81,6 +81,13 @@
       <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
                  @error="handleError(maxLengthField, $event)"/>
     </div>
+
+    <div v-if="selectedType !== 'multiline_text'" class="row">
+      <Textfield v-model="uiWidthWeight"
+                 :config="uiWidthWeightField"
+                 class="col s2"
+                 @error="handleError(uiWidthWeightField, $event)"/>
+    </div>
   </form>
 </template>
 
@@ -105,19 +112,20 @@ import {
   fileTypeField,
   maxField,
   maxLengthField,
-  regexPatternField,
-  regexDescriptionField,
   minField,
   multiselectArgumentTypeField,
   nameField,
   noValueField,
   paramField,
   recursiveField,
+  regexDescriptionField,
+  regexPatternField,
   requiredField,
   sameArgParamField,
   secureField,
   separatorField,
-  typeField
+  typeField,
+  uiWidthWeightField
 } from './parameter-fields';
 
 function updateValue(value, configField, newValue) {
@@ -203,6 +211,7 @@ export default {
       fileType: null,
       fileExtensions: null,
       excludedFiles: null,
+      uiWidthWeight: null,
       nameField,
       paramField: Object.assign({}, paramField),
       envVarField,
@@ -226,7 +235,8 @@ export default {
       fileDirField,
       recursiveField,
       fileTypeField,
-      allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField
+      allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField,
+      uiWidthWeightField
     }
   },
 
@@ -257,6 +267,7 @@ export default {
           this.fileType = get(config, 'file_type', 'any');
           this.fileExtensions = get(config, 'file_extensions', []);
           this.excludedFiles = get(config, 'excluded_files', []);
+          this.uiWidthWeight = config['ui']?.['width_weight']
 
           const defaultValue = get(config, 'default', '');
           if (this.isRecursiveFile()) {
@@ -349,6 +360,15 @@ export default {
         updateValue(this.value, 'default', path);
       } else {
         updateValue(this.value, 'default', this.defaultValue);
+      }
+    },
+    uiWidthWeight() {
+      if (this.uiWidthWeight) {
+        updateValue(this.value, 'ui', {
+          'width_weight': parseInt(this.uiWidthWeight)
+        })
+      } else {
+        this.$delete(this.value, 'ui')
       }
     }
   },

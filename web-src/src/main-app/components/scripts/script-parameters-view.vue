@@ -1,5 +1,6 @@
 <template>
-  <div class="script-parameters-panel">
+  <div ref="parametersPanel" :style="{ 'grid-template-columns': 'repeat(' + gridColumns + ', minmax(0, 1fr))'}"
+       class="script-parameters-panel">
     <template v-for="parameter in parameters">
       <component
           :is="getComponentType(parameter)"
@@ -8,6 +9,7 @@
           :value="getParameterValue(parameter)"
           :class="{'inline': isInline(parameter)}"
           class="parameter"
+          :style="getGridCellStyle(parameter)"
           :forceValue="forcedValueParameters.includes(parameter.name)"
           @error="handleError(parameter, $event)"
           @input="setParameterValue(parameter.name, $event)"/>
@@ -29,14 +31,32 @@ import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
 export default {
   name: 'script-parameters-view',
 
+  data: function () {
+    return {
+      gridColumns: 7
+    }
+  },
+
   computed: {
     ...mapState('scriptConfig', {
       parameters: 'parameters'
     }),
     ...mapState('scriptSetup', {
       parameterValues: 'parameterValues',
-      forcedValueParameters: 'forcedValueParameters',
+      forcedValueParameters: 'forcedValueParameters'
     })
+  },
+
+  mounted() {
+    window.addEventListener('resize', this.recalculateParamsLayout)
+
+    this.$nextTick(() => {
+      this.recalculateParamsLayout()
+    })
+  },
+
+  beforeDestroy() {
+    window.removeEventListener('resize', this.recalculateParamsLayout)
   },
 
   methods: {
@@ -83,6 +103,26 @@ export default {
       }
 
       return value;
+    },
+
+    recalculateParamsLayout() {
+      const width = this.$refs.parametersPanel.clientWidth
+      const minCellWidth = 200
+
+      this.gridColumns = Math.floor(width / minCellWidth)
+    },
+
+    getGridCellStyle(parameter) {
+      if (this.isInline(parameter)) {
+        let widthWeight = parameter.ui?.['widthWeight'];
+        if (widthWeight) {
+          return 'grid-column-start: span ' + Math.min(widthWeight, this.gridColumns)
+        }
+
+        return null
+      }
+
+      return 'grid-column-start: span ' + this.gridColumns
     }
   }
 }
@@ -92,17 +132,13 @@ export default {
 .script-parameters-panel >>> {
   margin-top: 15px;
   margin-right: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 24px;
+  row-gap: 8px;
 }
 
-.script-parameters-panel >>> .parameter {
-  margin: 7px 24px 20px 0;
-
-  flex-grow: 1;
-  flex-shrink: 0;
-  width: 180px;
-  max-width: 220px;
+.script-parameters-panel >>> .parameter.inline {
+  margin-left: 0;
 }
 
 .script-parameters-panel >>> .parameter input,
@@ -113,11 +149,6 @@ export default {
   font-size: 1rem;
   height: 1.5em;
   line-height: 1.5em;
-}
-
-.script-parameters-panel >>> .parameter:not(.inline) {
-  flex-basis: 100%;
-  max-width: 100%;
 }
 
 .script-parameters-panel >>> .parameter textarea {

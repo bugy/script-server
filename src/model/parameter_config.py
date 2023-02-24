@@ -10,7 +10,7 @@ from config.script.list_values import ConstValuesProvider, ScriptValuesProvider,
     DependantScriptValuesProvider, NoneValuesProvider, FilesProvider
 from model import model_helper
 from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SECURE_MASK, \
-    normalize_extension, read_bool_from_config, InvalidValueException, read_str_from_config
+    normalize_extension, read_bool_from_config, InvalidValueException, read_str_from_config, read_int_from_config
 from react.properties import ObservableDict, observable_fields
 from utils import file_utils, string_utils
 from utils.file_utils import FileMatcher
@@ -43,7 +43,8 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     '_list_files_dir',  # file_dir, relative to the server path (for listing files)
     'file_type',
     'file_extensions',
-    'file_recursive')
+    'file_recursive',
+    'ui_width_weight')
 class ParameterModel(object):
     def __init__(self, parameter_config, username, audit_name, other_params_supplier,
                  process_invoker: ProcessInvoker,
@@ -103,6 +104,10 @@ class ParameterModel(object):
         self.excluded_files_matcher = _resolve_excluded_files(config, 'excluded_files', self._list_files_dir)
 
         self.constant = read_bool_from_config('constant', config, default=False)
+
+        ui_config = config.get('ui')
+        if ui_config:
+            self.ui_width_weight = read_int_from_config('width_weight', ui_config)
 
         self._validate_config()
 
@@ -311,7 +316,7 @@ class ParameterModel(object):
                         return 'does not match regex pattern: ' + description
             if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
                 return 'is longer than allowed char length (' \
-                       + str(len(value)) + ' > ' + str(self.max_length) + ')'
+                    + str(len(value)) + ' > ' + str(self.max_length) + ')'
             return None
 
         if self.type == 'file_upload':
@@ -327,11 +332,11 @@ class ParameterModel(object):
 
             if (not is_empty(self.max)) and (int_value > int(self.max)):
                 return 'is greater than allowed value (' \
-                       + value_string + ' > ' + str(self.max) + ')'
+                    + value_string + ' > ' + str(self.max) + ')'
 
             if (not is_empty(self.min)) and (int_value < int(self.min)):
                 return 'is lower than allowed value (' \
-                       + value_string + ' < ' + str(self.min) + ')'
+                    + value_string + ' < ' + str(self.min) + ')'
             return None
 
         if self.type in ('ip', 'ip4', 'ip6'):
@@ -351,7 +356,7 @@ class ParameterModel(object):
         if (self.type == 'list') or (self._is_plain_server_file()):
             if value not in allowed_values:
                 return 'has value ' + value_string \
-                       + ', but should be in ' + repr(allowed_values)
+                    + ', but should be in ' + repr(allowed_values)
             return None
 
         if self.type == PARAM_TYPE_MULTISELECT:
@@ -361,7 +366,7 @@ class ParameterModel(object):
                 if value_element not in allowed_values:
                     element_str = self.value_to_repr(value_element)
                     return 'has value ' + element_str \
-                           + ', but should be in ' + repr(allowed_values)
+                        + ', but should be in ' + repr(allowed_values)
             return None
 
         if self._is_recursive_server_file():
@@ -544,7 +549,8 @@ def get_sorted_config(param_config):
                  'file_recursive',
                  'file_type',
                  'file_extensions',
-                 'excluded_files']
+                 'excluded_files',
+                 'ui']
 
     def get_order(key):
         if key in key_order:

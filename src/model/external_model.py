@@ -49,7 +49,10 @@ def parameter_to_external(parameter):
         'secure': parameter.secure,
         'fileRecursive': parameter.file_recursive,
         'fileType': parameter.file_type,
-        'requiredParameters': parameter.get_required_parameters()
+        'requiredParameters': parameter.get_required_parameters(),
+        'ui': {
+            'widthWeight': parameter.ui_width_weight
+        }
     }
 
 

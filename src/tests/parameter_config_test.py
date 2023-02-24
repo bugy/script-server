@@ -49,7 +49,10 @@ class ParameterModelInitTest(unittest.TestCase):
             'default': default,
             'type': type,
             'constant': 'false',
-            'values': values
+            'values': values,
+            'ui': {
+                'width_weight': '3'
+            }
         })
 
         self.assertEqual(name, parameter_model.name)
@@ -65,6 +68,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual(default, parameter_model.default)
         self.assertEqual(type, parameter_model.type)
         self.assertEqual(False, parameter_model.constant)
+        self.assertEqual(3, parameter_model.ui_width_weight)
         self.assertCountEqual(values, parameter_model.values)
 
     def test_default_settings(self):
@@ -76,6 +80,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual(',', parameter_model.separator)
         self.assertEqual('text', parameter_model.type)
         self.assertEqual(False, parameter_model.constant)
+        self.assertEqual(None, parameter_model.ui_width_weight)
 
     def test_default_value_from_env(self):
         test_utils.set_os_environ_value('my_env_var', 'sky')

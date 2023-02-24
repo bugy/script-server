@@ -448,7 +448,6 @@ export default {
   min-height: 0;
 }
 
-.script-view >>> .script-parameters-panel,
 .actions-panel,
 .files-download-panel {
   flex: 0 0 content;

@@ -143,3 +143,11 @@ export const fileTypeField = {
     default: 'any',
     values: ['any', 'file', 'dir']
 };
+
+export const uiWidthWeightField = {
+    name: 'UI width weight',
+    description: 'defines field\'s width as a ratio to other fields, e.g. 1 for default, 2 means twice as wide',
+    type: 'int',
+    min: 1,
+    max: 10
+};
