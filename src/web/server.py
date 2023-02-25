@@ -845,7 +845,7 @@ def init(server_config: ServerConfig,
     handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 
     settings = {
-        "cookie_secret": secret,
+        'cookie_secret': secret,
         "login_url": "/login.html",
         'websocket_ping_interval': 30,
         'websocket_ping_timeout': 300,
