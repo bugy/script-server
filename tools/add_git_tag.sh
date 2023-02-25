@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 if [ -z "$TRAVIS_BRANCH" ] || [ -z "$OWNER" ] || [ -z "$GITHUB_TOKEN" ] || [ -z "$TRAVIS_REPO_SLUG" ]; then
     echo 'Some environment variables are not set'
     exit -1
@@ -7,8 +9,8 @@ fi
 
 if [ "$TRAVIS_BRANCH" == "master" ]; then
     export NEW_GIT_TAG='dev'
-    git tag -d 'dev'
-    git push --delete origin 'dev'
+    GIT_TRACE=1 git tag -d 'dev'
+    GIT_TRACE=1 git push --delete origin 'dev'
 
 elif [ "$TRAVIS_BRANCH" == "stable" ]; then
     version=`unzip -qc build/script-server.zip version.txt`
