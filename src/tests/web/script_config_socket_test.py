@@ -44,7 +44,12 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
     @testing.gen_test
     def test_reload_model(self):
         self.socket = yield self._connect('Test script 1')
-        _ = yield self.socket.read_message()
+
+        message1 = yield self.socket.read_message()
+        self._assert_message_type(message1, 'initialConfig')
+
+        message2 = yield self.socket.read_message()
+        self._assert_message_type(message2, 'preloadScript')
 
         self.socket.write_message(json.dumps({
             'event': 'reloadModelValues',
@@ -61,7 +66,12 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
     @testing.gen_test
     def test_client_version(self):
         self.socket = yield self._connect('Test script 1')
-        _ = yield self.socket.read_message()
+
+        message1 = yield self.socket.read_message()
+        self._assert_message_type(message1, 'initialConfig')
+
+        message2 = yield self.socket.read_message()
+        self._assert_message_type(message2, 'preloadScript')
 
         self.socket.write_message(json.dumps({
             'event': 'parameterValue',
@@ -120,6 +130,25 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
                           list2_values=['y1.txt', 'y2.txt', 'y3.txt'],
                           external_model_id='abcd',
                           client_version=7)
+
+    @testing.gen_test
+    def test_preload_script(self):
+        self.socket = yield self._connect('Test script 1')
+
+        message1 = yield self.socket.read_message()
+        self._assert_message_type(message1, 'initialConfig')
+
+        message2 = yield self.socket.read_message()
+        event = json.loads(message2)
+
+        self.assertEqual(
+            {'event': 'preloadScript',
+             'data': {
+                 'clientStateVersion': None,
+                 'output': '123\n',
+                 'format': 'terminal'
+             }},
+            event)
 
     def assert_model(self, response, event_type, external_model_id=None, list2_values=None,
                      client_version=None):
@@ -181,6 +210,11 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
             {'data': {'clientStateVersion': client_version}, 'event': 'clientStateVersionAccepted'},
             event)
 
+    def _assert_message_type(self, message, expected_type):
+        event = json.loads(message)
+
+        self.assertEqual(event.get('event'), expected_type)
+
     def _connect(self, script_name, init_with_values=False):
         url = 'ws://localhost:{}/scripts/{}'.format(self.port, quote(script_name))
         if init_with_values:
@@ -218,6 +252,9 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
             {'name': 'Test script 1',
              'script_path': 'ls',
              'include': '${text 1}.json',
+             'preload_script': {
+                 'script': 'echo 123'
+             },
              'parameters': [
                  test_utils.create_script_param_config('text 1', required=True),
                  test_utils.create_script_param_config('list 1', type='list',

@@ -23,6 +23,9 @@
       <ScheduleButton v-if="schedulable" :disabled="!enableScheduleButton" @click="openSchedule"/>
     </div>
     <LogPanel v-show="showLog && !hasErrors && !hideExecutionControls" ref="logPanel" :outputFormat="outputFormat"/>
+    <LogPanel v-show="preloadOutput && !showLog && !hasErrors && !hideExecutionControls"
+              ref="preloadOutputPanel"
+              :output-format="preloadOutputFormat"/>
     <div v-if="hasErrors" v-show="!hideExecutionControls" class="validation-panel">
       <h6 class="header">Validation failed. Errors list:</h6>
       <ul class="validation-errors-list">
@@ -102,6 +105,8 @@ export default {
       loading: 'loading',
       scriptConfig: 'scriptConfig',
       outputFormat: state => state.scriptConfig ? state.scriptConfig.outputFormat : undefined,
+      preloadOutput: state => state.preloadScript?.['output'],
+      preloadOutputFormat: state => state.preloadScript?.['format']
     }),
     ...mapState('scriptSetup', {
       parameterErrors: 'errors'
@@ -374,6 +379,12 @@ export default {
         } else {
           updateLog();
         }
+      }
+    },
+
+    preloadOutput: {
+      handler(newValue, _) {
+        this.$refs.preloadOutputPanel.setLog(newValue)
       }
     },
 

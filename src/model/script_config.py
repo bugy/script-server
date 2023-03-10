@@ -53,7 +53,9 @@ def create_failed_short_config(path, has_admin_rights):
     'output_format',
     'output_files',
     'schedulable',
-    '_included_config')
+    'preload_script',
+    '_included_config',
+)
 class ConfigModel:
 
     def __init__(self,
@@ -213,6 +215,8 @@ class ConfigModel:
 
         self.logging_config = LoggingConfig.from_json(config.get('logging'))
 
+        self.preload_script = self._read_preload_script_conf(config.get('preload_script'))
+
         if not self.script_command:
             raise Exception('No script_path is specified for ' + self.name)
 
@@ -284,6 +288,41 @@ class ConfigModel:
         else:
             LOGGER.warning('Failed to load included file, path does not exist: ' + path)
             return None
+
+    def _read_preload_script_conf(self, config):
+        if config is None:
+            return None
+
+        error_message = 'Failed to load preload script for ' + self.name + ': '
+
+        if not isinstance(config, dict):
+            logging.warning(error_message + 'should be dict')
+            return None
+
+        script = config.get('script')
+        if is_empty(script):
+            logging.warning(error_message + 'missing "script" field')
+            return
+
+        try:
+            format = read_output_format(config)
+        except InvalidConfigException:
+            LOGGER.warning(error_message + 'invalid format specified')
+            format = OUTPUT_FORMAT_TERMINAL
+
+        return {'script': script, 'output_format': format}
+
+    def run_preload_script(self):
+        if not self.preload_script:
+            raise Exception('Cannot run preload script for ' + self.name + ': no preload_script is specified')
+
+        return self._process_invoker.invoke(self.preload_script.get('script'))
+
+    def get_preload_script_format(self):
+        if not self.preload_script:
+            return OUTPUT_FORMAT_TERMINAL
+
+        return self.preload_script.get('output_format')
 
 
 def _read_name(file_path, json_object):

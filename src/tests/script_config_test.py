@@ -12,6 +12,7 @@ from react.properties import ObservableDict, ObservableList
 from tests import test_utils
 from tests.test_utils import create_script_param_config, create_parameter_model, create_files
 from utils import file_utils, custom_json
+from utils.process_utils import ExecutionException
 
 DEF_AUDIT_NAME = '127.0.0.1'
 DEF_USERNAME = 'user1'
@@ -949,6 +950,62 @@ class SchedulableConfigTest(unittest.TestCase):
         config_model = _create_config_model('some-name', config=config)
 
         self.assertEqual(config_model.scheduling_auto_cleanup, expected_result)
+
+    def tearDown(self) -> None:
+        test_utils.cleanup()
+
+
+class PreloadScriptTest(unittest.TestCase):
+    @parameterized.expand([
+        ({'script': 'echo 123'}, 'echo 123', 'terminal'),
+        ({'script': 'echo 123', 'output_format': 'html'}, 'echo 123', 'html'),
+        ({'script': 'echo 123', 'output_format': 'weird'}, 'echo 123', 'terminal'),
+        ({'script': 'echo 123', 'unknown_field': 'html'}, 'echo 123', 'terminal'),
+    ])
+    def test_load_config(self, configured_config, expected_script, expected_format):
+        config = _create_config_model('some_name', config={
+            'preload_script': configured_config
+        })
+
+        self.assertEqual(
+            config.preload_script,
+            {'script': expected_script, 'output_format': expected_format}
+        )
+
+    @parameterized.expand([
+        ({'preload_script': None},),
+        ({},),
+        ({'preload_script': {}},),
+        ({'preload_script': {'some_field': 'echo 123'}},)
+    ])
+    def test_load_config_when_none(self, configured_config):
+        config = _create_config_model('some_name', config={
+            'preload_script': configured_config
+        })
+
+        self.assertEqual(config.preload_script, None)
+
+    def test_run_preload_script(self):
+        config = _create_config_model('some_name', config={
+            'preload_script': {'script': 'echo 123'}
+        })
+
+        output = config.run_preload_script()
+        self.assertEqual('123\n', output)
+
+    def test_run_preload_script_when_not_configured(self):
+        config = _create_config_model('some_name', config={
+            'preload_script': None
+        })
+
+        self.assertRaisesRegex(Exception, '.+no preload_script is specified', config.run_preload_script)
+
+    def test_run_preload_script_when_script_fails(self):
+        config = _create_config_model('some_name', config={
+            'preload_script': {'script': 'bash -c "exit -1"'}
+        })
+
+        self.assertRaises(ExecutionException, config.run_preload_script)
 
     def tearDown(self) -> None:
         test_utils.cleanup()

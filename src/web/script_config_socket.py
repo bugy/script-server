@@ -13,11 +13,13 @@ import tornado.websocket
 from tornado import gen
 
 from auth.user import User
+from concurrency.threading_decorators import threaded
 from config.config_service import ConfigNotAllowedException, CorruptConfigFileException
 from model import external_model
 from model.external_model import parameter_to_external
 from model.model_helper import read_bool
 from model.script_config import ConfigModel
+from utils.process_utils import ExecutionException
 from web.web_auth_utils import check_authorization
 from web.web_utils import wrap_to_server_event, inject_user
 
@@ -216,6 +218,22 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
         new_config = external_model.config_to_external(config_model, self.config_id, external_id)
         self.safe_write(self._create_event(event_type, new_config))
 
+        config_model.preload_script_prop.subscribe(self._send_preload_script)
+        self._send_preload_script(None, None)
+
     def _create_event(self, event_type, data):
         data['clientStateVersion'] = self._latest_client_state_version
         return wrap_to_server_event(event_type=event_type, data=data)
+
+    @threaded
+    def _send_preload_script(self, _, __):
+        if not self.config_model.preload_script:
+            return
+
+        try:
+            text = self.config_model.run_preload_script()
+            format = self.config_model.get_preload_script_format()
+
+            self.safe_write(self._create_event('preloadScript', {'output': text, 'format': format}))
+        except ExecutionException:
+            LOGGER.exception('Failed to execute preload script for ' + self.config_model.name)

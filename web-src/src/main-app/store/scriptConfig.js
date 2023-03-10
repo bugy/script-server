@@ -60,7 +60,8 @@ export default () => ({
         parameters: [],
         sentValues: {},
         loading: false,
-        clientStateVersion: 0
+        clientStateVersion: 0,
+        preloadScript: null
     },
     namespaced: true,
     actions: {
@@ -124,7 +125,7 @@ export default () => ({
             }
 
             forEachKeyValue(state.sentValues, (key, value) => sendParameterValue(key, value, websocket));
-        },
+        }
     },
     mutations: {
         RESET_CONFIG(state) {
@@ -135,6 +136,7 @@ export default () => ({
             state.loadError = null;
             state.loading = false;
             state.sentValues = {};
+            state.preloadScript = null
         },
 
         SET_ERROR(state, error) {
@@ -268,6 +270,10 @@ export default () => ({
                     break
                 }
             }
+        },
+
+        SET_PRELOAD_SCRIPT(state, preloadScript) {
+            state.preloadScript = preloadScript
         }
     }
 })
@@ -327,6 +333,12 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
 
             if (eventType === 'parameterRemoved') {
                 commit('REMOVE_PARAMETER', data);
+                return;
+            }
+
+            if (eventType === 'preloadScript') {
+                commit('SET_PRELOAD_SCRIPT', data)
+
             }
         },
 
@@ -337,11 +349,11 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
 
                 if (error.code === 422) {
                     commit('SET_ERROR', `${error.reason} "${selectedScript}"`);
-                  return;
+                    return;
                 }
-                
+
                 console.log('Socket closed. code=' + error.code + ', reason=' + error.reason);
-              
+
                 if (isNull(state.scriptConfig)) {
                     commit('SET_ERROR', 'Failed to connect to the server');
                     return;
