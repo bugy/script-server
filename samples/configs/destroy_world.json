@@ -3,7 +3,7 @@
   "script_path": "/usr/bin/python3 ./samples/scripts/destroy_world.py",
   "description": "This is a very dangerous script, please be careful when running. Don't forget your protective helmet.",
   "requires_terminal": false,
-  "output_format": "text",
+  "output_format": "terminal",
   "preload_script": {
     "script": "echo 'This is a <b>preload</b> script showing some info.</br>'",
     "output_format": "html"
