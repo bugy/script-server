@@ -23,7 +23,7 @@
       <ScheduleButton v-if="schedulable" :disabled="!enableScheduleButton" @click="openSchedule"/>
     </div>
     <LogPanel v-show="showLog && !hasErrors && !hideExecutionControls" ref="logPanel" :outputFormat="outputFormat"/>
-    <LogPanel v-show="preloadOutput && !showLog && !hasErrors && !hideExecutionControls"
+    <LogPanel v-if="preloadOutput && !showLog && !hasErrors && !hideExecutionControls"
               ref="preloadOutputPanel"
               :output-format="preloadOutputFormat"/>
     <div v-if="hasErrors" v-show="!hideExecutionControls" class="validation-panel">
@@ -384,7 +384,11 @@ export default {
 
     preloadOutput: {
       handler(newValue, _) {
-        this.$refs.preloadOutputPanel.setLog(newValue)
+        this.$nextTick(() => {
+          if (this.$refs.preloadOutputPanel) {
+            this.$refs.preloadOutputPanel.setLog(newValue);
+          }
+        })
       }
     },
 
