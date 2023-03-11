@@ -15,7 +15,7 @@
               v-bind:class="{
                     disabled: !enableStopButton,
                     'red lighten-1': !killEnabled,
-                    'grey darken-4': killEnabled}"
+                    'red darken-3': killEnabled}"
               @click="stopScript">
         {{ stopButtonLabel }}
       </button>
@@ -23,6 +23,9 @@
       <ScheduleButton v-if="schedulable" :disabled="!enableScheduleButton" @click="openSchedule"/>
     </div>
     <LogPanel v-show="showLog && !hasErrors && !hideExecutionControls" ref="logPanel" :outputFormat="outputFormat"/>
+    <LogPanel v-if="preloadOutput && !showLog && !hasErrors && !hideExecutionControls"
+              ref="preloadOutputPanel"
+              :output-format="preloadOutputFormat"/>
     <div v-if="hasErrors" v-show="!hideExecutionControls" class="validation-panel">
       <h6 class="header">Validation failed. Errors list:</h6>
       <ul class="validation-errors-list">
@@ -60,12 +63,12 @@ import LogPanel from '@/common/components/log_panel'
 import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
 import ScheduleButton from '@/main-app/components/scripts/ScheduleButton';
 import ScriptLoadingText from '@/main-app/components/scripts/ScriptLoadingText';
-import marked from 'marked';
+import ScriptViewScheduleHolder from '@/main-app/components/scripts/ScriptViewScheduleHolder';
+import DOMPurify from 'dompurify';
+import {marked} from 'marked';
 import {mapActions, mapState} from 'vuex'
 import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
 import ScriptParametersView from './script-parameters-view'
-import ScriptViewScheduleHolder from '@/main-app/components/scripts/ScriptViewScheduleHolder';
-import DOMPurify from 'dompurify';
 
 export default {
   data: function () {
@@ -102,6 +105,8 @@ export default {
       loading: 'loading',
       scriptConfig: 'scriptConfig',
       outputFormat: state => state.scriptConfig ? state.scriptConfig.outputFormat : undefined,
+      preloadOutput: state => state.preloadScript?.['output'],
+      preloadOutputFormat: state => state.preloadScript?.['format']
     }),
     ...mapState('scriptSetup', {
       parameterErrors: 'errors'
@@ -120,8 +125,8 @@ export default {
         return '';
       }
 
-      var descriptionHtml = DOMPurify.sanitize(marked(this.scriptDescription, {gfm: true, breaks: true}));
-      var paragraphRemoval = document.createElement('div');
+      const descriptionHtml = DOMPurify.sanitize(marked.parse(this.scriptDescription, {gfm: true, breaks: true}));
+      const paragraphRemoval = document.createElement('div');
       paragraphRemoval.innerHTML = descriptionHtml.trim();
 
       for (var i = 0; i < paragraphRemoval.childNodes.length; i++) {
@@ -377,6 +382,16 @@ export default {
       }
     },
 
+    preloadOutput: {
+      handler(newValue, _) {
+        this.$nextTick(() => {
+          if (this.$refs.preloadOutputPanel) {
+            this.$refs.preloadOutputPanel.setLog(newValue);
+          }
+        })
+      }
+    },
+
     inlineImages: {
       handler(newValue, oldValue) {
         const logPanel = this.$refs.logPanel;
@@ -448,7 +463,6 @@ export default {
   min-height: 0;
 }
 
-.script-view >>> .script-parameters-panel,
 .actions-panel,
 .files-download-panel {
   flex: 0 0 content;

@@ -67,6 +67,26 @@ export function triggerKeyEvent(element, type, code) {
     element.dispatchEvent(event);
 }
 
+export function triggerFocusEvent(element) {
+    const event = new Event('focus', {bubbles: true, cancelable: true});
+    element.dispatchEvent(event);
+}
+
+export function focus(element) {
+    const prevFocus = document.activeElement
+    if (prevFocus === element) {
+        return
+    }
+
+    element.focus()
+    triggerFocusEvent(element)
+
+    if (prevFocus) {
+        const blurEvent = new Event('blur', {bubbles: true, cancelable: true});
+        prevFocus.dispatchEvent(blurEvent);
+    }
+}
+
 export function setChipListValue(chipListComponent, value) {
     const chipList = M.Chips.getInstance($(chipListComponent.$el).find('.chips').get(0));
     while (chipList.chipsData.length > 0) {
@@ -77,11 +97,14 @@ export function setChipListValue(chipListComponent, value) {
     }
 }
 
-export function createVue(component, properties, store = null) {
+export function createVue(component, properties, store = null, vue = null) {
     document.body.insertAdjacentHTML('afterbegin', '<div id="top-level-element"></div>');
     const topLevelElement = document.getElementById('top-level-element');
 
-    const ComponentClass = Vue.extend(component);
+    if (vue === null) {
+        vue = Vue
+    }
+    const ComponentClass = vue.extend(component);
     const vm = new ComponentClass({
         store,
         propsData: properties
@@ -150,4 +173,11 @@ export const awaitInvisible = async (element, maxTimeout) => {
     }
 
     expect(element).not.toBeVisible()
+}
+
+export function getNodeText(element) {
+    return Array.from(element.childNodes)
+        .filter(child => child.nodeType === 3)
+        .map(child => child.nodeValue.trim())
+        .reduce((left, right) => left + right);
 }

@@ -20,7 +20,8 @@ import tornado.websocket
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from communications.alerts_service import AlertsService
-from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException
+from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException, \
+    CorruptConfigFileException
 from config.exceptions import InvalidConfigException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
@@ -34,7 +35,7 @@ from model.script_config import InvalidValueException, ParameterNotFoundExceptio
 from model.server_conf import ServerConfig, XSRF_PROTECTION_TOKEN, XSRF_PROTECTION_DISABLED, XSRF_PROTECTION_HEADER
 from scheduling.schedule_service import ScheduleService, UnavailableScriptException, InvalidScheduleException
 from utils import file_utils as file_utils
-from utils import tornado_utils, os_utils, env_utils
+from utils import tornado_utils, os_utils, env_utils, custom_json
 from utils.audit_utils import get_audit_name_from_request
 from utils.exceptions.missing_arg_exception import MissingArgumentException
 from utils.exceptions.not_found_exception import NotFoundException
@@ -137,7 +138,7 @@ class GetScripts(BaseRequestHandler):
 
         configs = self.application.config_service.list_configs(user, mode)
 
-        scripts = [{'name': conf.name, 'group': conf.group} for conf in configs]
+        scripts = [{'name': conf.name, 'group': conf.group, 'parsing_failed': conf.parsing_failed} for conf in configs]
 
         self.write(json.dumps({'scripts': scripts}))
 
@@ -190,6 +191,9 @@ class AdminGetScriptEndpoint(BaseRequestHandler):
         except ConfigNotAllowedException:
             LOGGER.warning('Admin access to the script "' + script_name + '" is denied for ' + user.get_audit_name())
             respond_error(self, 403, 'Access to the script is denied')
+            return
+        except CorruptConfigFileException as e:
+            respond_error(self, CorruptConfigFileException.HTTP_CODE, str(e))
             return
 
         if config is None:
@@ -313,9 +317,13 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
     def prepare_download_url(self, file):
         downloads_folder = self.application.downloads_folder
         relative_path = file_utils.relative_path(file, downloads_folder)
-        url_path = relative_path.replace(os.path.sep, '/')
-        url_path = 'result_files/' + url_path
-        return url_path
+
+        filename = tornado.escape.url_escape(os.path.basename(relative_path))
+        relative_dir = os.path.dirname(relative_path).replace(os.path.sep, '/')
+
+        url_path = relative_dir + '/' + filename
+
+        return 'result_files/' + url_path
 
     def handle_exception_on_open(self, e):
         (status_code, message) = exception_to_code_and_message(e)
@@ -380,29 +388,30 @@ class ScriptExecute(StreamUploadRequestHandler):
                 for key, value in self.form_reader.files.items():
                     parameter_values[key] = value.path
 
-            try:
-                config_model.set_all_param_values(parameter_values)
-                normalized_values = dict(config_model.parameter_values)
-            except InvalidValueException as e:
-                message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
-                LOGGER.error(message)
-                respond_error(self, 400, message)
-                return
-
             all_audit_names = user.audit_names
             LOGGER.info('Calling script %s. User %s', script_name, all_audit_names)
 
             execution_id = self.application.execution_service.start_script(
                 config_model,
-                normalized_values,
+                parameter_values,
                 user)
 
             self.write(str(execution_id))
+
+        except InvalidValueException as e:
+            message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
+            LOGGER.error(message)
+            respond_error(self, 422, message)
+            return
 
         except ConfigNotAllowedException:
             LOGGER.warning('Access to the script "' + script_name + '" is denied for ' + audit_name)
             respond_error(self, 403, 'Access to the script is denied')
             return
+
+        except CorruptConfigFileException as e:
+            respond_error(self, CorruptConfigFileException.HTTP_CODE, str(e))
+            return None
 
         except Exception as e:
             LOGGER.exception("Error while calling the script")
@@ -572,6 +581,7 @@ class LoginHandler(BaseRequestHandler):
 
 
 class AuthInfoHandler(BaseRequestHandler):
+    @check_authorization
     @inject_user
     def get(self, user):
         auth = self.application.auth
@@ -713,7 +723,7 @@ class AddSchedule(StreamUploadRequestHandler):
             for key, value in self.form_reader.files.items():
                 parameter_values[key] = value.path
 
-        schedule_config = json.loads(parameter_values['__schedule_config'])
+        schedule_config = custom_json.loads(parameter_values['__schedule_config'])
         del parameter_values['__schedule_config']
 
         try:
@@ -835,7 +845,7 @@ def init(server_config: ServerConfig,
     handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 
     settings = {
-        "cookie_secret": secret,
+        'cookie_secret': secret,
         "login_url": "/login.html",
         'websocket_ping_interval': 30,
         'websocket_ping_timeout': 300,

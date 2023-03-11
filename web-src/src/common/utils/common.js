@@ -396,6 +396,7 @@ export function setInputValue(inputField, value, triggerEvent) {
 
     if (inputField.type === 'checkbox') {
         inputField.checked = value;
+        inputField.indeterminate = isNull(value)
     } else {
         inputField.value = value;
     }
@@ -703,4 +704,19 @@ export function getFileInputValue(fileField) {
     }
 
     return value
+}
+
+export function isFullRegexMatch(regex, value) {
+    let fullStringPattern = regex
+
+    if (!fullStringPattern.startsWith('^')) {
+        fullStringPattern = '^' + fullStringPattern
+    }
+
+    if (!fullStringPattern.endsWith('$')) {
+        fullStringPattern += '$'
+    }
+
+    const regexPattern = new RegExp(fullStringPattern)
+    return regexPattern.test(value)
 }

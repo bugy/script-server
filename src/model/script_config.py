@@ -1,8 +1,10 @@
-import json
+import logging
 import logging
 import os
 import re
 from collections import OrderedDict
+from dataclasses import dataclass, field
+from typing import List
 
 from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
@@ -10,9 +12,11 @@ from model import parameter_config
 from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
     read_str_from_config, replace_auth_vars
 from model.parameter_config import ParameterModel
+from model.server_conf import LoggingConfig
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
-from utils import file_utils
+from utils import file_utils, custom_json
 from utils.object_utils import merge_dicts
+from utils.process_utils import ProcessInvoker
 
 OUTPUT_FORMAT_TERMINAL = 'terminal'
 
@@ -21,12 +25,24 @@ OUTPUT_FORMATS = [OUTPUT_FORMAT_TERMINAL, 'html', 'html_iframe', 'text']
 LOGGER = logging.getLogger('script_server.script_config')
 
 
-class ShortConfig(object):
-    def __init__(self):
-        self.name = None
-        self.allowed_users = []
-        self.admin_users = []
-        self.group = None
+@dataclass
+class ShortConfig:
+    name: str
+    group: str = None
+    allowed_users: List[str] = field(default_factory=list)
+    admin_users: List[str] = field(default_factory=list)
+    parsing_failed: bool = False
+
+
+def create_failed_short_config(path, has_admin_rights):
+    name = _build_name_from_path(path)
+    if not has_admin_rights:
+        file_content = file_utils.read_file(path)
+        if '"allowed_users"' in file_content:
+            restricted_name = name[:2] + '...' + name[-2:]
+            name = restricted_name + ' (restricted)'
+
+    return ShortConfig(name=name, parsing_failed=True)
 
 
 @observable_fields(
@@ -37,7 +53,9 @@ class ShortConfig(object):
     'output_format',
     'output_files',
     'schedulable',
-    '_included_config')
+    'preload_script',
+    '_included_config',
+)
 class ConfigModel:
 
     def __init__(self,
@@ -45,6 +63,7 @@ class ConfigModel:
                  path,
                  username,
                  audit_name,
+                 process_invoker: ProcessInvoker,
                  pty_enabled_default=True):
         super().__init__()
 
@@ -52,10 +71,12 @@ class ConfigModel:
         self.name = short_config.name
         self._pty_enabled_default = pty_enabled_default
         self._config_folder = os.path.dirname(path)
+        self._process_invoker = process_invoker
 
         self._username = username
         self._audit_name = audit_name
         self.schedulable = False
+        self.scheduling_auto_cleanup = True
 
         self.parameters = ObservableList()
         self.parameter_values = ObservableDict()
@@ -117,7 +138,11 @@ class ConfigModel:
                 if required_parameters and any(r not in processed for r in required_parameters):
                     continue
 
-                value = parameter.normalize_user_value(param_values.get(parameter.name))
+                if parameter.constant:
+                    value = parameter.default
+                else:
+                    value = parameter.normalize_user_value(param_values.get(parameter.name))
+
                 validation_error = parameter.validate_value(value)
                 if validation_error:
                     if skip_invalid_parameters:
@@ -152,6 +177,7 @@ class ConfigModel:
         for parameter_config in original_parameter_configs:
             parameter = ParameterModel(parameter_config, username, audit_name,
                                        lambda: self.parameters,
+                                       self._process_invoker,
                                        self.parameter_values,
                                        self.working_directory)
             self.parameters.append(parameter)
@@ -175,12 +201,21 @@ class ConfigModel:
         required_terminal = read_bool_from_config('requires_terminal', config, default=self._pty_enabled_default)
         self.requires_terminal = required_terminal
 
+        self.access = config.get('access', {})
+
         self.output_format = read_output_format(config)
 
         self.output_files = config.get('output_files', [])
 
-        if config.get('scheduling'):
-            self.schedulable = read_bool_from_config('enabled', config.get('scheduling'), default=False)
+        scheduling_config = config.get('scheduling')
+        if scheduling_config:
+            self.schedulable = read_bool_from_config('enabled', scheduling_config, default=False)
+            self.scheduling_auto_cleanup = read_bool_from_config(
+                'auto_cleanup', scheduling_config, default=not bool(self.output_files))
+
+        self.logging_config = LoggingConfig.from_json(config.get('logging'))
+
+        self.preload_script = self._read_preload_script_conf(config.get('preload_script'))
 
         if not self.script_command:
             raise Exception('No script_path is specified for ' + self.name)
@@ -205,6 +240,7 @@ class ConfigModel:
                 if parameter is None:
                     parameter = ParameterModel(parameter_config, self._username, self._audit_name,
                                                lambda: self.parameters,
+                                               self._process_invoker,
                                                self.parameter_values,
                                                self.working_directory)
                     self.parameters.append(parameter)
@@ -245,7 +281,7 @@ class ConfigModel:
         if os.path.exists(path):
             try:
                 file_content = file_utils.read_file(path)
-                return json.loads(file_content)
+                return custom_json.loads(file_content)
             except:
                 LOGGER.exception('Failed to load included file ' + path)
                 return None
@@ -253,39 +289,77 @@ class ConfigModel:
             LOGGER.warning('Failed to load included file, path does not exist: ' + path)
             return None
 
+    def _read_preload_script_conf(self, config):
+        if config is None:
+            return None
+
+        error_message = 'Failed to load preload script for ' + self.name + ': '
+
+        if not isinstance(config, dict):
+            logging.warning(error_message + 'should be dict')
+            return None
+
+        script = config.get('script')
+        if is_empty(script):
+            logging.warning(error_message + 'missing "script" field')
+            return
+
+        try:
+            format = read_output_format(config)
+        except InvalidConfigException:
+            LOGGER.warning(error_message + 'invalid format specified')
+            format = OUTPUT_FORMAT_TERMINAL
+
+        return {'script': script, 'output_format': format}
+
+    def run_preload_script(self):
+        if not self.preload_script:
+            raise Exception('Cannot run preload script for ' + self.name + ': no preload_script is specified')
+
+        return self._process_invoker.invoke(self.preload_script.get('script'))
+
+    def get_preload_script_format(self):
+        if not self.preload_script:
+            return OUTPUT_FORMAT_TERMINAL
+
+        return self.preload_script.get('output_format')
+
 
 def _read_name(file_path, json_object):
     name = json_object.get('name')
     if not name:
-        filename = os.path.basename(file_path)
-        name = os.path.splitext(filename)[0]
+        name = _build_name_from_path(file_path)
 
     return name.strip()
 
 
-def read_short(file_path, json_object):
-    config = ShortConfig()
+def _build_name_from_path(file_path):
+    filename = os.path.basename(file_path)
+    name = os.path.splitext(filename)[0]
+    return name.strip()
 
-    config.name = _read_name(file_path, json_object)
-    config.allowed_users = json_object.get('allowed_users')
-    config.admin_users = json_object.get('admin_users')
-    config.group = read_str_from_config(json_object, 'group', blank_to_none=True)
+
+def read_short(file_path, json_object):
+    name = _read_name(file_path, json_object)
+    allowed_users = json_object.get('allowed_users')
+    admin_users = json_object.get('admin_users')
+    group = read_str_from_config(json_object, 'group', blank_to_none=True)
 
     hidden = read_bool_from_config('hidden', json_object, default=False)
     if hidden:
         return None
 
-    if config.allowed_users is None:
-        config.allowed_users = ANY_USER
-    elif (config.allowed_users == '*') or ('*' in config.allowed_users):
-        config.allowed_users = ANY_USER
+    if allowed_users is None:
+        allowed_users = ANY_USER
+    elif (allowed_users == '*') or ('*' in allowed_users):
+        allowed_users = ANY_USER
 
-    if config.admin_users is None:
-        config.admin_users = ANY_USER
-    elif (config.admin_users == '*') or ('*' in config.admin_users):
-        config.admin_users = ANY_USER
+    if admin_users is None:
+        admin_users = ANY_USER
+    elif (admin_users == '*') or ('*' in admin_users):
+        admin_users = ANY_USER
 
-    return config
+    return ShortConfig(name=name, group=group, allowed_users=allowed_users, admin_users=admin_users)
 
 
 class ParameterNotFoundException(Exception):
@@ -377,11 +451,13 @@ def get_sorted_config(config):
                  'group',
                  'allowed_users',
                  'admin_users',
+                 'access',
                  'schedulable',
                  'include',
                  'output_files',
                  'requires_terminal',
                  'output_format',
+                 'scheduling',
                  'parameters']
 
     def get_order(key):

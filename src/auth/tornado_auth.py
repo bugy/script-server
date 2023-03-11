@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import logging
 
 import tornado.concurrent
@@ -33,9 +34,19 @@ class TornadoAuth():
 
         return active
 
-    @staticmethod
-    def _get_current_user(request_handler):
-        return tornado_utils.get_secure_cookie(request_handler, 'username')
+    def _get_current_user(self, request_handler):
+        cookie_username = tornado_utils.get_secure_cookie(request_handler, 'username')
+        if cookie_username:
+            return cookie_username
+
+        authorization_header = request_handler.request.headers.get('Authorization')
+        if authorization_header and authorization_header.startswith('Basic '):
+            username_password = base64.b64decode(authorization_header[6:]).decode('utf-8')
+            (username, password) = username_password.split(':', 1)
+            if self.authenticator.perform_basic_auth(username, password):
+                return username
+
+        return None
 
     def get_username(self, request_handler):
         if not self.is_enabled():

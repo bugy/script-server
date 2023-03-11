@@ -7,6 +7,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
+from auth.auth_base import AuthRejectedError, AuthFailureError
 from utils.tornado_utils import redirect_relative
 from web.web_utils import identify_user
 
@@ -29,7 +30,18 @@ def check_authorization(func):
         if login_resource:
             return func(self, *args, **kwargs)
 
-        authenticated = auth.is_authenticated(self)
+        try:
+            authenticated = auth.is_authenticated(self)
+        except (AuthRejectedError, AuthFailureError) as e:
+            message = 'On-fly auth rejected'
+            LOGGER.warning(message + ': ' + str(e))
+            code = 401
+            if isinstance(self, tornado.websocket.WebSocketHandler):
+                self.close(code=code, reason=message)
+                return
+            else:
+                raise tornado.web.HTTPError(code, message)
+
         access_allowed = authenticated and authorizer.is_allowed_in_app(identify_user(self))
 
         if authenticated and (not access_allowed):
@@ -39,8 +51,14 @@ def check_authorization(func):
             message = 'Access denied. Please contact system administrator'
             if isinstance(self, tornado.websocket.WebSocketHandler):
                 self.close(code=code, reason=message)
+                return
             else:
-                raise tornado.web.HTTPError(code, message)
+                if isinstance(self, tornado.web.StaticFileHandler) and request_path.lower().endswith('.html'):
+                    login_url += "?" + urlencode(dict(next=request_path, redirectReason='prohibited'))
+                    redirect_relative(login_url, self)
+                    return
+                else:
+                    raise tornado.web.HTTPError(code, message)
 
         if authenticated and access_allowed:
             return func(self, *args, **kwargs)

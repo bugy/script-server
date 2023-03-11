@@ -58,7 +58,7 @@ describe('Test ScriptConfig', function () {
     };
 
     async function _setValueByUser(fieldName, value) {
-        const form = configComponent.find(ScriptConfigForm);
+        const form = configComponent.findComponent(ScriptConfigForm);
         await setValueByUser(form.vm, fieldName, value);
     }
 
@@ -86,6 +86,82 @@ describe('Test ScriptConfig', function () {
 
             expect(configComponent.get('.path-textfield input').element.value).toBe('ping')
         });
+
+        async function runSchedulingConfigTest(
+            config,
+            expectedEnabled,
+            expectedAutoCleanup,
+            expectedCleanupDisabled,
+            expectedValue) {
+            store.state.scriptConfig.scriptConfig = config;
+
+            await vueTicks();
+
+            expect(_findField('Enabled').value).toBe(expectedEnabled)
+            expect(_findField('Auto cleanup').value).toBe(expectedAutoCleanup)
+            expect(_findField('Auto cleanup').disabled).toBe(expectedCleanupDisabled)
+
+            expect(store.state.scriptConfig.scriptConfig.scheduling).toEqual(expectedValue)
+        }
+
+        it('Test show scheduling when no config', async function () {
+            await runSchedulingConfigTest(
+                {},
+                false,
+                undefined,
+                true,
+                undefined
+            )
+        })
+
+        it('Test show scheduling when empty config', async function () {
+            await runSchedulingConfigTest(
+                {
+                    'scheduling': {}
+                },
+                false,
+                undefined,
+                true,
+                {}
+            )
+        })
+
+        it('Test show scheduling when enabled', async function () {
+            await runSchedulingConfigTest(
+                {
+                    'scheduling': {'enabled': true}
+                },
+                true,
+                undefined,
+                false,
+                {'enabled': true}
+            )
+        })
+
+        it('Test show scheduling when enabled and auto_cleanup', async function () {
+            await runSchedulingConfigTest(
+                {
+                    'scheduling': {'enabled': true, 'auto_cleanup': true}
+                },
+                true,
+                true,
+                false,
+                {'enabled': true, 'auto_cleanup': true}
+            )
+        })
+
+        it('Test show scheduling when enabled and auto_cleanup and output_files', async function () {
+            await runSchedulingConfigTest(
+                {
+                    'scheduling': {'enabled': true, 'auto_cleanup': true},
+                    'output_files': ['test']
+                },
+                true,
+                false,
+                true,
+                {'enabled': true}
+            )
+        })
     });
 
     describe('Test edit config', function () {
@@ -136,5 +212,70 @@ describe('Test ScriptConfig', function () {
         });
     });
 
+    describe('Test show shared instances access', function () {
+        it('Test show shared instances access unchecked', async function () {
+            store.state.scriptConfig.scriptConfig = {};
+
+            await vueTicks();
+
+            expect(_findField('Shared Script Instances').value).toBe(false);
+        });
+
+        it('Test show shared instances access checked', async function () {
+            store.state.scriptConfig.scriptConfig = {
+                'access': {'shared_access': {'type': 'ALL_USERS'}}
+            };
+
+            await vueTicks();
+
+            expect(_findField('Shared Script Instances').value).toBe(true);
+        });
+    });
+
+    describe('Test edit global_instances', function () {
+        it('Test update global_instances manually unchecked', async function () {
+            await _setValueByUser('Shared Script Instances', false);
+
+            expect(typeof store.state.scriptConfig.scriptConfig.access).toEqual('undefined');
+        });
+
+        it('Test update global_instances manually checked', async function () {
+            await _setValueByUser('Shared Script Instances', true);
+
+            expect(store.state.scriptConfig.scriptConfig.access).toEqual({'shared_access': {'type': 'ALL_USERS'}});
+        });
+    });
+
+    describe('Test edit scheduling', function () {
+        it('Test set enabled true', async function () {
+            store.state.scriptConfig.scriptConfig = {};
+
+            await vueTicks();
+
+            await _setValueByUser('Enabled', true);
+
+            expect(store.state.scriptConfig.scriptConfig.scheduling).toEqual({'enabled': true});
+        });
+
+        it('Test set enabled false', async function () {
+            store.state.scriptConfig.scriptConfig = {'scheduling': {'enabled': true, 'auto_cleanup': true}};
+
+            await vueTicks();
+
+            await _setValueByUser('Enabled', false)
+
+            expect(store.state.scriptConfig.scriptConfig.scheduling).toBeNil()
+        });
+
+        it('Test set auto cleanup enabled', async function () {
+            store.state.scriptConfig.scriptConfig = {'scheduling': {'enabled': true}}
+
+            await vueTicks()
+
+            await _setValueByUser('Auto cleanup', true)
+
+            expect(store.state.scriptConfig.scriptConfig.scheduling).toEqual({'enabled': true, 'auto_cleanup': true})
+        });
+    });
 
 });

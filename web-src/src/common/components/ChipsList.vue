@@ -1,13 +1,14 @@
 <template>
   <div class="chips-list">
     <label>{{ title }}</label>
-    <div ref="chips" class="chips"></div>
+    <div ref="chips" class="chips" @blur="onFocusLost"></div>
   </div>
 </template>
 
 <script>
 import '@/common/materializecss/imports/chips';
 import {isNull} from '@/common/utils/common';
+import clone from 'lodash/clone';
 
 export default {
   name: 'ChipsList',
@@ -24,6 +25,18 @@ export default {
 
   mounted: function () {
     this.initChips([]);
+
+    const instance = M.Chips.getInstance(this.$refs.chips);
+    instance.$input[0].addEventListener('blur', this.onFocusLost);
+    instance.$input[0].addEventListener('input', this.onTextInput);
+  },
+
+  beforeDestroy: function () {
+    const instance = M.Chips.getInstance(this.$refs.chips);
+    if (instance) {
+      instance.$input[0].removeEventListener('blur', this.onFocusLost);
+      instance.$input[0].removeEventListener('input', this.onTextInput);
+    }
   },
 
   watch: {
@@ -57,6 +70,68 @@ export default {
 
     updateChips() {
       this.initChips(this.value.map(v => ({tag: v})));
+    },
+
+    onFocusLost() {
+      const rawValues = this._getRawCsvValuesFromText()
+      if (!rawValues) {
+        return
+      }
+      const instance = M.Chips.getInstance(this.$refs.chips);
+
+      instance.$input[0].value = ''
+      const newValues = this._parseRawCsvValues(rawValues)
+      this._addValues(newValues)
+    },
+
+    onTextInput() {
+      const rawValues = this._getRawCsvValuesFromText()
+      if (!rawValues || rawValues.length < 2) {
+        return
+      }
+
+      const instance = M.Chips.getInstance(this.$refs.chips);
+
+      const lastElement = rawValues.pop()
+      instance.$input[0].value = ''
+
+      const newValues = this._parseRawCsvValues(rawValues)
+      this._addValues(newValues)
+
+      this.$nextTick(() => {
+        instance.$input[0].focus()
+        instance.$input[0].value = lastElement
+      })
+    },
+
+    _getRawCsvValuesFromText() {
+      const instance = M.Chips.getInstance(this.$refs.chips);
+      if (!instance) {
+        return
+      }
+
+      const inputValue = instance.$input[0].value?.trim()
+      if (!inputValue) {
+        return
+      }
+
+      return inputValue.split(/(?<!\\),/g)
+    },
+
+    _parseRawCsvValues(rawValues) {
+      return rawValues
+          .filter(v => !!v)
+          .map(v => v.trim())
+          .map(v => v.replace(/\\,/g, ','))
+    },
+
+    _addValues(newValues) {
+      if (newValues.size < 1) {
+        return
+      }
+
+      const mergedValues = clone(this.value).concat(newValues)
+      this.$emit('input', mergedValues);
     }
   }
 }

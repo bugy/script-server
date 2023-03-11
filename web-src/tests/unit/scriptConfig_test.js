@@ -164,6 +164,7 @@ describe('Test scriptConfig module', function () {
 
             expect(store.state.scriptConfig.scriptConfig).toEqual(config);
             expect(store.state.scriptConfig.parameters).toEqual(config.parameters);
+            expect(store.state.scriptConfig.preloadScript).toBeNil()
             expect(observers[0].path).toEndWith('?initWithValues=false')
         });
 
@@ -216,6 +217,26 @@ describe('Test scriptConfig module', function () {
             config.parameters.splice(0, 1);
 
             expect(store.state.scriptConfig.parameters).toEqual(config.parameters)
+        });
+
+        it('Test preload script', function () {
+            const store = createStore();
+            store.dispatch('scriptConfig/reloadScript', {selectedScript: 'my script'});
+
+            const config = createConfig();
+
+            sendEventFromServer(createConfigEvent(config));
+
+            let preloadScript = {
+                'output': '123',
+                'format': 'terminal'
+            };
+            sendEventFromServer(JSON.stringify({
+                event: 'preloadScript',
+                data: preloadScript
+            }));
+
+            expect(store.state.scriptConfig.preloadScript).toEqual(preloadScript)
         });
     });
 
