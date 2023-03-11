@@ -62,7 +62,7 @@ export default {
   height: 100%;
 }
 
-.script-config h5 {
+.script-config >>> h5 {
   margin-left: 0.75rem;
   margin-top: 0.5rem;
   margin-bottom: 2rem;

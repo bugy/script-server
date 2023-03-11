@@ -20,6 +20,9 @@ class Authenticator(metaclass=abc.ABCMeta):
     def validate_user(self, user, request_handler):
         return True
 
+    def perform_basic_auth(self, user, password):
+        return False
+
     def logout(self, user, request_handler):
         return None
 

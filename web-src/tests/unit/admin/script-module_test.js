@@ -42,17 +42,25 @@ describe('Test admin script module', function () {
             await store.dispatch('scripts/init');
             await flushPromises();
 
-            expect(store.state.scripts.scripts).toEqual(['script1'])
+            expect(store.state.scripts.scripts).toEqual(
+                [{'name': 'script1', 'parsingFailed': undefined}])
             expect(store.state.scripts.loading).toBeFalse()
         });
 
         it('test load multiple unsorted scripts', async function () {
-            mockGetScripts([{'name': 'def', 'group': 'some_group'}, {'name': 'xyz'}, {'name': 'abc'}]);
+            mockGetScripts([
+                {'name': 'def', 'group': 'some_group'},
+                {'name': 'xyz', 'parsing_failed': false},
+                {'name': 'abc', 'parsing_failed': true}]);
 
             await store.dispatch('scripts/init');
             await flushPromises();
 
-            expect(store.state.scripts.scripts).toEqual(['abc', 'def', 'xyz'])
+            expect(store.state.scripts.scripts).toEqual([
+                {'name': 'abc', 'parsingFailed': true},
+                {'name': 'def', 'parsingFailed': undefined},
+                {'name': 'xyz', 'parsingFailed': false}
+            ])
             expect(store.state.scripts.loading).toBeFalse()
         });
         }

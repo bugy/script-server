@@ -1,13 +1,13 @@
 'use strict';
 
 import ParameterConfigForm from '@/admin/components/scripts-config/ParameterConfigForm';
+import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
 import {isBlankString, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {attachToDocument, setChipListValue, vueTicks} from '../test_utils';
-import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
+import {attachToDocument, createScriptServerTestVue, setChipListValue, vueTicks} from '../test_utils';
 
 export async function setValueByUser(form, parameterName, value) {
     const childComponent = findField(form, parameterName);
@@ -69,6 +69,7 @@ describe('Test ParameterConfigForm', function () {
         errors = [];
 
         form = mount(ParameterConfigForm, {
+            localVue: createScriptServerTestVue(),
             attachTo: attachToDocument(),
             sync: false,
             propsData: {
@@ -191,7 +192,7 @@ describe('Test ParameterConfigForm', function () {
             form.setProps({
                 value: {
                     type: 'multiselect',
-                    multiselect_argument_type: 'argument_per_value',
+                    multiselect_argument_type: 'argument_per_value'
                 }
             });
 
@@ -338,6 +339,30 @@ describe('Test ParameterConfigForm', function () {
             expect(_findField('script', false)).toBeNil()
             expect(_findField('allowed values').value).toEqual(['abc', '123', 'xyz'])
             expect(_findField('load from script').value).toBeFalse()
+        });
+
+        it('Test initial width weight', async function () {
+            form.setProps({
+                value: {
+                    ui: {
+                        'width_weight': 3
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            expect(_findField('UI width weight', false).value).toBe(3)
+        });
+
+        it('Test initial width weight when no config', async function () {
+            form.setProps({
+                value: {}
+            });
+
+            await vueTicks()
+
+            expect(_findField('UI width weight', false).value).toBeNil()
         });
     });
 
@@ -549,6 +574,30 @@ describe('Test ParameterConfigForm', function () {
 
             assertOutputValue('excluded_files', undefined);
         });
+
+        it('Test update ui width weight', async function () {
+            await _setValueByUser('UI width weight', 3);
+
+            assertOutputValue('ui', {'width_weight': 3});
+        });
+
+        it('Test update ui width weight to empty', async function () {
+            form.setProps({
+                value: {
+                    ui: {
+                        'width_weight': 3
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            await _setValueByUser('UI width weight', null);
+
+            assertOutputValue('ui', undefined);
+        });
+
+
     });
 
     describe('Test parameter dependencies', function () {
@@ -702,6 +751,22 @@ describe('Test ParameterConfigForm', function () {
 
             await _setValueByUser('Max', 4);
             assertLastError('Max', 'min: 5');
+        });
+
+        it('Test "max_length" field for default type', async function () {
+            expect(_findField('Max characters length')).not.toBeNil()
+        });
+
+        it('Test "max_length" field for multiline_text type', async function () {
+            await _setValueByUser('Type', 'multiline_text')
+
+            expect(_findField('Max characters length')).not.toBeNil()
+        });
+
+        it('Test "max_length" field for int type', async function () {
+            await _setValueByUser('Type', 'int')
+
+            expect(_findField('Max characters length', false)).toBeNil()
         });
     });
 

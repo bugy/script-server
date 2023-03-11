@@ -1,4 +1,4 @@
-.script-server [type=checkbox]:not(:checked):disabled + span:not(.lever):before {
+.script-server [type=checkbox]:not(:checked):not(:indeterminate):disabled + span:not(.lever):before {
     background: none;
     border: 2px solid var(--font-color-disabled);
 }

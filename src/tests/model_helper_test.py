@@ -7,7 +7,7 @@ from model import model_helper
 from model.model_helper import read_list, read_dict, fill_parameter_values, resolve_env_vars, \
     InvalidFileException, read_bool_from_config, InvalidValueException, InvalidValueTypeException, read_str_from_config
 from tests import test_utils
-from tests.test_utils import create_parameter_model, set_env_value
+from tests.test_utils import create_parameter_model, set_os_environ_value
 from utils import file_utils
 from utils.file_utils import FileMatcher
 
@@ -208,7 +208,7 @@ class TestFillParameterValues(unittest.TestCase):
 class TestResolveEnvVars(unittest.TestCase):
 
     def test_replace_full_match(self):
-        set_env_value('my_key', 'my_password')
+        set_os_environ_value('my_key', 'my_password')
         resolved_val = resolve_env_vars('$$my_key', full_match=True)
         self.assertEqual('my_password', resolved_val)
 
@@ -226,24 +226,24 @@ class TestResolveEnvVars(unittest.TestCase):
         self.assertEqual(value, resolved_val)
 
     def test_replace_any_when_exact(self):
-        set_env_value('my_key', 'my_password')
+        set_os_environ_value('my_key', 'my_password')
         resolved_val = resolve_env_vars('$$my_key')
         self.assertEqual('my_password', resolved_val)
 
     def test_replace_any_when_single_in_middle(self):
-        set_env_value('my_key', 'my_password')
+        set_os_environ_value('my_key', 'my_password')
         resolved_val = resolve_env_vars('start/$$my_key/end')
         self.assertEqual('start/my_password/end', resolved_val)
 
     def test_replace_any_when_repeating(self):
-        set_env_value('my_key', 'abc')
+        set_os_environ_value('my_key', 'abc')
         resolved_val = resolve_env_vars('$$my_key,$$my_key.$$my_key')
         self.assertEqual('abc,abc.abc', resolved_val)
 
     def test_replace_any_when_multiple(self):
-        set_env_value('key1', 'Hello')
-        set_env_value('key2', 'world')
-        set_env_value('key3', '!')
+        set_os_environ_value('key1', 'Hello')
+        set_os_environ_value('key2', 'world')
+        set_os_environ_value('key3', '!')
         resolved_val = resolve_env_vars('$$key1 $$key2!$$key3')
         self.assertEqual('Hello world!!', resolved_val)
 

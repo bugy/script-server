@@ -3,7 +3,6 @@ import '@/common/materializecss/imports/cards';
 import '@/common/materializecss/imports/input-fields';
 import '@/common/style_imports';
 import '@/common/style_imports.js';
-import get from 'lodash/get'
 import {axiosInstance} from '@/common/utils/axios_utils'
 import {
     addClass,
@@ -16,6 +15,7 @@ import {
     removeClass,
     toQueryArgs
 } from '@/common/utils/common';
+import get from 'lodash/get'
 
 var NEXT_URL_KEY = 'next';
 var OAUTH_RESPONSE_KEY = 'code';
@@ -24,6 +24,15 @@ var loginMethod = 'POST';
 var loginUrl = 'login';
 
 window.onload = onLoad;
+
+function checkRedirectReason() {
+    let redirectReason = getQueryParameter('redirectReason');
+    if (redirectReason === 'prohibited') {
+        return 'Access if prohibited for this user'
+    }
+
+    return redirectReason;
+}
 
 function onLoad() {
     axiosInstance.get('auth/config').then(({data: config}) => {
@@ -35,6 +44,11 @@ function onLoad() {
             setupGitlabOAuth(loginContainer, config);
         } else {
             setupCredentials(loginContainer);
+        }
+
+        const redirectError = checkRedirectReason()
+        if (redirectError) {
+            showError(redirectError)
         }
     })
 }
@@ -110,8 +124,6 @@ function processCurrentOauthState() {
     var queryStateToken = getQueryParameter('state');
     if (oauthState || oauthResponseCode) {
         if (!oauthState && oauthResponseCode) {
-            console.log('oauth_state=' + oauthState);
-            console.log('oauthResponseCode=' + oauthResponseCode);
             showError('Invalid client state. Please try to relogin');
             return;
         }

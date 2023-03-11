@@ -93,7 +93,7 @@ export default {
   },
   created() {
     if (!this.newConfig) {
-      axiosInstance.get('/admin/scripts/' + encodeURIComponent(this.configName) + '/code')
+      axiosInstance.get('admin/scripts/' + encodeURIComponent(this.configName) + '/code')
           .then(({data}) => {
             this.code = data.code
             this.originalCode = data.code

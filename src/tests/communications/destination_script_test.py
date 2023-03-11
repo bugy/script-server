@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from communications.communication_model import File
 from communications.destination_script import ScriptDestination
+from tests import test_utils
 from tests.communications.communication_test_utils import mock_communicators
 
 
@@ -86,4 +87,4 @@ class TestScriptDestination(unittest.TestCase):
         self.destination.send('ignored', body, files)
 
     def setUp(self):
-        self.destination = ScriptDestination({})
+        self.destination = ScriptDestination({}, test_utils.process_invoker)

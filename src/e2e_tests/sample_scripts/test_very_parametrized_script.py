@@ -1,14 +1,17 @@
-from common.pages import VeryParametrizedScript
-import allure
-from common.pages import is_displayed, is_enabled, get_parent_element, get_underline_error_text, get_hidden_values_of_list, get_visible_values_of_list
-from delayed_assert import expect, assert_expectations
-from allure import severity, severity_level
-import string
 import random
+import string
 import sys
+
+import allure
+from allure import severity, severity_level
+from delayed_assert import expect, assert_expectations
 from selenium.webdriver.common.keys import Keys
 
-search_request = "lo"
+from common.pages import VeryParametrizedScript
+from common.pages import is_displayed, is_enabled, get_underline_error_text, get_hidden_values_of_list, \
+    get_visible_values_of_list
+
+search_request = "a"
 
 
 @severity(severity_level.NORMAL)
@@ -165,18 +168,26 @@ def test_input_key_text_in_simple_text(browser, config_host):
 def test_input_text_in_inc_params(browser, config_host):
     very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
 
-    random_srting1 = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(0, 254)))
-    very_parametrized_script_page.parameter_inc_param1.send_keys(random_srting1)
-    random_srting2 = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(0, 254)))
-    very_parametrized_script_page.parameter_inc_param2.send_keys(random_srting2)
-    expect(very_parametrized_script_page.parameter_inc_param1.get_attribute('value') == str(random_srting1), "Field text is not equal to input")
-    expect(get_underline_error_text(very_parametrized_script_page.parameter_inc_param1) == "", "Underline text error is not empty: " + str(get_underline_error_text(very_parametrized_script_page.parameter_inc_param1)))
+    random_string1 = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 254)))
+    very_parametrized_script_page.parameter_inc_param1.send_keys(random_string1)
+    random_string2 = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 254)))
+    very_parametrized_script_page.parameter_inc_param2.send_keys(random_string2)
+    expect(very_parametrized_script_page.parameter_inc_param1.get_attribute('value') == str(random_string1),
+           "Field text is not equal to input")
+    expect(get_underline_error_text(very_parametrized_script_page.parameter_inc_param1) == "",
+           "Underline text error is not empty: " + str(
+               get_underline_error_text(very_parametrized_script_page.parameter_inc_param1)))
     very_parametrized_script_page.parameter_inc_param1.send_keys(Keys.ENTER)
-    expect(very_parametrized_script_page.parameter_inc_param1.get_attribute("class") == "validate valid", "Class is not valid")
-    expect(very_parametrized_script_page.parameter_inc_param2.get_attribute('value') == str(random_srting2), "Field text is not equal to input")
-    expect(get_underline_error_text(very_parametrized_script_page.parameter_inc_param2) == "", "Underline text error is not empty: " + str(get_underline_error_text(very_parametrized_script_page.parameter_inc_param2)))
+    expect(very_parametrized_script_page.parameter_inc_param1.get_attribute("class") == "validate valid",
+           "Class is not valid")
+    expect(very_parametrized_script_page.parameter_inc_param2.get_attribute('value') == str(random_string2),
+           "Field text is not equal to input")
+    expect(get_underline_error_text(very_parametrized_script_page.parameter_inc_param2) == "",
+           "Underline text error is not empty: " + str(
+               get_underline_error_text(very_parametrized_script_page.parameter_inc_param2)))
     very_parametrized_script_page.parameter_inc_param2.send_keys(Keys.ENTER)
-    expect(very_parametrized_script_page.parameter_inc_param2.get_attribute("class") == "validate valid", "Class is not valid")
+    expect(very_parametrized_script_page.parameter_inc_param2.get_attribute("class") == "validate valid",
+           "Class is not valid")
 
     assert_expectations()
 
@@ -220,36 +231,54 @@ def test_click_random_drop_down_element(browser, config_host):
 
 @severity(severity_level.NORMAL)
 @allure.title("Open drop-down for command based list parameter")
-def test_click_command_based_list(browser, config_host):
+def test_command_based_list(browser, config_host):
     very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
     very_parametrized_script_page.parameter_command_based_list.click()
 
     expect(is_displayed(very_parametrized_script_page.command_based_list), "Command based List was not opened on click")
-    expect(is_displayed(very_parametrized_script_page.search_field_in_command_based_list), "Search field in command based list was not opened on click")
+    expect(len(very_parametrized_script_page.command_based_list_elements) > 0, "Command based List has no elements")
+
+    random_drop_down_element = random.choice(very_parametrized_script_page.command_based_list_elements)
+    random_drop_down_element.click()
 
     assert_expectations()
 
 
 @severity(severity_level.NORMAL)
-@allure.title("Search in command based list parameter")
-def test_search_in_command_based_list(browser, config_host):
+@allure.title("Open drop-down for List with search")
+def test_click_list_with_search(browser, config_host):
     very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
-    very_parametrized_script_page.search_field_in_command_based_list.send_keys(search_request)
+    very_parametrized_script_page.parameter_list_with_search.click()
 
-    expect(is_displayed(very_parametrized_script_page.command_based_list), "Command based List is not displayed after search")
-    for element in get_visible_values_of_list(very_parametrized_script_page.command_based_list):
+    expect(is_displayed(very_parametrized_script_page.parameter_list_with_search_list),
+           "List with search was not opened on click")
+    expect(is_displayed(very_parametrized_script_page.search_field_in_list_with_search),
+           "Search field in command based list was not opened on click")
+
+    assert_expectations()
+
+
+@severity(severity_level.NORMAL)
+@allure.title("Search in List with search parameter")
+def test_search_in_list_with_search(browser, config_host):
+    very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
+    very_parametrized_script_page.search_field_in_list_with_search.send_keys(search_request)
+
+    expect(is_displayed(very_parametrized_script_page.parameter_list_with_search_list),
+           "List with search is not displayed after search")
+    for element in get_visible_values_of_list(very_parametrized_script_page.parameter_list_with_search_list):
         expect(is_displayed(element), "Visible list element is not displayed")
-    for element in get_hidden_values_of_list(very_parametrized_script_page.command_based_list):
+    for element in get_hidden_values_of_list(very_parametrized_script_page.parameter_list_with_search_list):
         expect(not is_displayed(element), "Hidden list element is not displayed")
 
     assert_expectations()
 
 
 @severity(severity_level.NORMAL)
-@allure.title("Search in command based list parameter")
-def test_check_search_results_in_command_based_list(browser, config_host):
+@allure.title("Search in List with search parameter")
+def test_check_search_results_in_list_with_search(browser, config_host):
     very_parametrized_script_page = VeryParametrizedScript(browser, config_host)
-    for element in get_visible_values_of_list(very_parametrized_script_page.command_based_list):
-        expect(str(element.text).find(search_request) > -1)
+    for element in get_visible_values_of_list(very_parametrized_script_page.parameter_list_with_search_list):
+        expect(str(element.text).lower().find(search_request) > -1)
 
     assert_expectations()

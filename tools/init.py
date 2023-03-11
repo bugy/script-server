@@ -5,7 +5,8 @@ import sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..', 'src'))
 
-from utils import process_utils
+from utils.env_utils import EnvVariables
+from utils.process_utils import ProcessInvoker
 
 
 def download_web_files(project_path):
@@ -25,10 +26,12 @@ def download_web_files(project_path):
 
 
 def build_web_files(project_path):
+    process_invoker = ProcessInvoker(EnvVariables(os.environ))
+
     print('Building web...')
     work_dir = os.path.join(project_path, 'web-src')
-    process_utils.invoke('npm install', work_dir)
-    process_utils.invoke('npm run build', work_dir)
+    process_invoker.invoke('npm install', work_dir)
+    process_invoker.invoke('npm run build', work_dir)
     print('Done')
 
 

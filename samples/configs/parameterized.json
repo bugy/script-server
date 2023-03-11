@@ -41,7 +41,10 @@
       "name": "File upload",
       "param": "--file_upload",
       "type": "file_upload",
-      "description": "File upload testing"
+      "description": "File upload testing",
+      "ui": {
+        "width_weight": 2
+      }
     },
     {
       "name": "Multiple selection",
@@ -113,6 +116,28 @@
       "values": {
         "script": "ls /var | grep -v lock | grep -v backups"
       }
+    },
+    {
+      "name": "List with search",
+      "param": "--lws",
+      "type": "list",
+      "values": [
+        "Apples",
+        "Blueberries",
+        "Bananas",
+        "Oranges",
+        "Dragon fruit",
+        "Mango",
+        "Avocado",
+        "Lychee",
+        "Pineapple",
+        "Strawberries",
+        "Durian",
+        "Cherries",
+        "Olives",
+        "Watermelon",
+        "Kiwi"
+      ]
     },
     {
       "name": "Secure Int",
@@ -246,6 +271,11 @@
         "Value B",
         "Value C"
       ]
+    },
+    {
+      "name": "Multiline test",
+      "param": "--multiline_text",
+      "type": "multiline_text"
     }
   ]
 }

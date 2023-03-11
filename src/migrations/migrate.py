@@ -7,6 +7,7 @@ from collections import namedtuple, OrderedDict
 from datetime import datetime
 
 import execution.logging
+import utils.custom_json as custom_json
 from execution.logging import ExecutionLoggingService
 from model import model_helper
 from utils import file_utils
@@ -207,7 +208,7 @@ def __introduce_access_config(context):
         return
 
     content = file_utils.read_file(file_path)
-    json_object = json.loads(content, object_pairs_hook=OrderedDict)
+    json_object = custom_json.loads(content, object_pairs_hook=OrderedDict)
 
     def move_to_access(field, parent_object):
         if 'access' not in json_object:
@@ -335,20 +336,21 @@ def _load_runner_files(conf_folder):
     runners_folder = os.path.join(conf_folder, 'runners')
 
     if not os.path.exists(runners_folder):
-        return
+        return []
 
     conf_files = [os.path.join(runners_folder, file)
                   for file in os.listdir(runners_folder)
                   if file.lower().endswith('.json')]
+    conf_files = [f for f in conf_files if not file_utils.is_broken_symlink(f)]
 
     result = []
 
     for conf_file in conf_files:
         content = file_utils.read_file(conf_file)
         try:
-            json_object = json.loads(content, object_pairs_hook=OrderedDict)
+            json_object = custom_json.loads(content, object_pairs_hook=OrderedDict)
             result.append((conf_file, json_object, content))
-        except Exception:
+        except:
             LOGGER.exception('Failed to load file for migration: ' + conf_file)
             continue
 

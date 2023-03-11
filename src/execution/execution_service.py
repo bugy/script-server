@@ -4,9 +4,11 @@ from typing import Optional, Dict, Callable, Any
 
 from auth.authorization import Authorizer, is_same_user
 from auth.user import User
+from config.constants import SHARED_ACCESS_TYPE_ALL
 from execution.executor import ScriptExecutor
 from model import script_config
 from model.model_helper import is_empty, AccessProhibitedException
+from utils.env_utils import EnvVariables
 from utils.exceptions.missing_arg_exception import MissingArgumentException
 from utils.exceptions.not_found_exception import NotFoundException
 
@@ -17,7 +19,7 @@ _ExecutionInfo = namedtuple('_ExecutionInfo',
 
 
 class ExecutionService:
-    def __init__(self, authorizer, id_generator):
+    def __init__(self, authorizer, id_generator, env_vars: EnvVariables):
 
         self._id_generator = id_generator
         self._authorizer = authorizer  # type: Authorizer
@@ -32,6 +34,7 @@ class ExecutionService:
 
         self._finish_listeners = []
         self._start_listeners = []
+        self._env_vars = env_vars
 
     def get_active_executor(self, execution_id, user):
         self.validate_execution_id(execution_id, user, only_active=False)
@@ -43,13 +46,16 @@ class ExecutionService:
     def start_script(self, config, values, user: User):
         audit_name = user.get_audit_name()
 
-        executor = ScriptExecutor(config, values)
+        config.set_all_param_values(values)
+        normalized_values = dict(config.parameter_values)
+
+        executor = ScriptExecutor(config, normalized_values, self._env_vars)
         execution_id = self._id_generator.next_id()
 
         audit_command = executor.get_secure_command()
         LOGGER.info('Calling script #%s: %s', execution_id, audit_command)
 
-        executor.start()
+        executor.start(execution_id)
         self._executors[execution_id] = executor
         self._execution_infos[execution_id] = _ExecutionInfo(
             execution_id=execution_id,
@@ -85,11 +91,11 @@ class ExecutionService:
         return self._get_for_executor(execution_id, lambda e: e.get_return_code())
 
     def is_running(self, execution_id, user):
-        self.validate_execution_id(execution_id, user, only_active=False, allow_when_history_access=True)
-
         executor = self._executors.get(execution_id)  # type: ScriptExecutor
         if executor is None:
             return False
+
+        self.validate_execution_id(execution_id, user, only_active=False, allow_when_history_access=True)
 
         return not executor.is_finished()
 
@@ -140,7 +146,11 @@ class ExecutionService:
 
     @staticmethod
     def _can_access_execution(execution_info: _ExecutionInfo, user_id):
-        return (execution_info is not None) and (is_same_user(execution_info.owner_user.user_id, user_id))
+        if execution_info is None:
+            return False
+        shared_access_type = execution_info.config.access.get('shared_access', {}).get('type')
+        return (shared_access_type == SHARED_ACCESS_TYPE_ALL or \
+                is_same_user(execution_info.owner_user.user_id, user_id))
 
     def get_user_parameter_values(self, execution_id):
         return self._get_for_executor(execution_id,
