@@ -204,23 +204,21 @@ class ConfigService:
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
 
-        files=[]
+        files = []
         # Read config file from within directories too
         for _root, _dirs, _files in os.walk(configs_dir, topdown=True):
             for name in _files:
-                files.append( re.sub ( r'^.*/runners/', '', os.path.join( _root, name) ) )
+                files.append(os.path.join(_root, name))
 
         configs = [file for file in files if file.lower().endswith(".json")]
 
         result = []
 
         for config_path in configs:
-            path = os.path.join(configs_dir, config_path)
-
             try:
-                content = file_utils.read_file(path)
+                content = file_utils.read_file(config_path)
 
-                visit_result = visitor(path, content)
+                visit_result = visitor(config_path, content)
                 if visit_result is not None:
                     result.append(visit_result)
 
