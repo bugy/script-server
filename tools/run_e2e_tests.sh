@@ -3,7 +3,7 @@
 set -e
 
 mkdir -p conf/runners
-cp samples/configs/* conf/runners/
+cp -r samples/configs/* conf/runners/
 
 ./launcher.py > /dev/null &
 SERVER_PID=$!
