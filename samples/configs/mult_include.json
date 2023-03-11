@@ -2,12 +2,15 @@
   "name": "Multiple Include",
   "script_path": "/bin/bash conf/scripts/echo.sh",
   "description": "This script does nothing except accepting parameter from mulitple include and printing them",
-  "allowed_users": ["*"],
-
-  "parameters":[
+  "parameters": [
     {
-      "name": "self_param", "default": "A"
+      "name": "self_param",
+      "default": "A"
     }
   ],
-  "include": ["included.json", "included2.json", "included3.json"]
+  "include": [
+    "included.json",
+    "included2.json",
+    "included3.json"
+  ]
 }
