@@ -406,3 +406,7 @@ def is_binary(path):
             return True
 
     return False
+
+
+def is_broken_symlink(file_path):
+    return os.path.islink(file_path) and not os.path.exists(file_path)

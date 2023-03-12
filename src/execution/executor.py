@@ -6,6 +6,7 @@ from execution import process_popen, process_base
 from model import model_helper
 from model.model_helper import read_bool
 from utils import file_utils, process_utils, os_utils
+from utils.env_utils import EnvVariables
 from utils.transliteration import transliterate
 
 TIME_BUFFER_MS = 100
@@ -15,7 +16,7 @@ LOGGER = logging.getLogger('script_server.ScriptExecutor')
 mock_process = False
 
 
-def create_process_wrapper(executor, command, working_directory, env_variables):
+def create_process_wrapper(executor, command, working_directory, all_env_variables):
     run_pty = executor.config.requires_terminal
     if run_pty and not os_utils.is_pty_supported():
         LOGGER.warning(
@@ -24,9 +25,9 @@ def create_process_wrapper(executor, command, working_directory, env_variables):
 
     if run_pty:
         from execution import process_pty
-        process_wrapper = process_pty.PtyProcessWrapper(command, working_directory, env_variables)
+        process_wrapper = process_pty.PtyProcessWrapper(command, working_directory, all_env_variables)
     else:
-        process_wrapper = process_popen.POpenProcessWrapper(command, working_directory, env_variables)
+        process_wrapper = process_popen.POpenProcessWrapper(command, working_directory, all_env_variables)
 
     return process_wrapper
 
@@ -70,8 +71,9 @@ def _wrap_values(user_values, parameters):
 
 
 class ScriptExecutor:
-    def __init__(self, config, parameter_values):
+    def __init__(self, config, parameter_values, env_vars: EnvVariables):
         self.config = config
+        self._env_vars = env_vars
         self._parameter_values = _wrap_values(parameter_values, config.parameters)
         self._working_directory = _normalize_working_dir(config.working_directory)
 
@@ -84,7 +86,7 @@ class ScriptExecutor:
         self.raw_output_stream = None
         self.protected_output_stream = None
 
-    def start(self):
+    def start(self, execution_id):
         if self.process_wrapper is not None:
             raise Exception('Executor already started')
 
@@ -92,9 +94,11 @@ class ScriptExecutor:
 
         script_args = build_command_args(parameter_values, self.config)
         command = self.script_base_command + script_args
-        env_variables = _build_env_variables(parameter_values, self.config.parameters)
+        env_variables = _build_env_variables(parameter_values, self.config.parameters, execution_id)
 
-        process_wrapper = _process_creator(self, command, self._working_directory, env_variables)
+        all_env_variables = self._env_vars.build_env_vars(env_variables)
+
+        process_wrapper = _process_creator(self, command, self._working_directory, all_env_variables)
         process_wrapper.start()
 
         self.process_wrapper = process_wrapper
@@ -266,7 +270,7 @@ def _to_env_name(key):
     return 'PARAM_' + replaced.upper()
 
 
-def _build_env_variables(parameter_values, parameters):
+def _build_env_variables(parameter_values, parameters, execution_id):
     result = {}
     excluded = []
     for param_name, value in parameter_values.items():
@@ -297,6 +301,9 @@ def _build_env_variables(parameter_values, parameters):
             continue
 
         result[env_var] = str(value)
+
+    if 'EXECUTION_ID' not in result:
+        result['EXECUTION_ID'] = str(execution_id)
 
     return result
 

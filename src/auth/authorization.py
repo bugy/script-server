@@ -7,7 +7,7 @@ GROUP_PREFIX = '@'
 
 def _normalize_user(user):
     if user:
-        return user.lower()
+        return user.lower().strip()
     return user
 
 
@@ -186,3 +186,7 @@ def _exclude_unknown_groups_from_admin_users(admin_users, known_groups):
         result.append(user)
 
     return result
+
+
+def is_same_user(user_id1, user_id2):
+    return _normalize_user(user_id1) == _normalize_user(user_id2)

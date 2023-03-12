@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/bugy/script-server.svg?branch=master)](https://travis-ci.org/bugy/script-server) [![Gitter](https://badges.gitter.im/script-server/community.svg)](https://gitter.im/script-server/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Build Status](https://travis-ci.com/bugy/script-server.svg?branch=master&status=passed)](https://travis-ci.com/bugy/script-server) [![Gitter](https://badges.gitter.im/script-server/community.svg)](https://gitter.im/script-server/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 # script-server
 Script-server is a Web UI for scripts.  
@@ -68,6 +68,9 @@ For the usage please check [this ticket](https://github.com/bugy/script-server/i
 `init.py` script should be run after pulling any new changes
 
 If you are making changes to web files, use `npm run build` or `npm run serve`
+
+### A issue running on OpenBSD and maybe other UNIX systems
+See [A issue running on OpenBSD and maybe other UNIX systems](https://github.com/bugy/script-server/wiki/OpenBSD-process-termination-issues).
 
 
 ## Setup and run

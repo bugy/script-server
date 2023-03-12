@@ -4,20 +4,24 @@
            ref="checkbox"
            :checked="boolValue"
            type="checkbox"
+           :disabled="disabled"
            @input="emitValueChange"/>
     <span>{{ config.name }}</span>
   </label>
 </template>
 
 <script>
-import {toBoolean} from '@/common/utils/common';
+import {isNull, toBoolean} from '@/common/utils/common';
 
 export default {
   props: {
     'value': {
       type: [Boolean, String, Number]
     },
-    'config': Object
+    'config': Object,
+    'disabled': {
+      type: [Boolean]
+    }
   },
 
   computed: {
@@ -27,11 +31,17 @@ export default {
   },
 
   mounted: function () {
+    this.$refs.checkbox.indeterminate = isNull(this.value)
     this.emitValueChange();
   },
 
   methods: {
     emitValueChange() {
+      if (this.$refs.checkbox.indeterminate) {
+        this.$emit('input', undefined);
+        return;
+      }
+
       this.$emit('input', this.$refs.checkbox.checked);
     }
   },

@@ -44,11 +44,15 @@ def parameter_to_external(parameter):
         'min': parameter.min,
         'max': parameter.max,
         'max_length': parameter.max_length,
+        'regex': parameter.regex,
         'values': parameter.values,
         'secure': parameter.secure,
         'fileRecursive': parameter.file_recursive,
         'fileType': parameter.file_type,
-        'requiredParameters': parameter.get_required_parameters()
+        'requiredParameters': parameter.get_required_parameters(),
+        'ui': {
+            'widthWeight': parameter.ui_width_weight
+        }
     }
 
 

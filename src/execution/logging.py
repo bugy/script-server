@@ -3,9 +3,13 @@ import logging
 import os
 import re
 from string import Template
+from typing import Optional
 
+from auth.authorization import is_same_user
 from execution.execution_service import ExecutionService
+from model import model_helper
 from model.model_helper import AccessProhibitedException
+from model.server_conf import LoggingConfig
 from utils import file_utils, audit_utils
 from utils.audit_utils import get_audit_name
 from utils.collection_utils import get_first_existing
@@ -122,18 +126,26 @@ class ExecutionLoggingService:
     def start_logging(self, execution_id,
                       user_name,
                       user_id,
-                      script_name,
                       command,
                       output_stream,
                       all_audit_names,
-                      output_format,
+                      script_config,
+                      parameter_values,
                       start_time_millis=None):
+
+        script_name = str(script_config.name)
 
         if start_time_millis is None:
             start_time_millis = get_current_millis()
 
         log_filename = self._log_name_creator.create_filename(
-            execution_id, all_audit_names, script_name, start_time_millis)
+            execution_id,
+            all_audit_names,
+            script_name,
+            start_time_millis,
+            script_config.logging_config,
+            script_config.parameters,
+            parameter_values)
         log_file_path = os.path.join(self._output_folder, log_filename)
         log_file_path = file_utils.create_unique_filename(log_file_path)
 
@@ -144,7 +156,7 @@ class ExecutionLoggingService:
         output_logger.write_line('script:' + script_name)
         output_logger.write_line('start_time:' + str(start_time_millis))
         output_logger.write_line('command:' + command)
-        output_logger.write_line('output_format:' + output_format)
+        output_logger.write_line('output_format:' + script_config.output_format)
         output_logger.write_line(OUTPUT_STARTED_MARKER)
         output_logger.start()
 
@@ -332,7 +344,7 @@ class ExecutionLoggingService:
         if entry is None:
             return True
 
-        if entry.user_id == user_id:
+        if is_same_user(entry.user_id, user_id):
             return True
 
         if system_call:
@@ -348,11 +360,19 @@ class LogNameCreator:
             filename_pattern = '${SCRIPT}_${AUDIT_NAME}_${DATE}'
         self._filename_template = Template(filename_pattern)
 
-    def create_filename(self, execution_id, all_audit_names, script_name, start_time):
+    def create_filename(self,
+                        execution_id,
+                        all_audit_names,
+                        script_name,
+                        start_time,
+                        custom_logging_config: Optional[LoggingConfig],
+                        parameter_configs,
+                        parameter_values):
+
         audit_name = get_audit_name(all_audit_names)
         audit_name = file_utils.to_filename(audit_name)
 
-        date_string = ms_to_datetime(start_time).strftime(self._date_format)
+        date_string = ms_to_datetime(start_time).strftime(self._resolve_date_format(custom_logging_config))
 
         username = audit_utils.get_audit_username(all_audit_names)
 
@@ -367,13 +387,24 @@ class LogNameCreator:
             'SCRIPT': script_name
         }
 
-        filename = self._filename_template.safe_substitute(mapping)
+        filename = self._resolve_filename_template(custom_logging_config).safe_substitute(mapping)
+        filename = model_helper.fill_parameter_values(parameter_configs, filename, parameter_values)
         if not filename.lower().endswith('.log'):
             filename += '.log'
 
         filename = filename.replace(" ", "_").replace("/", "_")
 
         return filename
+
+    def _resolve_date_format(self, custom_logging_config: Optional[LoggingConfig]):
+        if custom_logging_config and custom_logging_config.date_format:
+            return custom_logging_config.date_format
+        return self._date_format
+
+    def _resolve_filename_template(self, custom_logging_config: Optional[LoggingConfig]):
+        if custom_logging_config and custom_logging_config.filename_pattern:
+            return Template(custom_logging_config.filename_pattern)
+        return self._filename_template
 
 
 class ExecutionLoggingController:
@@ -387,22 +418,22 @@ class ExecutionLoggingController:
 
         def started(execution_id, user):
             script_config = execution_service.get_config(execution_id, user)
-            script_name = str(script_config.name)
             audit_name = user.get_audit_name()
             owner = user.user_id
             all_audit_names = user.audit_names
             output_stream = execution_service.get_anonymized_output_stream(execution_id)
             audit_command = execution_service.get_audit_command(execution_id)
+            parameter_values = execution_service.get_user_parameter_values(execution_id)
 
             logging_service.start_logging(
                 execution_id,
                 audit_name,
                 owner,
-                script_name,
                 audit_command,
                 output_stream,
                 all_audit_names,
-                script_config.output_format)
+                script_config,
+                parameter_values)
 
         def finished(execution_id, user):
             exit_code = execution_service.get_exit_code(execution_id)

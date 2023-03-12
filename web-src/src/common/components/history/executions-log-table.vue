@@ -1,5 +1,17 @@
 <template>
   <div class="executions-log-table">
+    <div class="search-container">
+      <div class="search-panel">
+        <input ref="searchField" autocomplete="off" class="search-field"
+               name="searchField"
+               placeholder="Search"
+               v-model="searchText">
+        <input :alt="isClearSearchButton ? 'Clear search' : 'Search'" :src="searchImage"
+             class="search-button"
+             type="image"
+             @click="searchIconClickHandler">
+      </div>
+    </div>
     <table class="highlight striped">
       <thead>
       <tr>
@@ -11,7 +23,7 @@
       </tr>
       </thead>
       <tbody v-if="!loading">
-      <tr v-for="row in rows" :key="row.id" @click="rowClick(row)">
+      <tr v-for="row in filteredRows" :key="row.id" @click="rowClick(row)">
         <td>{{ row.id }}</td>
         <td>{{ row.startTimeString }}</td>
         <td>{{ row.user }}</td>
@@ -26,21 +38,23 @@
 
 <script>
 import {mapState} from 'vuex';
+import ClearIcon from '@/assets/clear.png'
+import SearchIcon from '@/assets/search.png'
 
 export default {
   name: 'executions-log-table',
   props: {
     rows: Array,
-    'sortColumn': {
-      type: String,
-      default: 'id'
-    },
-    'ascending': {
-      type: Boolean,
-      default: false
-    },
     rowClick: {
       type: Function
+    }
+  },
+
+  data() {
+    return {
+      searchText: '',
+      sortColumn: 'id',
+      ascending: false
     }
   },
 
@@ -58,22 +72,69 @@ export default {
         this.ascending = true;
         this.sortColumn = sortKey;
       }
+    },
 
-      let ascending = this.ascending;
-
-      this.rows.sort(function(a, b) {
-        if (a[sortKey] > b[sortKey]) {
-          return ascending ? 1 : -1
-        } else if (a[sortKey] < b[sortKey]) {
-          return ascending ? -1 : 1
-        }
-        return 0;
-      })
-    }
+    searchIconClickHandler() {
+      if (this.searchText !== '') {
+        this.searchText = '';
+      }
+      this.$nextTick(() => {
+        this.$refs.searchField.focus();
+      });
+    },
   },
 
   computed: {
-    ...mapState('history', ['loading'])
+    ...mapState('history', ['loading']),
+
+    isClearSearchButton() {
+      return this.searchText !== '';
+    },
+
+    searchImage() {
+      return this.isClearSearchButton ? ClearIcon : SearchIcon;
+    },
+
+    filteredRows() {
+      let searchText = (this.searchText || '').trim().toLowerCase();
+      let resultRows;
+      if(!this.rows) {
+        resultRows = [];
+      } else if(searchText === '') {
+        resultRows = [...this.rows];
+      } else {
+        resultRows = this.rows.filter((row) => {
+          return row.script.toLowerCase().includes(searchText) ||
+            row.user.toLowerCase().includes(searchText);
+        });
+      }
+
+      let ascending = this.ascending;
+      let column = this.sortColumn;
+
+      return resultRows.sort((a, b) => {
+        if (column === 'id') {
+          let id_a = a[column];
+          let id_b = b[column];
+          return ascending ? id_a - id_b : id_b - id_a
+
+        } else if (column === 'startTimeString') {
+          let date_a = new Date(a[column]);
+          let date_b = new Date(b[column]);
+          return ascending ? date_a - date_b : date_b - date_a
+
+        } else {
+          let other_a = a[column].toLowerCase()
+          let other_b = b[column].toLowerCase()
+          if (other_a > other_b) {
+            return ascending ? 1 : -1
+          } else if (other_a < other_b) {
+            return ascending ? -1 : 1
+          }
+          return 0;
+        }
+      });
+    }
   }
 }
 </script>
@@ -133,5 +194,18 @@ export default {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 4px solid var(--font-color-main);
+}
+
+.search-container {
+  min-width: 200px;
+  width: 50%;
+}
+
+.search-panel {
+  display: flex;
+}
+
+.search-button {
+  align-self: center;
 }
 </style>

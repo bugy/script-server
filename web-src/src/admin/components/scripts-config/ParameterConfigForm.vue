@@ -73,9 +73,20 @@
                  title="Excluded files"
                  @error="handleError('Excluded files', $event)"/>
     </div>
-    <div v-if="selectedType === 'text' || selectedType === undefined" class="row">
+    <div v-if="selectedType === 'text' || selectedType === undefined || selectedType === 'multiline_text'" class="row">
+      <Textfield v-model="regexConfigPattern" :config="regexPatternField" class="col s4"
+                 @error="handleError(regexPatternField, $event)"/>
+      <Textfield v-model="regexConfigDescription" :config="regexDescriptionField" class="col s4"
+                 @error="handleError(regexDescriptionField, $event)"/>
       <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
                  @error="handleError(maxLengthField, $event)"/>
+    </div>
+
+    <div v-if="selectedType !== 'multiline_text'" class="row">
+      <Textfield v-model="uiWidthWeight"
+                 :config="uiWidthWeightField"
+                 class="col s2"
+                 @error="handleError(uiWidthWeightField, $event)"/>
     </div>
   </form>
 </template>
@@ -107,11 +118,14 @@ import {
   noValueField,
   paramField,
   recursiveField,
+  regexDescriptionField,
+  regexPatternField,
   requiredField,
   sameArgParamField,
   secureField,
   separatorField,
-  typeField
+  typeField,
+  uiWidthWeightField
 } from './parameter-fields';
 
 function updateValue(value, configField, newValue) {
@@ -181,6 +195,8 @@ export default {
       min: null,
       max: null,
       max_length: null,
+      regexConfigPattern: null,
+      regexConfigDescription: null,
       allowedValues: null,
       allowedValuesScript: null,
       allowedValuesFromScript: null,
@@ -195,6 +211,7 @@ export default {
       fileType: null,
       fileExtensions: null,
       excludedFiles: null,
+      uiWidthWeight: null,
       nameField,
       paramField: Object.assign({}, paramField),
       envVarField,
@@ -206,6 +223,8 @@ export default {
       minField,
       maxField: Object.assign({}, maxField),
       maxLengthField,
+      regexPatternField,
+      regexDescriptionField,
       allowedValuesScriptField,
       allowedValuesFromScriptField,
       defaultValueField: Object.assign({}, defaultValueField),
@@ -216,7 +235,8 @@ export default {
       fileDirField,
       recursiveField,
       fileTypeField,
-      allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField
+      allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField,
+      uiWidthWeightField
     }
   },
 
@@ -235,6 +255,8 @@ export default {
           this.min = config['min'];
           this.max = config['max'];
           this.max_length = config['max_length'];
+          this.regexConfigPattern = get(config, 'regex.pattern', '');
+          this.regexConfigDescription = get(config, 'regex.description', '');
           this.constant = !!get(config, 'constant', false);
           this.secure = !!get(config, 'secure', false);
           this.multiselectArgumentType = get(config, 'multiselect_argument_type', 'single_argument');
@@ -245,6 +267,7 @@ export default {
           this.fileType = get(config, 'file_type', 'any');
           this.fileExtensions = get(config, 'file_extensions', []);
           this.excludedFiles = get(config, 'excluded_files', []);
+          this.uiWidthWeight = config['ui']?.['width_weight']
 
           const defaultValue = get(config, 'default', '');
           if (this.isRecursiveFile()) {
@@ -320,6 +343,12 @@ export default {
     allowedValuesScriptShellEnabled() {
       this.updateAllowedValues();
     },
+    regexConfigPattern() {
+      this.updateRegexConfig();
+    },
+    regexConfigDescription() {
+      this.updateRegexConfig();
+    },
     defaultValue() {
       if (this.selectedType === 'multiselect') {
         updateValue(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
@@ -331,6 +360,15 @@ export default {
         updateValue(this.value, 'default', path);
       } else {
         updateValue(this.value, 'default', this.defaultValue);
+      }
+    },
+    uiWidthWeight() {
+      if (this.uiWidthWeight) {
+        updateValue(this.value, 'ui', {
+          'width_weight': parseInt(this.uiWidthWeight)
+        })
+      } else {
+        this.$delete(this.value, 'ui')
       }
     }
   },
@@ -350,6 +388,12 @@ export default {
 
 
   methods: {
+    updateRegexConfig() {
+      updateValue(this.value, 'regex', {
+        pattern: this.regexConfigPattern,
+        description: this.regexConfigDescription
+      });
+    },
     updateAllowedValues() {
       if (this.allowedValuesFromScript) {
         updateValue(this.value, 'values', {
