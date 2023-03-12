@@ -39,6 +39,15 @@ class ConfigServiceTest(unittest.TestCase):
         conf_names = [config.name for config in configs]
         self.assertCountEqual(['conf_x', 'conf_y', 'A B C'], conf_names)
 
+    def test_list_configs_when_multiple_and_subfolders(self):
+        _create_script_config_file('conf_x', subfolder = 's1')
+        _create_script_config_file('conf_y', subfolder = 's2')
+        _create_script_config_file('ABC', subfolder = os.path.join('s1', 'inner'))
+
+        configs = self.config_service.list_configs(self.user)
+        conf_names = [config.name for config in configs]
+        self.assertCountEqual(['conf_x', 'conf_y', 'ABC'], conf_names)
+
     def test_list_configs_with_groups(self):
         _create_script_config_file('conf_x', group='g1')
         _create_script_config_file('conf_y')
@@ -103,7 +112,7 @@ class ConfigServiceTest(unittest.TestCase):
         _create_script_config_file('conf_x', name='Name with slash /')
 
         config = self.config_service.load_config_model('Name with slash /', self.user)
-        self.assertEquals('Name with slash /', config.name)
+        self.assertEqual('Name with slash /', config.name)
 
     def tearDown(self):
         super().tearDown()
