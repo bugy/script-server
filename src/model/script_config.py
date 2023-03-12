@@ -10,7 +10,7 @@ from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
 from model import parameter_config
 from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
-    read_str_from_config, replace_auth_vars
+    read_str_from_config, replace_auth_vars, read_list
 from model.parameter_config import ParameterModel
 from model.server_conf import LoggingConfig
 from react.properties import ObservableList, ObservableDict, observable_fields, Property
@@ -82,10 +82,10 @@ class ConfigModel:
         self.parameter_values = ObservableDict()
 
         self._original_config = config_object
-        self._included_config_path = _TemplateProperty(config_object.get('include'),
-                                                       parameters=self.parameters,
-                                                       values=self.parameter_values)
-        self._included_config_prop.bind(self._included_config_path, self._path_to_json)
+        self._included_config_paths = _TemplateProperty(read_list(config_object, 'include'),
+                                                        parameters=self.parameters,
+                                                        values=self.parameter_values)
+        self._included_config_prop.bind(self._included_config_paths, self._read_and_merge_included_paths)
 
         self._reload_config()
 
@@ -120,7 +120,7 @@ class ConfigModel:
         anything_changed = True
 
         def get_sort_key(parameter):
-            if parameter.name in self._included_config_path.required_parameters:
+            if parameter.name in self._included_config_paths.required_parameters:
                 return len(parameter.get_required_parameters())
             return 100 + len(parameter.get_required_parameters())
 
@@ -272,22 +272,44 @@ class ConfigModel:
         for parameter in self.parameters:
             parameter.validate_parameter_dependencies(self.parameters)
 
-    def _path_to_json(self, path):
-        if path is None:
+    def _read_and_merge_included_paths(self, paths):
+        if is_empty(paths):
             return None
 
-        path = file_utils.normalize_path(path, self._config_folder)
+        merged_dict = {}
+        merged_params = []
+        merged_param_names = set()
 
-        if os.path.exists(path):
-            try:
-                file_content = file_utils.read_file(path)
-                return custom_json.loads(file_content)
-            except:
-                LOGGER.exception('Failed to load included file ' + path)
-                return None
-        else:
-            LOGGER.warning('Failed to load included file, path does not exist: ' + path)
-            return None
+        for path in paths:
+            path = file_utils.normalize_path(path, self._config_folder)
+
+            if os.path.exists(path):
+                try:
+                    included_json = custom_json.loads(file_utils.read_file(path))
+                    merged_dict = merge_dicts(merged_dict, included_json, ignored_keys=['parameters'])
+
+                    parameters = included_json.get('parameters')
+                    if parameters:
+                        for param in parameters:
+                            param_name = param.get('name')
+                            if not param_name:
+                                continue
+
+                            if param_name in merged_param_names:
+                                continue
+
+                            merged_params.append(param)
+                            merged_param_names.add(param_name)
+                except:
+                    LOGGER.exception('Failed to load included file ' + path)
+                    continue
+            else:
+                LOGGER.warning('Failed to load included file, path does not exist: ' + path)
+                continue
+
+        if merged_params:
+            merged_dict['parameters'] = merged_params
+        return merged_dict
 
     def _read_preload_script_conf(self, config):
         if config is None:
@@ -368,9 +390,9 @@ class ParameterNotFoundException(Exception):
 
 
 class _TemplateProperty:
-    def __init__(self, template, parameters: ObservableList, values: ObservableDict, empty=None) -> None:
+    def __init__(self, template_config, parameters: ObservableList, values: ObservableDict, empty=None) -> None:
         self._value_property = Property(None)
-        self._template = template
+        self._template_config = template_config
         self._values = values
         self._empty = empty
         self._parameters = parameters
@@ -381,20 +403,23 @@ class _TemplateProperty:
         script_template = ''
         required_parameters = set()
 
-        if template:
-            while search_start < len(template):
-                match = pattern.search(template, search_start)
-                if not match:
-                    script_template += template[search_start:]
-                    break
-                param_start = match.start()
-                if param_start > search_start:
-                    script_template += template[search_start:param_start]
+        templates = template_config if isinstance(template_config, list) else [template_config]
 
-                param_name = match.group(1)
-                required_parameters.add(param_name)
+        for template in templates:
+            if template:
+                while search_start < len(template):
+                    match = pattern.search(template, search_start)
+                    if not match:
+                        script_template += template[search_start:]
+                        break
+                    param_start = match.start()
+                    if param_start > search_start:
+                        script_template += template[search_start:param_start]
 
-                search_start = match.end() + 1
+                    param_name = match.group(1)
+                    required_parameters.add(param_name)
+
+                    search_start = match.end() + 1
 
         self.required_parameters = tuple(required_parameters)
 
@@ -424,10 +449,16 @@ class _TemplateProperty:
                 values_filled = False
                 break
 
-        if self._template is None:
+        if self._template_config is None:
             self.value = None
         elif values_filled:
-            self.value = fill_parameter_values(self._parameters, self._template, self._values)
+            if isinstance(self._template_config, list):
+                values = []
+                for single_template in self._template_config:
+                    values.append(fill_parameter_values(self._parameters, single_template, self._values))
+                self.value = values
+            else:
+                self.value = fill_parameter_values(self._parameters, self._template_config, self._values)
         else:
             self.value = self._empty
 

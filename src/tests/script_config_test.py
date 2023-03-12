@@ -320,6 +320,17 @@ class ConfigModelIncludeTest(unittest.TestCase):
 
         self.assertEqual('ping google.com', config_model.script_command)
 
+    def test_static_include_multiple_inclusions(self):
+        included_path_1 = test_utils.write_script_config({'script_path': 'ping google.com'}, 'included1')
+        included_path_2 = test_utils.write_script_config(
+            {'script_path': 'echo 123', 'working_directory': '123'}, 'included2')
+        config_model = _create_config_model(
+            'main_conf',
+            script_path=None,
+            config={'include': [included_path_1, included_path_2]})
+
+        self.assertEqual('ping google.com', config_model.script_command)
+
     def test_static_include_precedence(self):
         included_path = test_utils.write_script_config({
             'script_path': 'ping google.com',
@@ -334,7 +345,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
     def test_static_include_single_parameter(self):
         included_path = test_utils.write_script_config({'parameters': [
             create_script_param_config('param2', type='int')
-        ]}, 'included')
+        ]}, 'included1')
         config_model = _create_config_model('main_conf', config={
             'include': included_path,
             'parameters': [create_script_param_config('param1', type='text')]})
@@ -347,6 +358,31 @@ class ConfigModelIncludeTest(unittest.TestCase):
         param2 = config_model.parameters[1]
         self.assertEqual('param2', param2.name)
         self.assertEqual('int', param2.type)
+
+    def test_static_include_multiple_parameters_from_multiple_included(self):
+        included_path_1 = test_utils.write_script_config({
+            'parameters': [
+                create_script_param_config('param2', type='int'),
+                create_script_param_config('param3'),
+            ]}, 'included1')
+        included_path_2 = test_utils.write_script_config({
+            'parameters': [
+                create_script_param_config('param2', type='ip4'),
+                create_script_param_config('param4'),
+                create_script_param_config(None),
+            ]}, 'included2')
+
+        config_model = _create_config_model('main_conf', config={
+            'include': [included_path_1, included_path_2],
+            'parameters': [create_script_param_config('param1', type='text')]})
+
+        name_type_tuples = list(map(lambda param: (param.name, param.type), config_model.parameters))
+        self.assertEqual(name_type_tuples, [
+            ('param1', 'text'),
+            ('param2', 'int'),
+            ('param3', 'text'),
+            ('param4', 'text'),
+        ])
 
     def test_static_include_corrupted_file(self):
         included_path = os.path.join(test_utils.temp_folder, 'file.json')
@@ -527,6 +563,41 @@ class ConfigModelIncludeTest(unittest.TestCase):
 
         dependant_parameter = config_model.find_parameter('included_param2')
         self.assertEqual(['xABCx'], dependant_parameter.values)
+
+    @parameterized.expand([
+        (2, 'test desc', [('param3', 'int'), ('param4', 'text')]),
+        (3, None, [('param3', 'int')]),
+        (None, None, []),
+    ])
+    def test_dynamic_include_when_multiple_includes(self, param2_value, expected_description, additional_parameters):
+        included_path_1 = test_utils.write_script_config({
+            'parameters': [
+                create_script_param_config('param3', type='int'),
+            ]}, 'included1')
+        included_path_2 = test_utils.write_script_config({
+            'description': 'test desc',
+            'parameters': [
+                create_script_param_config('param3', type='ip4'),
+                create_script_param_config('param4')
+            ]}, 'included2')
+
+        config_model = _create_config_model('main_conf', config={
+            'include': ['${param1}', included_path_2[:-6] + '${param2}.json'],
+            'parameters': [
+                create_script_param_config('param1', type='text'),
+                create_script_param_config('param2', type='int')
+            ]})
+
+        config_model.set_param_value('param1', included_path_1)
+        config_model.set_param_value('param2', param2_value)
+
+        self.assertEqual(expected_description, config_model.description)
+
+        name_type_tuples = list(map(lambda param: (param.name, param.type), config_model.parameters))
+        expected_parameters = [('param1', 'text'), ('param2', 'int')]
+        expected_parameters.extend(additional_parameters)
+
+        self.assertEqual(name_type_tuples, expected_parameters)
 
     def prepare_config_model_with_included(self, included_params, static_param_name):
         included_path = test_utils.write_script_config({'parameters': included_params}, 'included')
