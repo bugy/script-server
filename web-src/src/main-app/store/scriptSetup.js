@@ -1,7 +1,15 @@
-import {forEachKeyValue, guid, isEmptyObject, isEmptyString, isNull, removeElement} from '@/common/utils/common';
-import Vue from 'vue';
+import {
+    forEachKeyValue,
+    guid,
+    isEmptyObject,
+    isEmptyString,
+    isEmptyValue,
+    isNull,
+    removeElement
+} from '@/common/utils/common';
 import clone from 'lodash/clone';
 import isEqual from 'lodash/isEqual';
+import Vue from 'vue';
 
 export default {
     namespaced: true,
@@ -10,7 +18,8 @@ export default {
         forcedValueParameters: [],
         errors: {},
         nextReloadValues: null,
-        _parameterAllowedValues: {}
+        _parameterAllowedValues: {},
+        _default_values_from_config: {}
     },
     actions: {
         reset({commit}) {
@@ -18,6 +27,7 @@ export default {
             commit('SET_VALUES', {});
             commit('SET_FORCED_VALUE_PARAMETERS', []);
             commit('SET_NEXT_RELOAD_VALUES', null);
+            commit('RESET_DEFAULT_VALUES');
         },
 
         initFromParameters({state, dispatch, commit}, {scriptConfig, parameters}) {
@@ -46,15 +56,17 @@ export default {
             if (!isEmptyObject(state.parameterValues)) {
                 for (const parameter of parameters) {
                     const parameterName = parameter.name;
-                    if (!state.parameterValues.hasOwnProperty(parameterName)) {
-                        let value;
-                        if (!isNull(parameter.default)) {
-                            value = parameter.default;
-                        } else {
-                            value = null;
-                        }
+                    const defaultValue = !isNull(parameter.default) ? parameter.default : null;
+                    const oldDefault = state._default_values_from_config[parameterName];
+                    const currentValue = state.parameterValues[parameterName];
 
-                        dispatch('setParameterValue', {parameterName, value});
+                    if (isEmptyValue(currentValue)
+                        || (!isNull(defaultValue) && oldDefault === currentValue)) {
+                        dispatch('setParameterValue', {parameterName, value: defaultValue});
+                    }
+
+                    if (!isNull(defaultValue)) {
+                        commit('MEMORIZE_DEFAULT_VALUE', {parameterName, defaultValue});
                     }
                 }
 
@@ -63,10 +75,11 @@ export default {
 
             const values = {};
             for (const parameter of parameters) {
-                if (!isNull(parameter.default)) {
-                    values[parameter.name] = parameter.default;
-                } else {
-                    values[parameter.name] = null;
+                const defaultValue = !isNull(parameter.default) ? parameter.default : null;
+                values[parameter.name] = defaultValue;
+
+                if (!isNull(values[parameter.name])) {
+                    commit('MEMORIZE_DEFAULT_VALUE', {parameterName: parameter.name, defaultValue});
                 }
             }
 
@@ -156,6 +169,12 @@ export default {
                     removeElement(state.forcedValueParameters, forcedParameter)
                 }
             }
+        },
+        RESET_DEFAULT_VALUES(state) {
+            state._default_values_from_config = {};
+        },
+        MEMORIZE_DEFAULT_VALUE(state, {parameterName, defaultValue}) {
+            state._default_values_from_config[parameterName] = defaultValue;
         }
     }
 }

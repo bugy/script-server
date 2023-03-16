@@ -1,7 +1,6 @@
 import logging
 import logging
 import os
-import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import List
@@ -9,11 +8,12 @@ from typing import List
 from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
 from model import parameter_config
-from model.model_helper import is_empty, fill_parameter_values, read_bool_from_config, InvalidValueException, \
+from model.model_helper import is_empty, read_bool_from_config, InvalidValueException, \
     read_str_from_config, replace_auth_vars, read_list
 from model.parameter_config import ParameterModel
 from model.server_conf import LoggingConfig
-from react.properties import ObservableList, ObservableDict, observable_fields, Property
+from model.template_property import TemplateProperty
+from react.properties import ObservableList, ObservableDict, observable_fields
 from utils import file_utils, custom_json
 from utils.object_utils import merge_dicts
 from utils.process_utils import ProcessInvoker
@@ -82,9 +82,9 @@ class ConfigModel:
         self.parameter_values = ObservableDict()
 
         self._original_config = config_object
-        self._included_config_paths = _TemplateProperty(read_list(config_object, 'include'),
-                                                        parameters=self.parameters,
-                                                        values=self.parameter_values)
+        self._included_config_paths = TemplateProperty(read_list(config_object, 'include'),
+                                                       parameters=self.parameters,
+                                                       values=self.parameter_values)
         self._included_config_prop.bind(self._included_config_paths, self._read_and_merge_included_paths)
 
         self._reload_config()
@@ -387,91 +387,6 @@ def read_short(file_path, json_object):
 class ParameterNotFoundException(Exception):
     def __init__(self, param_name) -> None:
         self.param_name = param_name
-
-
-class _TemplateProperty:
-    def __init__(self, template_config, parameters: ObservableList, values: ObservableDict, empty=None) -> None:
-        self._value_property = Property(None)
-        self._template_config = template_config
-        self._values = values
-        self._empty = empty
-        self._parameters = parameters
-
-        pattern = re.compile('\${([^}]+)\}')
-
-        search_start = 0
-        script_template = ''
-        required_parameters = set()
-
-        templates = template_config if isinstance(template_config, list) else [template_config]
-
-        for template in templates:
-            if template:
-                while search_start < len(template):
-                    match = pattern.search(template, search_start)
-                    if not match:
-                        script_template += template[search_start:]
-                        break
-                    param_start = match.start()
-                    if param_start > search_start:
-                        script_template += template[search_start:param_start]
-
-                    param_name = match.group(1)
-                    required_parameters.add(param_name)
-
-                    search_start = match.end() + 1
-
-        self.required_parameters = tuple(required_parameters)
-
-        self._reload()
-
-        if self.required_parameters:
-            values.subscribe(self._value_changed)
-            parameters.subscribe(self)
-
-    def _value_changed(self, parameter, old, new):
-        if parameter in self.required_parameters:
-            self._reload()
-
-    def on_add(self, parameter, index):
-        if parameter.name in self.required_parameters:
-            self._reload()
-
-    def on_remove(self, parameter):
-        if parameter.name in self.required_parameters:
-            self._reload()
-
-    def _reload(self):
-        values_filled = True
-        for param_name in self.required_parameters:
-            value = self._values.get(param_name)
-            if is_empty(value):
-                values_filled = False
-                break
-
-        if self._template_config is None:
-            self.value = None
-        elif values_filled:
-            if isinstance(self._template_config, list):
-                values = []
-                for single_template in self._template_config:
-                    values.append(fill_parameter_values(self._parameters, single_template, self._values))
-                self.value = values
-            else:
-                self.value = fill_parameter_values(self._parameters, self._template_config, self._values)
-        else:
-            self.value = self._empty
-
-        self._value_property.set(self.value)
-
-    def subscribe(self, observer):
-        self._value_property.subscribe(observer)
-
-    def unsubscribe(self, observer):
-        self._value_property.unsubscribe(observer)
-
-    def get(self):
-        return self._value_property.get()
 
 
 def get_sorted_config(config):

@@ -15,7 +15,7 @@ from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
 from model.server_conf import LoggingConfig
 from react.observable import read_until_closed
-from react.properties import ObservableDict
+from react.properties import ObservableDict, ObservableList
 from utils import audit_utils
 from utils.env_utils import EnvVariables
 from utils.process_utils import ProcessInvoker
@@ -356,7 +356,7 @@ def create_parameter_model_from_config(config,
         config,
         username,
         audit_name,
-        all_parameters,
+        lambda: ObservableList(all_parameters),
         working_dir=working_dir,
         process_invoker=process_invoker)
 

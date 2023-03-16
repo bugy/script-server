@@ -11,6 +11,7 @@ from config.script.list_values import ConstValuesProvider, ScriptValuesProvider,
 from model import model_helper
 from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SECURE_MASK, \
     normalize_extension, read_bool_from_config, InvalidValueException, read_str_from_config, read_int_from_config
+from model.template_property import TemplateProperty
 from react.properties import ObservableDict, observable_fields
 from utils import file_utils, string_utils
 from utils.file_utils import FileMatcher
@@ -46,7 +47,8 @@ LOGGER = logging.getLogger('script_server.parameter_config')
     'file_recursive',
     'ui_width_weight')
 class ParameterModel(object):
-    def __init__(self, parameter_config, username, audit_name, other_params_supplier,
+    def __init__(self, parameter_config, username, audit_name,
+                 other_params_supplier,
                  process_invoker: ProcessInvoker,
                  other_param_values: ObservableDict = None,
                  working_dir=None):
@@ -61,14 +63,14 @@ class ParameterModel(object):
         self._original_config = parameter_config
         self._parameter_values = other_param_values
 
-        self._reload()
+        self._setup()
 
         if (other_param_values is not None) \
                 and (self._values_provider is not None) \
                 and self._values_provider.get_required_parameters():
             other_param_values.subscribe(self._param_values_observer)
 
-    def _reload(self):
+    def _setup(self):
         config = self._original_config
 
         self.param = config.get('param')
@@ -89,12 +91,14 @@ class ParameterModel(object):
             default='single_argument',
             allowed_values=['single_argument', 'argument_per_value', 'repeat_param_value'])
         self.type = self._read_type(config)
-        self.default = _resolve_default(
+        self._set_default_value(
             config.get('default'),
             self._username,
             self._audit_name,
             self._working_dir,
             self.type,
+            self._parameters_supplier(),
+            self._parameter_values,
             self._process_invoker)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
@@ -450,36 +454,61 @@ class ParameterModel(object):
     def _build_list_file_path(self, child_path):
         return os.path.normpath(os.path.join(self._list_files_dir, *child_path))
 
+    def _set_default_value(
+            self,
+            default_config,
+            username,
+            audit_name,
+            working_dir,
+            type,
+            parameters,
+            parameter_values,
+            process_invoker: ProcessInvoker):
+        if is_empty(default_config):
+            self.default = default_config
+            return
 
-def _resolve_default(default, username, audit_name, working_dir, type, process_invoker: ProcessInvoker):
-    if not default:
-        return default
+        script = False
+        if isinstance(default_config, dict) and 'script' in default_config:
+            string_value = default_config['script']
+            script = True
+        elif isinstance(default_config, str):
+            string_value = default_config
+        else:
+            self.default = default_config
+            return
 
-    script = False
-    if isinstance(default, dict) and 'script' in default:
-        string_value = default['script']
-        script = True
-    elif isinstance(default, str):
-        string_value = default
-    else:
-        return default
+        resolved_string_value = resolve_env_vars(string_value, full_match=True)
+        if resolved_string_value == string_value:
+            resolved_string_value = replace_auth_vars(string_value, username, audit_name)
 
-    resolved_string_value = resolve_env_vars(string_value, full_match=True)
-    if resolved_string_value == string_value:
-        resolved_string_value = replace_auth_vars(string_value, username, audit_name)
+        if not script:
+            self.default = resolved_string_value
+            return
 
-    if script:
-        has_variables = string_value != resolved_string_value
-        shell = read_bool_from_config('shell', default, default=not has_variables)
-        output = process_invoker.invoke(resolved_string_value, working_dir, shell=shell)
-        stripped_output = output.strip()
+        template_property = TemplateProperty(resolved_string_value, parameters, parameter_values)
+        shell = read_bool_from_config('shell', default_config, default=is_empty(template_property.required_parameters))
 
-        if type == PARAM_TYPE_MULTISELECT and '\n' in stripped_output:
-            return [line.strip() for line in stripped_output.split('\n') if not is_empty(line)]
+        def get_script_output(script):
+            output = process_invoker.invoke(script, working_dir, shell=shell)
+            stripped_output = output.strip()
 
-        return stripped_output
+            if type == PARAM_TYPE_MULTISELECT and '\n' in stripped_output:
+                return [line.strip() for line in stripped_output.split('\n') if not is_empty(line)]
 
-    return resolved_string_value
+            return stripped_output
+
+        if not template_property.required_parameters:
+            self.default = get_script_output(resolved_string_value)
+        else:
+            def update_default(_, new):
+                if new is None:
+                    self.default = None
+                else:
+                    self.default = get_script_output(new)
+
+            template_property.subscribe(update_default)
+            update_default(None, template_property.value)
 
 
 def _resolve_file_dir(config, key):

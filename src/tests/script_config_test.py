@@ -6,7 +6,7 @@ from parameterized import parameterized
 
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from config.exceptions import InvalidConfigException
-from model.script_config import ConfigModel, InvalidValueException, _TemplateProperty, ParameterNotFoundException, \
+from model.script_config import ConfigModel, InvalidValueException, TemplateProperty, ParameterNotFoundException, \
     get_sorted_config
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
@@ -862,7 +862,7 @@ class TestTemplateProperty(unittest.TestCase):
         self.values = ObservableDict()
 
     def create_property(self, template):
-        return _TemplateProperty(template, self.parameters, self.values)
+        return TemplateProperty(template, self.parameters, self.values)
 
     def add_parameter(self, config):
         self.parameters.append(config)

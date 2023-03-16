@@ -8,7 +8,7 @@ from parameterized import parameterized
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from model import parameter_config
 from model.parameter_config import get_sorted_config
-from react.properties import ObservableDict
+from react.properties import ObservableDict, ObservableList
 from tests import test_utils
 from tests.test_utils import create_parameter_model, create_parameter_model_from_config
 from utils.process_utils import ExecutionException
@@ -316,7 +316,7 @@ class TestDefaultValue(unittest.TestCase):
         ('y', None, 'my_user\ny1'),
         ('y', False, ExecutionException),
         ('y', True, 'my_user\ny1'),
-        ('${auth.username}', None, ExecutionException),
+        ('${auth.username}', None, 'my_user'),
         ('${auth.username}', False, ExecutionException),
         ('${auth.username}', True, 'my_user'),
     ])
@@ -329,8 +329,7 @@ class TestDefaultValue(unittest.TestCase):
         if inspect.isclass(expected_value) and issubclass(expected_value, BaseException):
             self.assertRaises(expected_value, self.resolve_default, config, username='my_user')
         else:
-            default = self.resolve_default(config,
-                                           username='my_user')
+            default = self.resolve_default(config, username='my_user')
             self.assertEqual(expected_value, default)
 
     @parameterized.expand([
@@ -349,15 +348,134 @@ class TestDefaultValue(unittest.TestCase):
         default = self.resolve_default(config, username='my_user', type=type)
         self.assertEqual(expected_value, default)
 
+    @parameterized.expand([
+        ('echo ${param1}', {'param1': 'xyz'}, 'xyz'),
+        ('echo ${param1}', {'param2': 'abc'}, None),
+        ('echo ${param1}', {}, None),
+        ('echo "${auth.username}-${param2}"', {'param1': 'xyz'}, None),
+        ('echo "${auth.username}-${param2}"', {'param2': 'abc'}, 'my_user-abc'),
+        ('echo "${param1}-${param2}"', {'param1': 'xyz', 'param2': 'abc'}, 'xyz-abc'),
+        ('echo "${param1}-${param2}"', {'param1': 'xyz'}, None),
+        ('echo "${param1}-${param2}"', {'param2': 'abc'}, None),
+        ('echo "${param3}"', {}, None),
+    ])
+    def test_script_value_when_dynamic_script(self, script, values, expected_value):
+        parameters = ObservableList([
+            _create_parameter_model({'name': 'param1'}),
+            _create_parameter_model({'name': 'param2'})])
+
+        parameter_values = ObservableDict()
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': script},
+            username='my_user',
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        self.assertEqual(None, parameter_model.default)
+
+        for (key, value) in values.items():
+            parameter_values[key] = value
+
+        self.assertEqual(expected_value, parameter_model.default)
+
+    def test_script_value_when_dynamic_script_value_change_to_null(self):
+        parameters = ObservableList([_create_parameter_model({'name': 'param1'})])
+
+        parameter_values = ObservableDict({'param1': 'abc'})
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': 'echo ${param1}'},
+            username='my_user',
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        self.assertEqual('abc', parameter_model.default)
+
+        parameter_values['param1'] = None
+
+        self.assertEqual(None, parameter_model.default)
+
+    def test_script_value_when_dynamic_script_shell_true(self):
+        parameters = ObservableList([_create_parameter_model({'name': 'param1'})])
+
+        parameter_values = ObservableDict()
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': 'echo "${param1}" | grep a', 'shell': True},
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        parameter_values['param1'] = 'abc\ndef\ncat'
+
+        self.assertEqual('abc\ncat', parameter_model.default)
+
+    @parameterized.expand([
+        (False,),
+        (None,),
+    ])
+    def test_script_value_when_dynamic_script_shell_false(self, shell):
+        parameters = ObservableList([_create_parameter_model({'name': 'param1'})])
+
+        parameter_values = ObservableDict()
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': 'echo "${param1}" | grep a', 'shell': shell},
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        parameter_values['param1'] = 'abc\ndef\ncat'
+
+        self.assertEqual('abc\ndef\ncat | grep a', parameter_model.default)
+
     @staticmethod
     def resolve_default(value, *, username=None, audit_name=None, working_dir=None, type=None):
-        return parameter_config._resolve_default(
+        model = TestDefaultValue.prepare_parameter_model(
             value,
+            username=username,
+            audit_name=audit_name,
+            working_dir=working_dir,
+            type=type)
+
+        return model.default
+
+    @staticmethod
+    def prepare_parameter_model(
+            value,
+            *,
+            username=None,
+            audit_name=None,
+            working_dir=None,
+            type=None,
+            other_parameters=None,
+            parameter_values=None):
+
+        config = {
+            'name': 'some param',
+            'default': value
+        }
+
+        if type is not None:
+            config['type'] = type
+
+        if parameter_values is None:
+            parameter_values = ObservableDict()
+
+        if other_parameters is None:
+            other_parameters = ObservableList()
+
+        return parameter_config.ParameterModel(
+            config,
             username,
             audit_name,
-            working_dir,
-            type,
-            test_utils.process_invoker)
+            lambda: other_parameters,
+            test_utils.process_invoker,
+            other_param_values=parameter_values,
+            working_dir=working_dir)
 
     def setUp(self):
         test_utils.setup()

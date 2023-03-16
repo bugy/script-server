@@ -91,7 +91,9 @@
       "name": "Default Text",
       "required": true,
       "param": "--def_text",
-      "default": "some_text",
+      "default": {
+        "script": "echo ${Required List}"
+      },
       "description": "Text with default value and required"
     },
     {
