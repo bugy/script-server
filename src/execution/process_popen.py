@@ -46,6 +46,9 @@ class POpenProcessWrapper(process_base.ProcessWrapper):
                                         errors='replace')
 
     def write_to_input(self, value):
+        if self.is_finished():
+            return
+
         input_value = value
         if not value.endswith("\n"):
             input_value += "\n"

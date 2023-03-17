@@ -9,6 +9,7 @@ from react.observable import _StoringObserver, read_until_closed
 from tests import test_utils
 from tests.test_utils import _MockProcessWrapper, create_config_model, create_script_param_config, \
     create_parameter_model, assert_contains_sub_dict
+from utils import string_utils
 
 BUFFER_FLUSH_WAIT_TIME = (executor.TIME_BUFFER_MS * 1.5) / 1000.0
 
@@ -127,6 +128,77 @@ class TestScriptExecutor(unittest.TestCase):
         assert_contains_sub_dict(self,
                                  process_wrapper.all_env_variables,
                                  {'PARAM_ID': '918273', 'PARAM_VERBOSE': 'true', 'EXECUTION_ID': '123'})
+
+    def test_pass_as(self):
+        config = create_config_model(
+            'config_x',
+            script_command='bash -c \'sleep 0.1 && echo ">$0< >$1< >$PARAM_P1< >$PARAM_P2< >$PARAM_P3<"\'',
+            parameters=[
+                create_script_param_config('p1', pass_as='argument'),
+                create_script_param_config('p2', pass_as='env_variable'),
+                create_script_param_config('p3', pass_as='stdin'),
+            ])
+
+        executor._process_creator = create_process_wrapper
+        self.create_executor(config, {'p1': 'abc', 'p2': 'def', 'p3': 'xyz'})
+        self.executor.start(123)
+
+        data = read_until_closed(self.executor.get_raw_output_stream(), 200)
+        output = ''.join(data)
+
+        self.assertEqual('xyz\n>abc< >< >< >def< ><\n', output)
+
+    def test_pass_as_stdin(self):
+        file_path = test_utils.create_file('my_script.sh', text='''
+            sleep 0.1
+            echo -n 'ababa'
+            sleep 0.1
+            echo -n 'baba'
+            sleep 0.1
+            echo -n 'bcdef'
+            sleep 0.1
+            echo 'abc'
+            sleep 0.1
+            read input1
+            read input2
+            read input3
+            read input4
+            read input5
+            read input6
+            sleep 0.1
+            echo "inputs: '$input1' '$input2' '$input3' '$input4' '$input5' '$input6'"
+        ''')
+
+        config = create_config_model(
+            'config_x',
+            script_command='bash ' + file_path,
+            parameters=[
+                create_script_param_config('p1', pass_as='stdin'),
+                create_script_param_config('p2', pass_as='stdin', stdin_expected_text='abc'),
+                create_script_param_config('p3', pass_as='stdin'),
+                create_script_param_config('p4', pass_as='stdin'),
+                create_script_param_config('p5', pass_as='stdin', no_value=True),
+                create_script_param_config('p6', pass_as='stdin', no_value=True),
+                create_script_param_config('p7', pass_as='stdin', stdin_expected_text='b'),
+            ])
+
+        executor._process_creator = create_process_wrapper
+        self.create_executor(config, {'p1': 'xxx', 'p2': 'yyy', 'p3': [1, 3, 7], 'p5': True, 'p6': False, 'p7': 'zzz'})
+        self.executor.start(123)
+
+        data = read_until_closed(self.executor.get_raw_output_stream(), 1000)
+        output = ''.join(data)
+
+        self.assertEqual(string_utils.dedent('''
+        xxx
+        1,3,7
+        true
+        false
+        ababazzz
+        bababcdefyyy
+        abc
+        inputs: 'xxx' '1,3,7' 'true' 'false' 'zzz' 'yyy'
+        '''), output)
 
     def create_executor(self, config, parameter_values):
         self.executor = ScriptExecutor(config, parameter_values, test_utils.env_variables)

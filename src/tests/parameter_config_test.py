@@ -910,6 +910,37 @@ class ParameterValueNormalizationTest(unittest.TestCase):
         self.assertEqual([], parameter.normalize_user_value(None))
 
 
+class TestPassAsValue(unittest.TestCase):
+    @parameterized.expand([
+        ('argument', True, False, False),
+        ('env_variable', False, True, False),
+        ('EnV_VariablE', False, True, False),
+        ('stdin', False, False, True),
+        ('STDIN ', False, False, True),
+        (None, True, True, False),
+        ('unknown value', True, True, False),
+    ])
+    def test_pass_as(self, config, pass_as_arg, pass_as_env, pass_as_stdin):
+        parameter = create_parameter_model('param', pass_as=config)
+
+        pass_as = parameter.pass_as
+        actual_value = (pass_as.pass_as_argument(), pass_as.pass_as_env_variable(), pass_as.pass_as_stdin())
+
+        self.assertEqual((pass_as_arg, pass_as_env, pass_as_stdin), actual_value)
+
+
+class TestStdinExpectedText(unittest.TestCase):
+
+    @parameterized.expand([
+        ('some text\nabc', 'some text\nabc'),
+        (None, None),
+    ])
+    def test_stdin_expected_text(self, config, expected_value):
+        parameter = create_parameter_model('param', stdin_expected_text=config)
+
+        self.assertEqual(expected_value, parameter.stdin_expected_text)
+
+
 class GetSortedParamConfig(unittest.TestCase):
     def test_get_sorted_when_3_fields(self):
         config = get_sorted_config({'type': 'int', 'name': 'Param X', 'required': True})

@@ -5,7 +5,7 @@ from collections import OrderedDict
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR, \
-    PARAM_TYPE_EDITABLE_LIST
+    PARAM_TYPE_EDITABLE_LIST, PASS_AS_ARGUMENT, PASS_AS_ENV_VAR, PASS_AS_STDIN
 from config.script.list_values import ConstValuesProvider, ScriptValuesProvider, EmptyValuesProvider, \
     DependantScriptValuesProvider, NoneValuesProvider, FilesProvider
 from model import model_helper
@@ -59,6 +59,8 @@ class ParameterModel(object):
         self._process_invoker = process_invoker
 
         self.name = parameter_config.get('name')
+        self.pass_as: PassAsConfiguration = _read_pass_as(parameter_config, self.name)
+        self.stdin_expected_text = parameter_config.get('stdin_expected_text')
 
         self._original_config = parameter_config
         self._parameter_values = other_param_values
@@ -511,6 +513,20 @@ class ParameterModel(object):
             update_default(None, template_property.value)
 
 
+class PassAsConfiguration:
+    def __init__(self, configured_option) -> None:
+        self._configured_option = configured_option
+
+    def pass_as_argument(self):
+        return (self._configured_option is None) or (self._configured_option == PASS_AS_ARGUMENT)
+
+    def pass_as_env_variable(self):
+        return (self._configured_option is None) or (self._configured_option == PASS_AS_ENV_VAR)
+
+    def pass_as_stdin(self):
+        return self._configured_option == PASS_AS_STDIN
+
+
 def _resolve_file_dir(config, key):
     raw_value = config.get(key)
     if not raw_value:
@@ -589,3 +605,21 @@ def get_sorted_config(param_config):
 
     sorted_config = OrderedDict(sorted(param_config.items(), key=lambda item: get_order(item[0])))
     return sorted_config
+
+
+def _read_pass_as(parameter_config, param_name):
+    default_value = PassAsConfiguration(None)
+
+    pass_as = parameter_config.get('pass_as')
+    if is_empty(pass_as):
+        return default_value
+
+    pass_as = pass_as.lower().strip()
+
+    allowed_values = [PASS_AS_ARGUMENT, PASS_AS_ENV_VAR, PASS_AS_STDIN]
+    if pass_as not in allowed_values:
+        LOGGER.warning(f'Unknown pass_as value "{pass_as}" for parameter {param_name}. '
+                       f'Should be one of: {allowed_values}')
+        return default_value
+
+    return PassAsConfiguration(pass_as)

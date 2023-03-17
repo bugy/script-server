@@ -152,7 +152,9 @@ def create_script_param_config(
         same_arg_param=None,
         values_script_shell=None,
         max_length=None,
-        regex=None):
+        regex=None,
+        pass_as=None,
+        stdin_expected_text=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -222,6 +224,12 @@ def create_script_param_config(
 
     if max_length is not None:
         conf['max_length'] = max_length
+
+    if pass_as is not None:
+        conf['pass_as'] = pass_as
+
+    if stdin_expected_text is not None:
+        conf['stdin_expected_text'] = stdin_expected_text
 
     return conf
 
@@ -302,7 +310,9 @@ def create_parameter_model(name=None,
                            other_param_values: ObservableDict = None,
                            values_script_shell=None,
                            max_length=None,
-                           regex=None):
+                           regex=None,
+                           pass_as=None,
+                           stdin_expected_text=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -323,7 +333,9 @@ def create_parameter_model(name=None,
         file_recursive=file_recursive,
         values_script_shell=values_script_shell,
         max_length=max_length,
-        regex=regex)
+        regex=regex,
+        pass_as=pass_as,
+        stdin_expected_text=stdin_expected_text)
 
     if all_parameters is None:
         all_parameters = []

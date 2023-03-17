@@ -1,11 +1,14 @@
 import logging
 import re
 import sys
+from typing import List
 
 from execution import process_popen, process_base
 from model import model_helper
 from model.model_helper import read_bool
-from utils import file_utils, process_utils, os_utils
+from model.parameter_config import ParameterModel
+from react.observable import ObservableBase
+from utils import file_utils, process_utils, os_utils, string_utils
 from utils.env_utils import EnvVariables
 from utils.transliteration import transliterate
 
@@ -105,6 +108,8 @@ class ScriptExecutor:
 
         output_stream = process_wrapper.output_stream.time_buffered(TIME_BUFFER_MS, _concat_output)
         self.raw_output_stream = output_stream.replay()
+
+        send_stdin_parameters(self.config.parameters, parameter_values, self.raw_output_stream, process_wrapper)
 
         if self.secure_replacements:
             self.protected_output_stream = output_stream \
@@ -216,6 +221,9 @@ def build_command_args(param_values, config):
         name = parameter.name
         option_name = parameter.param
 
+        if not parameter.pass_as.pass_as_argument():
+            continue
+
         if name in param_values:
             value = param_values[name]
 
@@ -270,7 +278,7 @@ def _to_env_name(key):
     return 'PARAM_' + replaced.upper()
 
 
-def _build_env_variables(parameter_values, parameters, execution_id):
+def _build_env_variables(parameter_values, parameters: List[ParameterModel], execution_id):
     result = {}
     excluded = []
     for param_name, value in parameter_values.items():
@@ -282,6 +290,9 @@ def _build_env_variables(parameter_values, parameters, execution_id):
             continue
 
         parameter = found_parameters[0]
+
+        if not parameter.pass_as.pass_as_env_variable():
+            continue
 
         env_var = parameter.env_var
         if env_var is None:
@@ -315,6 +326,36 @@ def _concat_output(output_chunks):
     return [''.join(output_chunks)]
 
 
+def send_stdin_parameters(
+        parameters: List[ParameterModel],
+        parameter_values,
+        raw_output_stream: ObservableBase,
+        process_wrapper):
+    for parameter in parameters:
+        if not parameter.pass_as.pass_as_stdin():
+            continue
+
+        value = parameter_values.get(parameter.name)
+        if value is None:
+            continue
+
+        if parameter.no_value:
+            if read_bool(value):
+                value = 'true'
+            else:
+                value = 'false'
+
+        if isinstance(value, list):
+            value = ','.join(string_utils.values_to_string(value))
+
+        if not parameter.stdin_expected_text:
+            process_wrapper.write_to_input(value)
+        else:
+            raw_output_stream.subscribe(_ExpectedTextListener(
+                parameter.stdin_expected_text,
+                lambda closed_value=value: process_wrapper.write_to_input(closed_value)))
+
+
 class _Value:
     def __init__(self, user_value, mapped_script_value, script_arg, secure_value=None):
         self.user_value = user_value
@@ -332,3 +373,41 @@ class _Value:
             return str(self.secure_value)
 
         return str(self.script_arg)
+
+
+class _ExpectedTextListener:
+    def __init__(self, expected_text, callback):
+        self.expected_text = expected_text
+        self.callback = callback
+
+        self.buffer = ''
+        self.first_char = expected_text[0]
+        self.value_sent = False
+
+    def on_next(self, output):
+        if self.value_sent:
+            return
+
+        full_text = self.buffer + output
+
+        while True:
+            start_index = full_text.find(self.first_char)
+            if start_index < 0:
+                self.buffer = ''
+                return
+
+            full_text = full_text[start_index:]
+
+            if len(full_text) < len(self.expected_text):
+                self.buffer = full_text
+                return
+
+            if full_text.startswith(self.expected_text):
+                self.callback()
+                self.value_sent = True
+                return
+
+            full_text = full_text[1:]
+
+    def on_close(self):
+        pass

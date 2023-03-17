@@ -54,6 +54,9 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
         fcntl.fcntl(self.pty_master, fcntl.F_SETFL, os.O_NONBLOCK)
 
     def write_to_input(self, value):
+        if self.is_finished():
+            return
+
         input_value = value
         if not input_value.endswith("\n"):
             input_value += "\n"

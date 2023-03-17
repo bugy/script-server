@@ -64,3 +64,14 @@ def values_to_string(value):
         return [str(element) for element in value]
 
     return value
+
+
+def dedent(multiline_text):
+    if multiline_text.startswith('\n'):
+        multiline_text = multiline_text[1:]
+
+    lines = multiline_text.split('\n')
+    for index, line in enumerate(lines):
+        lines[index] = line.lstrip()
+
+    return '\n'.join(lines)

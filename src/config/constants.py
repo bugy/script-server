@@ -4,3 +4,7 @@ PARAM_TYPE_EDITABLE_LIST = 'editable_list'
 FILE_TYPE_FILE = 'file'
 FILE_TYPE_DIR = 'dir'
 SHARED_ACCESS_TYPE_ALL = "ALL_USERS"
+
+PASS_AS_ARGUMENT = 'argument'
+PASS_AS_ENV_VAR = 'env_variable'
+PASS_AS_STDIN = 'stdin'
