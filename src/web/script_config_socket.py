@@ -70,13 +70,20 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
             data = message.get('data')
 
             if type == 'parameterValue':
+                param = data.get('parameter')
                 set_parameter_func = functools.partial(
                     self._set_parameter_value,
-                    data.get('parameter'),
+                    param,
                     data.get('value'),
                     data.get('clientStateVersion'))
 
-                self._start_task(set_parameter_func)
+                def handle_future_exception(result):
+                    if result.exception():
+                        LOGGER.exception(f'Failed to set parameter {param} value', exc_info=result.exception())
+
+                future = self._start_task(set_parameter_func)
+                future.add_done_callback(handle_future_exception)
+
                 return
             elif type == 'reloadModelValues':
                 parameter_values = data.get('parameterValues')
