@@ -1,6 +1,7 @@
 import {ReactiveWebSocket} from '@/common/connections/rxWebsocket';
 import {axiosInstance} from '@/common/utils/axios_utils';
 import {
+    contains,
     forEachKeyValue,
     HttpForbiddenError,
     HttpRequestError,
@@ -253,21 +254,23 @@ export default () => ({
                 if (parameter.name === parameterName) {
                     Vue.set(parameter, 'loading', shouldAwait)
                     parameter.awaitedVersion = newStateVersion
-                    break
                 }
             }
         },
 
-        RESET_AWAITED_DEPENDENCIES(state, {clientStateVersion}) {
+        RESET_AWAITED_DEPENDENCIES(state, {clientStateVersion, singleParameterName}) {
             if (!clientStateVersion) {
                 return
             }
 
             for (const parameter of state.parameters) {
+                if (!isNull(singleParameterName) && parameter.name !== singleParameterName) {
+                    continue
+                }
+
                 if ((parameter.awaitedVersion) && (parameter.awaitedVersion <= clientStateVersion)) {
                     Vue.set(parameter, 'loading', false)
                     parameter.awaitedVersion = null
-                    break
                 }
             }
         },
@@ -299,7 +302,11 @@ function reconnect(state, internalState, commit, dispatch, selectedScript) {
             const data = event.data;
             const clientStateVersion = event.data.clientStateVersion;
 
-            commit('RESET_AWAITED_DEPENDENCIES', {clientStateVersion})
+            if (contains(['initialConfig', 'reloadedConfig', 'clientStateVersionAccepted'], eventType)) {
+                commit('RESET_AWAITED_DEPENDENCIES', {clientStateVersion});
+            } else if (eventType === 'parameterChanged') {
+                commit('RESET_AWAITED_DEPENDENCIES', {clientStateVersion, singleParameterName: data?.name});
+            }
 
             if (isNull(state.scriptConfig) && (eventType !== 'initialConfig')) {
                 console.error('Expected "initialConfig" event, but got ' + eventType);
