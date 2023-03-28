@@ -5,7 +5,7 @@ import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptFie
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
-import {forEachKeyValue, isBlankString, setInputValue} from '@/common/utils/common';
+import {asyncForEachKeyValue, isBlankString, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {attachToDocument, createScriptServerTestVue, setChipListValue, vueTicks} from '../test_utils';
 
@@ -715,7 +715,7 @@ describe('Test ParameterConfigForm', function () {
                 'stdin': 'stdin'
             }
 
-            await forEachKeyValue(userInputToExpectedMap, async (userInput, expected) => {
+            await asyncForEachKeyValue(userInputToExpectedMap, async (userInput, expected) => {
                 await _setValueByUser('Pass as', userInput);
 
                 assertOutputValue('pass_as', expected);

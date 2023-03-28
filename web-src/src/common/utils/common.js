@@ -345,10 +345,19 @@ export function contains(array, element) {
     return array.indexOf(element) !== -1
 }
 
-export async function forEachKeyValue(array, callback) {
+export function forEachKeyValue(array, callback) {
     for (var key in array) {
         if (array.hasOwnProperty(key)) {
             var value = array[key];
+            callback(key, value);
+        }
+    }
+}
+
+export async function asyncForEachKeyValue(array, callback) {
+    for (const key in array) {
+        if (array.hasOwnProperty(key)) {
+            const value = array[key];
             await callback(key, value);
         }
     }
