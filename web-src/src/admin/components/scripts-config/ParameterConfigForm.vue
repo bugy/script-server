@@ -8,16 +8,40 @@
                 :dropdownContainer="this.$el"
                 class="col s4" @error="handleError(typeField, $event)"/>
     </div>
+
+
     <div class="row">
-      <Textfield v-model="param" :config="paramField" class="col s4" @error="handleError(paramField, $event)"/>
-      <Checkbox v-model="noValue" :config="noValueField" class="col s3 offset-s1"
-                @error="handleError(noValueField, $event)"/>
-      <Checkbox v-if="!noValue" v-model="sameArgParam" :config="sameArgParamField"
+      <Combobox v-model="passAs"
+                :config="passAsField"
+                class="col s3"/>
+
+      <Checkbox v-if="!noValue && (passAs === 'argument' || passAs === 'argument + env_variable')"
+                v-model="sameArgParam"
+                :config="sameArgParamField"
                 class="col s3" @error="handleError(sameArgParamField, $event)"/>
+
+      <Textfield
+          v-if="passAs === 'argument' || passAs === 'argument + env_variable'"
+          v-model="param" :config="paramField" class="col s3" @error="handleError(paramField, $event)"/>
+
+      <Textfield
+          v-if="passAs === 'env_variable' || passAs === 'argument + env_variable'"
+          v-model="envVar"
+          :config="envVarField"
+          class="col s3"
+          @error="handleError(envVarField, $event)"/>
+
+      <Textfield v-if="passAs === 'stdin'"
+                 v-model="stdinExpectedText"
+                 :config="stdinExpectedTextField"
+                 class="col s6"/>
+
     </div>
+
     <div class="row">
-      <Textfield v-model="envVar" :config="envVarField" class="col s4" @error="handleError(envVarField, $event)"/>
-      <Checkbox v-model="secure" :config="secureField" class="col s3 offset-s1"
+      <Checkbox v-model="noValue" :config="noValueField" class="col s3"
+                @error="handleError(noValueField, $event)"/>
+      <Checkbox v-model="secure" :config="secureField" class="col s3"
                 @error="handleError(secureField, $event)"/>
     </div>
     <div v-if="selectedType !== 'file_upload' && !noValue" class="row">
@@ -88,6 +112,18 @@
                  class="col s2"
                  @error="handleError(uiWidthWeightField, $event)"/>
     </div>
+
+    <div class="row">
+      <Combobox v-model="uiSeparatorType"
+                :config="uiSeparatorTypeField"
+                class="col s2"
+                @error="handleError(uiSeparatorTypeField, $event)"/>
+      <Textfield v-model="uiSeparatorTitle"
+                 :config="uiSeparatorTitleField"
+                 class="col s4"
+                 @error="handleError(uiSeparatorTitleField, $event)"/>
+
+    </div>
   </form>
 </template>
 
@@ -97,7 +133,7 @@ import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
 import Textfield from '@/common/components/textfield';
-import {forEachKeyValue, isEmptyArray, isEmptyString} from '@/common/utils/common';
+import {forEachKeyValue, isBlankString, isEmptyArray, isEmptyObject, isEmptyString} from '@/common/utils/common';
 import get from 'lodash/get';
 import Vue from 'vue';
 import {
@@ -117,6 +153,7 @@ import {
   nameField,
   noValueField,
   paramField,
+  passAsField,
   recursiveField,
   regexDescriptionField,
   regexPatternField,
@@ -124,7 +161,10 @@ import {
   sameArgParamField,
   secureField,
   separatorField,
+  stdinExpectedTextField,
   typeField,
+  uiSeparatorTitleField,
+  uiSeparatorTypeField,
   uiWidthWeightField
 } from './parameter-fields';
 
@@ -164,7 +204,8 @@ export default {
       separator: 'separator',
       fileDir: 'file_dir',
       recursive: 'file_recursive',
-      fileType: 'file_type'
+      fileType: 'file_type',
+      stdinExpectedText: 'stdin_expected_text'
     };
 
     forEachKeyValue(simpleFields, (vmField, configField) => {
@@ -188,6 +229,8 @@ export default {
       param: null,
       sameArgParam: null,
       envVar: null,
+      passAs: null,
+      stdinExpectedText: null,
       type: null,
       noValue: null,
       required: null,
@@ -212,8 +255,12 @@ export default {
       fileExtensions: null,
       excludedFiles: null,
       uiWidthWeight: null,
+      uiSeparatorType: null,
+      uiSeparatorTitle: null,
       nameField,
       paramField: Object.assign({}, paramField),
+      passAsField,
+      stdinExpectedTextField,
       envVarField,
       typeField,
       noValueField,
@@ -236,7 +283,9 @@ export default {
       recursiveField,
       fileTypeField,
       allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField,
-      uiWidthWeightField
+      uiWidthWeightField,
+      uiSeparatorTypeField,
+      uiSeparatorTitleField
     }
   },
 
@@ -267,7 +316,12 @@ export default {
           this.fileType = get(config, 'file_type', 'any');
           this.fileExtensions = get(config, 'file_extensions', []);
           this.excludedFiles = get(config, 'excluded_files', []);
+          this.stdinExpectedText = get(config, 'stdin_expected_text')
+          this.passAs = get(config, 'pass_as', 'argument + env_variable')
+
           this.uiWidthWeight = config['ui']?.['width_weight']
+          this.uiSeparatorType = config['ui']?.['separator_before']?.['type']
+          this.uiSeparatorTitle = config['ui']?.['separator_before']?.['title']
 
           const defaultValue = get(config, 'default', '');
           if (this.isRecursiveFile()) {
@@ -363,12 +417,19 @@ export default {
       }
     },
     uiWidthWeight() {
-      if (this.uiWidthWeight) {
-        updateValue(this.value, 'ui', {
-          'width_weight': parseInt(this.uiWidthWeight)
-        })
+      this.updateUiFields()
+    },
+    uiSeparatorType() {
+      this.updateUiFields()
+    },
+    uiSeparatorTitle() {
+      this.updateUiFields()
+    },
+    passAs() {
+      if (this.passAs === 'argument + env_variable') {
+        this.$delete(this.value, 'pass_as');
       } else {
-        this.$delete(this.value, 'ui')
+        updateValue(this.value, 'pass_as', this.passAs);
       }
     }
   },
@@ -406,6 +467,36 @@ export default {
     },
     isRecursiveFile() {
       return (this.selectedType === 'server_file') && (this.recursive);
+    },
+    updateUiFields() {
+      const newUiConfig = {}
+
+      if (this.uiWidthWeight) {
+        newUiConfig['width_weight'] = parseInt(this.uiWidthWeight)
+      }
+
+      const separatorType = !isEmptyString(this.uiSeparatorType) && (this.uiSeparatorType !== 'none')
+          ? this.uiSeparatorType
+          : null;
+      const separatorTitle = !isBlankString(this.uiSeparatorTitle)
+          ? this.uiSeparatorTitle
+          : null;
+
+      if (separatorType || separatorTitle) {
+        newUiConfig['separator_before'] = {}
+        if (separatorType) {
+          newUiConfig['separator_before']['type'] = separatorType
+        }
+        if (separatorTitle) {
+          newUiConfig['separator_before']['title'] = separatorTitle
+        }
+      }
+
+      if (!isEmptyObject(newUiConfig)) {
+        updateValue(this.value, 'ui', newUiConfig);
+      } else {
+        this.$delete(this.value, 'ui');
+      }
     },
     handleError(fieldConfig, error) {
       let fieldName;

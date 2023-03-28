@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR, \
@@ -19,6 +19,8 @@ from utils.process_utils import ProcessInvoker
 from utils.string_utils import strip
 
 LOGGER = logging.getLogger('script_server.parameter_config')
+
+ParameterUiSeparator = namedtuple('ParameterUiSeparator', ['type', 'title'])
 
 
 @observable_fields(
@@ -114,6 +116,11 @@ class ParameterModel(object):
         ui_config = config.get('ui')
         if ui_config:
             self.ui_width_weight = read_int_from_config('width_weight', ui_config)
+
+        if ui_config:
+            self.ui_separator = _read_ui_separator(ui_config)
+        else:
+            self.ui_separator = None
 
         self._validate_config()
 
@@ -623,3 +630,21 @@ def _read_pass_as(parameter_config, param_name):
         return default_value
 
     return PassAsConfiguration(pass_as)
+
+
+def _read_ui_separator(ui_config):
+    separator = ui_config.get('separator_before')
+    if not separator:
+        return None
+
+    separator_type = model_helper.read_enum(separator, 'type', ['new_line', 'line'])
+    separator_title = separator.get('title')
+
+    if separator_type is None:
+        if is_empty(separator_title):
+            raise InvalidValueException(
+                'separator_before',
+                'Invalid separator_before value: should have type or value defined')
+        separator_type = 'new_line'
+
+    return ParameterUiSeparator(separator_type, separator_title)

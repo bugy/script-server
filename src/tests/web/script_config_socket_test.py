@@ -260,7 +260,9 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
                  test_utils.create_script_param_config('list 1', type='list',
                                                        allowed_values=['A', 'B', 'C']),
                  test_utils.create_script_param_config('file 1', type='server_file',
-                                                       file_dir=test1_files_path),
+                                                       file_dir=test1_files_path,
+                                                       ui_separator_type='line',
+                                                       ui_separator_title='Some title'),
                  test_utils.create_script_param_config('list 2', type='list',
                                                        values_script='ls ' + test1_files_path + '/${file 1}')
              ]},
@@ -295,7 +297,7 @@ def _text1():
             'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
             'regex': None,
-            'ui': {'widthWeight': None}}
+            'ui': {'separatorBefore': None, 'widthWeight': None}}
 
 
 def _list1():
@@ -304,7 +306,7 @@ def _list1():
             'secure': False, 'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
             'regex': None,
-            'ui': {'widthWeight': None}}
+            'ui': {'separatorBefore': None, 'widthWeight': None}}
 
 
 def _file1():
@@ -313,7 +315,12 @@ def _file1():
             'secure': False, 'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
             'regex': None,
-            'ui': {'widthWeight': None}}
+            'ui': {
+                'separatorBefore': {
+                    'type': 'line',
+                    'title': 'Some title'
+                },
+                'widthWeight': None}}
 
 
 def _list2(list2_values):
@@ -323,7 +330,7 @@ def _list2(list2_values):
             'fileRecursive': False, 'fileType': None,
             'requiredParameters': ['file 1'],
             'regex': None,
-            'ui': {'widthWeight': None}}
+            'ui': {'separatorBefore': None, 'widthWeight': None}}
 
 
 def _included_text2():
@@ -332,5 +339,5 @@ def _included_text2():
             'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
             'regex': None,
-            'ui': {'widthWeight': None}
+            'ui': {'separatorBefore': None, 'widthWeight': None}
             }

@@ -2,6 +2,10 @@
   <div ref="parametersPanel" :style="{ 'grid-template-columns': 'repeat(' + gridColumns + ', minmax(0, 1fr))'}"
        class="script-parameters-panel">
     <template v-for="parameter in parameters">
+      <ParameterSeparator
+          v-if="parameter.ui?.separatorBefore && !startsWithNewLine(parameter)"
+          :separator="parameter.ui?.separatorBefore"
+          :style="'grid-column-start: span ' + gridColumns"/>
       <component
           :is="getComponentType(parameter)"
           :key="parameter.name"
@@ -25,11 +29,13 @@ import ServerFileField from '@/common/components/server_file_field'
 import TextArea from '@/common/components/TextArea'
 import Textfield from '@/common/components/textfield'
 import {isNull} from '@/common/utils/common';
+import ParameterSeparator from '@/main-app/components/scripts/ParameterSeparator.vue';
 import {mapActions, mapState} from 'vuex'
 import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
 
 export default {
   name: 'script-parameters-view',
+  components: {ParameterSeparator},
 
   data: function () {
     return {
@@ -114,15 +120,34 @@ export default {
 
     getGridCellStyle(parameter) {
       if (this.isInline(parameter)) {
-        let widthWeight = parameter.ui?.['widthWeight'];
-        if (widthWeight) {
-          return 'grid-column-start: span ' + Math.min(widthWeight, this.gridColumns)
+        const styles = []
+
+        if (this.startsWithNewLine(parameter)) {
+          styles.push('grid-column-start: 1')
         }
 
-        return null
+        let widthWeight = parameter.ui?.['widthWeight'];
+        if (widthWeight) {
+          styles.push('grid-column-end: span ' + Math.min(widthWeight, this.gridColumns))
+        }
+
+        return styles.join('; ')
       }
 
-      return 'grid-column-start: span ' + this.gridColumns
+      return 'grid-column-end: span ' + this.gridColumns
+    },
+
+    startsWithNewLine(parameter) {
+      const separator = parameter.ui?.separatorBefore
+      if (isNull(separator)) {
+        return false
+      }
+
+      if (separator.title) {
+        return false
+      }
+
+      return separator.type === 'new_line'
     }
   }
 }

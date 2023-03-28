@@ -51,7 +51,8 @@ def parameter_to_external(parameter):
         'fileType': parameter.file_type,
         'requiredParameters': parameter.get_required_parameters(),
         'ui': {
-            'widthWeight': parameter.ui_width_weight
+            'widthWeight': parameter.ui_width_weight,
+            'separatorBefore': parameter.ui_separator._asdict() if parameter.ui_separator else None
         }
     }
 

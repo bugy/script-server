@@ -321,3 +321,18 @@ def read_nested(json_object, path):
         return result
 
     return None
+
+
+def read_enum(config, key, allowed_values, default=None):
+    value = config.get(key)
+    if value is None:
+        return default
+
+    value = value.strip()
+
+    value_lower = value.lower()
+    for allowed_value in allowed_values:
+        if allowed_value.lower() == value_lower:
+            return allowed_value
+
+    raise InvalidValueException(key, f'Invalid "{key}" value = {value}. Should be one of: {allowed_values}')

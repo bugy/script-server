@@ -5,7 +5,7 @@ import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptFie
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
-import {isBlankString, setInputValue} from '@/common/utils/common';
+import {forEachKeyValue, isBlankString, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {attachToDocument, createScriptServerTestVue, setChipListValue, vueTicks} from '../test_utils';
 
@@ -364,6 +364,70 @@ describe('Test ParameterConfigForm', function () {
 
             expect(_findField('UI width weight', false).value).toBeNil()
         });
+
+        it('Test initial separator', async function () {
+            form.setProps({
+                value: {
+                    ui: {
+                        'separator_before': {
+                            'type': 'line',
+                            'title': 'Some title'
+                        }
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            expect(_findField('UI separator (before parameter)', false).value).toBe('line')
+            expect(_findField('UI separator title', false).value).toBe('Some title')
+        });
+
+        it('Test initial width weight when no config', async function () {
+            form.setProps({
+                value: {}
+            });
+
+            await vueTicks()
+
+            expect(_findField('UI separator (before parameter)', false).value).toBeNil()
+            expect(_findField('UI separator title', false).value).toBeNil()
+        });
+
+        it('Test passAs when not set', async function () {
+            form.setProps({
+                value: {}
+            });
+
+            await vueTicks()
+
+            expect(_findField('Pass as').value).toBe('argument + env_variable')
+        });
+
+        it('Test passAs when set', async function () {
+            for (const passAs of ['argument', 'env_variable', 'stdin']) {
+                form.setProps({
+                    value: {'pass_as': passAs}
+                });
+
+                await vueTicks()
+
+                expect(_findField('Pass as').value).toBe(passAs)
+            }
+        });
+
+        it('Test stdin expected text', async function () {
+            form.setProps({
+                value: {
+                    'pass_as': 'stdin',
+                    'stdin_expected_text': '123'
+                }
+            });
+
+            await vueTicks()
+
+            expect(_findField('Stdin expected Text').value).toBe('123')
+        });
     });
 
     describe('Test update values in form', function () {
@@ -597,7 +661,73 @@ describe('Test ParameterConfigForm', function () {
             assertOutputValue('ui', undefined);
         });
 
+        it('Test update ui separator type only', async function () {
+            await _setValueByUser('UI separator (before parameter)', 'line');
 
+            assertOutputValue('ui', {'separator_before': {'type': 'line'}});
+        });
+
+        it('Test update ui separator title only', async function () {
+            await _setValueByUser('UI separator title', 'Some title');
+
+            assertOutputValue('ui', {'separator_before': {'title': 'Some title'}});
+        });
+
+        it('Test update ui separator type and title', async function () {
+            await _setValueByUser('UI separator (before parameter)', 'new_line');
+            await _setValueByUser('UI separator title', 'Another title');
+            await _setValueByUser('Type', 'list');
+
+            assertOutputValue('type', 'list')
+            assertOutputValue('ui', {
+                'separator_before': {
+                    'type': 'new_line',
+                    'title': 'Another title'
+                }
+            });
+        });
+
+        it('Test update ui separator to empty', async function () {
+            form.setProps({
+                value: {
+                    ui: {
+                        'separator_before': {
+                            'type': 'line',
+                            'title': 'Text'
+                        }
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            await _setValueByUser('UI separator (before parameter)', 'none');
+            await _setValueByUser('UI separator title', '  ');
+
+            assertOutputValue('ui', undefined);
+        });
+
+        it('Test setting passAs values', async function () {
+            const userInputToExpectedMap = {
+                'argument + env_variable': undefined,
+                'argument': 'argument',
+                'env_variable': 'env_variable',
+                'stdin': 'stdin'
+            }
+
+            await forEachKeyValue(userInputToExpectedMap, async (userInput, expected) => {
+                await _setValueByUser('Pass as', userInput);
+
+                assertOutputValue('pass_as', expected);
+            })
+        })
+
+        it('Test setting stdin expected text', async function () {
+            await _setValueByUser('Pass as', 'stdin');
+            await _setValueByUser('Stdin expected text', '123');
+
+            assertOutputValue('stdin_expected_text', '123');
+        })
     });
 
     describe('Test parameter dependencies', function () {

@@ -154,7 +154,9 @@ def create_script_param_config(
         max_length=None,
         regex=None,
         pass_as=None,
-        stdin_expected_text=None):
+        stdin_expected_text=None,
+        ui_separator_type=None,
+        ui_separator_title=None):
     conf = {'name': param_name}
 
     if type is not None:
@@ -230,6 +232,14 @@ def create_script_param_config(
 
     if stdin_expected_text is not None:
         conf['stdin_expected_text'] = stdin_expected_text
+
+    if ui_separator_type or ui_separator_title:
+        separator_conf = {}
+        conf['ui'] = {'separator_before': separator_conf}
+        if ui_separator_type:
+            separator_conf['type'] = ui_separator_type
+        if ui_separator_title:
+            separator_conf['title'] = ui_separator_title
 
     return conf
 
@@ -312,7 +322,9 @@ def create_parameter_model(name=None,
                            max_length=None,
                            regex=None,
                            pass_as=None,
-                           stdin_expected_text=None):
+                           stdin_expected_text=None,
+                           ui_separator_type=None,
+                           ui_separator_title=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -335,7 +347,9 @@ def create_parameter_model(name=None,
         max_length=max_length,
         regex=regex,
         pass_as=pass_as,
-        stdin_expected_text=stdin_expected_text)
+        stdin_expected_text=stdin_expected_text,
+        ui_separator_type=ui_separator_type,
+        ui_separator_title=ui_separator_title)
 
     if all_parameters is None:
         all_parameters = []

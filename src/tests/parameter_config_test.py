@@ -7,7 +7,8 @@ from parameterized import parameterized
 
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from model import parameter_config
-from model.parameter_config import get_sorted_config
+from model.model_helper import InvalidValueException
+from model.parameter_config import get_sorted_config, ParameterUiSeparator
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
 from tests.test_utils import create_parameter_model, create_parameter_model_from_config
@@ -51,7 +52,11 @@ class ParameterModelInitTest(unittest.TestCase):
             'constant': 'false',
             'values': values,
             'ui': {
-                'width_weight': '3'
+                'width_weight': '3',
+                'separator_before': {
+                    'type': 'line',
+                    'title': 'Some title'
+                }
             }
         })
 
@@ -69,6 +74,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual(type, parameter_model.type)
         self.assertEqual(False, parameter_model.constant)
         self.assertEqual(3, parameter_model.ui_width_weight)
+        self.assertEqual(ParameterUiSeparator('line', 'Some title'), parameter_model.ui_separator)
         self.assertCountEqual(values, parameter_model.values)
 
     def test_default_settings(self):
@@ -81,6 +87,7 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual('text', parameter_model.type)
         self.assertEqual(False, parameter_model.constant)
         self.assertEqual(None, parameter_model.ui_width_weight)
+        self.assertEqual(None, parameter_model.ui_separator)
 
     def test_default_value_from_env(self):
         test_utils.set_os_environ_value('my_env_var', 'sky')
@@ -939,6 +946,38 @@ class TestStdinExpectedText(unittest.TestCase):
         parameter = create_parameter_model('param', stdin_expected_text=config)
 
         self.assertEqual(expected_value, parameter.stdin_expected_text)
+
+
+class TestUiSeparator(unittest.TestCase):
+
+    @parameterized.expand([
+        ('line', None, 'line', None),
+        ('new_line', None, 'new_line', None),
+        (' New_Line ', None, 'new_line', None),
+        (None, 'Some title', 'new_line', 'Some title'),
+        ('line', '', 'line', None),
+        ('line', 'Title', 'line', 'Title'),
+    ])
+    def test_valid_values(self, configured_type, configured_title, expected_type, expected_title):
+        parameter = create_parameter_model(
+            'param',
+            ui_separator_type=configured_type,
+            ui_separator_title=configured_title)
+
+        self.assertEqual(ParameterUiSeparator(expected_type, expected_title), parameter.ui_separator)
+
+    @parameterized.expand([
+        ('block', None, 'Invalid "type" value = block.*'),
+    ])
+    def test_invalid_values(self, configured_type, configured_title, expected_regex):
+        self.assertRaisesRegex(
+            InvalidValueException,
+            expected_regex,
+            create_parameter_model,
+            'param',
+            ui_separator_type=configured_type,
+            ui_separator_title=configured_title
+        )
 
 
 class GetSortedParamConfig(unittest.TestCase):

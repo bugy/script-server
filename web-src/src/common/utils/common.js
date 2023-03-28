@@ -345,11 +345,11 @@ export function contains(array, element) {
     return array.indexOf(element) !== -1
 }
 
-export function forEachKeyValue(array, callback) {
+export async function forEachKeyValue(array, callback) {
     for (var key in array) {
         if (array.hasOwnProperty(key)) {
             var value = array[key];
-            callback(key, value);
+            await callback(key, value);
         }
     }
 }

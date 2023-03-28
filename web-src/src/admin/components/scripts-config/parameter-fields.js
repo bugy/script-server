@@ -12,6 +12,23 @@ export const paramField = {
     description: 'Allows to specify command-line option for the parameter (e.g. -q or --quiet)'
 };
 
+export const passAsField = {
+    name: 'Pass as',
+    description: 'Specifies, how the parameter value should be sent',
+    type: 'list',
+    values: [
+        'argument + env_variable',
+        'argument',
+        'env_variable',
+        'stdin'
+    ]
+}
+
+export const stdinExpectedTextField = {
+    name: 'Stdin expected text',
+    description: 'Parameter value will be sent to stdin after this text is found in the output'
+}
+
 export const envVarField = {
     name: 'Env variable',
     description: 'Environment variable, which will be associated with the parameter (by default PARAM_{uppercase name})'
@@ -150,4 +167,15 @@ export const uiWidthWeightField = {
     type: 'int',
     min: 1,
     max: 10
+};
+
+export const uiSeparatorTypeField = {
+    name: 'UI separator (before parameter)',
+    description: 'Allows to insert a separator BEFORE the parameter. line type stands for a horizontal line',
+    type: 'list',
+    values: ['none', 'new_line', 'line']
+};
+
+export const uiSeparatorTitleField = {
+    name: 'UI separator title'
 };
