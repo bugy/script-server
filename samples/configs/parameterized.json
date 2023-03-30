@@ -30,6 +30,9 @@
       "param": "--simple_list=",
       "same_arg_param": true,
       "type": "list",
+      "default": {
+        "script": "echo ${Simple Text}"
+      },
       "description": "Parameter Five",
       "values": [
         "val1",
@@ -64,6 +67,12 @@
       "required": true,
       "param": "--required_text",
       "description": "Parameter One",
+      "ui": {
+        "separator_before": {
+          "type": "new_line",
+          "title": "Validated fields"
+        }
+      },
       "env_var": "Req_Text"
     },
     {
@@ -85,7 +94,8 @@
       "default": "5",
       "description": "Parameter Three",
       "min": "-1",
-      "max": "123"
+      "max": "123",
+      "pass_as": "argument"
     },
     {
       "name": "Default Text",
@@ -94,7 +104,13 @@
       "default": {
         "script": "echo ${Required List}"
       },
-      "description": "Text with default value and required"
+      "description": "Text with default value and required",
+      "ui": {
+        "separator_before": {
+          "type": "line",
+          "title": "Default values"
+        }
+      }
     },
     {
       "name": "Default Boolean",
@@ -117,7 +133,14 @@
       "description": "List parameter 2",
       "values": {
         "script": "ls /var | grep -v lock | grep -v backups"
-      }
+      },
+      "ui": {
+        "separator_before": {
+          "type": "new_line"
+        }
+      },
+      "pass_as": "stdin",
+      "stdin_expected_text": "--file_upload"
     },
     {
       "name": "List with search",
@@ -142,10 +165,30 @@
       ]
     },
     {
+      "name": "Very long list",
+      "param": "--very_long_list",
+      "type": "list",
+      "description": "List with very long values",
+      "values": [
+        "some quite long line",
+        "short",
+        "a bit longer",
+        "abcdefghijklmopqrstuvwxyz",
+        "/home/whoever/wherever/temp/stuff/internal/my_important_file-180214.txt",
+        "abcde-fghijk:lmopqr.stuvwx_yzabcd efghij.klmopq-rstuv%wxyz"
+      ]
+    },
+    {
       "name": "Secure Int",
       "type": "int",
       "description": "Parameter Nine",
-      "secure": true
+      "secure": true,
+      "ui": {
+        "separator_before": {
+          "type": "line"
+        }
+      },
+      "pass_as": "env_variable"
     },
     {
       "name": "Secure List",
@@ -158,20 +201,6 @@
         "qwerty",
         "12345678",
         "password"
-      ]
-    },
-    {
-      "name": "Very long list",
-      "param": "--very_long_list",
-      "type": "list",
-      "description": "List with very long values",
-      "values": [
-        "some quite long line",
-        "short",
-        "a bit longer",
-        "abcdefghijklmopqrstuvwxyz",
-        "/home/whoever/wherever/temp/stuff/internal/my_important_file-180214.txt",
-        "abcde-fghijk:lmopqr.stuvwx_yzabcd efghij.klmopq-rstuv%wxyz"
       ]
     },
     {
@@ -272,7 +301,8 @@
         "Value A",
         "Value B",
         "Value C"
-      ]
+      ],
+      "pass_as": "stdin"
     },
     {
       "name": "Multiline test",
