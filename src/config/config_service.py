@@ -49,10 +49,10 @@ def _preprocess_incoming_config(config):
     config['name'] = name.strip()
 
 
-def _add_date_prefix_to_filename(filename):
+def _create_archive_filename(filename):
     current_datetime = datetime.now()
     formatted_datetime = current_datetime.strftime('%Y%m%d%H%M%S')
-    return f"{formatted_datetime}_{filename}"
+    return f"{formatted_datetime}_{filename}.deleted"
 
 
 class ConfigService:
@@ -148,11 +148,8 @@ class ConfigService:
                 f'{str(user)} has no admin access to {short_config.name}'
             )
 
-        archived_configs_folder = os.path.join(self._script_configs_folder, '..', 'deleted')
-        file_utils.prepare_folder(archived_configs_folder)
-
-        archive_file_name = _add_date_prefix_to_filename(os.path.basename(path))
-        archive_file_path = os.path.join(archived_configs_folder, archive_file_name)
+        archive_file_name = _create_archive_filename(os.path.basename(path))
+        archive_file_path = os.path.join(self._scripts_deleted_folder, archive_file_name)
         unique_archive_file_path = file_utils.create_unique_filename(archive_file_path, 100)
 
         LOGGER.info(
