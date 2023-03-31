@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+import shutil
 from typing import NamedTuple, Optional
 
 from auth.authorization import Authorizer
@@ -13,6 +14,8 @@ from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
 from utils.process_utils import ProcessInvoker
 from utils.string_utils import is_blank, strip
+from datetime import datetime
+
 
 SCRIPT_EDIT_CODE_MODE = 'new_code'
 SCRIPT_EDIT_UPLOAD_MODE = 'upload_script'
@@ -44,6 +47,12 @@ def _preprocess_incoming_config(config):
     if is_blank(name):
         raise InvalidConfigException('Script name is required')
     config['name'] = name.strip()
+
+
+def _add_date_prefix_to_filename(filename):
+    current_datetime = datetime.now()
+    formatted_datetime = current_datetime.strftime('%Y%m%d%H%M%S')
+    return f"{formatted_datetime}_{filename}"
 
 
 class ConfigService:
@@ -121,6 +130,33 @@ class ConfigService:
 
         LOGGER.info('Updating script config "' + name + '" in ' + original_file_path)
         self._save_config(config, original_file_path)
+
+
+    def delete_config(self, user, name):
+        self._check_admin_access(user)
+
+        search_result = self._find_config(name, user)
+        if search_result is None:
+            raise InvalidConfigException(f'Config with the name "{name}" not found')
+
+        (short_config, path, config_object) = search_result
+
+        if not self._can_edit_script(user, short_config):
+            raise ConfigNotAllowedException(
+                f'{str(user)} has no admin access to {short_config.name}'
+            )
+
+        archived_configs_folder = os.path.join(self._script_configs_folder, '..', 'deleted')
+        file_utils.prepare_folder(archived_configs_folder)
+
+        archive_file_name = _add_date_prefix_to_filename(os.path.basename(path))
+        archive_file_path = os.path.join(archived_configs_folder, archive_file_name)
+        unique_archive_file_path = file_utils.create_unique_filename(archive_file_path, 100)
+
+        LOGGER.info(
+            f'Archiving script config "{name}" from {path} to {unique_archive_file_path}'
+        )
+        shutil.move(path, unique_archive_file_path)
 
     def load_script_code(self, script_name, user):
         if not self._authorizer.can_edit_code(user.user_id):
