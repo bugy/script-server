@@ -83,7 +83,8 @@ export default {
         },
 
         deleteScript({}, {scriptName}) {
-            return axiosInstance.delete(`admin/scripts/${encodeURIComponent(scriptName)}`).then(() => {
+            return axiosInstance.delete(`admin/scripts/${encodeURIComponent(scriptName)}`)
+            .then(() => {
                     router.push({
                         path: `/scripts/`
                     });
