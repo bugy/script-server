@@ -60,9 +60,11 @@ class ConfigService:
         self._authorizer = authorizer  # type: Authorizer
         self._script_configs_folder = os.path.join(conf_folder, 'runners')
         self._scripts_folder = os.path.join(conf_folder, 'scripts')
+        self._scripts_deleted_folder = os.path.join(conf_folder, 'deleted')
         self._process_invoker = process_invoker
 
         file_utils.prepare_folder(self._script_configs_folder)
+        file_utils.prepare_folder(self._scripts_deleted_folder)
 
     def load_config(self, name, user):
         self._check_admin_access(user)
