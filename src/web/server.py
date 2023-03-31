@@ -182,7 +182,7 @@ class AdminUpdateScriptEndpoint(BaseRequestHandler):
         return config, filename, uploaded_script
 
 
-class AdminGetScriptEndpoint(BaseRequestHandler):
+class AdminScriptEndpoint(BaseRequestHandler):
     @requires_admin_rights
     @inject_user
     def get(self, user, script_name):
@@ -200,6 +200,27 @@ class AdminGetScriptEndpoint(BaseRequestHandler):
             raise tornado.web.HTTPError(404, str('Failed to find config for name: ' + script_name))
 
         self.write(json.dumps(config))
+
+
+    @requires_admin_rights
+    @inject_user
+    def delete(self, user, script_name):
+        try:
+            self.application.config_service.delete_config(user, script_name)
+        except ConfigNotAllowedException:
+            LOGGER.warning(
+                f'Admin access to the script "{script_name}" is denied for {user.get_audit_name()}'
+            )
+            respond_error(self, 403, 'Access to the script is denied')
+            return
+        except NotFoundException as e:
+            LOGGER.warning(f'Failed to delete script {script_name}', exc_info=True)
+            respond_error(self, 404, str(e))
+            return
+        except InvalidAccessException as e:
+            raise tornado.web.HTTPError(403, reason=str(e)) from e
+
+        self.set_status(204)
 
 
 class AdminGetScriptCodeEndpoint(BaseRequestHandler):
@@ -832,7 +853,7 @@ def init(server_config: ServerConfig,
                  DownloadResultFile,
                  {'path': downloads_folder}),
                 (r'/admin/scripts', AdminUpdateScriptEndpoint),
-                (r'/admin/scripts/([^/]*)', AdminGetScriptEndpoint),
+                (r'/admin/scripts/([^/]+)', AdminScriptEndpoint),
                 (r'/admin/scripts/([^/]*)/code', AdminGetScriptCodeEndpoint),
                 (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
 
