@@ -8,6 +8,9 @@
           <h5>Parameters</h5>
           <ScriptParamList :parameters="scriptConfig.parameters"/>
         </div>
+        <div v-if="scriptName !== NEW_SCRIPT">
+          <PromisableButton :click="onDeleteScript" class="delete-button" title="Delete"/>
+        </div>
       </div>
     </div>
     <footer class="page-footer primary-color-dark">
@@ -22,6 +25,7 @@ import {mapActions, mapState} from 'vuex';
 import ParameterConfigForm from './ParameterConfigForm';
 import ScriptConfigForm from './ScriptConfigForm';
 import ScriptParamList from './ScriptParamList';
+import {NEW_SCRIPT} from '@/admin/store/script-config-module';
 
 export default {
   name: 'ScriptConfig',
@@ -33,14 +37,20 @@ export default {
   },
 
   methods: {
-    ...mapActions('scriptConfig', ['init', 'save'])
+    ...mapActions('scriptConfig', ['init', 'save', 'deleteScript']),
+    async onDeleteScript() {
+        await this.deleteScript({scriptName: this.scriptName});
+    }
   },
 
   computed: {
     ...mapState('scriptConfig', {
       scriptConfig: 'scriptConfig',
       loadingError: 'error'
-    })
+    }),
+    NEW_SCRIPT() {
+      return NEW_SCRIPT;
+    }
   },
 
   watch: {
@@ -52,7 +62,6 @@ export default {
     }
   }
 }
-
 </script>
 
 <style scoped>
@@ -106,5 +115,13 @@ footer.page-footer {
 
 .script-config >>> footer.page-footer .btn-flat i {
   font-size: 24px;
+}
+
+.script-config >>> .delete-button {
+  background-color: red;
+  color: white;
+  width: 128px;
+  text-align: center;
+  margin: 2rem 0;
 }
 </style>
