@@ -80,7 +80,21 @@ export default {
                     }
                     throw e;
                 });
-        }
+        },
+
+        deleteScript({}, {scriptName}) {
+            return axiosInstance.delete(`admin/scripts/${encodeURIComponent(scriptName)}`).then(() => {
+                    router.push({
+                        path: `/scripts/`
+                    });
+            })
+            .catch(e => {
+                if (e.response.status === 422) {
+                  e.userMessage = e.response.data;
+                }
+                throw e;
+              });
+          },
     },
     mutations: {
         RESET(state, scriptName) {
