@@ -13,7 +13,7 @@
     <footer class="page-footer primary-color-dark">
       <div class="footer-left">
         <PromisableButton v-if="scriptName !== NEW_SCRIPT"
-                          :click="onDeleteScript"
+                          :click="deleteScript"
                           class="delete-button"
                           icon-text="delete"
                           title="Delete"/>
@@ -44,10 +44,7 @@ export default {
   },
 
   methods: {
-    ...mapActions('scriptConfig', ['init', 'save', 'deleteScript']),
-    async onDeleteScript() {
-      await this.deleteScript({scriptName: this.scriptName});
-    }
+    ...mapActions('scriptConfig', ['init', 'save', 'deleteScript'])
   },
 
   computed: {

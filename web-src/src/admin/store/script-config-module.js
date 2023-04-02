@@ -1,8 +1,8 @@
+import {UPLOAD_MODE} from '@/admin/components/scripts-config/script-edit/ScriptEditDialog'
+import {axiosInstance} from '@/common/utils/axios_utils';
 import {contains, forEachKeyValue, isEmptyArray, isEmptyValue} from '@/common/utils/common';
 import clone from 'lodash/clone';
 import router from '../router/router'
-import {axiosInstance} from '@/common/utils/axios_utils';
-import {UPLOAD_MODE} from '@/admin/components/scripts-config/script-edit/ScriptEditDialog'
 
 const allowedEmptyValuesInParam = ['name'];
 
@@ -82,18 +82,20 @@ export default {
                 });
         },
 
-        deleteScript({}, {scriptName}) {
-            return axiosInstance.delete(`admin/scripts/${encodeURIComponent(scriptName)}`)
-            .then(() => {
+        deleteScript({state}) {
+            const oldName = state.scriptName;
+
+            return axiosInstance.delete(`admin/scripts/${encodeURIComponent(oldName)}`)
+                .then(() => {
                     router.push({
                         path: `/scripts/`
                     });
-            })
-            .catch(e => {
-                if (e.response.status === 422) {
-                  e.userMessage = e.response.data;
-                }
-                throw e;
+                })
+                .catch(e => {
+                    if (e.response.status === 422) {
+                        e.userMessage = e.response.data;
+                    }
+                    throw e;
               });
           },
     },
