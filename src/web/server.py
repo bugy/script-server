@@ -219,8 +219,6 @@ class AdminScriptEndpoint(BaseRequestHandler):
         except InvalidAccessException as e:
             raise tornado.web.HTTPError(403, reason=str(e)) from e
 
-        return
-
 
 class AdminGetScriptCodeEndpoint(BaseRequestHandler):
     @requires_admin_rights
