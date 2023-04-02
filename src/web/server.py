@@ -201,7 +201,6 @@ class AdminScriptEndpoint(BaseRequestHandler):
 
         self.write(json.dumps(config))
 
-
     @requires_admin_rights
     @inject_user
     def delete(self, user, script_name):

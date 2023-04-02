@@ -2,6 +2,7 @@
   <a :disabled="!enabled" class="save-button waves-effect btn-flat promisable-button"
      @click="onClick">
 
+    <i v-if="iconText && !error && !inProgress" class="material-icons">{{ iconText }}</i>
     <i v-if="error" :title="error" class="material-icons">warning</i>
     <div v-if="inProgress" :style="preloaderStyle" class="preloader-wrapper small active">
       <div class="spinner-layer">
@@ -37,8 +38,14 @@ export default {
       default: () => {
       }
     },
+
     enabled: {
       default: true
+    },
+
+    iconText: {
+      type: String,
+      default: null
     }
   },
 

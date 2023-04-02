@@ -8,24 +8,31 @@
           <h5>Parameters</h5>
           <ScriptParamList :parameters="scriptConfig.parameters"/>
         </div>
-        <div v-if="scriptName !== NEW_SCRIPT">
-          <PromisableButton :click="onDeleteScript" class="delete-button" title="Delete"/>
-        </div>
       </div>
     </div>
     <footer class="page-footer primary-color-dark">
+      <div class="footer-left">
+        <PromisableButton v-if="scriptName !== NEW_SCRIPT"
+                          :click="onDeleteScript"
+                          class="delete-button"
+                          icon-text="delete"
+                          title="Delete"/>
+      </div>
+
       <PromisableButton :click="save" title="Save"/>
+
+      <div class="footer-right"/>
     </footer>
   </div>
 </template>
 
 <script>
+import {NEW_SCRIPT} from '@/admin/store/script-config-module';
 import PromisableButton from '@/common/components/PromisableButton';
 import {mapActions, mapState} from 'vuex';
 import ParameterConfigForm from './ParameterConfigForm';
 import ScriptConfigForm from './ScriptConfigForm';
 import ScriptParamList from './ScriptParamList';
-import {NEW_SCRIPT} from '@/admin/store/script-config-module';
 
 export default {
   name: 'ScriptConfig',
@@ -39,7 +46,7 @@ export default {
   methods: {
     ...mapActions('scriptConfig', ['init', 'save', 'deleteScript']),
     async onDeleteScript() {
-        await this.deleteScript({scriptName: this.scriptName});
+      await this.deleteScript({scriptName: this.scriptName});
     }
   },
 
@@ -92,16 +99,21 @@ footer.page-footer {
   padding-top: 0;
 
   flex: 0 0 0;
+
+  display: flex;
 }
 
 .script-config >>> footer.page-footer a.btn-flat {
   height: 48px;
   line-height: 48px;
-  width: 128px;
+  width: 136px;
   text-align: center;
   font-size: 16px;
-  margin-right: auto;
-  margin-left: auto;
+}
+
+.script-config .footer-left,
+.script-config .footer-right {
+  flex: 1 1 0;
 }
 
 .script-config >>> footer.page-footer .preloader-wrapper {
@@ -117,11 +129,4 @@ footer.page-footer {
   font-size: 24px;
 }
 
-.script-config >>> .delete-button {
-  background-color: red;
-  color: white;
-  width: 128px;
-  text-align: center;
-  margin: 2rem 0;
-}
 </style>
