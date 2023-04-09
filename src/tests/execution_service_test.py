@@ -170,7 +170,8 @@ class ExecutionServiceTest(unittest.TestCase):
             'test_get_user_parameter_values',
             username=DEFAULT_USER_ID,
             parameters=parameters.values())
-        execution_id = self._start_with_config(execution_service, config_model, parameter_values)
+        config_model.set_all_param_values(parameter_values)
+        execution_id = self._start_with_config(execution_service, config_model)
 
         self.assertEqual(parameter_values, execution_service.get_user_parameter_values(execution_id))
 
@@ -187,7 +188,8 @@ class ExecutionServiceTest(unittest.TestCase):
             'test_get_user_parameter_values',
             username=DEFAULT_USER_ID,
             parameters=parameters.values())
-        execution_id = self._start_with_config(execution_service, config_model, parameter_values)
+        config_model.set_all_param_values(parameter_values)
+        execution_id = self._start_with_config(execution_service, config_model)
 
         self.assertEqual({'x': 1, 'y': '2', 'z': True, 'const': 'abc'},
                          execution_service.get_script_parameter_values(execution_id))
@@ -237,15 +239,9 @@ class ExecutionServiceTest(unittest.TestCase):
     def _start(self, execution_service, user_id=DEFAULT_USER_ID):
         return _start(execution_service, user_id)
 
-    def _start_with_config(self, execution_service, config, parameter_values=None, user_id=DEFAULT_USER_ID):
-        if parameter_values is None:
-            parameter_values = {}
-
+    def _start_with_config(self, execution_service, config, user_id=DEFAULT_USER_ID):
         user = User(user_id, DEFAULT_AUDIT_NAMES)
-        execution_id = execution_service.start_script(
-            config,
-            parameter_values,
-            user)
+        execution_id = execution_service.start_script(config, user)
         return execution_id
 
     def create_execution_service(self):
@@ -416,10 +412,11 @@ def _start_with_config(execution_service, config, parameter_values=None, user_id
     if parameter_values is None:
         parameter_values = {}
 
+    config.set_all_param_values(parameter_values)
+
     user = User(user_id, DEFAULT_AUDIT_NAMES)
     execution_id = execution_service.start_script(
         config,
-        parameter_values,
         user)
     execution_owners[execution_id] = user
     return execution_id

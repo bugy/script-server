@@ -525,7 +525,6 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
     def test_start_logging_on_execution_start(self):
         execution_id = self.executor_service.start_script(
             create_config_model('my_script'),
-            {},
             User('userX', create_audit_names(ip='localhost')))
 
         executor = self.executor_service.get_active_executor(execution_id, USER_X)
@@ -544,10 +543,10 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
             script_command='echo',
             parameters=[param1, param2, param3, param4],
             logging_config=LoggingConfig('test-${SCRIPT}-${p1}'))
+        config_model.set_all_param_values({'p1': 'abc', 'p3': True, 'p4': 987})
 
         execution_id = self.executor_service.start_script(
             config_model,
-            {'p1': 'abc', 'p3': True, 'p4': 987},
             User('userX', create_audit_names(ip='localhost', auth_username='sandy')))
 
         executor = self.executor_service.get_active_executor(execution_id, USER_X)
@@ -577,7 +576,6 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         execution_id = self.executor_service.start_script(
             config_model,
-            {},
             User('userX', create_audit_names(ip='localhost')))
 
         executor = self.executor_service.get_active_executor(execution_id, USER_X)

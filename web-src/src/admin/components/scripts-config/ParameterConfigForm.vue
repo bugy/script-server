@@ -124,16 +124,23 @@
                  @error="handleError(uiSeparatorTitleField, $event)"/>
 
     </div>
+
+    <div v-if="type === 'list' || type === 'multiselect'" class="row">
+      <ParameterSeparator :separator="{'type': 'line', 'title': 'Values UI Mapping'}" class="col s12"/>
+      <ParameterValuesUiMapping v-model="valuesUiMapping" class="col s12"/>
+    </div>
   </form>
 </template>
 
 <script>
+import ParameterValuesUiMapping from '@/admin/components/scripts-config/ParameterValuesUiMapping.vue';
 import Checkbox from '@/common/components/checkbox';
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
 import Textfield from '@/common/components/textfield';
 import {forEachKeyValue, isBlankString, isEmptyArray, isEmptyObject, isEmptyString} from '@/common/utils/common';
+import ParameterSeparator from '@/main-app/components/scripts/ParameterSeparator.vue';
 import get from 'lodash/get';
 import Vue from 'vue';
 import {
@@ -177,7 +184,7 @@ function updateValue(value, configField, newValue) {
 
 export default {
   name: 'ParameterConfigForm',
-  components: {ChipsList, TextArea, Checkbox, Combobox, Textfield},
+  components: {ParameterValuesUiMapping, ParameterSeparator, ChipsList, TextArea, Checkbox, Combobox, Textfield},
   props: {
     value: {
       type: Object,
@@ -205,23 +212,14 @@ export default {
       fileDir: 'file_dir',
       recursive: 'file_recursive',
       fileType: 'file_type',
-      stdinExpectedText: 'stdin_expected_text'
+      stdinExpectedText: 'stdin_expected_text',
+      valuesUiMapping: 'values_ui_mapping'
     };
 
     forEachKeyValue(simpleFields, (vmField, configField) => {
       this.$watch(vmField, (newValue) => updateValue(this.value, configField, newValue));
     });
-
-    for (const child of this.$children) {
-      let fieldName;
-      if (child.$options._componentTag === ChipsList.name) {
-        fieldName = child.title;
-      } else {
-        fieldName = child.$props.config.name;
-      }
-    }
   },
-
 
   data() {
     return {
@@ -244,6 +242,7 @@ export default {
       allowedValuesScript: null,
       allowedValuesFromScript: null,
       allowedValuesScriptShellEnabled: null,
+      valuesUiMapping: null,
       defaultValue: null,
       constant: null,
       secure: null,
@@ -318,6 +317,7 @@ export default {
           this.excludedFiles = get(config, 'excluded_files', []);
           this.stdinExpectedText = get(config, 'stdin_expected_text')
           this.passAs = get(config, 'pass_as', 'argument + env_variable')
+          this.valuesUiMapping = get(config, 'values_ui_mapping', {})
 
           this.uiWidthWeight = config['ui']?.['width_weight']
           this.uiSeparatorType = config['ui']?.['separator_before']?.['type']

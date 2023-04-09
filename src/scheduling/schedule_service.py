@@ -85,7 +85,11 @@ class ScheduleService:
 
         id = self._id_generator.next_id()
 
-        normalized_values = dict(config_model.parameter_values)
+        normalized_values = {}
+        for parameter_name, value_wrapper in config_model.parameter_values.items():
+            if value_wrapper.user_value is not None:
+                normalized_values[parameter_name] = value_wrapper.user_value
+
         job = SchedulingJob(id, user, schedule_config, script_name, normalized_values)
 
         job_path = self.save_job(job)
@@ -131,7 +135,7 @@ class ScheduleService:
             config = self._config_service.load_config_model(script_name, user, parameter_values)
             self.validate_script_config(config)
 
-            execution_id = self._execution_service.start_script(config, parameter_values, user)
+            execution_id = self._execution_service.start_script(config, user)
             LOGGER.info('Started script #' + str(execution_id) + ' for ' + job.get_log_name())
 
             if config.scheduling_auto_cleanup:

@@ -188,7 +188,7 @@ def is_empty(value):
     return (not value) and (value != 0) and (value is not False)
 
 
-def fill_parameter_values(parameter_configs, template, values):
+def fill_parameter_values(parameter_configs, template, value_wrappers):
     result = template
 
     for parameter_config in parameter_configs:
@@ -196,14 +196,11 @@ def fill_parameter_values(parameter_configs, template, values):
             continue
 
         parameter_name = parameter_config.name
-        value = values.get(parameter_name)
+        value_wrapper = value_wrappers.get(parameter_name)
+        value = value_wrapper.mapped_script_value if value_wrapper else None
 
         if value is None:
             value = ''
-
-        if not isinstance(value, str):
-            mapped_value = parameter_config.map_to_script(value)
-            value = parameter_config.to_script_args(mapped_value)
 
         result = result.replace('${' + parameter_name + '}', str(value))
 

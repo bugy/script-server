@@ -54,7 +54,7 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         self.socket.write_message(json.dumps({
             'event': 'reloadModelValues',
             'data': {'clientModelId': 'abcd',
-                     'parameterValues': {'list 1': 'A', 'file 1': 'z', 'list 2': 'z1.txt'}}}))
+                     'parameterValues': {'list 1': 'Value a', 'file 1': 'z', 'list 2': 'z1.txt'}}}))
 
         response = yield self.socket.read_message()
         self.assertIsNone(self.socket.close_reason)
@@ -106,7 +106,7 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         self.socket.write_message(json.dumps({
             'event': 'reloadModelValues',
             'data': {'clientModelId': 'abcd',
-                     'parameterValues': {'list 1': 'A', 'file 1': 'y', 'list 2': 'y1.txt'},
+                     'parameterValues': {'list 1': 'Value a', 'file 1': 'y', 'list 2': 'y1.txt'},
                      'clientStateVersion': 7}}))
 
         self._assert_parameter_change((yield self.socket.read_message()),
@@ -258,13 +258,15 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
              'parameters': [
                  test_utils.create_script_param_config('text 1', required=True),
                  test_utils.create_script_param_config('list 1', type='list',
-                                                       allowed_values=['A', 'B', 'C']),
+                                                       allowed_values=['A', 'B', 'C'],
+                                                       values_ui_mapping={'A': 'Value a', 'C': 'Customer'},
+                                                       default='C'),
                  test_utils.create_script_param_config('file 1', type='server_file',
                                                        file_dir=test1_files_path,
                                                        ui_separator_type='line',
                                                        ui_separator_title='Some title'),
                  test_utils.create_script_param_config('list 2', type='list',
-                                                       values_script='ls ' + test1_files_path + '/${file 1}')
+                                                       values_script='ls ${file 1}')
              ]},
             'test_script_1')
 
@@ -301,8 +303,8 @@ def _text1():
 
 
 def _list1():
-    return {'name': 'list 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
-            'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': ['A', 'B', 'C'],
+    return {'name': 'list 1', 'description': None, 'withoutValue': False, 'required': False, 'default': 'Customer',
+            'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': ['Value a', 'B', 'Customer'],
             'secure': False, 'fileRecursive': False, 'fileType': None,
             'requiredParameters': [],
             'regex': None,

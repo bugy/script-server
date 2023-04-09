@@ -18,9 +18,6 @@ class ValuesProvider(metaclass=abc.ABCMeta):
     def get_values(self, parameter_values):
         pass
 
-    def map_value(self, user_value):
-        return user_value
-
 
 class EmptyValuesProvider(ValuesProvider):
 
@@ -88,8 +85,8 @@ class DependantScriptValuesProvider(ValuesProvider):
 
     def get_values(self, parameter_values):
         for param_name in self._required_parameters:
-            value = parameter_values.get(param_name)
-            if is_empty(value):
+            value_wrapper = parameter_values.get(param_name)
+            if (value_wrapper is None) or is_empty(value_wrapper.mapped_script_value):
                 return []
 
         parameters = self._parameters_supplier()

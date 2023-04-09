@@ -7,6 +7,7 @@ from execution import process_popen, process_base
 from model import model_helper
 from model.model_helper import read_bool
 from model.parameter_config import ParameterModel
+from model.script_config import ConfigModel
 from react.observable import ObservableBase
 from utils import file_utils, process_utils, os_utils, string_utils
 from utils.env_utils import EnvVariables
@@ -44,40 +45,11 @@ def _normalize_working_dir(working_directory):
     return file_utils.normalize_path(working_directory)
 
 
-def _wrap_values(user_values, parameters):
-    result = {}
-    for parameter in parameters:
-        name = parameter.name
-
-        if parameter.constant:
-            value = parameter.default
-            result[name] = _Value(None, value, value, parameter.value_to_str(value))
-            continue
-
-        if name in user_values:
-            user_value = user_values[name]
-
-            if parameter.no_value:
-                bool_value = model_helper.read_bool(user_value)
-                result[name] = _Value(user_value, bool_value, bool_value)
-                continue
-
-            elif user_value:
-                mapped_value = parameter.map_to_script(user_value)
-                script_arg = parameter.to_script_args(mapped_value)
-                secure_value = parameter.get_secured_value(script_arg)
-                result[name] = _Value(user_value, mapped_value, script_arg, secure_value)
-        else:
-            result[name] = _Value(None, None, None)
-
-    return result
-
-
 class ScriptExecutor:
-    def __init__(self, config, parameter_values, env_vars: EnvVariables):
+    def __init__(self, config: ConfigModel, env_vars: EnvVariables):
         self.config = config
         self._env_vars = env_vars
-        self._parameter_values = _wrap_values(parameter_values, config.parameters)
+        self._parameter_values = dict(config.parameter_values)
         self._working_directory = _normalize_working_dir(config.working_directory)
 
         self.script_base_command = process_utils.split_command(
@@ -354,25 +326,6 @@ def send_stdin_parameters(
             raw_output_stream.subscribe(_ExpectedTextListener(
                 parameter.stdin_expected_text,
                 lambda closed_value=value: process_wrapper.write_to_input(closed_value)))
-
-
-class _Value:
-    def __init__(self, user_value, mapped_script_value, script_arg, secure_value=None):
-        self.user_value = user_value
-        self.mapped_script_value = mapped_script_value
-        self.script_arg = script_arg
-        self.secure_value = secure_value
-
-    def get_secure_value(self):
-        if self.secure_value is not None:
-            return self.secure_value
-        return self.script_arg
-
-    def __str__(self) -> str:
-        if self.secure_value is not None:
-            return str(self.secure_value)
-
-        return str(self.script_arg)
 
 
 class _ExpectedTextListener:

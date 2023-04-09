@@ -409,10 +409,9 @@ class ScriptExecute(StreamUploadRequestHandler):
             all_audit_names = user.audit_names
             LOGGER.info('Calling script %s. User %s', script_name, all_audit_names)
 
-            execution_id = self.application.execution_service.start_script(
-                config_model,
-                parameter_values,
-                user)
+            config_model.set_all_param_values(parameter_values)
+
+            execution_id = self.application.execution_service.start_script(config_model, user)
 
             self.write(str(execution_id))
 

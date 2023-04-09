@@ -2,7 +2,7 @@ import logging
 import os
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 from auth.authorization import ANY_USER
 from config.exceptions import InvalidConfigException
@@ -83,7 +83,7 @@ class ConfigModel:
         self._original_config = config_object
         self._included_config_paths = TemplateProperty(read_list(config_object, 'include'),
                                                        parameters=self.parameters,
-                                                       values=self.parameter_values)
+                                                       value_wrappers=self.parameter_values)
         self._included_config_prop.bind(self._included_config_paths, self._read_and_merge_included_paths)
 
         self._reload_config()
@@ -93,7 +93,7 @@ class ConfigModel:
         self._init_parameters(username, audit_name)
 
         for parameter in self.parameters:
-            self.parameter_values[parameter.name] = parameter.default
+            self.parameter_values[parameter.name] = parameter.create_value_wrapper_for_default()
 
         self._reload_parameters({})
 
@@ -104,13 +104,15 @@ class ConfigModel:
         if parameter is None:
             LOGGER.warning('Parameter ' + param_name + ' does not exist in ' + self.name)
             return
-        validation_error = parameter.validate_value(value, ignore_required=True)
+        normalized_value = parameter.normalize_user_value(value)
+        value_wrapper = parameter.create_value_wrapper(normalized_value)
+        validation_error = parameter.validate_value(value_wrapper, ignore_required=True)
 
         if validation_error is not None:
-            self.parameter_values[param_name] = None
+            self.parameter_values[param_name] = parameter.create_value_wrapper(None)
             raise InvalidValueException(param_name, validation_error)
 
-        self.parameter_values[param_name] = value
+        self.parameter_values[param_name] = value_wrapper
 
     def set_all_param_values(self, param_values, skip_invalid_parameters=False):
         original_values = dict(self.parameter_values)
@@ -138,20 +140,21 @@ class ConfigModel:
                     continue
 
                 if parameter.constant:
-                    value = parameter.default
+                    value_wrapper = parameter.create_value_wrapper_for_default()
                 else:
                     value = parameter.normalize_user_value(param_values.get(parameter.name))
+                    value_wrapper = parameter.create_value_wrapper(value)
 
-                validation_error = parameter.validate_value(value)
+                validation_error = parameter.validate_value(value_wrapper)
                 if validation_error:
                     if skip_invalid_parameters:
                         logging.warning('Parameter ' + parameter.name + ' has invalid value, skipping')
-                        value = parameter.normalize_user_value(None)
+                        value_wrapper = parameter.create_value_wrapper(parameter.normalize_user_value(None))
                     else:
                         self.parameter_values.set(original_values)
                         raise InvalidValueException(parameter.name, validation_error)
 
-                self.parameter_values[parameter.name] = value
+                self.parameter_values[parameter.name] = value_wrapper
                 processed[parameter.name] = parameter
                 anything_changed = True
 
@@ -245,14 +248,14 @@ class ConfigModel:
                     self.parameters.append(parameter)
 
                     if parameter.name not in self.parameter_values:
-                        self.parameter_values[parameter.name] = parameter.default
+                        self.parameter_values[parameter.name] = parameter.create_value_wrapper_for_default()
                     continue
                 else:
                     LOGGER.warning('Parameter ' + parameter_name + ' exists in original and included file. '
                                    + 'This is now allowed! Included parameter is ignored')
                     continue
 
-    def find_parameter(self, param_name):
+    def find_parameter(self, param_name) -> Optional[ParameterModel]:
         for parameter in self.parameters:
             if parameter.name == param_name:
                 return parameter

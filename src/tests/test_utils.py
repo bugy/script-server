@@ -14,6 +14,7 @@ from auth.auth_base import Authenticator, AuthRejectedError
 from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
 from model.server_conf import LoggingConfig
+from model.value_wrapper import ScriptValueWrapper
 from react.observable import read_until_closed
 from react.properties import ObservableDict, ObservableList
 from utils import audit_utils
@@ -156,82 +157,44 @@ def create_script_param_config(
         pass_as=None,
         stdin_expected_text=None,
         ui_separator_type=None,
-        ui_separator_title=None):
+        ui_separator_title=None,
+        values_ui_mapping=None):
+    method_params = dict(locals())
     conf = {'name': param_name}
 
-    if type is not None:
-        conf['type'] = type
+    simple_options = {
+        'type': 'type',
+        'default': 'default',
+        'required': 'required',
+        'secure': 'secure',
+        'param': 'param',
+        'env_var': 'env_var',
+        'no_value': 'no_value',
+        'constant': 'constant',
+        'multiselect_separator': 'separator',
+        'multiselect_argument_type': 'multiselect_argument_type',
+        'min': 'min',
+        'max': 'max',
+        'file_dir': 'file_dir',
+        'file_recursive': 'file_recursive',
+        'file_extensions': 'file_extensions',
+        'file_type': 'file_type',
+        'excluded_files': 'excluded_files',
+        'same_arg_param': 'same_arg_param',
+        'regex': 'regex',
+        'max_length': 'max_length',
+        'pass_as': 'pass_as',
+        'stdin_expected_text': 'stdin_expected_text',
+        'values_ui_mapping': 'values_ui_mapping',
+    }
 
     if values_script is not None:
         conf['values'] = {'script': values_script}
         if values_script_shell is not None:
             conf['values']['shell'] = values_script_shell
 
-    if default is not None:
-        conf['default'] = default
-
-    if required is not None:
-        conf['required'] = required
-
-    if secure is not None:
-        conf['secure'] = secure
-
-    if param is not None:
-        conf['param'] = param
-
-    if env_var is not None:
-        conf['env_var'] = env_var
-
-    if no_value is not None:
-        conf['no_value'] = no_value
-
-    if constant is not None:
-        conf['constant'] = constant
-
-    if multiselect_separator is not None:
-        conf['separator'] = multiselect_separator
-
-    if multiselect_argument_type is not None:
-        conf['multiselect_argument_type'] = multiselect_argument_type
-
-    if min is not None:
-        conf['min'] = min
-
-    if max is not None:
-        conf['max'] = max
-
     if allowed_values is not None:
         conf['values'] = list(allowed_values)
-
-    if file_dir is not None:
-        conf['file_dir'] = file_dir
-
-    if file_recursive is not None:
-        conf['file_recursive'] = file_recursive
-
-    if file_extensions is not None:
-        conf['file_extensions'] = file_extensions
-
-    if file_type is not None:
-        conf['file_type'] = file_type
-
-    if excluded_files is not None:
-        conf['excluded_files'] = excluded_files
-
-    if same_arg_param is not None:
-        conf['same_arg_param'] = same_arg_param
-
-    if regex is not None:
-        conf['regex'] = regex
-
-    if max_length is not None:
-        conf['max_length'] = max_length
-
-    if pass_as is not None:
-        conf['pass_as'] = pass_as
-
-    if stdin_expected_text is not None:
-        conf['stdin_expected_text'] = stdin_expected_text
 
     if ui_separator_type or ui_separator_title:
         separator_conf = {}
@@ -240,6 +203,11 @@ def create_script_param_config(
             separator_conf['type'] = ui_separator_type
         if ui_separator_title:
             separator_conf['title'] = ui_separator_title
+
+    for param_name, conf_name in simple_options.items():
+        value = method_params[param_name]
+        if value is not None:
+            conf[conf_name] = value
 
     return conf
 
@@ -291,7 +259,7 @@ def create_config_model(name, *,
 
     model = ConfigModel(result_config, path, username, audit_name, process_invoker)
     if parameter_values is not None:
-        model.set_all_param_values(model)
+        model.set_all_param_values(parameter_values)
 
     return model
 
@@ -324,7 +292,8 @@ def create_parameter_model(name=None,
                            pass_as=None,
                            stdin_expected_text=None,
                            ui_separator_type=None,
-                           ui_separator_title=None):
+                           ui_separator_title=None,
+                           values_ui_mapping=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -349,7 +318,8 @@ def create_parameter_model(name=None,
         pass_as=pass_as,
         stdin_expected_text=stdin_expected_text,
         ui_separator_type=ui_separator_type,
-        ui_separator_title=ui_separator_title)
+        ui_separator_title=ui_separator_title,
+        values_ui_mapping=values_ui_mapping)
 
     if all_parameters is None:
         all_parameters = []
@@ -526,6 +496,29 @@ def wait_and_read(process_wrapper):
     thread.join(timeout=0.1)
 
     return ''.join(read_until_closed(process_wrapper.output_stream))
+
+
+def wrap_values(parameters, values):
+    parameters_dict = {p.name: p for p in parameters}
+
+    result = {}
+    for name, value in values.items():
+        parameter = parameters_dict.get(name)
+        if parameter:
+            value_wrapper = parameter.create_value_wrapper(value)
+        else:
+            value_wrapper = ScriptValueWrapper(value, value, value)
+        result[name] = value_wrapper
+
+    return result
+
+
+def validate_value(parameter, value):
+    return parameter.validate_value(parameter.create_value_wrapper(value))
+
+
+def get_default_value(parameter_model):
+    return parameter_model.create_value_wrapper_for_default().mapped_script_value
 
 
 class _MockProcessWrapper(ProcessWrapper):

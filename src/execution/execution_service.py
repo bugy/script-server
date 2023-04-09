@@ -43,13 +43,10 @@ class ExecutionService:
 
         return self._executors.get(execution_id)
 
-    def start_script(self, config, values, user: User):
+    def start_script(self, config, user: User):
         audit_name = user.get_audit_name()
 
-        config.set_all_param_values(values)
-        normalized_values = dict(config.parameter_values)
-
-        executor = ScriptExecutor(config, normalized_values, self._env_vars)
+        executor = ScriptExecutor(config, self._env_vars)
         execution_id = self._id_generator.next_id()
 
         audit_command = executor.get_secure_command()

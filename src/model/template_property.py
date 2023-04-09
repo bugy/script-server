@@ -5,10 +5,10 @@ from react.properties import ObservableList, ObservableDict, Property
 
 
 class TemplateProperty:
-    def __init__(self, template_config, parameters: ObservableList, values: ObservableDict, empty=None) -> None:
+    def __init__(self, template_config, parameters: ObservableList, value_wrappers: ObservableDict, empty=None) -> None:
         self._value_property = Property(None)
         self._template_config = template_config
-        self._values = values
+        self._values = value_wrappers
         self._empty = empty
         self._parameters = parameters
 
@@ -41,7 +41,7 @@ class TemplateProperty:
         self._reload()
 
         if self.required_parameters:
-            values.subscribe(self._value_changed)
+            value_wrappers.subscribe(self._value_changed)
             parameters.subscribe(self)
 
     def _value_changed(self, parameter, old, new):
@@ -59,8 +59,8 @@ class TemplateProperty:
     def _reload(self):
         values_filled = True
         for param_name in self.required_parameters:
-            value = self._values.get(param_name)
-            if is_empty(value):
+            value_wrapper = self._values.get(param_name)
+            if value_wrapper is None or is_empty(value_wrapper.mapped_script_value):
                 values_filled = False
                 break
 

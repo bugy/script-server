@@ -12,6 +12,8 @@ from model import model_helper
 from model.model_helper import resolve_env_vars, replace_auth_vars, is_empty, SECURE_MASK, \
     normalize_extension, read_bool_from_config, InvalidValueException, read_str_from_config, read_int_from_config
 from model.template_property import TemplateProperty
+from model.value_mappers import create_ui_value_mapper
+from model.value_wrapper import ScriptValueWrapper
 from react.properties import ObservableDict, observable_fields
 from utils import file_utils, string_utils
 from utils.file_utils import FileMatcher
@@ -30,7 +32,7 @@ ParameterUiSeparator = namedtuple('ParameterUiSeparator', ['type', 'title'])
     'no_value',
     'description',
     'required',
-    'default',
+    '_default',
     'type',
     'min',
     'max',
@@ -65,7 +67,7 @@ class ParameterModel(object):
         self.stdin_expected_text = parameter_config.get('stdin_expected_text')
 
         self._original_config = parameter_config
-        self._parameter_values = other_param_values
+        self._parameter_value_wrappers = other_param_values
 
         self._setup()
 
@@ -102,7 +104,7 @@ class ParameterModel(object):
             self._working_dir,
             self.type,
             self._parameters_supplier(),
-            self._parameter_values,
+            self._parameter_value_wrappers,
             self._process_invoker)
         self.file_dir = _resolve_file_dir(config, 'file_dir')
         self._list_files_dir = _resolve_list_files_dir(self.file_dir, self._working_dir)
@@ -122,6 +124,8 @@ class ParameterModel(object):
         else:
             self.ui_separator = None
 
+        self._ui_value_mapper = create_ui_value_mapper(config)
+
         self._validate_config()
 
         values_provider = self._create_values_provider(
@@ -134,7 +138,7 @@ class ParameterModel(object):
     def _validate_config(self):
         param_log_name = self.str_name()
 
-        if self.constant and not self.default:
+        if self.constant and not self._default:
             message = 'Constant should have default value specified'
             raise Exception('Failed to set parameter "' + param_log_name + '" to constant: ' + message)
 
@@ -172,6 +176,12 @@ class ParameterModel(object):
                     + '" of type "' + unsupported_type
                     + '" in values.script! ')
 
+    def get_ui_values(self):
+        if self.values is None:
+            return None
+
+        return [self._ui_value_mapper.map_to_ui_value(v) for v in self.values]
+
     def _read_type(self, config):
         type = config.get('type', 'text')
 
@@ -196,7 +206,7 @@ class ParameterModel(object):
             self.values = None
             return
 
-        values = values_provider.get_values(self._parameter_values)
+        values = values_provider.get_values(self._parameter_value_wrappers)
         self.values = values
 
     def _create_values_provider(self, values_config, type, constant):
@@ -249,6 +259,27 @@ class ParameterModel(object):
 
         return value
 
+    def create_value_wrapper(self, user_value) -> ScriptValueWrapper:
+        if self.constant:
+            value = self._default
+            return ScriptValueWrapper(None, value, value, self.value_to_str(value))
+
+        if user_value is None:
+            return ScriptValueWrapper(None, None, None)
+
+        if self.no_value:
+            bool_value = model_helper.read_bool(user_value)
+            return ScriptValueWrapper(user_value, bool_value, bool_value)
+
+        mapped_value = self.map_to_script(user_value)
+        script_arg = self.to_script_args(mapped_value)
+        secure_value = self.get_secured_value(script_arg)
+        return ScriptValueWrapper(user_value, mapped_value, script_arg, secure_value)
+
+    def create_value_wrapper_for_default(self):
+        ui_value = self._ui_value_mapper.map_to_ui_value(self._default)
+        return self.create_value_wrapper(ui_value)
+
     def value_to_str(self, value):
         if self.secure:
             return SECURE_MASK
@@ -271,15 +302,10 @@ class ParameterModel(object):
         return self.value_to_str(value)
 
     def map_to_script(self, user_value):
-        def map_single_value(user_value):
-            if self._values_provider:
-                return self._values_provider.map_value(user_value)
-            return user_value
+        if user_value is None:
+            return None
 
-        if self.type == PARAM_TYPE_MULTISELECT:
-            return [map_single_value(v) for v in user_value]
-
-        elif self._is_recursive_server_file():
+        if self._is_recursive_server_file():
             if user_value:
                 return os.path.join(self.file_dir, *user_value)
             else:
@@ -290,7 +316,10 @@ class ParameterModel(object):
             else:
                 return None
 
-        return map_single_value(user_value)
+        if isinstance(user_value, list):
+            return [self._ui_value_mapper.map_to_script_value(single_value) for single_value in user_value]
+        else:
+            return self._ui_value_mapper.map_to_script_value(user_value)
 
     def to_script_args(self, script_value):
         if self.type == PARAM_TYPE_MULTISELECT:
@@ -301,21 +330,23 @@ class ParameterModel(object):
 
         return script_value
 
-    def validate_value(self, value, *, ignore_required=False):
+    def validate_value(self, value_wrapper: ScriptValueWrapper, *, ignore_required=False):
         if self.constant:
             return None
 
-        if is_empty(value):
+        user_value = value_wrapper.user_value
+
+        if is_empty(user_value):
             if self.required and not ignore_required:
                 return 'is not specified'
             return None
 
-        value_string = self.value_to_repr(value)
+        value_string = self.value_to_repr(user_value)
 
         if self.no_value:
-            if isinstance(value, bool):
+            if isinstance(user_value, bool):
                 return None
-            if isinstance(value, str) and value.lower() in ['true', 'false']:
+            if isinstance(user_value, str) and user_value.lower() in ['true', 'false']:
                 return None
             return 'should be boolean, but has value ' + value_string
 
@@ -323,25 +354,26 @@ class ParameterModel(object):
             if self.regex is not None:
                 regex_pattern = self.regex.get('pattern', None)
                 if not is_empty(regex_pattern):
-                    regex_matched = re.fullmatch(regex_pattern, value)
+                    regex_matched = re.fullmatch(regex_pattern, user_value)
                     if not regex_matched:
                         description = self.regex.get('description') or regex_pattern
                         return 'does not match regex pattern: ' + description
-            if (not is_empty(self.max_length)) and (len(value) > int(self.max_length)):
+            if (not is_empty(self.max_length)) and (len(user_value) > int(self.max_length)):
                 return 'is longer than allowed char length (' \
-                    + str(len(value)) + ' > ' + str(self.max_length) + ')'
+                    + str(len(user_value)) + ' > ' + str(self.max_length) + ')'
             return None
 
         if self.type == 'file_upload':
-            if not os.path.exists(value):
-                return 'Cannot find file ' + value
+            if not os.path.exists(user_value):
+                return 'Cannot find file ' + user_value
             return None
 
         if self.type == 'int':
-            if not (isinstance(value, int) or (isinstance(value, str) and string_utils.is_integer(value))):
+            if not (isinstance(user_value, int) or (
+                    isinstance(user_value, str) and string_utils.is_integer(user_value))):
                 return 'should be integer, but has value ' + value_string
 
-            int_value = int(value)
+            int_value = int(user_value)
 
             if (not is_empty(self.max)) and (int_value > int(self.max)):
                 return 'is greater than allowed value (' \
@@ -354,7 +386,7 @@ class ParameterModel(object):
 
         if self.type in ('ip', 'ip4', 'ip6'):
             try:
-                address = ip_address(value.strip())
+                address = ip_address(user_value.strip())
                 if self.type == 'ip4':
                     if not isinstance(address, IPv4Address):
                         return value_string + ' is not an IPv4 address'
@@ -364,18 +396,18 @@ class ParameterModel(object):
             except ValueError:
                 return 'wrong IP address ' + value_string
 
-        allowed_values = self.values
+        allowed_values = self.get_ui_values()
 
         if (self.type == 'list') or (self._is_plain_server_file()):
-            if value not in allowed_values:
+            if user_value not in allowed_values:
                 return 'has value ' + value_string \
                     + ', but should be in ' + repr(allowed_values)
             return None
 
         if self.type == PARAM_TYPE_MULTISELECT:
-            if not isinstance(value, list):
-                return 'should be a list, but was: ' + value_string + '(' + str(type(value)) + ')'
-            for value_element in value:
+            if not isinstance(user_value, list):
+                return 'should be a list, but was: ' + value_string + '(' + str(type(user_value)) + ')'
+            for value_element in user_value:
                 if value_element not in allowed_values:
                     element_str = self.value_to_repr(value_element)
                     return 'has value ' + element_str \
@@ -383,7 +415,7 @@ class ParameterModel(object):
             return None
 
         if self._is_recursive_server_file():
-            return self._validate_recursive_path(value, intermediate=False)
+            return self._validate_recursive_path(user_value, intermediate=False)
 
         return None
 
@@ -471,10 +503,10 @@ class ParameterModel(object):
             working_dir,
             type,
             parameters,
-            parameter_values,
+            parameter_value_wrappers,
             process_invoker: ProcessInvoker):
         if is_empty(default_config):
-            self.default = default_config
+            self._default = default_config
             return
 
         script = False
@@ -484,7 +516,7 @@ class ParameterModel(object):
         elif isinstance(default_config, str):
             string_value = default_config
         else:
-            self.default = default_config
+            self._default = default_config
             return
 
         resolved_string_value = resolve_env_vars(string_value, full_match=True)
@@ -492,10 +524,10 @@ class ParameterModel(object):
             resolved_string_value = replace_auth_vars(string_value, username, audit_name)
 
         if not script:
-            self.default = resolved_string_value
+            self._default = resolved_string_value
             return
 
-        template_property = TemplateProperty(resolved_string_value, parameters, parameter_values)
+        template_property = TemplateProperty(resolved_string_value, parameters, parameter_value_wrappers)
         shell = read_bool_from_config('shell', default_config, default=is_empty(template_property.required_parameters))
 
         def get_script_output(script):
@@ -508,13 +540,13 @@ class ParameterModel(object):
             return stripped_output
 
         if not template_property.required_parameters:
-            self.default = get_script_output(resolved_string_value)
+            self._default = get_script_output(resolved_string_value)
         else:
             def update_default(_, new):
                 if new is None:
-                    self.default = None
+                    self._default = None
                 else:
-                    self.default = get_script_output(new)
+                    self._default = get_script_output(new)
 
             template_property.subscribe(update_default)
             update_default(None, template_property.value)
@@ -591,6 +623,7 @@ def get_sorted_config(param_config):
                  'type', 'no_value', 'default', 'constant', 'description',
                  'secure',
                  'values',
+                 'values_ui_mapping',
                  'min',
                  'max',
                  'max_length',

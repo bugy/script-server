@@ -130,7 +130,7 @@ class ExecutionLoggingService:
                       output_stream,
                       all_audit_names,
                       script_config,
-                      parameter_values,
+                      parameter_value_wrappers,
                       start_time_millis=None):
 
         script_name = str(script_config.name)
@@ -145,7 +145,7 @@ class ExecutionLoggingService:
             start_time_millis,
             script_config.logging_config,
             script_config.parameters,
-            parameter_values)
+            parameter_value_wrappers)
         log_file_path = os.path.join(self._output_folder, log_filename)
         log_file_path = file_utils.create_unique_filename(log_file_path)
 
@@ -367,7 +367,7 @@ class LogNameCreator:
                         start_time,
                         custom_logging_config: Optional[LoggingConfig],
                         parameter_configs,
-                        parameter_values):
+                        parameter_value_wrappers):
 
         audit_name = get_audit_name(all_audit_names)
         audit_name = file_utils.to_filename(audit_name)
@@ -388,7 +388,7 @@ class LogNameCreator:
         }
 
         filename = self._resolve_filename_template(custom_logging_config).safe_substitute(mapping)
-        filename = model_helper.fill_parameter_values(parameter_configs, filename, parameter_values)
+        filename = model_helper.fill_parameter_values(parameter_configs, filename, parameter_value_wrappers)
         if not filename.lower().endswith('.log'):
             filename += '.log'
 
@@ -423,7 +423,7 @@ class ExecutionLoggingController:
             all_audit_names = user.audit_names
             output_stream = execution_service.get_anonymized_output_stream(execution_id)
             audit_command = execution_service.get_audit_command(execution_id)
-            parameter_values = execution_service.get_user_parameter_values(execution_id)
+            parameter_value_wrappers = script_config.parameter_values
 
             logging_service.start_logging(
                 execution_id,
@@ -433,7 +433,7 @@ class ExecutionLoggingController:
                 output_stream,
                 all_audit_names,
                 script_config,
-                parameter_values)
+                parameter_value_wrappers)
 
         def finished(execution_id, user):
             exit_code = execution_service.get_exit_code(execution_id)

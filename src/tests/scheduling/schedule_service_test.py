@@ -66,7 +66,7 @@ class ScheduleServiceTestCase(TestCase):
         self.create_config('unschedulable-script', scheduling_enabled=False)
 
         self.execution_service = MagicMock()
-        self.execution_service.start_script.side_effect = lambda config, values, user: time.time_ns()
+        self.execution_service.start_script.side_effect = lambda config, user: time.time_ns()
 
         self.schedule_service = ScheduleService(self.config_service, self.execution_service, test_utils.temp_folder)
 
@@ -75,7 +75,7 @@ class ScheduleServiceTestCase(TestCase):
     def create_config(self, name, scheduling_enabled=True, parameters=None, auto_cleanup=False):
         if parameters is None:
             parameters = [
-                {'name': 'p1'},
+                {'name': 'p1', 'values_ui_mapping': {'bingo!': 'mpd'}},
                 {'name': 'param_2', 'type': 'multiselect', 'values': ['hello', 'world', '1', '2', '3']},
             ]
 
@@ -182,6 +182,15 @@ class TestScheduleServiceCreateJob(ScheduleServiceTestCase):
         self.call_create_job(job_prototype)
 
         self.assert_schedule_calls([(job_prototype, get_job_path(job_prototype), mocked_now_epoch + 1468703)])
+
+    def test_create_job_when_ui_values_mapping(self):
+        job_prototype = create_job(
+            id='1',
+            parameter_values={'p1': 'mpd', 'param_2': []},
+            repeatable=False)
+        self.call_create_job(job_prototype)
+
+        self.assert_schedule_calls([(job_prototype, get_job_path(job_prototype), mocked_now_epoch + 5)])
 
     def call_create_job(self, job: SchedulingJob):
         return self.schedule_service.create_job(
@@ -292,13 +301,18 @@ class TestScheduleServiceInit(ScheduleServiceTestCase):
 
 class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
     def test_execute_simple_job(self):
-        job = create_job(id=1, repeatable=False, start_datetime=mocked_now - timedelta(seconds=1))
+        job = create_job(
+            id=1,
+            repeatable=False,
+            start_datetime=mocked_now - timedelta(seconds=1),
+            parameter_values={'p1': 'mpd', 'param_2': ['hello', '3']})
+
         job_path = save_job(job)
 
         self.schedule_service._execute_job(job, job_path)
 
-        self.execution_service.start_script.assert_called_once_with(
-            ANY, job.parameter_values, job.user)
+        self.verify_start_script_call({'p1': 'bingo!', 'param_2': ['hello', '3']}, job.user)
+
         self.execution_service.add_finish_listener.assert_not_called()
         self.assert_schedule_calls([])
 
@@ -312,8 +326,7 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
 
         self.schedule_service._execute_job(job, job_path)
 
-        self.execution_service.start_script.assert_called_once_with(
-            ANY, job.parameter_values, job.user)
+        self.verify_start_script_call(job.parameter_values, job.user)
         self.execution_service.add_finish_listener.assert_not_called()
         self.assert_schedule_calls([(job, job_path, mocked_now_epoch + 86399)])
 
@@ -394,8 +407,7 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
 
         self.schedule_service._execute_job(job, job_path)
 
-        self.execution_service.start_script.assert_called_once_with(
-            ANY, job.parameter_values, job.user)
+        self.verify_start_script_call(job.parameter_values, job.user)
         self.execution_service.cleanup_execution.assert_not_called()
         self.assertIsNotNone(finish_callback)
 
@@ -403,6 +415,12 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
         finish_callback()
 
         self.execution_service.cleanup_execution.assert_called_once_with(ANY, job.user)
+
+    def verify_start_script_call(self, expected_values, expected_user):
+        start_args = self.execution_service.start_script.call_args.args
+        self.assertEqual(expected_user, start_args[1])
+        actual_values = {name: value.mapped_script_value for name, value in start_args[0].parameter_values.items()}
+        self.assertEqual(expected_values, actual_values)
 
 
 def create_job(id=None,

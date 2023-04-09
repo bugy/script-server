@@ -1,11 +1,13 @@
 'use strict';
 
 import ParameterConfigForm from '@/admin/components/scripts-config/ParameterConfigForm';
+import ParameterValuesUiMapping from '@/admin/components/scripts-config/ParameterValuesUiMapping.vue';
 import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
-import {asyncForEachKeyValue, isBlankString, setInputValue} from '@/common/utils/common';
+import Textfield from '@/common/components/textfield.vue';
+import {asyncForEachKeyValue, isBlankString, isNull, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
 import {attachToDocument, createScriptServerTestVue, setChipListValue, vueTicks} from '../test_utils';
 
@@ -32,10 +34,10 @@ export const findField = (form, expectedName, failOnMissing = true) => {
         } else if (child.$options._componentTag === ScriptField.name) {
             fieldName = child.scriptPathField.name;
         } else {
-            fieldName = child.$props.config.name;
+            fieldName = child.$props.config?.name;
         }
 
-        if (fieldName.toLowerCase() === expectedName.toLowerCase()) {
+        if (!isNull(fieldName) && (fieldName.toLowerCase() === expectedName.toLowerCase())) {
             return child;
         }
     }
@@ -44,6 +46,54 @@ export const findField = (form, expectedName, failOnMissing = true) => {
         throw Error('Failed to find field: ' + expectedName)
     }
 };
+
+export const findUiMappingFields = (form, failOnMissing = true) => {
+    const mappingComponent = form.findComponent(ParameterValuesUiMapping)
+    if (failOnMissing) {
+        expect(mappingComponent.exists()).toBeTrue()
+    }
+
+    const result = []
+
+    const textFields = mappingComponent.findAllComponents(Textfield);
+    for (let i = 0; i < textFields.length; i += 2) {
+        const scriptField = textFields.at(i)
+        const uiField = textFields.at(i + 1)
+
+        result.push([scriptField, uiField])
+    }
+
+    return result
+}
+
+export const extractUiMappingValues = (uiMappingFields) => {
+    const result = []
+
+    for (const uiMappingFieldPair of uiMappingFields) {
+        const scriptValue = uiMappingFieldPair[0].vm.value
+        const uiValue = uiMappingFieldPair[1].vm.value
+
+        result.push([scriptValue, uiValue])
+    }
+
+    return result
+}
+
+export async function setUiMappingScriptValue(form, index, value) {
+    const pair = findUiMappingFields(form)[index]
+
+    setInputValue(pair[0].find('input').element, value, true)
+
+    await vueTicks()
+}
+
+export async function setUiMappingUiValue(form, index, value) {
+    const pair = findUiMappingFields(form)[index];
+
+    setInputValue(pair[1].find('input').element, value, true)
+
+    await vueTicks()
+}
 
 const findFieldInputElement = (form, expectedName) => {
     const field = findField(form, expectedName);
@@ -428,6 +478,27 @@ describe('Test ParameterConfigForm', function () {
 
             expect(_findField('Stdin expected Text').value).toBe('123')
         });
+
+        it('Test initial values UI mapping', async function () {
+            form.setProps({
+                value: {
+                    'type': 'list',
+                    'values_ui_mapping': {
+                        'abc': 'qwerty',
+                        ' def ': '1234'
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            expect(extractUiMappingValues(findUiMappingFields(form))).toEqual([
+                ['abc', 'qwerty'],
+                [' def ', '1234'],
+                ['', '']
+            ])
+        });
+
     });
 
     describe('Test update values in form', function () {
@@ -728,6 +799,46 @@ describe('Test ParameterConfigForm', function () {
 
             assertOutputValue('stdin_expected_text', '123');
         })
+
+        it('Test values_ui_mapping when type set to list', async function () {
+            await _setValueByUser('Type', 'list');
+
+            expect(findUiMappingFields(form).length).toEqual(1)
+            assertOutputValue('values_ui_mapping', {});
+        });
+
+        it('Test values_ui_mapping when single empty ui value', async function () {
+            await _setValueByUser('Type', 'list')
+
+            await setUiMappingScriptValue(form, 0, 'abc')
+
+            assertOutputValue('values_ui_mapping', {'abc': ''});
+        });
+
+        it('Test values_ui_mapping when multiple values', async function () {
+            await _setValueByUser('Type', 'list')
+
+            await setUiMappingScriptValue(form, 0, 'abc')
+            await setUiMappingUiValue(form, 0, 'qwerty')
+
+            await setUiMappingScriptValue(form, 1, ' def ')
+            await setUiMappingUiValue(form, 1, ' 1234 ')
+
+            await setUiMappingScriptValue(form, 2, 'hello')
+            await setUiMappingUiValue(form, 2, 'world')
+
+            assertOutputValue('values_ui_mapping', {
+                'abc': 'qwerty',
+                ' def ': ' 1234 ',
+                'hello': 'world'
+            });
+            expect(extractUiMappingValues(findUiMappingFields(form))).toEqual([
+                ['abc', 'qwerty'],
+                [' def ', ' 1234 '],
+                ['hello', 'world'],
+                ['', '']
+            ])
+        });
     });
 
     describe('Test parameter dependencies', function () {

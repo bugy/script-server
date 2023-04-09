@@ -11,7 +11,10 @@
     {
       "name": "Simple Int",
       "param": "--simple_int",
-      "type": "int"
+      "type": "int",
+      "values_ui_mapping": {
+        "One": "1"
+      }
     },
     {
       "name": "Simple Boolean",
@@ -30,15 +33,16 @@
       "param": "--simple_list=",
       "same_arg_param": true,
       "type": "list",
-      "default": {
-        "script": "echo ${Simple Text}"
-      },
       "description": "Parameter Five",
       "values": [
         "val1",
         "val3",
         "some long value"
-      ]
+      ],
+      "values_ui_mapping": {
+        "val1": "Value 1",
+        "val3": "Value 3"
+      }
     },
     {
       "name": "File upload",
@@ -183,6 +187,9 @@
       "type": "int",
       "description": "Parameter Nine",
       "secure": true,
+      "values_ui_mapping": {
+        "qwerty": "2232"
+      },
       "ui": {
         "separator_before": {
           "type": "line"
