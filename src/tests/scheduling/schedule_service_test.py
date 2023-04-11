@@ -418,6 +418,7 @@ class TestScheduleServiceExecuteJob(ScheduleServiceTestCase):
 
     def verify_start_script_call(self, expected_values, expected_user):
         start_args = self.execution_service.start_script.call_args.args
+        print('self.execution_service.start_script.call_args: ' + str(self.execution_service.start_script.call_args))
         print('start_args: ' + str(start_args))
         self.assertEqual(expected_user, start_args[1])
         actual_values = {name: value.mapped_script_value for name, value in start_args[0].parameter_values.items()}
