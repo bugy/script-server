@@ -154,6 +154,9 @@ class ObservableDict(UserDict):
 
         super().__setitem__(key, item)
 
+        if item == old_value:
+            return
+
         self._notify_observers(key, old_value, item)
 
     def __delitem__(self, key: _KT) -> None:
