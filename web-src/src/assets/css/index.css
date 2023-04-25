@@ -100,7 +100,9 @@ h6.header {
     color: #F44336;
 }
 
-#login-panel .login-google_oauth .login-info-label {
+#login-panel .login-google_oauth .login-info-label,
+#login-panel .login-gitlab .login-info-label,
+#login-panel .login-keycloak .login-info-label {
     margin-top: 16px;
 }
 
@@ -153,4 +155,9 @@ h6.header {
 #login-gitlab-button {
     background-image: url('../gitlab-icon-rgb.png');
     background-position-x: 6px;
+}
+
+#login-keycloak-button {
+    padding-left: 42px;
+    background-image: url('../keycloak_icon.png');
 }

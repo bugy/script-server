@@ -40,6 +40,8 @@ function onLoad() {
 
         if (config['type'] === 'google_oauth') {
             setupGoogleOAuth(loginContainer, config);
+        } else if (config['type'] === 'keycloak_openid') {
+            setupKeycloakOpenid(loginContainer, config);
         } else if (config['type'] === 'gitlab') {
             setupGitlabOAuth(loginContainer, config);
         } else {
@@ -77,6 +79,14 @@ function setupGoogleOAuth(loginContainer, authConfig) {
         authConfig,
         'login-google_oauth-template',
         'login-google_oauth-button')
+}
+
+function setupKeycloakOpenid(loginContainer, authConfig) {
+    setupOAuth(
+        loginContainer,
+        authConfig,
+        'login-keycloak-template',
+        'login-keycloak-button')
 }
 
 function setupGitlabOAuth(loginContainer, authConfig) {

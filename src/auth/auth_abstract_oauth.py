@@ -6,7 +6,7 @@ import os
 import threading
 import time
 import urllib.parse as urllib_parse
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 from typing import Dict
 
 import tornado
@@ -14,11 +14,12 @@ import tornado.ioloop
 from tornado import httpclient, escape
 
 from auth import auth_base
-from auth.auth_base import AuthFailureError, AuthBadRequestException
+from auth.auth_base import AuthFailureError, AuthBadRequestException, AuthRejectedError
 from model import model_helper
 from model.model_helper import read_bool_from_config, read_int_from_config
 from model.server_conf import InvalidServerConfigException
 from utils import file_utils
+from utils.tornado_utils import get_secure_cookie
 
 LOGGER = logging.getLogger('script_server.AbstractOauthAuthenticator')
 
@@ -31,7 +32,21 @@ class _UserState:
         self.last_visit = None
 
 
-_OauthUserInfo = namedtuple('_OauthUserInfo', ['email', 'enabled', 'oauth_response'])
+class _OauthUserInfo:
+    def __init__(self, username, enabled, oauth_response, eager_groups=None):
+        self.username = username
+        self.enabled = enabled
+        self.oauth_response = oauth_response
+        self.eager_groups = eager_groups
+
+    def __eq__(self, o: object) -> bool:
+        return isinstance(o, _OauthUserInfo) and (self.username == o.username)
+
+    def __str__(self) -> str:
+        return f'_OauthUserInfo({self.username})'
+
+    def __repr__(self) -> str:
+        return f'_OauthUserInfo({self.__dict__})'
 
 
 def _start_timer(callback):
@@ -67,6 +82,8 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
         self._users = {}  # type: Dict[str, _UserState]
         self._user_locks = defaultdict(lambda: asyncio.locks.Lock())
 
+        self.http_client = httpclient.AsyncHTTPClient()
+
         self.timer = None
         if self.dump_file:
             self._restore_state()
@@ -88,28 +105,26 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
             LOGGER.error('Code is not specified')
             raise AuthBadRequestException('Missing authorization information. Please contact your administrator')
 
-        access_token = await self.fetch_access_token(code, request_handler)
+        (access_token, refresh_token) = await self.fetch_access_token(code, request_handler)
         user_info = await self.fetch_user_info(access_token)
 
-        user_email = user_info.email
-        if not user_email:
+        username = user_info.username
+        if not username:
             error_message = 'No email field in user response. The response: ' + str(user_info.oauth_response)
             LOGGER.error(error_message)
             raise AuthFailureError(error_message)
 
         if not user_info.enabled:
             error_message = 'User %s is not enabled in OAuth provider. The response: %s' \
-                            % (user_email, str(user_info.oauth_response))
+                            % (username, str(user_info.oauth_response))
             LOGGER.error(error_message)
             raise AuthFailureError(error_message)
 
-        user_state = _UserState(user_email)
-        self._users[user_email] = user_state
+        user_state = _UserState(username)
+        self._users[username] = user_state
 
         if self.group_support:
-            user_groups = await self.fetch_user_groups(access_token)
-            LOGGER.info('Loaded groups for ' + user_email + ': ' + str(user_groups))
-            user_state.groups = user_groups
+            await self.load_groups(access_token, username, user_info, user_state)
 
         now = time.time()
 
@@ -119,7 +134,15 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
 
         user_state.last_visit = now
 
-        return user_email
+        return username
+
+    async def load_groups(self, access_token, username, user_info, user_state):
+        if user_info.eager_groups is not None:
+            user_state.groups = user_info.eager_groups
+        else:
+            user_groups = await self.fetch_user_groups(access_token)
+            user_state.groups = user_groups
+        LOGGER.info('Loaded groups for ' + username + ': ' + str(user_state.groups))
 
     def validate_user(self, user, request_handler):
         if not user:
@@ -146,7 +169,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
         user_state.last_visit = now
 
         if self.auth_info_ttl:
-            access_token = request_handler.get_secure_cookie('token')
+            access_token = get_secure_cookie(request_handler, 'token')
             if access_token is None:
                 LOGGER.info('User %s token is not available', user)
                 return False
@@ -180,8 +203,8 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
             'client_secret': self.secret,
             'grant_type': 'authorization_code',
         })
-        http_client = httpclient.AsyncHTTPClient()
-        response = await http_client.fetch(
+
+        response = await self.http_client.fetch(
             self.oauth_token_url,
             method='POST',
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
@@ -206,13 +229,14 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
 
         response_values = escape.json_decode(response.body)
         access_token = response_values.get('access_token')
+        refresh_token = response_values.get('refresh_token')
 
         if not access_token:
             message = 'No access token in response: ' + str(response.body)
             LOGGER.error(message)
             raise AuthFailureError(message)
 
-        return access_token
+        return access_token, refresh_token
 
     def update_user_auth(self, username, user_state, access_token):
         now = time.time()
@@ -242,8 +266,14 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
 
             LOGGER.info('User %s state expired, refreshing', username)
 
-            user_info = await self.fetch_user_info(access_token)  # type: _OauthUserInfo
-            if (not user_info) or (not user_info.email):
+            try:
+                user_info = await self.fetch_user_info(access_token)  # type: _OauthUserInfo
+            except AuthRejectedError:
+                LOGGER.info(f'User {username} is not authenticated anymore. Logging out')
+                self._remove_user(username)
+                return
+
+            if (not user_info) or (not user_info.username):
                 LOGGER.error('Failed to fetch user info: %s', str(user_info))
                 self._remove_user(username)
                 return
@@ -256,9 +286,7 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
 
             if self.group_support:
                 try:
-                    user_groups = await self.fetch_user_groups(access_token)
-                    LOGGER.info('Updated groups for ' + username + ': ' + str(user_groups))
-                    user_state.groups = user_groups
+                    await self.load_groups(access_token, username, user_info, user_state)
                 except AuthFailureError:
                     LOGGER.error('Failed to fetch user %s groups', username)
                     self._remove_user(username)

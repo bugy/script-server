@@ -16,6 +16,7 @@ from model.server_conf import InvalidServerConfigException
 from tests import test_utils
 from tests.test_utils import mock_object
 from utils import file_utils
+from utils.tornado_utils import get_secure_cookie
 
 mock_time = Mock()
 mock_time.return_value = 10000.01
@@ -156,7 +157,7 @@ def mock_request_handler(code):
     handler_mock.get_secure_cookie = lambda cookie: secure_cookies.get(cookie)
 
     def set_secure_cookie(cookie, value):
-        secure_cookies[cookie] = value
+        secure_cookies[cookie] = value.encode('utf-8')
 
     def clear_secure_cookie(cookie):
         if cookie in secure_cookies:
@@ -240,7 +241,7 @@ class TestAuthenticate(_OauthTestCase):
         request_handler = mock_request_handler(code='Y')
         yield authenticator.authenticate(request_handler)
 
-        saved_token = request_handler.get_secure_cookie('token')
+        saved_token = get_secure_cookie(request_handler, 'token')
         self.assertEqual('22222', saved_token)
 
     @gen_test
@@ -622,7 +623,7 @@ class MockOauthAuthenticator(AbstractOauthAuthenticator):
     async def fetch_access_token(self, code, request_handler):
         for key, value in self.user_tokens.items():
             if value.endswith(code):
-                return key
+                return key, None
 
         raise Exception('Could not generate token for code ' + code + '. Make sure core is equal to user suffix')
 
