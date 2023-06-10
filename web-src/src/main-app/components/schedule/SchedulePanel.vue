@@ -41,6 +41,50 @@
                       label="Time" @error="checkErrors"/>
         </div>
 
+        <div>
+        <span class="schedule-repeat_col-1">End</span>
+        <div class="schedule-type-panel">
+        <p class="schedule-type-field">
+          <label>
+            <input :checked="endOption === 'never'" class="with-gap" name="end-type"
+                  type="radio"
+                  @click="endOption = 'never'"/>
+            <span>Never</span>
+          </label>
+        </p>
+        <p class="schedule-type-field">
+          <label>
+            <input :checked="endOption === 'after'" class="with-gap" name="end-type"
+                  type="radio"
+                  @click="endOption = 'after'"/>
+            <span>After</span>
+          </label>
+        </p>
+        <p class="schedule-type-field">
+          <label>
+            <input :checked="endOption === 'on'" class="with-gap" name="end-type"
+                  type="radio"
+                  @click="endOption = 'on'"/>
+            <span>On</span>
+          </label>
+        </p>
+      </div>
+      <br>
+      <div v-if="endOption === 'on'">
+        <span class="schedule-repeat_col-1">Ending</span>
+        <DatePicker v-model="startDate"
+                    :show-header-in-modal="!mobileView"
+                    class="inline repeat-start-date schedule-repeat_col-2" label="Date"/>
+        <TimePicker v-model="startTime" class="inline repeat-start-time schedule-repeat_col-3"
+                    label="Time" @error="checkErrors"/>
+      </div>
+      <div v-if="endOption === 'after'">
+        <span class="schedule-repeat_col-1">Count</span>
+        <Textfield v-model="executeCount" :config="repeatPeriodField"
+                     class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors"/>
+
+      </div>
+
         <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
           <div :class="{ error: weekdaysError }" class="repeat-weekday-panel">
             <ToggleDayButton v-for="day in weekDays"
@@ -61,6 +105,7 @@
                         :enabled="errors.length === 0"
                         :preloaderStyle="{ width: '20px', height: '20px' }"
                         title="Schedule"/>
+    </div>
     </div>
   </div>
 </template>
@@ -95,10 +140,12 @@ export default {
 
     return {
       oneTimeSchedule: true,
+      endOption: 'never',
       startDate: now,
       startTime: now.toTimeString().substr(0, 5),
       id: null,
       repeatPeriod: 1,
+      executeCount: 1,
       repeatTimeUnit: 'days',
       weekDays: [
         {'day': 'Monday', active: currentDay === 1},
