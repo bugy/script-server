@@ -271,7 +271,7 @@ export default {
   font-size: 16px;
   max-width: 320px;
   width: 100%;
-  height: 380px;
+  height: 480px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
