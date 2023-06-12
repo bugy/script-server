@@ -162,15 +162,11 @@ class ScheduleService:
                 self._execution_service.add_finish_listener(cleanup, execution_id)
 
             if job.schedule.endOption == 'after':
-                schedule = job.schedule
-                schedule.endArg -= 1
+                job.schedule.endArg -= 1
 
-                with open(job_path, 'r+') as file:
-                    data = json.load(file)
-                    data['schedule']['endArg'] = schedule.endArg
-                    file.seek(0)  # Move the file pointer to the beginning
-                    json.dump(data, file, indent=4)
-                    file.truncate()
+                file_utils.write_file(
+                    job_path,
+                    json.dumps(job.as_serializable_dict(), indent=2))
 
         except:
             LOGGER.exception('Failed to execute ' + job.get_log_name())
