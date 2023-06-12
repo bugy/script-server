@@ -123,13 +123,14 @@ class ScheduleService:
         if not schedule.repeatable and date_utils.is_past(schedule.start_datetime):
             return
         
-        if schedule.endOption == 'on' and date_utils.is_past(schedule.endArg):
-            return
-        
         if schedule.endOption == 'after' and schedule.endArg <= 0:
             return
         
         next_datetime = schedule.get_next_time()
+
+        if schedule.endOption == 'on' and date_utils.is_past(schedule.endArg) or next_datetime < schedule.endArg:
+            return
+        
         LOGGER.info(
             'Scheduling ' + job.get_log_name() + ' at ' + next_datetime.astimezone(tz=None).strftime('%H:%M, %d %B %Y'))
 
