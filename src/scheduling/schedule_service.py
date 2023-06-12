@@ -123,11 +123,8 @@ class ScheduleService:
         if not schedule.repeatable and date_utils.is_past(schedule.start_datetime):
             return
         
-        if schedule.endOption == 'after':
-            if schedule.endArg > 1:
-                schedule.endArg -= 1
-            else:
-                return
+        if schedule.endOption == 'after' and schedule.endArg <= 0:
+            return                
         
         next_datetime = schedule.get_next_time()
 
@@ -163,6 +160,18 @@ class ScheduleService:
                     self._execution_service.cleanup_execution(execution_id, user)
 
                 self._execution_service.add_finish_listener(cleanup, execution_id)
+
+            if job.schedule.endOption == 'after':
+                schedule = job.schedule
+                schedule.endArg -= 1
+
+                with open(job_path, 'r+') as file:
+                    data = json.load(file)
+                    data['schedule']['endArg'] = schedule.endArg
+                    file.seek(0)  # Move the file pointer to the beginning
+                    json.dump(data, file, indent=4)
+                    file.truncate()
+
         except:
             LOGGER.exception('Failed to execute ' + job.get_log_name())
 
