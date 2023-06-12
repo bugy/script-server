@@ -7,12 +7,9 @@ from utils.string_utils import is_blank
 ALLOWED_WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 
-def _read_start_datetime(incoming_schedule_config):
-    start_datetime = model_helper.read_datetime_from_config('start_datetime', incoming_schedule_config)
-    if start_datetime is None:
-        raise InvalidScheduleException('start_datetime is required')
-    return start_datetime
-
+def _read_datetime(incoming_schedule_config, key):
+    datetime_value = model_helper.read_datetime_from_config(key, incoming_schedule_config)
+    return datetime_value
 
 def _read_repeat_unit(incoming_schedule_config):
     repeat_unit = incoming_schedule_config.get('repeat_unit')
@@ -52,9 +49,11 @@ def read_weekdays(incoming_schedule_config):
 
 def read_schedule_config(incoming_schedule_config):
     repeatable = read_repeatable_flag(incoming_schedule_config)
-    start_datetime = _read_start_datetime(incoming_schedule_config)
+    start_datetime = _read_datetime(incoming_schedule_config, 'start_datetime')
+    endOption = incoming_schedule_config.get('endOption')
+    endArg = incoming_schedule_config.get('endArg')
 
-    prepared_schedule_config = ScheduleConfig(repeatable, start_datetime)
+    prepared_schedule_config = ScheduleConfig(repeatable, start_datetime, endOption, endArg)
     if repeatable:
         prepared_schedule_config.repeat_unit = _read_repeat_unit(incoming_schedule_config)
         prepared_schedule_config.repeat_period = _read_repeat_period(incoming_schedule_config)
@@ -67,9 +66,11 @@ def read_schedule_config(incoming_schedule_config):
 
 class ScheduleConfig:
 
-    def __init__(self, repeatable, start_datetime) -> None:
+    def __init__(self, repeatable, start_datetime, endOption, endArg) -> None:
         self.repeatable = repeatable
         self.start_datetime = start_datetime  # type: datetime
+        self.endOption = endOption
+        self.endArg = endArg
         self.repeat_unit = None
         self.repeat_period = None
         self.weekdays = None
@@ -77,8 +78,14 @@ class ScheduleConfig:
     def as_serializable_dict(self):
         result = {
             'repeatable': self.repeatable,
-            'start_datetime': date_utils.to_iso_string(self.start_datetime)
+            'start_datetime': date_utils.to_iso_string(self.start_datetime),
+            'endOption': self.endOption
         }
+
+        if self.endOption == 'on':
+            result['endArg'] = date_utils.to_iso_string(date_utils.parse_iso_datetime(self.endArg))
+        else:
+            result['endArg'] = self.endArg
 
         if self.repeat_unit is not None:
             result['repeat_unit'] = self.repeat_unit
