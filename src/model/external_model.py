@@ -129,6 +129,8 @@ def parse_external_schedule(external_schedule):
     return {
         'repeatable': external_schedule.get('repeatable'),
         'start_datetime': external_schedule.get('startDatetime'),
+        'endOption': external_schedule.get('endOption'),
+        'endArg': external_schedule.get('endArg'),
         'repeat_unit': external_schedule.get('repeatUnit'),
         'repeat_period': external_schedule.get('repeatPeriod'),
         'weekdays': external_schedule.get('weekDays')

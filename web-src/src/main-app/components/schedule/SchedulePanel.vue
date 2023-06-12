@@ -72,10 +72,10 @@
       <br>
       <div v-if="endOption === 'on'">
         <span class="schedule-repeat_col-1">Ending</span>
-        <DatePicker v-model="startDate"
+        <DatePicker v-model="endDate"
                     :show-header-in-modal="!mobileView"
                     class="inline repeat-start-date schedule-repeat_col-2" label="Date"/>
-        <TimePicker v-model="startTime" class="inline repeat-start-time schedule-repeat_col-3"
+        <TimePicker v-model="endTime" class="inline repeat-start-time schedule-repeat_col-3"
                     label="Time" @error="checkErrors"/>
       </div>
       <div v-if="endOption === 'after'">
@@ -138,11 +138,16 @@ export default {
     const now = new Date();
     const currentDay = now.getDay();
 
+    const endDay = new Date(now);
+    endDay.setDate(now.getDate() + 1);
+
     return {
       oneTimeSchedule: true,
-      endOption: 'never',
       startDate: now,
       startTime: now.toTimeString().substr(0, 5),
+      endOption: 'never',
+      endDate: endDay,
+      endTime: endDay.toTimeString().substr(0, 5),
       id: null,
       repeatPeriod: 1,
       executeCount: 1,
@@ -182,15 +187,28 @@ export default {
 
     buildScheduleSetup() {
       const startDatetime = new Date(this.startDate);
-      const [hours, minutes] = this.startTime.split(':')
-      startDatetime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+      const [hours, minutes] = this.startTime.split(':');
+      startDatetime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      const weekDays = this.weekDays.filter(day => day.active)
-          .map(day => day.day);
+      let endOption = this.endOption;
+      let endArg = null;
+
+      if (this.endOption === 'after') {
+        endArg = this.executeCount;
+      } else if (this.endOption === 'on') {
+        const endDatetime = new Date(this.endDate);
+        const [hoursEnd, minutesEnd] = this.endTime.split(':');
+        endDatetime.setHours(parseInt(hoursEnd), parseInt(minutesEnd), 0, 0);
+        endArg = endDatetime;
+      }
+
+      const weekDays = this.weekDays.filter(day => day.active).map(day => day.day);
 
       return {
         repeatable: !this.oneTimeSchedule,
         startDatetime: startDatetime,
+        endOption: endOption,
+        endArg: endArg,
         repeatUnit: this.repeatTimeUnit,
         repeatPeriod: this.repeatPeriod,
         weekDays: weekDays
