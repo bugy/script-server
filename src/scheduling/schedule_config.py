@@ -53,6 +53,9 @@ def read_schedule_config(incoming_schedule_config):
     endOption = incoming_schedule_config.get('endOption')
     endArg = incoming_schedule_config.get('endArg')
 
+    if endOption == 'on':
+        endArg = _read_datetime(incoming_schedule_config, 'endArg')
+
     prepared_schedule_config = ScheduleConfig(repeatable, start_datetime, endOption, endArg)
     if repeatable:
         prepared_schedule_config.repeat_unit = _read_repeat_unit(incoming_schedule_config)
@@ -83,7 +86,7 @@ class ScheduleConfig:
         }
 
         if self.endOption == 'on':
-            result['endArg'] = date_utils.to_iso_string(date_utils.parse_iso_datetime(self.endArg))
+            result['endArg'] = date_utils.to_iso_string(self.endArg)
         else:
             result['endArg'] = self.endArg
 

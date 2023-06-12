@@ -83,6 +83,15 @@ class ScheduleService:
         if not schedule_config.repeatable and date_utils.is_past(schedule_config.start_datetime):
             raise InvalidScheduleException('Start date should be in the future')
 
+        if schedule_config.endOption == 'on':
+            if schedule_config.start_datetime > schedule_config.endArg:
+                raise InvalidScheduleException('End date should be after start date')
+            if date_utils.is_past(schedule_config.endArg):
+                raise InvalidScheduleException('End date should be in the future')
+
+        if schedule_config.endOption == 'after' and schedule_config.endArg <= 0:
+            raise InvalidScheduleException('Count should be greater than 0!')
+
         id = self._id_generator.next_id()
 
         normalized_values = {}
