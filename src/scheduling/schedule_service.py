@@ -83,11 +83,11 @@ class ScheduleService:
         if not schedule_config.repeatable and date_utils.is_past(schedule_config.start_datetime):
             raise InvalidScheduleException('Start date should be in the future')
 
-        if schedule_config.endOption == 'on':
-            if schedule_config.start_datetime > schedule_config.endArg:
+        if schedule_config.end_option == 'on':
+            if schedule_config.start_datetime > schedule_config.end_arg:
                 raise InvalidScheduleException('End date should be after start date')
 
-        if schedule_config.endOption == 'after' and schedule_config.endArg <= 0:
+        if schedule_config.end_option == 'after' and schedule_config.end_arg <= 0:
             raise InvalidScheduleException('Count should be greater than 0!')
 
         id = self._id_generator.next_id()
@@ -121,13 +121,13 @@ class ScheduleService:
         if not schedule.repeatable and date_utils.is_past(schedule.start_datetime):
             return
         
-        if schedule.endOption == 'after' and schedule.endArg <= 0:
+        if schedule.end_option == 'after' and schedule.end_arg <= 0:
             return                
         
         next_datetime = schedule.get_next_time()
 
-        if schedule.endOption == 'on':
-            if date_utils.is_past(schedule.endArg) or next_datetime > schedule.endArg:
+        if schedule.end_option == 'on':
+            if date_utils.is_past(schedule.end_arg) or next_datetime > schedule.end_arg:
                 return
         
         LOGGER.info(
@@ -159,8 +159,8 @@ class ScheduleService:
 
                 self._execution_service.add_finish_listener(cleanup, execution_id)
 
-            if job.schedule.endOption == 'after':
-                job.schedule.endArg -= 1
+            if job.schedule.end_option == 'after':
+                job.schedule.end_arg -= 1
 
                 file_utils.write_file(
                     job_path,

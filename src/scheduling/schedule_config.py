@@ -54,14 +54,14 @@ def read_schedule_config(incoming_schedule_config):
     prepared_schedule_config = ScheduleConfig(repeatable, start_datetime)
     if repeatable:
 
-        endOption = incoming_schedule_config.get('endOption')
-        prepared_schedule_config.endOption = endOption
-        if endOption == 'on':
-            prepared_schedule_config.endArg = _read_datetime(incoming_schedule_config, 'endArg')
-        elif endOption == 'after':
-            prepared_schedule_config.endArg = model_helper.read_int_from_config('endArg', incoming_schedule_config)
+        end_option = incoming_schedule_config.get('end_option')
+        prepared_schedule_config.end_option = end_option
+        if end_option == 'on':
+            prepared_schedule_config.end_arg = _read_datetime(incoming_schedule_config, 'end_arg')
+        elif end_option == 'after':
+            prepared_schedule_config.end_arg = model_helper.read_int_from_config('end_arg', incoming_schedule_config)
         else:
-            prepared_schedule_config.endOption = 'never'
+            prepared_schedule_config.end_option = 'never'
 
         prepared_schedule_config.repeat_unit = _read_repeat_unit(incoming_schedule_config)
         prepared_schedule_config.repeat_period = _read_repeat_period(incoming_schedule_config)
@@ -77,8 +77,8 @@ class ScheduleConfig:
     def __init__(self, repeatable, start_datetime) -> None:
         self.repeatable = repeatable
         self.start_datetime = start_datetime  # type: datetime
-        self.endOption = None
-        self.endArg = None
+        self.end_option = None
+        self.end_arg = None
         self.repeat_unit = None
         self.repeat_period = None
         self.weekdays = None
@@ -89,12 +89,12 @@ class ScheduleConfig:
             'start_datetime': date_utils.to_iso_string(self.start_datetime),
         }
 
-        if self.endOption == 'on':
-            result['endOption'] = self.endOption
-            result['endArg'] = date_utils.to_iso_string(self.endArg)
-        elif self.endOption == 'after':
-            result['endOption'] = self.endOption
-            result['endArg'] = self.endArg
+        if self.end_option == 'on':
+            result['end_option'] = self.end_option
+            result['end_arg'] = date_utils.to_iso_string(self.end_arg)
+        elif self.end_option == 'after':
+            result['end_option'] = self.end_option
+            result['end_arg'] = self.end_arg
 
         if self.repeat_unit is not None:
             result['repeat_unit'] = self.repeat_unit
