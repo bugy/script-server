@@ -5,31 +5,40 @@
       <div class="schedule-type-panel">
         <p class="schedule-type-field">
           <label>
-            <input :checked="oneTimeSchedule" class="with-gap" name="schedule-type" type="radio" @click="oneTimeSchedule = true" />
+            <input :checked="oneTimeSchedule" class="with-gap" name="schedule-type"
+                   type="radio"
+                   @click="oneTimeSchedule = true"/>
             <span>One time</span>
           </label>
         </p>
         <p class="schedule-type-field">
           <label>
-            <input :checked="!oneTimeSchedule" class="with-gap" name="schedule-type" type="radio" @click="oneTimeSchedule = false" />
+            <input :checked="!oneTimeSchedule" class="with-gap" name="schedule-type"
+                   type="radio"
+                   @click="oneTimeSchedule = false"/>
             <span>Repeat</span>
           </label>
         </p>
       </div>
       <div v-if="oneTimeSchedule" class="one-time-schedule-panel">
-        <DatePicker v-model="startDate" :show-header-in-modal="!mobileView" class="inline" label="Date" />
-        <TimePicker v-model="startTime" class="inline" label="Time" @error="checkErrors" />
+        <DatePicker v-model="startDate" :show-header-in-modal="!mobileView" class="inline" label="Date"/>
+        <TimePicker v-model="startTime" class="inline" label="Time" @error="checkErrors"/>
       </div>
       <div v-else class="repeat-schedule-panel">
         <div>
           <span class="schedule-repeat_col-1">Every</span>
-          <Textfield v-model="repeatPeriod" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors" />
-          <Combobox v-model="repeatTimeUnit" :config="repeatTimeUnitField" :show-header="false" class="inline repeat-time-unit-field schedule-repeat_col-3" />
+          <Textfield v-model="repeatPeriod" :config="repeatPeriodField"
+                     class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors"/>
+          <Combobox v-model="repeatTimeUnit" :config="repeatTimeUnitField"
+                    :show-header="false" class="inline repeat-time-unit-field schedule-repeat_col-3"/>
         </div>
         <div>
           <span class="schedule-repeat_col-1">Starting</span>
-          <DatePicker v-model="startDate" :show-header-in-modal="!mobileView" class="inline repeat-start-date schedule-repeat_col-2" label="Date" />
-          <TimePicker v-model="startTime" class="inline repeat-start-time schedule-repeat_col-3" label="Time" @error="checkErrors" />
+          <DatePicker v-model="startDate"
+                      :show-header-in-modal="!mobileView"
+                      class="inline repeat-start-date schedule-repeat_col-2" label="Date"/>
+          <TimePicker v-model="startTime" class="inline repeat-start-time schedule-repeat_col-3"
+                      label="Time" @error="checkErrors"/>
         </div>
 
         <div>
@@ -66,18 +75,27 @@
 
           </div>
 
-          <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
-            <div :class="{ error: weekdaysError }" class="repeat-weekday-panel">
-              <ToggleDayButton v-for="day in weekDays" :key="day.day" v-model="day.active" :text="day.day.charAt(0)" :title="day.day" />
-            </div>
-            <div v-if="weekdaysError" class="weekdays-error">{{ weekdaysError }}</div>
+        <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
+          <div :class="{ error: weekdaysError }" class="repeat-weekday-panel">
+            <ToggleDayButton v-for="day in weekDays"
+                             :key="day.day"
+                             v-model="day.active"
+                             :text="day.day.charAt(0)"
+                             :title="day.day"/>
           </div>
+          <div v-if="weekdaysError" class="weekdays-error">{{ weekdaysError }}</div>
         </div>
       </div>
     </div>
     <div class="schedule-panel-buttons card-action">
-      <a class="waves-effect btn-flat" @click="close">Cancel</a>
-      <PromisableButton :click="runScheduleAction" :enabled="errors.length === 0" :preloaderStyle="{ width: '20px', height: '20px' }" title="Schedule" />
+      <a class="waves-effect btn-flat" @click="close">
+        Cancel
+      </a>
+      <PromisableButton :click="runScheduleAction"
+                        :enabled="errors.length === 0"
+                        :preloaderStyle="{ width: '20px', height: '20px' }"
+                        title="Schedule"/>
+    </div>
     </div>
   </div>
 </template>
