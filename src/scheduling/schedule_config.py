@@ -9,6 +9,8 @@ ALLOWED_WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 
 def _read_datetime(incoming_schedule_config, key):
     datetime_value = model_helper.read_datetime_from_config(key, incoming_schedule_config)
+    if datetime_value is None:
+        raise InvalidScheduleException('%1 is required', key)
     return datetime_value
 
 def _read_repeat_unit(incoming_schedule_config):
