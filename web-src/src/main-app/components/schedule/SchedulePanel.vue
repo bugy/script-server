@@ -72,7 +72,6 @@
           <div v-if="endOption === 'after'">
             <span class="schedule-repeat_col-1">Count</span>
             <Textfield v-model="executeCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors" />
-
           </div>
 
         <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
