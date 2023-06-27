@@ -457,22 +457,46 @@ def wait_observable_close_notification(observable, timeout):
     close_condition.wait(timeout)
 
 
-def mock_request_handler(*, arguments: dict = None, method='GET', headers=None):
+def mock_request_handler(*, arguments: dict = None, method='GET', headers=None, previous_request=None):
     if headers is None:
         headers = {}
 
     request_handler = mock_object()
 
-    def get_argument(arg_name):
+    cookies = {}
+    if previous_request and previous_request._cookies:
+        cookies.update(previous_request._cookies)
+
+    def get_argument(arg_name, default=None):
         if arguments is None:
-            return None
+            return default
         return arguments.get(arg_name)
 
+    def set_secure_cookie(cookie_name, value):
+        cookies[cookie_name] = f'!SECURE!{value}!!!'
+
+    def clear_cookie(cookie_name):
+        del cookies[cookie_name]
+
+    def get_secure_cookie(cookie_name):
+        if not previous_request or cookie_name not in cookies:
+            raise Exception('No cookie ' + cookie_name + ' is available')
+
+        value = cookies[cookie_name]
+        if not value.startswith('!SECURE!'):
+            raise Exception('Cookie ' + cookie_name + ' is not a secure cookie')
+
+        return value[8:-3].encode('utf8')
+
     request_handler.get_argument = get_argument
+    request_handler.set_secure_cookie = set_secure_cookie
+    request_handler.get_secure_cookie = get_secure_cookie
+    request_handler.clear_cookie = clear_cookie
 
     request_handler.request = mock_object()
     request_handler.request.method = method
     request_handler.request.headers = headers
+    request_handler._cookies = cookies
 
     return request_handler
 

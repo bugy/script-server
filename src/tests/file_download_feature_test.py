@@ -31,14 +31,14 @@ class TestFileMatching(unittest.TestCase):
         self.assertEqual(files, [os.path.join(test_utils.temp_folder, 'test.txt')])
 
     def test_single_asterisk_2_matches(self):
-        test_utils.create_file('test1.txt')
-        test_utils.create_file('test2.txt')
+        test_utils.create_file('test1.log')
+        test_utils.create_file('test2.log')
 
-        files = file_download_feature.find_matching_files('*/test*.txt', None)
+        files = file_download_feature.find_matching_files('*/test*.log', None)
 
         self.assertCountEqual(files, [
-            os.path.join(test_utils.temp_folder, 'test1.txt'),
-            os.path.join(test_utils.temp_folder, 'test2.txt')
+            os.path.join(test_utils.temp_folder, 'test1.log'),
+            os.path.join(test_utils.temp_folder, 'test2.log')
         ])
 
     def test_double_asterisk_match(self):

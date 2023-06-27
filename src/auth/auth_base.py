@@ -17,7 +17,7 @@ class Authenticator(metaclass=abc.ABCMeta):
     def get_groups(self, user, known_groups=None):
         return []
 
-    def validate_user(self, user, request_handler):
+    async def validate_user(self, user, request_handler):
         return True
 
     def perform_basic_auth(self, user, password):

@@ -8,7 +8,7 @@ from unittest.mock import patch, ANY, MagicMock
 
 from auth.user import User
 from config.config_service import ConfigService
-from scheduling import schedule_service
+from scheduling import scheduler
 from scheduling.schedule_config import ScheduleConfig, InvalidScheduleException
 from scheduling.schedule_service import ScheduleService, InvalidUserException, UnavailableScriptException
 from scheduling.scheduling_job import SchedulingJob
@@ -57,8 +57,8 @@ class ScheduleServiceTestCase(TestCase):
         self.scheduler_mock = MagicMock()
         self.patcher.start().return_value = self.scheduler_mock
 
-        schedule_service._sleep = MagicMock()
-        schedule_service._sleep.side_effect = lambda x: time.sleep(0.001)
+        scheduler._sleep = MagicMock()
+        scheduler._sleep.side_effect = lambda x: time.sleep(0.001)
 
         self.config_service = ConfigService(AnyUserAuthorizer(), test_utils.temp_folder, test_utils.process_invoker)
 
@@ -95,10 +95,9 @@ class ScheduleServiceTestCase(TestCase):
 
         date_utils._mocked_now = None
 
-        self.schedule_service._stop()
-        self.schedule_service.scheduling_thread.join()
+        self.schedule_service.stop()
 
-        schedule_service._sleep = time.sleep
+        scheduler._sleep = time.sleep
 
         self.patcher.stop()
 
@@ -289,7 +288,7 @@ class TestScheduleServiceInit(ScheduleServiceTestCase):
         self.assertGreater(step2_runs_count, step1_runs_count)
 
     def test_scheduler_runner_when_stopped(self):
-        self.schedule_service._stop()
+        self.schedule_service.stop()
         time.sleep(0.1)
         original_runs_count = self.scheduler_mock.run.call_count
 

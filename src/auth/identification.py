@@ -2,11 +2,10 @@ import abc
 import logging
 import uuid
 
-import tornado.websocket
-
 from model.trusted_ips import TrustedIpValidator
 from utils import tornado_utils, date_utils, audit_utils
 from utils.date_utils import days_to_ms
+from utils.tornado_utils import can_write_secure_cookie
 
 LOGGER = logging.getLogger('identification')
 
@@ -120,4 +119,4 @@ class IpBasedIdentification(Identification):
         request_handler.set_secure_cookie(self.COOKIE_KEY, new_token, expires_days=self.EXPIRES_DAYS)
 
     def _can_write(self, request_handler):
-        return not isinstance(request_handler, tornado.websocket.WebSocketHandler)
+        return can_write_secure_cookie(request_handler)

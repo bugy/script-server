@@ -32,7 +32,7 @@ or [how to configure the server](https://github.com/bugy/script-server/wiki/Serv
 
 ### Server-side
 
-Python 3.6 or higher with the following modules:
+Python 3.7 or higher with the following modules:
 
 * Tornado 5 / 6
 

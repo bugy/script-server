@@ -60,7 +60,7 @@ class TestFetchUserInfo(AsyncTestCase):
         user_info = yield authenticator.fetch_user_info('my_token_2')
         self.assertEqual(_OauthUserInfo('me@gmail.com', True, response), user_info)
 
-        mock_request.assert_called_with('https://my.gitlab.host/api/v4/user', 'my_token_2')
+        mock_request.assert_called_with('https://my.gitlab.host/api/v4/user', access_token='my_token_2')
 
     @patch('tornado.auth.OAuth2Mixin.oauth2_request', new_callable=AsyncMock)
     @gen_test

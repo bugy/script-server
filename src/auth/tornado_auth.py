@@ -8,19 +8,19 @@ from tornado import gen
 
 from auth import auth_base
 from utils import tornado_utils
-from utils.tornado_utils import respond_error, redirect_relative
+from utils.tornado_utils import respond_error, redirect_relative, can_write_secure_cookie
 
 LOGGER = logging.getLogger('script_server.tornado_auth')
 
 
-class TornadoAuth():
+class TornadoAuth:
     def __init__(self, authenticator):
         self.authenticator = authenticator
 
     def is_enabled(self):
         return bool(self.authenticator)
 
-    def is_authenticated(self, request_handler):
+    async def is_authenticated(self, request_handler):
         if not self.is_enabled():
             return True
 
@@ -28,7 +28,7 @@ class TornadoAuth():
         if not username:
             return False
 
-        active = self.authenticator.validate_user(username, request_handler)
+        active = await self.authenticator.validate_user(username, request_handler)
         if not active:
             self.logout(request_handler)
 
@@ -111,6 +111,9 @@ class TornadoAuth():
 
         username = self.get_username(request_handler)
         if not username:
+            return
+
+        if not can_write_secure_cookie(request_handler):
             return
 
         LOGGER.info('Logging out ' + username)

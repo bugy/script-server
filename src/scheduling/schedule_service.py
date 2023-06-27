@@ -1,10 +1,6 @@
 import json
 import logging
 import os
-import sched
-import threading
-import time
-from datetime import timedelta
 
 from auth.user import User
 from config.config_service import ConfigService
@@ -12,6 +8,7 @@ from execution.execution_service import ExecutionService
 from execution.id_generator import IdGenerator
 from scheduling import scheduling_job
 from scheduling.schedule_config import read_schedule_config, InvalidScheduleException
+from scheduling.scheduler import Scheduler
 from scheduling.scheduling_job import SchedulingJob
 from utils import file_utils, date_utils, custom_json
 
@@ -22,8 +19,6 @@ PARAM_VALUES_KEY = 'parameter_values'
 JOB_SCHEDULE_KEY = 'schedule'
 
 LOGGER = logging.getLogger('script_server.scheduling.schedule_service')
-
-_sleep = time.sleep
 
 
 def restore_jobs(schedules_folder):
@@ -63,10 +58,8 @@ class ScheduleService:
 
         (jobs, ids) = restore_jobs(self._schedules_folder)
         self._id_generator = IdGenerator(ids)
-        self.stopped = False
 
-        self.scheduler = sched.scheduler(timefunc=time.time)
-        self._start_scheduler()
+        self.scheduler = Scheduler()
 
         for job_path, job in jobs.items():
             self.schedule_job(job, job_path)
@@ -118,7 +111,7 @@ class ScheduleService:
         LOGGER.info(
             'Scheduling ' + job.get_log_name() + ' at ' + next_datetime.astimezone(tz=None).strftime('%H:%M, %d %B %Y'))
 
-        self.scheduler.enterabs(next_datetime.timestamp(), 1, self._execute_job, (job, job_path))
+        self.scheduler.schedule(next_datetime, self._execute_job, (job, job_path))
 
     def _execute_job(self, job: SchedulingJob, job_path):
         LOGGER.info('Executing ' + job.get_log_name())
@@ -160,29 +153,8 @@ class ScheduleService:
 
         return path
 
-    def _start_scheduler(self):
-        def scheduler_loop():
-            while not self.stopped:
-                try:
-                    self.scheduler.run(blocking=False)
-                except:
-                    LOGGER.exception('Failed to execute scheduled job')
-
-                now = date_utils.now()
-                sleep_delta = timedelta(minutes=1) - timedelta(microseconds=now.microsecond, seconds=now.second)
-                _sleep(sleep_delta.total_seconds())
-
-        self.scheduling_thread = threading.Thread(daemon=True, target=scheduler_loop)
-        self.scheduling_thread.start()
-
-    def _stop(self):
-        self.stopped = True
-
-        def stopper():
-            pass
-
-        # just schedule the next execution to exit thread immediately
-        self.scheduler.enter(1, 0, stopper)
+    def stop(self):
+        self.scheduler.stop()
 
 
 class InvalidUserException(Exception):
