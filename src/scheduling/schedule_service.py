@@ -127,7 +127,7 @@ class ScheduleService:
         next_datetime = schedule.get_next_time()
 
         if schedule.end_option == 'on':
-            if date_utils.is_past(schedule.end_arg) or next_datetime > schedule.end_arg:
+            if next_datetime > schedule.end_arg:
                 return
         
         LOGGER.info(
