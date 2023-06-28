@@ -61,9 +61,9 @@ def read_schedule_config(incoming_schedule_config):
             raise InvalidScheduleException('end_option is required for repeatable schedule')
 
         prepared_schedule_config.end_option = end_option
-        if end_option == 'on':
+        if end_option == 'end_datetime':
             prepared_schedule_config.end_arg = _read_datetime(incoming_schedule_config, 'end_arg')
-        elif end_option == 'after':
+        elif end_option == 'max_executions':
             prepared_schedule_config.end_arg = model_helper.read_int_from_config('end_arg', incoming_schedule_config)
         else:
             prepared_schedule_config.end_option = 'never'
@@ -94,10 +94,10 @@ class ScheduleConfig:
             'start_datetime': date_utils.to_iso_string(self.start_datetime),
         }
 
-        if self.end_option == 'on':
+        if self.end_option == 'end_datetime':
             result['end_option'] = self.end_option
             result['end_arg'] = date_utils.to_iso_string(self.end_arg)
-        elif self.end_option == 'after':
+        elif self.end_option == 'max_executions':
             result['end_option'] = self.end_option
             result['end_arg'] = self.end_arg
 

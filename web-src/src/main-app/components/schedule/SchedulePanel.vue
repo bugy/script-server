@@ -42,7 +42,7 @@
         </div>
 
         <div>
-          <span class="schedule-repeat_col-1">End</span>
+          <span class="schedule-repeat_col-1">End:</span>
           <div class="schedule-type-panel">
             <p class="schedule-type-field">
               <label>
@@ -52,24 +52,24 @@
             </p>
             <p class="schedule-type-field">
               <label>
-                <input :checked="endOption === 'after'" class="with-gap" name="end-type" type="radio" @click="endOption = 'after'" />
-                <span>After</span>
+                <input :checked="endOption === 'maxExecuteCount'" class="with-gap" name="end-type" type="radio" @click="endOption = 'maxExecuteCount'" />
+                <span>Count</span>
               </label>
             </p>
             <p class="schedule-type-field">
               <label>
-                <input :checked="endOption === 'on'" class="with-gap" name="end-type" type="radio" @click="endOption = 'on'" />
-                <span>On</span>
+                <input :checked="endOption === 'endDatetime'" class="with-gap" name="end-type" type="radio" @click="endOption = 'endDatetime'" />
+                <span>Date</span>
               </label>
             </p>
           </div>
           <br>
-          <div v-if="endOption === 'on'">
+          <div v-if="endOption === 'endDatetime'">
             <span class="schedule-repeat_col-1">Ending</span>
             <DatePicker v-model="endDate" :show-header-in-modal="!mobileView" class="inline repeat-start-date schedule-repeat_col-2" label="Date" />
             <TimePicker v-model="endTime" class="inline repeat-start-time schedule-repeat_col-3" label="Time" @error="checkErrors" />
           </div>
-          <div v-if="endOption === 'after'">
+          <div v-if="endOption === 'maxExecuteCount'">
             <span class="schedule-repeat_col-1">Count</span>
             <Textfield v-model="maxExecuteCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors" />
           </div>
@@ -182,13 +182,15 @@ export default {
       let endOption = this.endOption;
       let endArg = null;
 
-      if (this.endOption === 'after') {
+      if (this.endOption === 'maxExecuteCount') {
         endArg = this.maxExecuteCount;
-      } else if (this.endOption === 'on') {
+        endOption = 'max_executions';
+      } else if (this.endOption === 'endDatetime') {
         const endDatetime = new Date(this.endDate);
         const [hoursEnd, minutesEnd] = this.endTime.split(':');
         endDatetime.setHours(parseInt(hoursEnd), parseInt(minutesEnd), 0, 0);
         endArg = endDatetime;
+        endOption = 'end_datetime';
       }
 
       const weekDays = this.weekDays.filter(day => day.active).map(day => day.day);
