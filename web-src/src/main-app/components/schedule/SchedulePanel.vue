@@ -71,7 +71,7 @@
           </div>
           <div v-if="endOption === 'after'">
             <span class="schedule-repeat_col-1">Count</span>
-            <Textfield v-model="executeCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors" />
+            <Textfield v-model="maxExecuteCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors" />
           </div>
 
         <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
@@ -139,7 +139,7 @@ export default {
       endTime: endDay.toTimeString().substr(0, 5),
       id: null,
       repeatPeriod: 1,
-      executeCount: 1,
+      maxExecuteCount: 1,
       repeatTimeUnit: 'days',
       weekDays: [
         {'day': 'Monday', active: currentDay === 1},
@@ -183,7 +183,7 @@ export default {
       let endArg = null;
 
       if (this.endOption === 'after') {
-        endArg = this.executeCount;
+        endArg = this.maxExecuteCount;
       } else if (this.endOption === 'on') {
         const endDatetime = new Date(this.endDate);
         const [hoursEnd, minutesEnd] = this.endTime.split(':');
