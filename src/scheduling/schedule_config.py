@@ -57,6 +57,9 @@ def read_schedule_config(incoming_schedule_config):
     if repeatable:
 
         end_option = incoming_schedule_config.get('end_option')
+        if end_option is None:
+            raise InvalidScheduleException('end_option is required for repeatable schedule')
+
         prepared_schedule_config.end_option = end_option
         if end_option == 'on':
             prepared_schedule_config.end_arg = _read_datetime(incoming_schedule_config, 'end_arg')
