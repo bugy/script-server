@@ -111,9 +111,10 @@ class OAuthTokenManager:
         if not self._scheduler:
             self.scheduler = Scheduler()
 
-        if (next_refresh_datetime - datetime.datetime.now()) < datetime.timedelta(seconds=30):
-            next_refresh_datetime_adjusted = next_refresh_datetime
-        elif (next_refresh_datetime - datetime.datetime.now()) < datetime.timedelta(minutes=2):
+        token_expires_in = next_refresh_datetime - datetime.datetime.now()
+        if token_expires_in < datetime.timedelta(seconds=30):
+            next_refresh_datetime_adjusted = next_refresh_datetime - (token_expires_in / 2)
+        elif token_expires_in < datetime.timedelta(minutes=2):
             next_refresh_datetime_adjusted = next_refresh_datetime - datetime.timedelta(seconds=10)
         else:
             next_refresh_datetime_adjusted = next_refresh_datetime - datetime.timedelta(minutes=1)
