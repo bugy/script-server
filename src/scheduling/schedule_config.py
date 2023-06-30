@@ -115,7 +115,7 @@ class ScheduleConfig:
     def as_serializable_dict(self):
         result = {
             'repeatable': self.repeatable,
-            'start_datetime': date_utils.to_iso_string(self.start_datetime),
+            'start_datetime': date_utils.to_iso_string(self.start_datetime)
         }
 
         if self.end_option == 'end_datetime':
