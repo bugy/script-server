@@ -124,7 +124,7 @@ class ScheduleConfig:
         elif self.end_option == 'max_executions':
             result['end_option'] = self.end_option
             result['end_arg'] = self.end_arg
-        else:
+        elif self.end_option == 'never':
             result['end_option'] = 'never'
 
         if self.repeatable:
