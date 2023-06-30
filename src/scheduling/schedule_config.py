@@ -31,6 +31,37 @@ def _read_repeat_period(incoming_schedule_config):
     return period
 
 
+def _read_executions_count(incoming_schedule_config):
+    executions_count = model_helper.read_int_from_config('executions_count', incoming_schedule_config)
+    if executions_count is None:
+        executions_count = 0
+    elif executions_count < 0:
+        raise InvalidScheduleException('executions_count should be > 0')
+    return executions_count
+
+def _read_end_arg_int(incoming_schedule_config):
+    end_arg = model_helper.read_int_from_config('end_arg', incoming_schedule_config)
+    if end_arg is None:
+        raise InvalidScheduleException('end_arg is required for repeatable schedule')
+    elif end_arg <= 0:
+        raise InvalidScheduleException('end_arg should be > 0')
+    return end_arg
+
+
+def _read_end_args(incoming_schedule_config):
+    end_option = incoming_schedule_config.get('end_option')
+    if end_option is None:
+        raise InvalidScheduleException('end_option is required for repeatable schedule')
+    elif end_option == 'end_datetime':
+        end_arg = _read_datetime(incoming_schedule_config, 'end_arg')
+        return end_option,end_arg
+    elif end_option == 'max_executions':
+        end_arg = _read_end_arg_int(incoming_schedule_config)
+        return end_option,end_arg
+    else:
+        return end_option,None
+
+
 def read_repeatable_flag(incoming_schedule_config):
     repeatable = model_helper.read_bool_from_config('repeatable', incoming_schedule_config)
     if repeatable is None:
@@ -56,17 +87,9 @@ def read_schedule_config(incoming_schedule_config):
     prepared_schedule_config = ScheduleConfig(repeatable, start_datetime)
     if repeatable:
 
-        end_option = incoming_schedule_config.get('end_option')
-        if end_option is None:
-            raise InvalidScheduleException('end_option is required for repeatable schedule')
+        prepared_schedule_config.executions_count = _read_executions_count(incoming_schedule_config)
 
-        prepared_schedule_config.end_option = end_option
-        if end_option == 'end_datetime':
-            prepared_schedule_config.end_arg = _read_datetime(incoming_schedule_config, 'end_arg')
-        elif end_option == 'max_executions':
-            prepared_schedule_config.end_arg = model_helper.read_int_from_config('end_arg', incoming_schedule_config)
-        else:
-            prepared_schedule_config.end_option = 'never'
+        prepared_schedule_config.end_option, prepared_schedule_config.end_arg = _read_end_args(incoming_schedule_config)
 
         prepared_schedule_config.repeat_unit = _read_repeat_unit(incoming_schedule_config)
         prepared_schedule_config.repeat_period = _read_repeat_period(incoming_schedule_config)
@@ -84,6 +107,7 @@ class ScheduleConfig:
         self.start_datetime = start_datetime  # type: datetime
         self.end_option = None
         self.end_arg = None
+        self.executions_count = None
         self.repeat_unit = None
         self.repeat_period = None
         self.weekdays = None
@@ -100,6 +124,11 @@ class ScheduleConfig:
         elif self.end_option == 'max_executions':
             result['end_option'] = self.end_option
             result['end_arg'] = self.end_arg
+        else:
+            result['end_option'] = 'never'
+
+        if self.repeatable:
+            result['executions_count'] = self.executions_count
 
         if self.repeat_unit is not None:
             result['repeat_unit'] = self.repeat_unit

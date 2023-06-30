@@ -121,7 +121,7 @@ class ScheduleService:
         if not schedule.repeatable and date_utils.is_past(schedule.start_datetime):
             return
         
-        if schedule.end_option == 'max_executions' and schedule.end_arg <= 0:
+        if schedule.end_option == 'max_executions' and schedule.end_arg <= schedule.executions_count:
             return                
         
         next_datetime = schedule.get_next_time()
@@ -159,8 +159,8 @@ class ScheduleService:
 
                 self._execution_service.add_finish_listener(cleanup, execution_id)
 
-            if job.schedule.end_option == 'max_executions':
-                job.schedule.end_arg -= 1
+            if job.schedule.repeatable:
+                job.schedule.executions_count += 1
 
                 file_utils.write_file(
                     job_path,
