@@ -42,7 +42,7 @@ from utils.exceptions.not_found_exception import NotFoundException
 from utils.tornado_utils import respond_error, redirect_relative, get_form_file
 from web.script_config_socket import ScriptConfigSocket, active_config_models
 from web.streaming_form_reader import StreamingFormReader
-from web.web_auth_utils import check_authorization
+from web.web_auth_utils import check_authorization, check_authorization_sync
 from web.web_utils import wrap_to_server_event, identify_user, inject_user, get_user
 from web.xheader_app_wrapper import autoapply_xheaders
 
@@ -266,10 +266,6 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
     @check_authorization
     @inject_user
     def open(self, user, execution_id):
-        auth = self.application.auth
-        if not auth.is_authenticated(self):
-            return None
-
         execution_service = self.application.execution_service
 
         try:
@@ -503,7 +499,7 @@ class GetExecutionStatus(BaseRequestHandler):
 class AuthorizedStaticFileHandler(BaseStaticHandler):
     admin_files = ['admin.html', 'css/admin.css', 'admin.js', 'admin-deps.css']
 
-    @check_authorization
+    @check_authorization_sync
     def validate_absolute_path(self, root, absolute_path):
         if not self.application.auth.is_enabled() and (absolute_path.endswith("/login.html")):
             raise tornado.web.HTTPError(404)

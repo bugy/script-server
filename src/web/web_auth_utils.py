@@ -8,18 +8,28 @@ import tornado.web
 import tornado.websocket
 
 from auth.auth_base import AuthRejectedError, AuthFailureError
+from utils import tornado_utils
 from utils.tornado_utils import redirect_relative
 from web.web_utils import identify_user
 
 LOGGER = logging.getLogger('web_server')
 
-webpack_prefixed_extensions = ['.css', '.js.map', '.js', '.jpg', '.woff', '.woff2']
+webpack_prefixed_extensions = ['.css', '.js.map', '.js', '.jpg', '.woff', '.woff2', '.png']
+
+
+def check_authorization_sync(func):
+    wrapper = check_authorization(func)
+
+    def sync_wrapper(self, *args, **kwargs):
+        return tornado_utils.run_sync(wrapper(self, *args, **kwargs))
+
+    return sync_wrapper
 
 
 # In case of REST requests we don't redirect explicitly, but reply with Unauthorized code.
 # Client application should provide redirection in the way it likes
-def check_authorization(func):
-    def wrapper(self, *args, **kwargs):
+def check_authorization(func, ):
+    async def wrapper(self, *args, **kwargs):
         auth = self.application.auth
         authorizer = self.application.authorizer
 
@@ -31,7 +41,7 @@ def check_authorization(func):
             return func(self, *args, **kwargs)
 
         try:
-            authenticated = auth.is_authenticated(self)
+            authenticated = await auth.is_authenticated(self)
         except (AuthRejectedError, AuthFailureError) as e:
             message = 'On-fly auth rejected'
             LOGGER.warning(message + ': ' + str(e))
@@ -104,7 +114,8 @@ def is_allowed_during_login(request_path, login_url, request_handler):
                        '/fonts/roboto-latin-500.woff',
                        '/fonts/roboto-latin-400.woff2',
                        '/fonts/roboto-latin-400.woff',
-                       '/img/titleBackground_login.jpg']
+                       '/img/titleBackground_login.jpg',
+                       '/img/gitlab-icon-rgb.png']
 
     return (request_path in login_resources) or (request_path.startswith('/theme/'))
 

@@ -12,6 +12,7 @@ from tornado.testing import AsyncTestCase, gen_test
 import auth
 from auth.auth_abstract_oauth import AbstractOauthAuthenticator, _OauthUserInfo
 from auth.auth_base import AuthFailureError, AuthBadRequestException
+from auth.oauth_token_response import OAuthTokenResponse
 from model.server_conf import InvalidServerConfigException
 from tests import test_utils
 from tests.test_utils import mock_object
@@ -263,42 +264,42 @@ class TestValidateUser(_OauthTestCase):
         request_handler = mock_request_handler('X')
         username = yield authenticator.authenticate(request_handler)
 
-        valid = authenticator.validate_user(username, request_handler)
+        valid = yield authenticator.validate_user(username, request_handler)
         self.assertEqual(True, valid)
 
     @gen_test
     def test_validate_when_no_state(self):
         authenticator = create_test_authenticator(group_support=False)
 
-        valid = authenticator.validate_user('user_X', mock_request_handler(''))
+        valid = yield authenticator.validate_user('user_X', mock_request_handler(''))
         self.assertEqual(True, valid)
 
     @gen_test
     def test_validate_when_no_username(self):
         authenticator = create_test_authenticator(group_support=False)
 
-        valid = authenticator.validate_user(None, mock_request_handler(''))
+        valid = yield authenticator.validate_user(None, mock_request_handler(''))
         self.assertEqual(False, valid)
 
     @gen_test
     def test_validate_when_no_state_and_expire_enabled(self):
         authenticator = create_test_authenticator(session_expire_minutes=1)
 
-        valid = authenticator.validate_user('user_X', mock_request_handler(''))
+        valid = yield authenticator.validate_user('user_X', mock_request_handler(''))
         self.assertEqual(False, valid)
 
     @gen_test
     def test_validate_when_no_state_and_auth_update_enabled(self):
         authenticator = create_test_authenticator(auth_info_ttl=1)
 
-        valid = authenticator.validate_user('user_X', mock_request_handler(''))
+        valid = yield authenticator.validate_user('user_X', mock_request_handler(''))
         self.assertEqual(False, valid)
 
     @gen_test
     def test_validate_when_no_state_and_group_support(self):
         authenticator = create_test_authenticator(group_support=True)
 
-        valid = authenticator.validate_user('user_X', mock_request_handler(''))
+        valid = yield authenticator.validate_user('user_X', mock_request_handler(''))
         self.assertEqual(False, valid)
 
     @patch('time.time', mock_time)
@@ -310,7 +311,7 @@ class TestValidateUser(_OauthTestCase):
         username = yield authenticator.authenticate(request_handler)
 
         mock_time.return_value = mock_time.return_value + 60 * 10
-        valid = authenticator.validate_user(username, request_handler)
+        valid = yield authenticator.validate_user(username, request_handler)
         self.assertEqual(False, valid)
 
     @patch('time.time', mock_time)
@@ -322,7 +323,7 @@ class TestValidateUser(_OauthTestCase):
         username = yield authenticator.authenticate(request_handler)
 
         mock_time.return_value = mock_time.return_value + 60 * 2
-        valid = authenticator.validate_user(username, request_handler)
+        valid = yield authenticator.validate_user(username, request_handler)
         self.assertEqual(True, valid)
 
     @patch('time.time', mock_time)
@@ -334,10 +335,10 @@ class TestValidateUser(_OauthTestCase):
         username = yield authenticator.authenticate(request_handler)
 
         mock_time.return_value = mock_time.return_value + 60 * 2
-        authenticator.validate_user(username, request_handler)
+        yield authenticator.validate_user(username, request_handler)
 
         mock_time.return_value = mock_time.return_value + 60 * 4
-        valid2 = authenticator.validate_user(username, request_handler)
+        valid2 = yield authenticator.validate_user(username, request_handler)
         self.assertEqual(True, valid2)
 
     @patch('time.time', mock_time)
@@ -352,7 +353,7 @@ class TestValidateUser(_OauthTestCase):
         authenticator.validate_user(username, request_handler)
 
         mock_time.return_value = mock_time.return_value + 60 * 6
-        valid2 = authenticator.validate_user(username, request_handler)
+        valid2 = yield authenticator.validate_user(username, request_handler)
         self.assertEqual(False, valid2)
 
     @gen_test
@@ -362,7 +363,7 @@ class TestValidateUser(_OauthTestCase):
         request_handler = mock_request_handler('X')
         username = yield authenticator.authenticate(request_handler)
 
-        valid = authenticator.validate_user(username, mock_request_handler('X'))
+        valid = yield authenticator.validate_user(username, mock_request_handler('X'))
         self.assertEqual(False, valid)
 
 
@@ -441,7 +442,7 @@ class TestUpdateUserAuth(_OauthTestCase):
 
         authenticator.user_groups['user_X'] = ['Group A']
 
-        valid1 = authenticator.validate_user(username, request_handler)
+        valid1 = yield authenticator.validate_user(username, request_handler)
         self.assertEqual(True, valid1)
 
         yield self.wait_next_ioloop()
@@ -460,12 +461,13 @@ class TestUpdateUserAuth(_OauthTestCase):
 
         prevalidation_callback(username, authenticator)
 
-        valid1 = authenticator.validate_user(username, request_handler)
+        valid1 = yield authenticator.validate_user(username, request_handler)
         self.assertEqual(True, valid1)
 
         yield self.wait_next_ioloop()
 
-        return authenticator.validate_user(username, request_handler)
+        new_validity = yield authenticator.validate_user(username, request_handler)
+        return new_validity
 
     async def wait_next_ioloop(self):
         await gen.sleep(0.001)
@@ -483,7 +485,7 @@ class TestLogout(_OauthTestCase):
 
         self.assertIsNone(request_handler.get_secure_cookie('token'))
 
-        valid = authenticator.validate_user(username, request_handler)
+        valid = yield authenticator.validate_user(username, request_handler)
         self.assertFalse(valid)
 
 
@@ -620,10 +622,10 @@ class MockOauthAuthenticator(AbstractOauthAuthenticator):
         self.disabled_users = []
         self.failing_groups_loading = []
 
-    async def fetch_access_token(self, code, request_handler):
+    async def fetch_access_token_by_code(self, code, request_handler):
         for key, value in self.user_tokens.items():
             if value.endswith(code):
-                return key, None
+                return OAuthTokenResponse(key, None, None, None)
 
         raise Exception('Could not generate token for code ' + code + '. Make sure core is equal to user suffix')
 

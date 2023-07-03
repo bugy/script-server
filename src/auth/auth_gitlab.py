@@ -29,7 +29,7 @@ class GitlabOAuthAuthenticator(AbstractOauthAuthenticator, OAuth2Mixin):
     async def fetch_user_info(self, access_token) -> _OauthUserInfo:
         user = await self.oauth2_request(
             _OAUTH_GITLAB_USERINFO % self.gitlab_host,
-            access_token)
+            access_token=access_token)
         if user is None:
             return None
 
