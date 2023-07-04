@@ -31,14 +31,6 @@ def _read_repeat_period(incoming_schedule_config):
     return period
 
 
-def _read_executions_count(incoming_schedule_config):
-    executions_count = model_helper.read_int_from_config('executions_count', incoming_schedule_config)
-    if executions_count is None:
-        executions_count = 0
-    elif executions_count < 0:
-        raise InvalidScheduleException('executions_count should be > 0')
-    return executions_count
-
 def _read_end_arg_int(incoming_schedule_config):
     end_arg = model_helper.read_int_from_config('end_arg', incoming_schedule_config)
     if end_arg is None:
@@ -87,7 +79,7 @@ def read_schedule_config(incoming_schedule_config):
     prepared_schedule_config = ScheduleConfig(repeatable, start_datetime)
     if repeatable:
 
-        prepared_schedule_config.executions_count = _read_executions_count(incoming_schedule_config)
+        prepared_schedule_config.executions_count = model_helper.read_int_from_config('executions_count', incoming_schedule_config, default=0)
 
         prepared_schedule_config.end_option, prepared_schedule_config.end_arg = _read_end_args(incoming_schedule_config)
 
