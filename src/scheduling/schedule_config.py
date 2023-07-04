@@ -42,9 +42,7 @@ def _read_end_arg_int(incoming_schedule_config):
 
 def _read_end_args(incoming_schedule_config):
     end_option = incoming_schedule_config.get('end_option')
-    if end_option is None:
-        raise InvalidScheduleException('end_option is required for repeatable schedule')
-    elif end_option == 'end_datetime':
+    if end_option == 'end_datetime':
         end_arg = _read_datetime(incoming_schedule_config, 'end_arg')
         return end_option,end_arg
     elif end_option == 'max_executions':
@@ -116,8 +114,6 @@ class ScheduleConfig:
         elif self.end_option == 'max_executions':
             result['end_option'] = self.end_option
             result['end_arg'] = self.end_arg
-        elif self.end_option == 'never':
-            result['end_option'] = 'never'
 
         if self.repeatable:
             result['executions_count'] = self.executions_count
