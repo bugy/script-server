@@ -155,9 +155,7 @@ class ScheduleService:
             if job.schedule.repeatable:
                 job.schedule.executions_count += 1
 
-                file_utils.write_file(
-                    job_path,
-                    json.dumps(job.as_serializable_dict(), indent=2))
+                self.save_job(job)
 
         except:
             LOGGER.exception('Failed to execute ' + job.get_log_name())
