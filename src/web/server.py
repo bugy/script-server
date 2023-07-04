@@ -644,7 +644,7 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
         encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
         self.set_header('Content-Disposition', 'attachment; filename*=UTF-8\'\'' + encoded_filename + '')
 
-    @check_authorization
+    @check_authorization_sync
     def validate_absolute_path(self, root, absolute_path):
         audit_name = get_audit_name_from_request(self)
         user_id = identify_user(self)

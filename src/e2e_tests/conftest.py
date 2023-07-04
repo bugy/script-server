@@ -83,7 +83,9 @@ def pytest_configure(config):
     with open(CONFIG_PATH) as config_file:
         data = json.load(config_file)
     for config_item in data.keys():
-        config._metadata[str(config_item)] = str(data[config_item])
+        # https://github.com/pytest-dev/pytest-metadata/issues/70
+        from pytest_metadata.plugin import metadata_key
+        config.stash[metadata_key][str(config_item)] = str(data[config_item])
 
 
 def pytest_html_report_title(report):
