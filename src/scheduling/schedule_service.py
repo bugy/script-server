@@ -76,6 +76,13 @@ class ScheduleService:
         if not schedule_config.repeatable and date_utils.is_past(schedule_config.start_datetime):
             raise InvalidScheduleException('Start date should be in the future')
 
+        if schedule_config.end_option == 'end_datetime':
+            if schedule_config.start_datetime > schedule_config.end_arg:
+                raise InvalidScheduleException('End date should be after start date')
+
+        if schedule_config.end_option == 'max_executions' and schedule_config.end_arg <= 0:
+            raise InvalidScheduleException('Count should be greater than 0!')
+
         id = self._id_generator.next_id()
 
         normalized_values = {}
@@ -106,8 +113,16 @@ class ScheduleService:
 
         if not schedule.repeatable and date_utils.is_past(schedule.start_datetime):
             return
-
+        
+        if schedule.end_option == 'max_executions' and schedule.end_arg <= schedule.executions_count:
+            return                
+        
         next_datetime = schedule.get_next_time()
+
+        if schedule.end_option == 'end_datetime':
+            if next_datetime > schedule.end_arg:
+                return
+        
         LOGGER.info(
             'Scheduling ' + job.get_log_name() + ' at ' + next_datetime.astimezone(tz=None).strftime('%H:%M, %d %B %Y'))
 
@@ -136,6 +151,12 @@ class ScheduleService:
                     self._execution_service.cleanup_execution(execution_id, user)
 
                 self._execution_service.add_finish_listener(cleanup, execution_id)
+
+            if job.schedule.repeatable:
+                job.schedule.executions_count += 1
+
+                self.save_job(job)
+
         except:
             LOGGER.exception('Failed to execute ' + job.get_log_name())
 
