@@ -13,6 +13,7 @@ from typing import Dict
 import tornado
 import tornado.ioloop
 from tornado import httpclient, escape
+from tornado.httpclient import HTTPClientError
 
 from auth import auth_base
 from auth.auth_base import AuthFailureError, AuthBadRequestException, AuthRejectedError
@@ -266,10 +267,13 @@ class AbstractOauthAuthenticator(auth_base.Authenticator, metaclass=abc.ABCMeta)
 
             try:
                 user_info = await self.fetch_user_info(access_token)  # type: _OauthUserInfo
-            except AuthRejectedError:
-                LOGGER.info(f'User {username} is not authenticated anymore. Logging out')
-                self._remove_user(username)
-                return
+            except (AuthRejectedError, HTTPClientError) as e:
+                if (not isinstance(e, HTTPClientError)) or (e.code == 401):
+                    LOGGER.info(f'User {username} is not authenticated anymore. Logging out')
+                    self._remove_user(username)
+                    return
+                else:
+                    raise e
 
             if (not user_info) or (not user_info.username):
                 LOGGER.error('Failed to fetch user info: %s', str(user_info))

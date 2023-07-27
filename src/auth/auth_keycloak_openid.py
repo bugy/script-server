@@ -1,10 +1,8 @@
 import logging
 
 from tornado import escape
-from tornado.httpclient import HTTPClientError
 
 from auth.auth_abstract_oauth import AbstractOauthAuthenticator, _OauthUserInfo
-from auth.auth_base import AuthRejectedError
 from model import model_helper
 
 LOGGER = logging.getLogger('script_server.GoogleOauthAuthorizer')
@@ -33,13 +31,7 @@ class KeycloakOpenidAuthenticator(AbstractOauthAuthenticator):
             self._realm_url + 'protocol/openid-connect/userinfo',
             headers={'Authorization': 'Bearer ' + access_token})
 
-        try:
-            user_response = await user_future
-        except HTTPClientError as e:
-            if e.code == 401:
-                raise AuthRejectedError('Failed to fetch user info')
-            else:
-                raise e
+        user_response = await user_future
 
         if not user_response:
             raise Exception('No response during loading userinfo')

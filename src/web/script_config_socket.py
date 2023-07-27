@@ -197,7 +197,7 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
             self.close(code=CorruptConfigFileException.HTTP_CODE, reason=str(e))
             return None
         except Exception:
-            message = 'Failed to load script config ' + config_name
+            message = 'Failed to load script config ' + str(config_name)
             LOGGER.exception(message)
             self.close(code=500, reason=message)
             return None
