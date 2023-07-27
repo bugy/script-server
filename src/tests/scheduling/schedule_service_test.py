@@ -431,7 +431,8 @@ def create_job(id=None,
                repeat_unit=None,
                repeat_period=None,
                weekdays=None,
-               parameter_values=None):
+               parameter_values=None,
+               executions_count=0):
     if audit_names is None:
         audit_names = {audit_utils.HOSTNAME: 'my-host'}
 
@@ -450,6 +451,7 @@ def create_job(id=None,
     schedule_config.repeat_unit = repeat_unit
     schedule_config.repeat_period = repeat_period
     schedule_config.weekdays = weekdays
+    schedule_config.executions_count = executions_count
 
     return SchedulingJob(id, User(user_id, audit_names), schedule_config, script_name, parameter_values)
 

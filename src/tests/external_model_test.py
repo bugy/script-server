@@ -174,15 +174,22 @@ class TestServerConf(unittest.TestCase):
 class TestParseExternalSchedule(unittest.TestCase):
     def test_parse_full_config(self):
         parsed = parse_external_schedule(
-            {'repeatable': False, 'startDatetime': '2020-12-30', 'repeatUnit': 'days', 'repeatPeriod': 5,
-             'weekDays': ['monday', 'Tuesday']})
+            {'repeatable': False,
+             'startDatetime': '2020-12-30',
+             'repeatUnit': 'days',
+             'repeatPeriod': 5,
+             'weekDays': ['monday', 'Tuesday'],
+             'endOption': 'max_executions',
+             'endArg': 3})
 
         self.assertDictEqual({
             'repeatable': False,
             'start_datetime': '2020-12-30',
             'repeat_unit': 'days',
             'repeat_period': 5,
-            'weekdays': ['monday', 'Tuesday']},
+            'weekdays': ['monday', 'Tuesday'],
+            'end_option': 'max_executions',
+            'end_arg': 3},
             parsed)
 
     def test_parse_partial_config(self):
@@ -194,7 +201,9 @@ class TestParseExternalSchedule(unittest.TestCase):
             'start_datetime': '2020-12-30',
             'repeat_unit': None,
             'repeat_period': None,
-            'weekdays': None},
+            'weekdays': None,
+            'end_arg': None,
+            'end_option': None},
             parsed)
 
     def test_parse_unknown_field(self):
@@ -208,4 +217,6 @@ class TestParseExternalSchedule(unittest.TestCase):
             'start_datetime': '2020-12-30',
             'repeat_unit': None,
             'repeat_period': None,
-            'weekdays': None}, parsed)
+            'weekdays': None,
+            'end_arg': None,
+            'end_option': None}, parsed)

@@ -1,4 +1,5 @@
 import copy
+import time
 import unittest
 
 from parameterized import parameterized
@@ -247,6 +248,9 @@ class ExecutionServiceTest(unittest.TestCase):
         execution_service.add_start_listener(lambda _, __: notifications.append('started'))
 
         self._start(execution_service)
+
+        if len(notifications) < 2:
+            time.sleep(0.01)
 
         self.assertEqual(['started', 'finished'], notifications)
 
