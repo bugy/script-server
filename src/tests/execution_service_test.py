@@ -236,6 +236,20 @@ class ExecutionServiceTest(unittest.TestCase):
         self.get_process(id1).stop()
         self.assertEqual(1, len(notifications))
 
+    def test_start_finish_listener_order(self):
+        executor._process_creator = create_process_wrapper
+
+        execution_service = self.create_execution_service()
+
+        notifications = []
+
+        execution_service.add_finish_listener(lambda _, __: notifications.append('finished'))
+        execution_service.add_start_listener(lambda _, __: notifications.append('started'))
+
+        self._start(execution_service)
+
+        self.assertEqual(['started', 'finished'], notifications)
+
     def _start(self, execution_service, user_id=DEFAULT_USER_ID):
         return _start(execution_service, user_id)
 

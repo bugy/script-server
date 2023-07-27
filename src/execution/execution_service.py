@@ -62,9 +62,9 @@ class ExecutionService:
             config=config)
         self._active_executor_ids.add(execution_id)
 
-        self._add_post_finish_handling(execution_id, executor, user)
-
         self._fire_execution_started(execution_id, user)
+
+        self._add_post_finish_handling(execution_id, executor, user)
 
         return execution_id
 
