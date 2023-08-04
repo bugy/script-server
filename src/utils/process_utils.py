@@ -6,37 +6,41 @@ import subprocess
 from utils import file_utils
 from utils import os_utils
 from utils import string_utils
+from utils.env_utils import EnvVariables
 
 LOGGER = logging.getLogger('script_server.process_utils')
 
 
-def invoke(command, work_dir='.', *, environment_variables=None, check_stderr=True, shell=False):
-    if isinstance(command, str) and not shell:
-        command = split_command(command, working_directory=work_dir)
+class ProcessInvoker:
 
-    if environment_variables is not None:
-        env = dict(os.environ, **environment_variables)
-    else:
-        env = None
+    def __init__(self, env_vars: EnvVariables):
+        super().__init__()
+        self._env_vars = env_vars
 
-    p = subprocess.Popen(command,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         cwd=work_dir,
-                         env=env,
-                         universal_newlines=True,
-                         shell=shell)
+    def invoke(self, command, work_dir='.', *, environment_variables: dict = None, check_stderr=True, shell=False):
+        if isinstance(command, str) and not shell:
+            command = split_command(command, working_directory=work_dir)
 
-    (output, error) = p.communicate()
+        env_vars = self._env_vars.build_env_vars(environment_variables)
 
-    result_code = p.returncode
-    if result_code != 0:
-        raise ExecutionException(result_code, error, output)
+        p = subprocess.Popen(command,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             cwd=work_dir,
+                             env=env_vars,
+                             universal_newlines=True,
+                             shell=shell)
 
-    if error and check_stderr:
-        LOGGER.warning("Error output wasn't empty, although the command finished with code 0!")
+        (output, error) = p.communicate()
 
-    return output
+        result_code = p.returncode
+        if result_code != 0:
+            raise ExecutionException(result_code, error, output)
+
+        if error and check_stderr:
+            LOGGER.warning("Error output wasn't empty, although the command finished with code 0!")
+
+        return output
 
 
 def split_command(script_command, working_directory=None):

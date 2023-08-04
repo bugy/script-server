@@ -39,16 +39,21 @@ def parameter_to_external(parameter):
         'description': parameter.description,
         'withoutValue': parameter.no_value,
         'required': parameter.required,
-        'default': parameter.default,
+        'default': parameter.create_value_wrapper_for_default().user_value,
         'type': parameter.type,
         'min': parameter.min,
         'max': parameter.max,
         'max_length': parameter.max_length,
-        'values': parameter.values,
+        'regex': parameter.regex,
+        'values': parameter.get_ui_values(),
         'secure': parameter.secure,
         'fileRecursive': parameter.file_recursive,
         'fileType': parameter.file_type,
-        'requiredParameters': parameter.get_required_parameters()
+        'requiredParameters': parameter.get_required_parameters(),
+        'ui': {
+            'widthWeight': parameter.ui_width_weight,
+            'separatorBefore': parameter.ui_separator._asdict() if parameter.ui_separator else None
+        }
     }
 
 
@@ -124,6 +129,8 @@ def parse_external_schedule(external_schedule):
     return {
         'repeatable': external_schedule.get('repeatable'),
         'start_datetime': external_schedule.get('startDatetime'),
+        'end_option': external_schedule.get('endOption'),
+        'end_arg': external_schedule.get('endArg'),
         'repeat_unit': external_schedule.get('repeatUnit'),
         'repeat_period': external_schedule.get('repeatPeriod'),
         'weekdays': external_schedule.get('weekDays')

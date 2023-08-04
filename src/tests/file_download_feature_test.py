@@ -10,7 +10,7 @@ from features.file_download_feature import FileDownloadFeature
 from files.user_file_storage import UserFileStorage
 from tests import test_utils
 from tests.test_utils import create_parameter_model, _MockProcessWrapper, _IdGeneratorMock, create_config_model, \
-    create_audit_names, create_script_param_config, AnyUserAuthorizer
+    create_audit_names, create_script_param_config, AnyUserAuthorizer, wrap_values
 from utils import file_utils, os_utils
 from utils.file_utils import normalize_path
 
@@ -31,14 +31,14 @@ class TestFileMatching(unittest.TestCase):
         self.assertEqual(files, [os.path.join(test_utils.temp_folder, 'test.txt')])
 
     def test_single_asterisk_2_matches(self):
-        test_utils.create_file('test1.txt')
-        test_utils.create_file('test2.txt')
+        test_utils.create_file('test1.log')
+        test_utils.create_file('test2.log')
 
-        files = file_download_feature.find_matching_files('*/test*.txt', None)
+        files = file_download_feature.find_matching_files('*/test*.log', None)
 
         self.assertCountEqual(files, [
-            os.path.join(test_utils.temp_folder, 'test1.txt'),
-            os.path.join(test_utils.temp_folder, 'test2.txt')
+            os.path.join(test_utils.temp_folder, 'test1.log'),
+            os.path.join(test_utils.temp_folder, 'test2.log')
         ])
 
     def test_double_asterisk_match(self):
@@ -210,10 +210,12 @@ class TestParametersSubstitute(unittest.TestCase):
     def test_single_replace(self):
         parameter = create_parameter_model('param1')
 
+        parameters = [parameter]
+        value_wrappers = wrap_values(parameters, {'param1': 'val1'})
         files = file_download_feature.substitute_variable_values(
-            [parameter],
+            parameters,
             ['/home/user/${param1}.txt'],
-            {'param1': 'val1'},
+            value_wrappers,
             '127.0.0.1',
             'user_X')
 
@@ -224,10 +226,11 @@ class TestParametersSubstitute(unittest.TestCase):
         parameters.append(create_parameter_model('param1', all_parameters=parameters))
         parameters.append(create_parameter_model('param2', all_parameters=parameters))
 
+        value_wrappers = wrap_values(parameters, {'param1': 'val1', 'param2': 'val2'})
         files = file_download_feature.substitute_variable_values(
             parameters,
             ['/home/${param2}/${param1}.txt'],
-            {'param1': 'val1', 'param2': 'val2'},
+            value_wrappers,
             '127.0.0.1',
             'user_X')
 
@@ -238,10 +241,11 @@ class TestParametersSubstitute(unittest.TestCase):
         parameters.append(create_parameter_model('param1', all_parameters=parameters))
         parameters.append(create_parameter_model('param2', all_parameters=parameters))
 
+        value_wrappers = wrap_values(parameters, {'param1': 'val1', 'param2': 'val2'})
         files = file_download_feature.substitute_variable_values(
             parameters,
             ['/home/${param2}/${param1}.txt', '/tmp/${param2}.txt', '/${param1}'],
-            {'param1': 'val1', 'param2': 'val2'},
+            value_wrappers,
             '127.0.0.1',
             'user_X')
 
@@ -250,10 +254,11 @@ class TestParametersSubstitute(unittest.TestCase):
     def test_no_pattern_match(self):
         param1 = create_parameter_model('param1')
 
+        parameters = [param1]
         files = file_download_feature.substitute_variable_values(
-            [param1],
+            parameters,
             ['/home/user/${paramX}.txt'],
-            {'param1': 'val1'},
+            wrap_values(parameters, {'param1': 'val1'}),
             '127.0.0.1',
             'user_X')
 
@@ -262,10 +267,11 @@ class TestParametersSubstitute(unittest.TestCase):
     def test_skip_secure_replace(self):
         param1 = create_parameter_model('param1', secure=True)
 
+        parameters = [param1]
         files = file_download_feature.substitute_variable_values(
-            [param1],
+            parameters,
             ['/home/user/${param1}.txt'],
-            {'param1': 'val1'},
+            wrap_values(parameters, {'param1': 'val1'}),
             '127.0.0.1',
             'user_X')
 
@@ -274,10 +280,11 @@ class TestParametersSubstitute(unittest.TestCase):
     def test_skip_flag_replace(self):
         param1 = create_parameter_model('param1', no_value=True)
 
+        parameters = [param1]
         files = file_download_feature.substitute_variable_values(
-            [param1],
+            parameters,
             ['/home/user/${param1}.txt'],
-            {'param1': 'val1'},
+            wrap_values(parameters, {'param1': 'val1'}),
             '127.0.0.1',
             'user_X')
 
@@ -286,10 +293,11 @@ class TestParametersSubstitute(unittest.TestCase):
     def test_replace_audit_name(self):
         param1 = create_parameter_model('param1', no_value=True)
 
+        parameters = [param1]
         files = file_download_feature.substitute_variable_values(
-            [param1],
+            parameters,
             ['/home/user/${auth.audit_name}.txt'],
-            {'param1': 'val1'},
+            wrap_values(parameters, {'param1': 'val1'}),
             '127.0.0.1',
             'user_X')
 
@@ -298,10 +306,11 @@ class TestParametersSubstitute(unittest.TestCase):
     def test_replace_username(self):
         param1 = create_parameter_model('param1', no_value=True)
 
+        parameters = [param1]
         files = file_download_feature.substitute_variable_values(
-            [param1],
+            parameters,
             ['/home/user/${auth.username}.txt'],
-            {'param1': 'val1'},
+            wrap_values(parameters, {'param1': 'val1'}),
             '127.0.0.1',
             'user_X')
 
@@ -310,10 +319,11 @@ class TestParametersSubstitute(unittest.TestCase):
     def test_replace_username_and_param(self):
         param1 = create_parameter_model('param1')
 
+        parameters = [param1]
         files = file_download_feature.substitute_variable_values(
-            [param1],
+            parameters,
             ['/home/${auth.username}/${param1}.txt'],
-            {'param1': 'val1'},
+            wrap_values(parameters, {'param1': 'val1'}),
             '127.0.0.1',
             'user_X')
 
@@ -370,10 +380,11 @@ class FileDownloadFeatureTest(unittest.TestCase):
             parameters = [create_script_param_config(key) for key in parameter_values.keys()]
 
         config_model = create_config_model('my_script', output_files=output_files, parameters=parameters)
+        config_model.set_all_param_values(parameter_values)
 
         user = User('userX', create_audit_names(ip='127.0.0.1'))
         execution_id = self.executor_service.start_script(
-            config_model, parameter_values, user)
+            config_model, user)
         self.executor_service.stop_script(execution_id, user)
 
         finish_condition = threading.Event()
@@ -389,7 +400,7 @@ class FileDownloadFeatureTest(unittest.TestCase):
         test_utils.setup()
 
         executor._process_creator = _MockProcessWrapper
-        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock(), test_utils.env_variables)
 
         self.feature = FileDownloadFeature(UserFileStorage(b'123456'), test_utils.temp_folder)
         self.feature.subscribe(self.executor_service)
@@ -423,7 +434,7 @@ class TestInlineImages(unittest.TestCase):
         test_utils.setup()
 
         executor._process_creator = _MockProcessWrapper
-        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock(), test_utils.env_variables)
 
         self.file_download_feature = file_download_feature.FileDownloadFeature(
             UserFileStorage(b'123456'), test_utils.temp_folder)
@@ -613,7 +624,7 @@ class TestInlineImages(unittest.TestCase):
         process_wrapper.write_output(output)
 
     def start_execution(self, config):
-        execution_id = self.executor_service.start_script(config, {}, DEFAULT_USER)
+        execution_id = self.executor_service.start_script(config, DEFAULT_USER)
         self.file_download_feature.subscribe_on_inline_images(execution_id, self._add_image)
         return execution_id
 

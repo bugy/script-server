@@ -20,7 +20,8 @@ import tornado.websocket
 from auth.identification import AuthBasedIdentification, IpBasedIdentification
 from auth.tornado_auth import TornadoAuth
 from communications.alerts_service import AlertsService
-from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException
+from config.config_service import ConfigService, ConfigNotAllowedException, InvalidAccessException, \
+    CorruptConfigFileException
 from config.exceptions import InvalidConfigException
 from execution.execution_service import ExecutionService
 from execution.logging import ExecutionLoggingService
@@ -41,7 +42,7 @@ from utils.exceptions.not_found_exception import NotFoundException
 from utils.tornado_utils import respond_error, redirect_relative, get_form_file
 from web.script_config_socket import ScriptConfigSocket, active_config_models
 from web.streaming_form_reader import StreamingFormReader
-from web.web_auth_utils import check_authorization
+from web.web_auth_utils import check_authorization, check_authorization_sync
 from web.web_utils import wrap_to_server_event, identify_user, inject_user, get_user
 from web.xheader_app_wrapper import autoapply_xheaders
 
@@ -137,7 +138,7 @@ class GetScripts(BaseRequestHandler):
 
         configs = self.application.config_service.list_configs(user, mode)
 
-        scripts = [{'name': conf.name, 'group': conf.group} for conf in configs]
+        scripts = [{'name': conf.name, 'group': conf.group, 'parsing_failed': conf.parsing_failed} for conf in configs]
 
         self.write(json.dumps({'scripts': scripts}))
 
@@ -181,7 +182,7 @@ class AdminUpdateScriptEndpoint(BaseRequestHandler):
         return config, filename, uploaded_script
 
 
-class AdminGetScriptEndpoint(BaseRequestHandler):
+class AdminScriptEndpoint(BaseRequestHandler):
     @requires_admin_rights
     @inject_user
     def get(self, user, script_name):
@@ -191,11 +192,32 @@ class AdminGetScriptEndpoint(BaseRequestHandler):
             LOGGER.warning('Admin access to the script "' + script_name + '" is denied for ' + user.get_audit_name())
             respond_error(self, 403, 'Access to the script is denied')
             return
+        except CorruptConfigFileException as e:
+            respond_error(self, CorruptConfigFileException.HTTP_CODE, str(e))
+            return
 
         if config is None:
             raise tornado.web.HTTPError(404, str('Failed to find config for name: ' + script_name))
 
         self.write(json.dumps(config))
+
+    @requires_admin_rights
+    @inject_user
+    def delete(self, user, script_name):
+        try:
+            self.application.config_service.delete_config(user, script_name)
+        except ConfigNotAllowedException:
+            LOGGER.warning(
+                f'Admin access to the script "{script_name}" is denied for {user.get_audit_name()}'
+            )
+            respond_error(self, 403, 'Access to the script is denied')
+            return
+        except NotFoundException as e:
+            LOGGER.warning(f'Failed to delete script {script_name}', exc_info=True)
+            respond_error(self, 404, str(e))
+            return
+        except InvalidAccessException as e:
+            raise tornado.web.HTTPError(403, reason=str(e)) from e
 
 
 class AdminGetScriptCodeEndpoint(BaseRequestHandler):
@@ -244,10 +266,6 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
     @check_authorization
     @inject_user
     def open(self, user, execution_id):
-        auth = self.application.auth
-        if not auth.is_authenticated(self):
-            return None
-
         execution_service = self.application.execution_service
 
         try:
@@ -313,9 +331,13 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
     def prepare_download_url(self, file):
         downloads_folder = self.application.downloads_folder
         relative_path = file_utils.relative_path(file, downloads_folder)
-        url_path = relative_path.replace(os.path.sep, '/')
-        url_path = 'result_files/' + url_path
-        return url_path
+
+        filename = tornado.escape.url_escape(os.path.basename(relative_path))
+        relative_dir = os.path.dirname(relative_path).replace(os.path.sep, '/')
+
+        url_path = relative_dir + '/' + filename
+
+        return 'result_files/' + url_path
 
     def handle_exception_on_open(self, e):
         (status_code, message) = exception_to_code_and_message(e)
@@ -380,29 +402,29 @@ class ScriptExecute(StreamUploadRequestHandler):
                 for key, value in self.form_reader.files.items():
                     parameter_values[key] = value.path
 
-            try:
-                config_model.set_all_param_values(parameter_values)
-                normalized_values = dict(config_model.parameter_values)
-            except InvalidValueException as e:
-                message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
-                LOGGER.error(message)
-                respond_error(self, 400, message)
-                return
-
             all_audit_names = user.audit_names
             LOGGER.info('Calling script %s. User %s', script_name, all_audit_names)
 
-            execution_id = self.application.execution_service.start_script(
-                config_model,
-                normalized_values,
-                user)
+            config_model.set_all_param_values(parameter_values)
+
+            execution_id = self.application.execution_service.start_script(config_model, user)
 
             self.write(str(execution_id))
+
+        except InvalidValueException as e:
+            message = 'Invalid parameter %s value: %s' % (e.param_name, str(e))
+            LOGGER.error(message)
+            respond_error(self, 422, message)
+            return
 
         except ConfigNotAllowedException:
             LOGGER.warning('Access to the script "' + script_name + '" is denied for ' + audit_name)
             respond_error(self, 403, 'Access to the script is denied')
             return
+
+        except CorruptConfigFileException as e:
+            respond_error(self, CorruptConfigFileException.HTTP_CODE, str(e))
+            return None
 
         except Exception as e:
             LOGGER.exception("Error while calling the script")
@@ -477,7 +499,7 @@ class GetExecutionStatus(BaseRequestHandler):
 class AuthorizedStaticFileHandler(BaseStaticHandler):
     admin_files = ['admin.html', 'css/admin.css', 'admin.js', 'admin-deps.css']
 
-    @check_authorization
+    @check_authorization_sync
     def validate_absolute_path(self, root, absolute_path):
         if not self.application.auth.is_enabled() and (absolute_path.endswith("/login.html")):
             raise tornado.web.HTTPError(404)
@@ -572,6 +594,7 @@ class LoginHandler(BaseRequestHandler):
 
 
 class AuthInfoHandler(BaseRequestHandler):
+    @check_authorization
     @inject_user
     def get(self, user):
         auth = self.application.auth
@@ -621,7 +644,7 @@ class DownloadResultFile(AuthorizedStaticFileHandler):
         encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
         self.set_header('Content-Disposition', 'attachment; filename*=UTF-8\'\'' + encoded_filename + '')
 
-    @check_authorization
+    @check_authorization_sync
     def validate_absolute_path(self, root, absolute_path):
         audit_name = get_audit_name_from_request(self)
         user_id = identify_user(self)
@@ -822,7 +845,7 @@ def init(server_config: ServerConfig,
                  DownloadResultFile,
                  {'path': downloads_folder}),
                 (r'/admin/scripts', AdminUpdateScriptEndpoint),
-                (r'/admin/scripts/([^/]*)', AdminGetScriptEndpoint),
+                (r'/admin/scripts/([^/]+)', AdminScriptEndpoint),
                 (r'/admin/scripts/([^/]*)/code', AdminGetScriptCodeEndpoint),
                 (r"/", ProxiedRedirectHandler, {"url": "/index.html"})]
 
@@ -835,7 +858,7 @@ def init(server_config: ServerConfig,
     handlers.append((r"/(.*)", AuthorizedStaticFileHandler, {"path": "web"}))
 
     settings = {
-        "cookie_secret": secret,
+        'cookie_secret': secret,
         "login_url": "/login.html",
         'websocket_ping_interval': 30,
         'websocket_ping_timeout': 300,

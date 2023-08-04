@@ -101,7 +101,7 @@ class _ScriptHandler:
         paths = [_extract_path(f) for f in config.output_files if predicate(f)]
         paths = [p for p in paths if p]
 
-        parameter_values = self.execution_service.get_script_parameter_values(execution_id)
+        parameter_value_wrappers = config.parameter_values
         all_audit_names = self.execution_service.get_all_audit_names(execution_id)
 
         audit_name = audit_utils.get_audit_name(all_audit_names)
@@ -110,7 +110,7 @@ class _ScriptHandler:
         return substitute_variable_values(
             config.parameters,
             paths,
-            parameter_values,
+            parameter_value_wrappers,
             audit_name,
             username)
 
@@ -238,10 +238,10 @@ class _ScriptHandler:
                 LOGGER.error('Failed to notify image listener')
 
 
-def substitute_variable_values(parameter_configs, output_files, values, audit_name, username):
+def substitute_variable_values(parameter_configs, output_files, value_wrappers, audit_name, username):
     output_file_parsed = []
     for _, output_file in enumerate(output_files):
-        substituted_file = fill_parameter_values(parameter_configs, output_file, values)
+        substituted_file = fill_parameter_values(parameter_configs, output_file, value_wrappers)
         substituted_file = replace_auth_vars(substituted_file, username, audit_name)
         output_file_parsed.append(substituted_file)
 

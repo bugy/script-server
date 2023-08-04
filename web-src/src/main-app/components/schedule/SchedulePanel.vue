@@ -41,6 +41,39 @@
                       label="Time" @error="checkErrors"/>
         </div>
 
+        <div>
+          <span class="schedule-repeat_col-1">End:</span>
+          <div class="schedule-type-panel">
+            <p class="schedule-type-field">
+              <label>
+                <input :checked="endOption === 'never'" class="with-gap" name="end-type" type="radio" @click="endOption = 'never'" />
+                <span>Never</span>
+              </label>
+            </p>
+            <p class="schedule-type-field">
+              <label>
+                <input :checked="endOption === 'maxExecuteCount'" class="with-gap" name="end-type" type="radio" @click="endOption = 'maxExecuteCount'" />
+                <span>Count</span>
+              </label>
+            </p>
+            <p class="schedule-type-field">
+              <label>
+                <input :checked="endOption === 'endDatetime'" class="with-gap" name="end-type" type="radio" @click="endOption = 'endDatetime'" />
+                <span>Date</span>
+              </label>
+            </p>
+          </div>
+          <br>
+          <div v-if="endOption === 'endDatetime'">
+            <span class="schedule-repeat_col-1">Ending</span>
+            <DatePicker v-model="endDate" :show-header-in-modal="!mobileView" class="inline repeat-start-date schedule-repeat_col-2" label="Date" />
+            <TimePicker v-model="endTime" class="inline repeat-start-time schedule-repeat_col-3" label="Time" @error="checkErrors" />
+          </div>
+          <div v-if="endOption === 'maxExecuteCount'">
+            <span class="schedule-repeat_col-1">Count</span>
+            <Textfield v-model="maxExecuteCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors" />
+          </div>
+
         <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
           <div :class="{ error: weekdaysError }" class="repeat-weekday-panel">
             <ToggleDayButton v-for="day in weekDays"
@@ -61,6 +94,7 @@
                         :enabled="errors.length === 0"
                         :preloaderStyle="{ width: '20px', height: '20px' }"
                         title="Schedule"/>
+    </div>
     </div>
   </div>
 </template>
@@ -93,12 +127,19 @@ export default {
     const now = new Date();
     const currentDay = now.getDay();
 
+    const endDay = new Date(now);
+    endDay.setDate(now.getDate() + 1);
+
     return {
       oneTimeSchedule: true,
       startDate: now,
       startTime: now.toTimeString().substr(0, 5),
+      endOption: 'never',
+      endDate: endDay,
+      endTime: endDay.toTimeString().substr(0, 5),
       id: null,
       repeatPeriod: 1,
+      maxExecuteCount: 1,
       repeatTimeUnit: 'days',
       weekDays: [
         {'day': 'Monday', active: currentDay === 1},
@@ -135,15 +176,30 @@ export default {
 
     buildScheduleSetup() {
       const startDatetime = new Date(this.startDate);
-      const [hours, minutes] = this.startTime.split(':')
-      startDatetime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+      const [hours, minutes] = this.startTime.split(':');
+      startDatetime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      const weekDays = this.weekDays.filter(day => day.active)
-          .map(day => day.day);
+      let endOption = this.endOption;
+      let endArg = null;
+
+      if (this.endOption === 'maxExecuteCount') {
+        endArg = this.maxExecuteCount;
+        endOption = 'max_executions';
+      } else if (this.endOption === 'endDatetime') {
+        const endDatetime = new Date(this.endDate);
+        const [hoursEnd, minutesEnd] = this.endTime.split(':');
+        endDatetime.setHours(parseInt(hoursEnd), parseInt(minutesEnd), 0, 0);
+        endArg = endDatetime;
+        endOption = 'end_datetime';
+      }
+
+      const weekDays = this.weekDays.filter(day => day.active).map(day => day.day);
 
       return {
         repeatable: !this.oneTimeSchedule,
         startDatetime: startDatetime,
+        endOption: endOption,
+        endArg: endArg,
         repeatUnit: this.repeatTimeUnit,
         repeatPeriod: this.repeatPeriod,
         weekDays: weekDays
@@ -206,7 +262,7 @@ export default {
   font-size: 16px;
   max-width: 320px;
   width: 100%;
-  height: 380px;
+  height: 480px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;

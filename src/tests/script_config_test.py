@@ -6,12 +6,14 @@ from parameterized import parameterized
 
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from config.exceptions import InvalidConfigException
-from model.script_config import ConfigModel, InvalidValueException, _TemplateProperty, ParameterNotFoundException, \
+from model.script_config import ConfigModel, InvalidValueException, TemplateProperty, ParameterNotFoundException, \
     get_sorted_config
+from model.value_wrapper import ScriptValueWrapper
 from react.properties import ObservableDict, ObservableList
 from tests import test_utils
-from tests.test_utils import create_script_param_config, create_parameter_model, create_files
+from tests.test_utils import create_script_param_config, create_parameter_model, create_files, wrap_values
 from utils import file_utils, custom_json
+from utils.process_utils import ExecutionException
 
 DEF_AUDIT_NAME = '127.0.0.1'
 DEF_USERNAME = 'user1'
@@ -57,14 +59,15 @@ class ConfigModelInitTest(unittest.TestCase):
     def test_create_with_parameters_and_default_values(self):
         parameters = [create_script_param_config('param1', default='123'),
                       create_script_param_config('param2'),
-                      create_script_param_config('param3', default='A')]
+                      create_script_param_config('param3', default='A', values_ui_mapping={'A': 'Value 1'})]
         config_model = _create_config_model('conf_with_defaults', parameters=parameters)
         self.assertEqual(3, len(config_model.parameters))
 
         values = config_model.parameter_values
-        self.assertEqual('123', values.get('param1'))
-        self.assertIsNone(values.get('param2'))
-        self.assertEqual('A', values.get('param3'))
+        self.assertEqual('123', values.get('param1').mapped_script_value)
+        self.assertIsNone(values.get('param2').mapped_script_value)
+        self.assertEqual('A', values.get('param3').mapped_script_value)
+        self.assertEqual('Value 1', values.get('param3').user_value)
 
     def test_create_with_parameters_and_custom_values(self):
         parameters = [create_script_param_config('param1', default='def1'),
@@ -76,9 +79,9 @@ class ConfigModelInitTest(unittest.TestCase):
         self.assertEqual(3, len(config_model.parameters))
 
         values = config_model.parameter_values
-        self.assertEqual('123', values.get('param1'))
-        self.assertIsNone(values.get('param2'))
-        self.assertEqual(True, values.get('param3'))
+        self.assertEqual('123', values.get('param1').mapped_script_value)
+        self.assertIsNone(values.get('param2').mapped_script_value)
+        self.assertEqual(True, values.get('param3').mapped_script_value)
 
     def test_create_with_missing_dependant_parameter(self):
         parameters = [create_script_param_config('param1', type='list', values_script='echo ${p2}')]
@@ -125,7 +128,8 @@ class ConfigModelValuesTest(unittest.TestCase):
         config_model = _create_config_model('conf_x', parameters=[param1])
         config_model.set_param_value('param1', 'abc')
 
-        self.assertEqual({'param1': 'abc'}, config_model.parameter_values)
+        expected_values = wrap_values(config_model.parameters, {'param1': 'abc'})
+        self.assertEqual(expected_values, config_model.parameter_values)
 
     def test_set_value_for_unknown_parameter(self):
         param1 = create_script_param_config('param1')
@@ -134,6 +138,45 @@ class ConfigModelValuesTest(unittest.TestCase):
         config_model.set_param_value('PAR_2', 'abc')
 
         self.assertNotIn('PAR_2', config_model.parameter_values)
+
+    @parameterized.expand([
+        ('list', 'ABC', 'abc'),
+        ('list', 'qwerty', 'def'),
+        ('list', 'xyz', 'xyz'),
+        ('PARAM_TYPE_MULTISELECT', ['ABC', 'qwerty', 'xyz'], ['abc', 'def', 'xyz']),
+        ('PARAM_TYPE_MULTISELECT', ['ABC'], ['abc']),
+        ('PARAM_TYPE_MULTISELECT', ['xyz'], ['xyz']),
+        ('PARAM_TYPE_MULTISELECT', [], []),
+        ('int', 1, 'One'),
+        ('int', 2, 2),
+    ])
+    def test_set_value_when_mapping(self, param_type, user_value, expected_script_value):
+        parameters = [
+            create_script_param_config('p1',
+                                       type=param_type,
+                                       allowed_values=['abc', 'def', 'ghi', 'xyz'],
+                                       values_ui_mapping={'abc': 'ABC', 'def': 'qwerty', 'One': '1'})]
+
+        config_model = _create_config_model('config', parameters=parameters)
+        config_model.set_param_value('p1', user_value)
+
+        value = config_model.parameter_values['p1']
+        self.assertEqual(
+            (user_value, expected_script_value),
+            (value.user_value, value.mapped_script_value))
+
+    def test_set_value_when_mapping_and_wrong_value(self):
+        parameters = [
+            create_script_param_config('p1',
+                                       type='list',
+                                       allowed_values=['abc', 'def', 'ghi', 'xyz'],
+                                       values_ui_mapping={'abc': 'ABC', 'def': 'qwerty', 'One': '1'})]
+
+        config_model = _create_config_model('config', parameters=parameters)
+        self.assertRaises(InvalidValueException, config_model.set_param_value, 'p1', 'abc')
+
+        value = config_model.parameter_values['p1']
+        self.assertEqual(ScriptValueWrapper(None, None, None), value)
 
     def test_set_all_values_when_dependant_before_required(self):
         parameters = [
@@ -145,9 +188,10 @@ class ConfigModelValuesTest(unittest.TestCase):
         values = {'dep_p2': 'XabcX', 'p1': 'abc'}
         config_model.set_all_param_values(values)
 
-        self.assertEqual(values, config_model.parameter_values)
+        expected_values = wrap_values(config_model.parameters, values)
+        self.assertEqual(expected_values, config_model.parameter_values)
 
-    def test_set_all_values_when_dependants_cylce(self):
+    def test_set_all_values_when_dependants_cycle(self):
         parameters = [
             create_script_param_config('p1', type='list', values_script='echo "X${p2}X"'),
             create_script_param_config('p2', type='list', values_script='echo "X${p1}X"')]
@@ -167,7 +211,47 @@ class ConfigModelValuesTest(unittest.TestCase):
         config_model = _create_config_model('config', parameters=parameters)
         config_model.set_all_param_values({'p1': '', 'p2': ['def'], 'p3': 'abc'})
 
-        self.assertEqual({'p1': [], 'p2': ['def'], 'p3': ['abc']}, config_model.parameter_values)
+        expected_values = wrap_values(config_model.parameters, {'p1': [], 'p2': ['def'], 'p3': ['abc']})
+        self.assertEqual(expected_values, config_model.parameter_values)
+
+    def test_set_all_values_when_dependant_and_ui_mapping(self):
+        parameters = [
+            create_script_param_config('dep_p2', type='list', values_script='echo "X${p1}X"'),
+            create_script_param_config('p1', values_ui_mapping={'abc': 'qwerty'})]
+
+        config_model = _create_config_model('main_conf', parameters=parameters)
+
+        values = {'dep_p2': 'XabcX', 'p1': 'qwerty'}
+        config_model.set_all_param_values(values)
+
+        expected_values = wrap_values(config_model.parameters, values)
+        self.assertEqual(expected_values, config_model.parameter_values)
+
+    @parameterized.expand([
+        ('list', 'ABC', 'abc'),
+        ('list', 'qwerty', 'def'),
+        ('list', 'xyz', 'xyz'),
+        ('PARAM_TYPE_MULTISELECT', ['ABC', 'qwerty', 'xyz'], ['abc', 'def', 'xyz']),
+        ('PARAM_TYPE_MULTISELECT', ['ABC'], ['abc']),
+        ('PARAM_TYPE_MULTISELECT', ['xyz'], ['xyz']),
+        ('PARAM_TYPE_MULTISELECT', [], []),
+        ('int', 1, 'One'),
+        ('int', 2, 2),
+    ])
+    def test_set_all_values_when_mapping(self, param_type, user_value, expected_script_value):
+        parameters = [
+            create_script_param_config('p1',
+                                       type=param_type,
+                                       allowed_values=['abc', 'def', 'ghi', 'xyz'],
+                                       values_ui_mapping={'abc': 'ABC', 'def': 'qwerty', 'One': '1'})]
+
+        config_model = _create_config_model('config', parameters=parameters)
+        config_model.set_all_param_values({'p1': user_value})
+
+        value = config_model.parameter_values['p1']
+        self.assertEqual(
+            (user_value, expected_script_value),
+            (value.user_value, value.mapped_script_value))
 
 
 class ConfigModelListFilesTest(unittest.TestCase):
@@ -319,6 +403,17 @@ class ConfigModelIncludeTest(unittest.TestCase):
 
         self.assertEqual('ping google.com', config_model.script_command)
 
+    def test_static_include_multiple_inclusions(self):
+        included_path_1 = test_utils.write_script_config({'script_path': 'ping google.com'}, 'included1')
+        included_path_2 = test_utils.write_script_config(
+            {'script_path': 'echo 123', 'working_directory': '123'}, 'included2')
+        config_model = _create_config_model(
+            'main_conf',
+            script_path=None,
+            config={'include': [included_path_1, included_path_2]})
+
+        self.assertEqual('ping google.com', config_model.script_command)
+
     def test_static_include_precedence(self):
         included_path = test_utils.write_script_config({
             'script_path': 'ping google.com',
@@ -333,7 +428,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
     def test_static_include_single_parameter(self):
         included_path = test_utils.write_script_config({'parameters': [
             create_script_param_config('param2', type='int')
-        ]}, 'included')
+        ]}, 'included1')
         config_model = _create_config_model('main_conf', config={
             'include': included_path,
             'parameters': [create_script_param_config('param1', type='text')]})
@@ -346,6 +441,31 @@ class ConfigModelIncludeTest(unittest.TestCase):
         param2 = config_model.parameters[1]
         self.assertEqual('param2', param2.name)
         self.assertEqual('int', param2.type)
+
+    def test_static_include_multiple_parameters_from_multiple_included(self):
+        included_path_1 = test_utils.write_script_config({
+            'parameters': [
+                create_script_param_config('param2', type='int'),
+                create_script_param_config('param3'),
+            ]}, 'included1')
+        included_path_2 = test_utils.write_script_config({
+            'parameters': [
+                create_script_param_config('param2', type='ip4'),
+                create_script_param_config('param4'),
+                create_script_param_config(None),
+            ]}, 'included2')
+
+        config_model = _create_config_model('main_conf', config={
+            'include': [included_path_1, included_path_2],
+            'parameters': [create_script_param_config('param1', type='text')]})
+
+        name_type_tuples = list(map(lambda param: (param.name, param.type), config_model.parameters))
+        self.assertEqual(name_type_tuples, [
+            ('param1', 'text'),
+            ('param2', 'int'),
+            ('param3', 'text'),
+            ('param4', 'text'),
+        ])
 
     def test_static_include_corrupted_file(self):
         included_path = os.path.join(test_utils.temp_folder, 'file.json')
@@ -477,14 +597,31 @@ class ConfigModelIncludeTest(unittest.TestCase):
         values = {'p1': included_path, 'included_param1': 'X', 'included_param2': 123}
         config_model.set_all_param_values(values)
 
-        self.assertEqual(values, config_model.parameter_values)
+        expected_values = wrap_values(config_model.parameters, values)
+        self.assertEqual(expected_values, config_model.parameter_values)
+
+    def test_set_all_values_for_dependant_on_constant(self):
+        included_path = test_utils.write_script_config({'parameters': [
+            create_script_param_config('included_param1', values_script='echo ${p1}'),
+        ]}, 'included')
+        config_model = _create_config_model(
+            'main_conf',
+            config={
+                'include': included_path,
+                'parameters': [create_script_param_config('p1', constant=True, default='t1\nt2\nt3')]})
+
+        values = {'included_param1': 't2'}
+        config_model.set_all_param_values(values)
+
+        expected_values = wrap_values(config_model.parameters, {'included_param1': 't2', 'p1': 't1\nt2\nt3'})
+        self.assertEqual(expected_values, config_model.parameter_values)
 
     def test_dynamic_include_add_parameter_with_default(self):
         (config_model, included_path) = self.prepare_config_model_with_included([
             create_script_param_config('included_param', default='abc 123')
         ], 'p1')
 
-        self.assertEqual('abc 123', config_model.parameter_values.get('included_param'))
+        self.assertEqual('abc 123', config_model.parameter_values.get('included_param').mapped_script_value)
 
     def test_dynamic_include_add_parameter_with_default_when_value_exist(self):
         (config_model, included_path) = self.prepare_config_model_with_included([
@@ -494,10 +631,10 @@ class ConfigModelIncludeTest(unittest.TestCase):
         config_model.set_param_value('included_param', 'def 456')
 
         config_model.set_param_value('p1', 'random value')
-        self.assertEqual('def 456', config_model.parameter_values.get('included_param'))
+        self.assertEqual('def 456', config_model.parameter_values.get('included_param').mapped_script_value)
 
         config_model.set_param_value('p1', included_path)
-        self.assertEqual('def 456', config_model.parameter_values.get('included_param'))
+        self.assertEqual('def 456', config_model.parameter_values.get('included_param').mapped_script_value)
 
     def test_dynamic_include_add_2_parameters_with_default_when_one_dependant(self):
         (config_model, included_path) = self.prepare_config_model_with_included([
@@ -506,11 +643,46 @@ class ConfigModelIncludeTest(unittest.TestCase):
                                        values_script='echo x${included_param1}x'),
         ], 'p1')
 
-        self.assertEqual('ABC', config_model.parameter_values.get('included_param1'))
-        self.assertEqual('xABCx', config_model.parameter_values.get('included_param2'))
+        self.assertEqual('ABC', config_model.parameter_values.get('included_param1').mapped_script_value)
+        self.assertEqual('xABCx', config_model.parameter_values.get('included_param2').mapped_script_value)
 
         dependant_parameter = config_model.find_parameter('included_param2')
         self.assertEqual(['xABCx'], dependant_parameter.values)
+
+    @parameterized.expand([
+        (2, 'test desc', [('param3', 'int'), ('param4', 'text')]),
+        (3, None, [('param3', 'int')]),
+        (None, None, []),
+    ])
+    def test_dynamic_include_when_multiple_includes(self, param2_value, expected_description, additional_parameters):
+        included_path_1 = test_utils.write_script_config({
+            'parameters': [
+                create_script_param_config('param3', type='int'),
+            ]}, 'included1')
+        included_path_2 = test_utils.write_script_config({
+            'description': 'test desc',
+            'parameters': [
+                create_script_param_config('param3', type='ip4'),
+                create_script_param_config('param4')
+            ]}, 'included2')
+
+        config_model = _create_config_model('main_conf', config={
+            'include': ['${param1}', included_path_2[:-6] + '${param2}.json'],
+            'parameters': [
+                create_script_param_config('param1', type='text'),
+                create_script_param_config('param2', type='int')
+            ]})
+
+        config_model.set_param_value('param1', included_path_1)
+        config_model.set_param_value('param2', param2_value)
+
+        self.assertEqual(expected_description, config_model.description)
+
+        name_type_tuples = list(map(lambda param: (param.name, param.type), config_model.parameters))
+        expected_parameters = [('param1', 'text'), ('param2', 'int')]
+        expected_parameters.extend(additional_parameters)
+
+        self.assertEqual(name_type_tuples, expected_parameters)
 
     def prepare_config_model_with_included(self, included_params, static_param_name):
         included_path = test_utils.write_script_config({'parameters': included_params}, 'included')
@@ -580,13 +752,15 @@ class TestParametersValidation(unittest.TestCase):
 
         valid = self._validate(script_config, values, skip_invalid_parameters=True)
         self.assertTrue(valid)
-        self.assertEqual({
-            'param0': '0',
-            'param1': '1',
-            'param2': '2',
-            'param3': None,
-            'param4': '4'},
-            script_config.parameter_values)
+
+        expected_values = wrap_values(
+            script_config.parameters,
+            {'param0': '0',
+             'param1': '1',
+             'param2': '2',
+             'param3': None,
+             'param4': '4'})
+        self.assertEqual(expected_values, script_config.parameter_values)
 
     def test_multiple_parameters_when_all_defined(self):
         values = {}
@@ -775,13 +949,13 @@ class TestTemplateProperty(unittest.TestCase):
         self.values = ObservableDict()
 
     def create_property(self, template):
-        return _TemplateProperty(template, self.parameters, self.values)
+        return TemplateProperty(template, self.parameters, self.values)
 
     def add_parameter(self, config):
         self.parameters.append(config)
 
     def set_value(self, name, value):
-        self.values[name] = value
+        self.values[name] = ScriptValueWrapper(value, value, value)
 
 
 class GetSortedConfigTest(unittest.TestCase):
@@ -853,21 +1027,20 @@ class GetSortedConfigTest(unittest.TestCase):
         ])
         self.assertEqual(expected, config)
 
-
     def test_json_comments(self):
         config = get_sorted_config(custom_json.loads(
-                """{
-                // Comment 1
-                "parameters": [
-                            // Comment 2
-                            {"name": "param2", "description": "desc 1"},
-                            {"type": "int", "name": "paramA"},
-                            {"default": "false", "name": "param1", "no_value": true}
-                            ],
-                // Comment 3
-                "name": "Conf X"
-                }""")
-            )
+            """{
+            // Comment 1
+            "parameters": [
+                        // Comment 2
+                        {"name": "param2", "description": "desc 1"},
+                        {"type": "int", "name": "paramA"},
+                        {"default": "false", "name": "param1", "no_value": true}
+                        ],
+            // Comment 3
+            "name": "Conf X"
+            }""")
+        )
 
         expected = OrderedDict([
             ('name', 'Conf X'),
@@ -913,6 +1086,85 @@ class SchedulableConfigTest(unittest.TestCase):
 
         self.assertFalse(config_model.schedulable)
 
+    @parameterized.expand([
+        (True, True, [], True),
+        (False, True, [], True),
+        (True, False, [], False),
+        (False, False, [], False),
+        (True, True, ['test'], True),
+        (True, False, ['test'], False),
+        (True, None, [], True),
+        (False, None, [], True),
+        (True, None, ['test'], False),
+    ])
+    def test_auto_cleanup(self, scheduling_enabled, auto_cleanup, output_files, expected_result):
+        config = {
+            'scheduling': {'enabled': scheduling_enabled},
+            'output_files': output_files
+        }
+        if auto_cleanup is not None:
+            config['scheduling']['auto_cleanup'] = auto_cleanup
+
+        config_model = _create_config_model('some-name', config=config)
+
+        self.assertEqual(config_model.scheduling_auto_cleanup, expected_result)
+
+    def tearDown(self) -> None:
+        test_utils.cleanup()
+
+
+class PreloadScriptTest(unittest.TestCase):
+    @parameterized.expand([
+        ({'script': 'echo 123'}, 'echo 123', 'terminal'),
+        ({'script': 'echo 123', 'output_format': 'html'}, 'echo 123', 'html'),
+        ({'script': 'echo 123', 'output_format': 'weird'}, 'echo 123', 'terminal'),
+        ({'script': 'echo 123', 'unknown_field': 'html'}, 'echo 123', 'terminal'),
+    ])
+    def test_load_config(self, configured_config, expected_script, expected_format):
+        config = _create_config_model('some_name', config={
+            'preload_script': configured_config
+        })
+
+        self.assertEqual(
+            config.preload_script,
+            {'script': expected_script, 'output_format': expected_format}
+        )
+
+    @parameterized.expand([
+        ({'preload_script': None},),
+        ({},),
+        ({'preload_script': {}},),
+        ({'preload_script': {'some_field': 'echo 123'}},)
+    ])
+    def test_load_config_when_none(self, configured_config):
+        config = _create_config_model('some_name', config={
+            'preload_script': configured_config
+        })
+
+        self.assertEqual(config.preload_script, None)
+
+    def test_run_preload_script(self):
+        config = _create_config_model('some_name', config={
+            'preload_script': {'script': 'echo 123'}
+        })
+
+        output = config.run_preload_script()
+        self.assertEqual('123\n', output)
+
+    def test_run_preload_script_when_not_configured(self):
+        config = _create_config_model('some_name', config={
+            'preload_script': None
+        })
+
+        self.assertRaisesRegex(Exception, '.+no preload_script is specified', config.run_preload_script)
+
+    def test_run_preload_script_when_script_fails(self):
+        config = _create_config_model('some_name', config={
+            'preload_script': {'script': 'bash -c "exit -1"'}
+        })
+
+        self.assertRaises(ExecutionException, config.run_preload_script)
+
     def tearDown(self) -> None:
         test_utils.cleanup()
 
@@ -946,7 +1198,7 @@ def _create_config_model(name, *,
     if working_dir is not None:
         result_config['working_directory'] = working_dir
 
-    model = ConfigModel(result_config, path, username, audit_name)
+    model = ConfigModel(result_config, path, username, audit_name, test_utils.process_invoker)
     if parameter_values is not None:
         model.set_all_param_values(parameter_values, skip_invalid_parameters=skip_invalid_parameters)
 

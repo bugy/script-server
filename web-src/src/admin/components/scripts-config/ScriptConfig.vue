@@ -11,12 +11,23 @@
       </div>
     </div>
     <footer class="page-footer primary-color-dark">
+      <div class="footer-left">
+        <PromisableButton v-if="scriptName !== NEW_SCRIPT"
+                          :click="deleteScript"
+                          class="delete-button"
+                          icon-text="delete"
+                          title="Delete"/>
+      </div>
+
       <PromisableButton :click="save" title="Save"/>
+
+      <div class="footer-right"/>
     </footer>
   </div>
 </template>
 
 <script>
+import {NEW_SCRIPT} from '@/admin/store/script-config-module';
 import PromisableButton from '@/common/components/PromisableButton';
 import {mapActions, mapState} from 'vuex';
 import ParameterConfigForm from './ParameterConfigForm';
@@ -33,14 +44,17 @@ export default {
   },
 
   methods: {
-    ...mapActions('scriptConfig', ['init', 'save'])
+    ...mapActions('scriptConfig', ['init', 'save', 'deleteScript'])
   },
 
   computed: {
     ...mapState('scriptConfig', {
       scriptConfig: 'scriptConfig',
       loadingError: 'error'
-    })
+    }),
+    NEW_SCRIPT() {
+      return NEW_SCRIPT;
+    }
   },
 
   watch: {
@@ -52,7 +66,6 @@ export default {
     }
   }
 }
-
 </script>
 
 <style scoped>
@@ -62,7 +75,7 @@ export default {
   height: 100%;
 }
 
-.script-config h5 {
+.script-config >>> h5 {
   margin-left: 0.75rem;
   margin-top: 0.5rem;
   margin-bottom: 2rem;
@@ -83,16 +96,21 @@ footer.page-footer {
   padding-top: 0;
 
   flex: 0 0 0;
+
+  display: flex;
 }
 
 .script-config >>> footer.page-footer a.btn-flat {
   height: 48px;
   line-height: 48px;
-  width: 128px;
+  width: 136px;
   text-align: center;
   font-size: 16px;
-  margin-right: auto;
-  margin-left: auto;
+}
+
+.script-config .footer-left,
+.script-config .footer-right {
+  flex: 1 1 0;
 }
 
 .script-config >>> footer.page-footer .preloader-wrapper {
@@ -107,4 +125,5 @@ footer.page-footer {
 .script-config >>> footer.page-footer .btn-flat i {
   font-size: 24px;
 }
+
 </style>

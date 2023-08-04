@@ -8,7 +8,8 @@ from os.path import join
 
 import init
 from utils import file_utils
-from utils import process_utils
+from utils.env_utils import EnvVariables
+from utils.process_utils import ProcessInvoker
 
 VERSION_FILE = 'version.txt'
 
@@ -61,14 +62,16 @@ def parse_semver_str(version_string):
 
 
 def create_version_file():
+    process_invoker = ProcessInvoker(EnvVariables(os.environ))
+
     if 'TRAVIS_BRANCH' in os.environ:
         current_branch = os.environ['TRAVIS_BRANCH']
     else:
-        current_branch = process_utils.invoke('git rev-parse --abbrev-ref HEAD').strip()
+        current_branch = process_invoker.invoke('git rev-parse --abbrev-ref HEAD').strip()
 
     npm_version = get_npm_version()
     if current_branch == 'stable':
-        last_tag = process_utils.invoke('git describe --exclude dev --abbrev=0 --tags').strip()
+        last_tag = process_invoker.invoke('git describe --exclude dev --abbrev=0 --tags').strip()
         last_tag_version = parse_semver_str(last_tag)
         if (last_tag_version[0] == npm_version[0]) and (last_tag_version[1] == npm_version[1]):
             new_version = [last_tag_version[0], last_tag_version[1], last_tag_version[2] + 1]
@@ -76,7 +79,7 @@ def create_version_file():
             new_version = npm_version
         new_version = '.'.join([str(v) for v in new_version])
     else:
-        git_hash = process_utils.invoke('git rev-parse --short HEAD').strip()
+        git_hash = process_invoker.invoke('git rev-parse --short HEAD').strip()
 
         new_version = str(npm_version[0])
         new_version += '.' + str(npm_version[1] + 1)

@@ -1,12 +1,19 @@
 <template>
-  <div class="script-parameters-panel">
+  <div ref="parametersPanel" :style="{ 'grid-template-columns': 'repeat(' + gridColumns + ', minmax(0, 1fr))'}"
+       class="script-parameters-panel">
     <template v-for="parameter in parameters">
+      <ParameterSeparator
+          v-if="parameter.ui?.separatorBefore && !startsWithNewLine(parameter)"
+          :separator="parameter.ui?.separatorBefore"
+          :style="'grid-column-start: span ' + gridColumns"/>
       <component
           :is="getComponentType(parameter)"
           :key="parameter.name"
           :config="parameter"
-          :value="parameterValues[parameter.name]"
-          class="inline parameter"
+          :value="getParameterValue(parameter)"
+          :class="{'inline': isInline(parameter)}"
+          class="parameter"
+          :style="getGridCellStyle(parameter)"
           :forceValue="forcedValueParameters.includes(parameter.name)"
           @error="handleError(parameter, $event)"
           @input="setParameterValue(parameter.name, $event)"/>
@@ -19,12 +26,22 @@ import Checkbox from '@/common/components/checkbox'
 import Combobox from '@/common/components/combobox'
 import FileUpload from '@/common/components/file_upload'
 import ServerFileField from '@/common/components/server_file_field'
+import TextArea from '@/common/components/TextArea'
 import Textfield from '@/common/components/textfield'
+import {isNull} from '@/common/utils/common';
+import ParameterSeparator from '@/main-app/components/scripts/ParameterSeparator.vue';
 import {mapActions, mapState} from 'vuex'
 import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
 
 export default {
   name: 'script-parameters-view',
+  components: {ParameterSeparator},
+
+  data: function () {
+    return {
+      gridColumns: 7
+    }
+  },
 
   computed: {
     ...mapState('scriptConfig', {
@@ -32,8 +49,20 @@ export default {
     }),
     ...mapState('scriptSetup', {
       parameterValues: 'parameterValues',
-      forcedValueParameters: 'forcedValueParameters',
+      forcedValueParameters: 'forcedValueParameters'
     })
+  },
+
+  mounted() {
+    window.addEventListener('resize', this.recalculateParamsLayout)
+
+    this.$nextTick(() => {
+      this.recalculateParamsLayout()
+    })
+  },
+
+  beforeDestroy() {
+    window.removeEventListener('resize', this.recalculateParamsLayout)
   },
 
   methods: {
@@ -50,9 +79,15 @@ export default {
         return Combobox;
       } else if (parameter.type === 'file_upload') {
         return FileUpload;
+      } else if (parameter.type === 'multiline_text') {
+        return TextArea;
       } else {
         return Textfield;
       }
+    },
+
+    isInline(parameter) {
+      return parameter.type !== 'multiline_text'
     },
 
     handleError(parameter, error) {
@@ -61,6 +96,58 @@ export default {
 
     setParameterValue(parameterName, value) {
       this.setParameterValueInStore({parameterName, value});
+    },
+
+    getParameterValue(parameter) {
+      const value = this.parameterValues[parameter.name];
+      if (!isNull(value)) {
+        return value;
+      }
+
+      if (parameter.withoutValue) {
+        return false;
+      }
+
+      return value;
+    },
+
+    recalculateParamsLayout() {
+      const width = this.$refs.parametersPanel.clientWidth
+      const minCellWidth = 200
+
+      this.gridColumns = Math.floor(width / minCellWidth)
+    },
+
+    getGridCellStyle(parameter) {
+      if (this.isInline(parameter)) {
+        const styles = []
+
+        if (this.startsWithNewLine(parameter)) {
+          styles.push('grid-column-start: 1')
+        }
+
+        let widthWeight = parameter.ui?.['widthWeight'];
+        if (widthWeight) {
+          styles.push('grid-column-end: span ' + Math.min(widthWeight, this.gridColumns))
+        }
+
+        return styles.join('; ')
+      }
+
+      return 'grid-column-end: span ' + this.gridColumns
+    },
+
+    startsWithNewLine(parameter) {
+      const separator = parameter.ui?.separatorBefore
+      if (isNull(separator)) {
+        return false
+      }
+
+      if (separator.title) {
+        return false
+      }
+
+      return separator.type === 'new_line'
     }
   }
 }
@@ -70,26 +157,31 @@ export default {
 .script-parameters-panel >>> {
   margin-top: 15px;
   margin-right: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 24px;
+  row-gap: 8px;
 }
 
-.script-parameters-panel >>> .parameter {
-  margin: 7px 24px 20px 0;
-
-  flex-grow: 1;
-  flex-shrink: 0;
-  width: 180px;
-  max-width: 220px;
+.script-parameters-panel >>> .parameter.inline {
+  margin-left: 0;
 }
 
 .script-parameters-panel >>> .parameter input,
+.script-parameters-panel >>> .parameter textarea,
 .script-parameters-panel >>> .parameter .file-upload-field-value {
   margin: 0;
 
   font-size: 1rem;
   height: 1.5em;
   line-height: 1.5em;
+}
+
+.script-parameters-panel >>> .parameter textarea {
+  padding-bottom: 0;
+  padding-top: 0;
+
+  min-height: 1.5em;
+  box-sizing: content-box;
 }
 
 .script-parameters-panel >>> .parameter > label {

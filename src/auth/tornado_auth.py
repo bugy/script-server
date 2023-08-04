@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import logging
 
 import tornado.concurrent
@@ -7,19 +8,19 @@ from tornado import gen
 
 from auth import auth_base
 from utils import tornado_utils
-from utils.tornado_utils import respond_error, redirect_relative
+from utils.tornado_utils import respond_error, redirect_relative, can_write_secure_cookie
 
 LOGGER = logging.getLogger('script_server.tornado_auth')
 
 
-class TornadoAuth():
+class TornadoAuth:
     def __init__(self, authenticator):
         self.authenticator = authenticator
 
     def is_enabled(self):
         return bool(self.authenticator)
 
-    def is_authenticated(self, request_handler):
+    async def is_authenticated(self, request_handler):
         if not self.is_enabled():
             return True
 
@@ -27,15 +28,25 @@ class TornadoAuth():
         if not username:
             return False
 
-        active = self.authenticator.validate_user(username, request_handler)
+        active = await self.authenticator.validate_user(username, request_handler)
         if not active:
             self.logout(request_handler)
 
         return active
 
-    @staticmethod
-    def _get_current_user(request_handler):
-        return tornado_utils.get_secure_cookie(request_handler, 'username')
+    def _get_current_user(self, request_handler):
+        cookie_username = tornado_utils.get_secure_cookie(request_handler, 'username')
+        if cookie_username:
+            return cookie_username
+
+        authorization_header = request_handler.request.headers.get('Authorization')
+        if authorization_header and authorization_header.startswith('Basic '):
+            username_password = base64.b64decode(authorization_header[6:]).decode('utf-8')
+            (username, password) = username_password.split(':', 1)
+            if self.authenticator.perform_basic_auth(username, password):
+                return username
+
+        return None
 
     def get_username(self, request_handler):
         if not self.is_enabled():
@@ -100,6 +111,9 @@ class TornadoAuth():
 
         username = self.get_username(request_handler)
         if not username:
+            return
+
+        if not can_write_secure_cookie(request_handler):
             return
 
         LOGGER.info('Logging out ' + username)

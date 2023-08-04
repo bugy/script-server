@@ -7,10 +7,13 @@ from parameterized import parameterized
 
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from model import parameter_config
-from model.parameter_config import get_sorted_config
-from react.properties import ObservableDict
+from model.model_helper import InvalidValueException
+from model.parameter_config import get_sorted_config, ParameterUiSeparator
+from model.value_wrapper import ScriptValueWrapper
+from react.properties import ObservableDict, ObservableList
 from tests import test_utils
-from tests.test_utils import create_parameter_model, create_parameter_model_from_config
+from tests.test_utils import create_parameter_model, create_parameter_model_from_config, validate_value, \
+    get_default_value, wrap_values
 from utils.process_utils import ExecutionException
 from utils.string_utils import is_blank
 
@@ -39,7 +42,7 @@ class ParameterModelInitTest(unittest.TestCase):
             'name': name,
             'param': param,
             'env_var': 'my_Param',
-            'no_value': 'true',
+            'no_value': 'false',
             'description': description,
             'required': required,
             'min': min,
@@ -49,22 +52,31 @@ class ParameterModelInitTest(unittest.TestCase):
             'default': default,
             'type': type,
             'constant': 'false',
-            'values': values
+            'values': values,
+            'ui': {
+                'width_weight': '3',
+                'separator_before': {
+                    'type': 'line',
+                    'title': 'Some title'
+                }
+            }
         })
 
         self.assertEqual(name, parameter_model.name)
         self.assertEqual(param, parameter_model.param)
         self.assertEqual('my_Param', parameter_model.env_var)
-        self.assertEqual(True, parameter_model.no_value)
+        self.assertEqual(False, parameter_model.no_value)
         self.assertEqual(description, parameter_model.description)
         self.assertEqual(required, parameter_model.required)
         self.assertEqual(min, parameter_model.min)
         self.assertEqual(max, parameter_model.max)
         self.assertEqual(separator, parameter_model.separator)
         self.assertEqual('argument_per_value', parameter_model.multiselect_argument_type)
-        self.assertEqual(default, parameter_model.default)
+        self.assertEqual(default, parameter_model.create_value_wrapper_for_default().mapped_script_value)
         self.assertEqual(type, parameter_model.type)
         self.assertEqual(False, parameter_model.constant)
+        self.assertEqual(3, parameter_model.ui_width_weight)
+        self.assertEqual(ParameterUiSeparator('line', 'Some title'), parameter_model.ui_separator)
         self.assertCountEqual(values, parameter_model.values)
 
     def test_default_settings(self):
@@ -76,17 +88,19 @@ class ParameterModelInitTest(unittest.TestCase):
         self.assertEqual(',', parameter_model.separator)
         self.assertEqual('text', parameter_model.type)
         self.assertEqual(False, parameter_model.constant)
+        self.assertEqual(None, parameter_model.ui_width_weight)
+        self.assertEqual(None, parameter_model.ui_separator)
 
     def test_default_value_from_env(self):
-        test_utils.set_env_value('my_env_var', 'sky')
+        test_utils.set_os_environ_value('my_env_var', 'sky')
 
         parameter_model = _create_parameter_model({
             'name': 'def_param',
             'default': '$$my_env_var'})
-        self.assertEqual('sky', parameter_model.default)
+        self.assertEqual('sky', parameter_model.create_value_wrapper_for_default().mapped_script_value)
 
     def test_default_value_from_env_when_missing(self):
-        test_utils.set_env_value('my_env_var', 'earth')
+        test_utils.set_os_environ_value('my_env_var', 'earth')
 
         self.assertRaisesRegex(
             Exception,
@@ -96,7 +110,8 @@ class ParameterModelInitTest(unittest.TestCase):
 
     def test_default_value_from_auth(self):
         parameter_model = _create_parameter_model({'name': 'def_param', 'default': 'X${auth.username}X'})
-        self.assertEqual('X' + DEF_USERNAME + 'X', parameter_model.default)
+        default_wrapper = parameter_model.create_value_wrapper_for_default()
+        self.assertEqual('X' + DEF_USERNAME + 'X', default_wrapper.mapped_script_value)
 
     def test_prohibit_constant_without_default(self):
         self.assertRaisesRegex(Exception, 'Constant should have default value specified',
@@ -166,6 +181,12 @@ class ParameterModelInitTest(unittest.TestCase):
             'name': 'def_param',
             'type': 'Ipv6'})
         self.assertEqual('ip6', parameter_model.type)
+
+    def test_multiline_text(self):
+        parameter_model = _create_parameter_model({
+            'name': 'def_param',
+            'type': 'multiline_text'})
+        self.assertEqual('multiline_text', parameter_model.type)
 
     def tearDown(self):
         super().tearDown()
@@ -243,7 +264,7 @@ class TestDefaultValue(unittest.TestCase):
         self.assertEqual(default, True)
 
     def test_env_variable(self):
-        test_utils.set_env_value('test_val', 'text')
+        test_utils.set_os_environ_value('test_val', 'text')
 
         default = self.resolve_default('$$test_val')
 
@@ -290,7 +311,7 @@ class TestDefaultValue(unittest.TestCase):
         self.assertEqual(abs_temp_path, default)
 
     def test_script_value_when_env_var(self):
-        test_utils.set_env_value('my_command', 'echo "Hello world"')
+        test_utils.set_os_environ_value('my_command', 'echo "Hello world"')
 
         default = self.resolve_default({'script': '$$my_command'}, working_dir=test_utils.temp_folder)
         self.assertEqual('Hello world', default)
@@ -305,7 +326,7 @@ class TestDefaultValue(unittest.TestCase):
         ('y', None, 'my_user\ny1'),
         ('y', False, ExecutionException),
         ('y', True, 'my_user\ny1'),
-        ('${auth.username}', None, ExecutionException),
+        ('${auth.username}', None, 'my_user'),
         ('${auth.username}', False, ExecutionException),
         ('${auth.username}', True, 'my_user'),
     ])
@@ -318,13 +339,171 @@ class TestDefaultValue(unittest.TestCase):
         if inspect.isclass(expected_value) and issubclass(expected_value, BaseException):
             self.assertRaises(expected_value, self.resolve_default, config, username='my_user')
         else:
-            default = self.resolve_default(config,
-                                           username='my_user')
+            default = self.resolve_default(config, username='my_user')
             self.assertEqual(expected_value, default)
 
+    @parameterized.expand([
+        ('multiselect', '123', '123'),
+        ('list', '123', '123'),
+        ('multiselect', '123\n', '123'),
+        ('multiselect', '123\n456', ['123', '456']),
+        ('list', '123\n456', '123\n456'),
+        ('multiselect', '\n123\n456\n', ['123', '456']),
+        ('multiselect', '\n123 \n \t 456\n', ['123', '456']),
+        ('multiselect', '123 \n \t 456\n789', ['123', '456', '789']),
+    ])
+    def test_script_value_when_multiselect_and_multiple_values(self, type, output, expected_value):
+        config = {'script': 'echo "' + output + '"'}
+
+        default = self.resolve_default(config, username='my_user', type=type)
+        self.assertEqual(expected_value, default)
+
+    @parameterized.expand([
+        ('echo ${param1}', {'param1': 'xyz'}, 'xyz'),
+        ('echo ${param1}', {'param2': 'abc'}, None),
+        ('echo ${param1}', {}, None),
+        ('echo "${auth.username}-${param2}"', {'param1': 'xyz'}, None),
+        ('echo "${auth.username}-${param2}"', {'param2': 'abc'}, 'my_user-abc'),
+        ('echo "${param1}-${param2}"', {'param1': 'xyz', 'param2': 'abc'}, 'xyz-abc'),
+        ('echo "${param1}-${param2}"', {'param1': 'xyz'}, None),
+        ('echo "${param1}-${param2}"', {'param2': 'abc'}, None),
+        ('echo "${param3}"', {}, None),
+    ])
+    def test_script_value_when_dynamic_script(self, script, values, expected_value):
+        parameters = ObservableList([
+            _create_parameter_model({'name': 'param1'}),
+            _create_parameter_model({'name': 'param2'})])
+
+        parameter_values = ObservableDict()
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': script},
+            username='my_user',
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        self.assertEqual(None, get_default_value(parameter_model))
+
+        parameter_values.set(wrap_values(parameters, values))
+
+        self.assertEqual(expected_value, get_default_value(parameter_model))
+
+    def test_script_value_when_dynamic_script_value_change_to_null(self):
+        param1 = _create_parameter_model({'name': 'param1'})
+        parameters = ObservableList([param1])
+
+        parameter_values = ObservableDict({'param1': param1.create_value_wrapper('abc')})
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': 'echo ${param1}'},
+            username='my_user',
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        self.assertEqual('abc', get_default_value(parameter_model))
+
+        parameter_values['param1'] = param1.create_value_wrapper(None)
+
+        self.assertEqual(None, get_default_value(parameter_model))
+
+    def test_script_value_when_dynamic_script_shell_true(self):
+        param1 = _create_parameter_model({'name': 'param1'})
+        parameters = ObservableList([param1])
+
+        parameter_values = ObservableDict()
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': 'echo "${param1}" | grep a', 'shell': True},
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        parameter_values['param1'] = param1.create_value_wrapper('abc\ndef\ncat')
+
+        self.assertEqual('abc\ncat', get_default_value(parameter_model))
+
+    @parameterized.expand([
+        (False,),
+        (None,),
+    ])
+    def test_script_value_when_dynamic_script_shell_false(self, shell):
+        param1 = _create_parameter_model({'name': 'param1'})
+        parameters = ObservableList([param1])
+
+        parameter_values = ObservableDict()
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': 'echo "${param1}" | grep a', 'shell': shell},
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        parameter_values['param1'] = param1.create_value_wrapper('abc\ndef\ncat')
+
+        self.assertEqual('abc\ndef\ncat | grep a', get_default_value(parameter_model))
+
+    def test_script_value_when_dynamic_script_and_ui_mapping(self):
+        param1 = _create_parameter_model({'name': 'param1', 'values_ui_mapping': {'abc': 'qwerty'}})
+        parameters = ObservableList([param1])
+
+        parameter_values = ObservableDict()
+
+        parameter_model = self.prepare_parameter_model(
+            {'script': 'echo "${param1}"'},
+            other_parameters=parameters,
+            parameter_values=parameter_values
+        )
+
+        parameter_values['param1'] = param1.create_value_wrapper('qwerty')
+
+        self.assertEqual('abc', get_default_value(parameter_model))
+
     @staticmethod
-    def resolve_default(value, *, username=None, audit_name=None, working_dir=None):
-        return parameter_config._resolve_default(value, username, audit_name, working_dir)
+    def resolve_default(value, *, username=None, audit_name=None, working_dir=None, type=None):
+        model = TestDefaultValue.prepare_parameter_model(
+            value,
+            username=username,
+            audit_name=audit_name,
+            working_dir=working_dir,
+            type=type)
+
+        return get_default_value(model)
+
+    @staticmethod
+    def prepare_parameter_model(
+            value,
+            *,
+            username=None,
+            audit_name=None,
+            working_dir=None,
+            type=None,
+            other_parameters=None,
+            parameter_values=None):
+
+        config = {
+            'name': 'some param',
+            'default': value
+        }
+
+        if type is not None:
+            config['type'] = type
+
+        if parameter_values is None:
+            parameter_values = ObservableDict()
+
+        if other_parameters is None:
+            other_parameters = ObservableList()
+
+        return parameter_config.ParameterModel(
+            config,
+            username,
+            audit_name,
+            lambda: other_parameters,
+            test_utils.process_invoker,
+            other_param_values=parameter_values,
+            working_dir=working_dir)
 
     def setUp(self):
         test_utils.setup()
@@ -338,259 +517,288 @@ class TestSingleParameterValidation(unittest.TestCase):
     def test_string_parameter_when_none(self):
         parameter = create_parameter_model('param')
 
-        error = parameter.validate_value(None)
+        error = validate_value(parameter, None)
         self.assertIsNone(error)
 
-    def test_string_parameter_when_value(self):
-        parameter = create_parameter_model('param')
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_value(self, param_type):
+        parameter = create_parameter_model('param', type=param_type)
 
-        error = parameter.validate_value('val')
+        error = validate_value(parameter, 'val')
         self.assertIsNone(error)
 
     def test_required_parameter_when_none(self):
         parameter = create_parameter_model('param', required=True)
 
-        error = parameter.validate_value({})
+        error = validate_value(parameter, {})
         self.assert_error(error)
 
-    def test_required_parameter_when_empty(self):
-        parameter = create_parameter_model('param', required=True)
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_required_parameter_when_empty(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, required=True)
 
-        error = parameter.validate_value('')
+        error = validate_value(parameter, '')
         self.assert_error(error)
 
     def test_required_parameter_when_value(self):
         parameter = create_parameter_model('param', required=True)
 
-        error = parameter.validate_value('val')
+        error = validate_value(parameter, 'val')
         self.assertIsNone(error)
 
     def test_required_parameter_when_constant(self):
         parameter = create_parameter_model('param', required=True, constant=True, default='123')
 
-        error = parameter.validate_value(None)
+        error = validate_value(parameter, None)
         self.assertIsNone(error)
 
     def test_flag_parameter_when_true_bool(self):
         parameter = create_parameter_model('param', no_value=True)
 
-        error = parameter.validate_value(True)
+        error = validate_value(parameter, True)
         self.assertIsNone(error)
 
     def test_flag_parameter_when_false_bool(self):
         parameter = create_parameter_model('param', no_value=True)
 
-        error = parameter.validate_value(False)
+        error = validate_value(parameter, False)
         self.assertIsNone(error)
 
     def test_flag_parameter_when_true_string(self):
         parameter = create_parameter_model('param', no_value=True)
 
-        error = parameter.validate_value('true')
+        error = validate_value(parameter, 'true')
         self.assertIsNone(error)
 
     def test_flag_parameter_when_false_string(self):
         parameter = create_parameter_model('param', no_value=True)
 
-        error = parameter.validate_value('false')
+        error = validate_value(parameter, 'false')
         self.assertIsNone(error)
 
     def test_flag_parameter_when_some_string(self):
         parameter = create_parameter_model('param', no_value=True)
 
-        error = parameter.validate_value('no')
+        error = validate_value(parameter, 'no')
         self.assert_error(error)
 
     def test_required_flag_parameter_when_true_boolean(self):
         parameter = create_parameter_model('param', no_value=True, required=True)
 
-        error = parameter.validate_value(True)
+        error = validate_value(parameter, True)
         self.assertIsNone(error)
 
     def test_required_flag_parameter_when_false_boolean(self):
         parameter = create_parameter_model('param', no_value=True, required=True)
 
-        error = parameter.validate_value(False)
+        error = validate_value(parameter, False)
         self.assertIsNone(error)
 
     def test_int_parameter_when_negative_int(self):
         parameter = create_parameter_model('param', type='int')
 
-        error = parameter.validate_value(-100)
+        error = validate_value(parameter, -100)
         self.assertIsNone(error)
 
     def test_int_parameter_when_large_positive_int(self):
         parameter = create_parameter_model('param', type='int')
 
-        error = parameter.validate_value(1234567890987654321)
+        error = validate_value(parameter, 1234567890987654321)
         self.assertIsNone(error)
 
     def test_int_parameter_when_zero_int_string(self):
         parameter = create_parameter_model('param', type='int')
 
-        error = parameter.validate_value('0')
+        error = validate_value(parameter, '0')
         self.assertIsNone(error)
 
     def test_int_parameter_when_large_negative_int_string(self):
         parameter = create_parameter_model('param', type='int')
 
-        error = parameter.validate_value('-1234567890987654321')
+        error = validate_value(parameter, '-1234567890987654321')
         self.assertIsNone(error)
 
     def test_int_parameter_when_not_int_string(self):
         parameter = create_parameter_model('param', type='int')
 
-        error = parameter.validate_value('v123')
+        error = validate_value(parameter, 'v123')
         self.assert_error(error)
 
     def test_int_parameter_when_float(self):
         parameter = create_parameter_model('param', type='int')
 
-        error = parameter.validate_value(1.2)
+        error = validate_value(parameter, 1.2)
         self.assert_error(error)
 
     def test_int_parameter_when_float_string(self):
         parameter = create_parameter_model('param', type='int')
 
-        error = parameter.validate_value('1.0')
+        error = validate_value(parameter, '1.0')
         self.assert_error(error)
 
     def test_int_parameter_when_lower_than_max(self):
         parameter = create_parameter_model('param', type='int', max=100)
 
-        error = parameter.validate_value(9)
+        error = validate_value(parameter, 9)
         self.assertIsNone(error)
 
     def test_int_parameter_when_equal_to_max(self):
         parameter = create_parameter_model('param', type='int', max=5)
 
-        error = parameter.validate_value(5)
+        error = validate_value(parameter, 5)
         self.assertIsNone(error)
 
     def test_int_parameter_when_larger_than_max(self):
         parameter = create_parameter_model('param', type='int', max=0)
 
-        error = parameter.validate_value(100)
+        error = validate_value(parameter, 100)
         self.assert_error(error)
 
     def test_int_parameter_when_lower_than_min(self):
         parameter = create_parameter_model('param', type='int', min=100)
 
-        error = parameter.validate_value(0)
+        error = validate_value(parameter, 0)
         self.assert_error(error)
 
     def test_int_parameter_when_equal_to_min(self):
         parameter = create_parameter_model('param', type='int', min=-100)
 
-        error = parameter.validate_value(-100)
+        error = validate_value(parameter, -100)
         self.assertIsNone(error)
 
     def test_int_parameter_when_larger_than_min(self):
         parameter = create_parameter_model('param', type='int', min=100)
 
-        error = parameter.validate_value(0)
+        error = validate_value(parameter, 0)
         self.assert_error(error)
 
     def test_required_int_parameter_when_zero(self):
         parameter = create_parameter_model('param', type='int', required=True)
 
-        error = parameter.validate_value(0)
+        error = validate_value(parameter, 0)
         self.assertIsNone(error)
 
     def test_file_upload_parameter_when_valid(self):
         parameter = create_parameter_model('param', type='file_upload')
 
         uploaded_file = test_utils.create_file('test.xml')
-        error = parameter.validate_value(uploaded_file)
+        error = validate_value(parameter, uploaded_file)
         self.assertIsNone(error)
 
     def test_file_upload_parameter_when_not_exists(self):
         parameter = create_parameter_model('param', type='file_upload')
 
         uploaded_file = test_utils.create_file('test.xml')
-        error = parameter.validate_value(uploaded_file + '_')
+        error = validate_value(parameter, uploaded_file + '_')
         self.assert_error(error)
 
     def test_list_parameter_when_matches(self):
         parameter = create_parameter_model(
             'param', type='list', allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value('val2')
+        error = validate_value(parameter, 'val2')
         self.assertIsNone(error)
 
     def test_list_parameter_when_not_matches(self):
         parameter = create_parameter_model(
             'param', type='list', allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value('val4')
+        error = validate_value(parameter, 'val4')
         self.assert_error(error)
 
     def test_editable_list_parameter_when_not_matches(self):
         parameter = create_parameter_model(
             'param', type='editable_list', allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value('val4')
+        error = validate_value(parameter, 'val4')
         self.assertIsNone(error)
 
     def test_multiselect_when_empty_string(self):
         parameter = create_parameter_model(
             'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value('')
+        error = validate_value(parameter, '')
         self.assertIsNone(error)
 
     def test_multiselect_when_empty_list(self):
         parameter = create_parameter_model(
             'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value([])
+        error = validate_value(parameter, [])
         self.assertIsNone(error)
 
     def test_multiselect_when_single_matching_element(self):
         parameter = create_parameter_model(
             'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value(['val2'])
+        error = validate_value(parameter, ['val2'])
         self.assertIsNone(error)
 
     def test_multiselect_when_multiple_matching_elements(self):
         parameter = create_parameter_model(
             'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value(['val2', 'val1'])
+        error = validate_value(parameter, ['val2', 'val1'])
         self.assertIsNone(error)
 
     def test_multiselect_when_multiple_elements_one_not_matching(self):
         parameter = create_parameter_model(
             'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value(['val2', 'val1', 'X'])
+        error = validate_value(parameter, ['val2', 'val1', 'X'])
         self.assert_error(error)
 
     def test_multiselect_when_not_list_value(self):
         parameter = create_parameter_model(
             'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value('val1')
+        error = validate_value(parameter, 'val1')
         self.assert_error(error)
 
     def test_multiselect_when_single_not_matching_element(self):
         parameter = create_parameter_model(
             'param', type=PARAM_TYPE_MULTISELECT, allowed_values=['val1', 'val2', 'val3'])
 
-        error = parameter.validate_value(['X'])
+        error = validate_value(parameter, ['X'])
         self.assert_error(error)
 
     def test_list_with_script_when_matches(self):
         parameter = create_parameter_model('param', type='list', values_script="echo '123\n' 'abc'")
 
-        error = parameter.validate_value('123')
+        error = validate_value(parameter, '123')
         self.assertIsNone(error)
 
     def test_list_with_script_when_matches_and_win_newline(self):
         parameter = create_parameter_model('param', type='list', values_script="echo '123\r\n' 'abc'")
 
-        error = parameter.validate_value('123')
+        error = validate_value(parameter, '123')
+        self.assertIsNone(error)
+
+    @parameterized.expand([
+        ('a\d', 'ab', 'some desc', 'some desc'),
+        ('a\d', '12', 'desc 2', 'desc 2'),
+        ('a\d', 'a12', 'some long description', 'some long description'),
+        ('\d+\wa+', 'aaaa', 'some desc', 'some desc'),
+        ('\d+\wa+', 'aaaa', None, '\d+\wa+'),
+    ])
+    def test_regex_validation_when_fail_with_description(self, regex, value, description, expected_description):
+        parameter = create_parameter_model('param', regex={'pattern': regex, 'description': description})
+
+        error = validate_value(parameter, value)
+        self.assert_error(error)
+        self.assertEqual(error, "does not match regex pattern: " + expected_description)
+
+    @parameterized.expand([
+        ('a\d', 'a1',),
+        ('\da', '2a',),
+        ('a\d+', 'a12',),
+        ('\d+\wa+', '1Xaaaa'),
+        (None, '1Xaaaa'),
+    ])
+    def test_regex_validation_when_success(self, regex, value):
+        parameter = create_parameter_model('param', regex={'pattern': regex})
+
+        error = validate_value(parameter, value)
         self.assertIsNone(error)
 
     @parameterized.expand([(False,), (True,), (None,)])
@@ -606,48 +814,48 @@ class TestSingleParameterValidation(unittest.TestCase):
                                            values_script_shell=shell)
         parameters.extend([dep_param, parameter])
 
-        values['dep_param'] = 'abc'
-        error = parameter.validate_value(' _abc_')
+        values['dep_param'] = ScriptValueWrapper('abc', 'abc', 'abc')
+        error = validate_value(parameter, ' _abc_')
         self.assertIsNone(error)
 
     def test_any_ip_when_ip4(self):
         parameter = create_parameter_model('param', type='ip')
-        error = parameter.validate_value('127.0.0.1')
+        error = validate_value(parameter, '127.0.0.1')
         self.assertIsNone(error)
 
     def test_any_ip_when_ip6(self):
         parameter = create_parameter_model('param', type='ip')
-        error = parameter.validate_value('ABCD::6789')
+        error = validate_value(parameter, 'ABCD::6789')
         self.assertIsNone(error)
 
     def test_any_ip_when_wrong(self):
         parameter = create_parameter_model('param', type='ip')
-        error = parameter.validate_value('127.abcd.1')
+        error = validate_value(parameter, '127.abcd.1')
         self.assert_error(error)
 
     def test_ip4_when_valid(self):
         parameter = create_parameter_model('param', type='ip4')
-        error = parameter.validate_value('192.168.0.13')
+        error = validate_value(parameter, '192.168.0.13')
         self.assertIsNone(error)
 
     def test_ip4_when_ip6(self):
         parameter = create_parameter_model('param', type='ip4')
-        error = parameter.validate_value('ABCD::1234')
+        error = validate_value(parameter, 'ABCD::1234')
         self.assert_error(error)
 
     def test_ip6_when_valid(self):
         parameter = create_parameter_model('param', type='ip6')
-        error = parameter.validate_value('1:2:3:4:5:6:7:8')
+        error = validate_value(parameter, '1:2:3:4:5:6:7:8')
         self.assertIsNone(error)
 
     def test_ip6_when_ip4(self):
         parameter = create_parameter_model('param', type='ip6')
-        error = parameter.validate_value('172.13.0.15')
+        error = validate_value(parameter, '172.13.0.15')
         self.assert_error(error)
 
     def test_ip6_when_complex_valid(self):
         parameter = create_parameter_model('param', type='ip6')
-        error = parameter.validate_value('AbC:0::13:127.0.0.1')
+        error = validate_value(parameter, 'AbC:0::13:127.0.0.1')
         self.assertIsNone(error)
 
     def test_server_file_when_valid(self):
@@ -656,14 +864,28 @@ class TestSingleParameterValidation(unittest.TestCase):
         test_utils.create_file(filename)
         parameter = create_parameter_model('param', type=PARAM_TYPE_SERVER_FILE, file_dir=test_utils.temp_folder)
 
-        error = parameter.validate_value(filename)
+        error = validate_value(parameter, filename)
         self.assertIsNone(error)
 
     def test_server_file_when_wrong(self):
         test_utils.create_file('file1.txt')
         parameter = create_parameter_model('param', type=PARAM_TYPE_SERVER_FILE, file_dir=test_utils.temp_folder)
 
-        error = parameter.validate_value('my.dat')
+        error = validate_value(parameter, 'my.dat')
+        self.assert_error(error)
+
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_max_length_ok(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, max_length=10)
+
+        error = validate_value(parameter, '012345678\n')
+        self.assertIsNone(error)
+
+    @parameterized.expand([(None,), ('multiline_text',)])
+    def test_text_parameter_when_max_length_violated(self, param_type):
+        parameter = create_parameter_model('param', type=param_type, max_length=10)
+
+        error = validate_value(parameter, '0123456789\n')
         self.assert_error(error)
 
     def assert_error(self, error):
@@ -714,6 +936,69 @@ class ParameterValueNormalizationTest(unittest.TestCase):
         parameter = create_parameter_model('param', type=PARAM_TYPE_MULTISELECT, allowed_values=['Hello', 'world'])
 
         self.assertEqual([], parameter.normalize_user_value(None))
+
+
+class TestPassAsValue(unittest.TestCase):
+    @parameterized.expand([
+        ('argument', True, False, False),
+        ('env_variable', False, True, False),
+        ('EnV_VariablE', False, True, False),
+        ('stdin', False, False, True),
+        ('STDIN ', False, False, True),
+        (None, True, True, False),
+        ('unknown value', True, True, False),
+    ])
+    def test_pass_as(self, config, pass_as_arg, pass_as_env, pass_as_stdin):
+        parameter = create_parameter_model('param', pass_as=config)
+
+        pass_as = parameter.pass_as
+        actual_value = (pass_as.pass_as_argument(), pass_as.pass_as_env_variable(), pass_as.pass_as_stdin())
+
+        self.assertEqual((pass_as_arg, pass_as_env, pass_as_stdin), actual_value)
+
+
+class TestStdinExpectedText(unittest.TestCase):
+
+    @parameterized.expand([
+        ('some text\nabc', 'some text\nabc'),
+        (None, None),
+    ])
+    def test_stdin_expected_text(self, config, expected_value):
+        parameter = create_parameter_model('param', stdin_expected_text=config)
+
+        self.assertEqual(expected_value, parameter.stdin_expected_text)
+
+
+class TestUiSeparator(unittest.TestCase):
+
+    @parameterized.expand([
+        ('line', None, 'line', None),
+        ('new_line', None, 'new_line', None),
+        (' New_Line ', None, 'new_line', None),
+        (None, 'Some title', 'new_line', 'Some title'),
+        ('line', '', 'line', None),
+        ('line', 'Title', 'line', 'Title'),
+    ])
+    def test_valid_values(self, configured_type, configured_title, expected_type, expected_title):
+        parameter = create_parameter_model(
+            'param',
+            ui_separator_type=configured_type,
+            ui_separator_title=configured_title)
+
+        self.assertEqual(ParameterUiSeparator(expected_type, expected_title), parameter.ui_separator)
+
+    @parameterized.expand([
+        ('block', None, 'Invalid "type" value = block.*'),
+    ])
+    def test_invalid_values(self, configured_type, configured_title, expected_regex):
+        self.assertRaisesRegex(
+            InvalidValueException,
+            expected_regex,
+            create_parameter_model,
+            'param',
+            ui_separator_type=configured_type,
+            ui_separator_title=configured_title
+        )
 
 
 class GetSortedParamConfig(unittest.TestCase):
@@ -773,6 +1058,25 @@ class GetSortedParamConfig(unittest.TestCase):
         self.assertEqual(expected.popitem(last=False), config.popitem(last=False))
         self.assertEqual(expected.popitem(last=False), config.popitem(last=False))
         self.assertCountEqual(expected.items(), config.items())
+
+
+class TestUiValueMapping(unittest.TestCase):
+    def test_no_mapping(self):
+        parameter_model = create_parameter_model(type='list', allowed_values=['abc', 'def', 'xyz'])
+
+        self.assertEqual(['abc', 'def', 'xyz'], parameter_model.get_ui_values())
+
+    def test_mapping(self):
+        parameter_model = create_parameter_model(
+            type='list',
+            allowed_values=['abc', 'def', 'xyz'],
+            values_ui_mapping={
+                'abc': 'ABC',
+                'def': 'qwerty'
+            }
+        )
+
+        self.assertEqual(['ABC', 'qwerty', 'xyz'], parameter_model.get_ui_values())
 
 
 def _create_parameter_model(config, *, username=DEF_USERNAME, audit_name=DEF_AUDIT_NAME, all_parameters=None):

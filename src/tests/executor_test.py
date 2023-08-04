@@ -1,3 +1,4 @@
+import os
 import time
 import unittest
 
@@ -7,7 +8,8 @@ from execution.executor import ScriptExecutor, _build_env_variables, create_proc
 from react.observable import _StoringObserver, read_until_closed
 from tests import test_utils
 from tests.test_utils import _MockProcessWrapper, create_config_model, create_script_param_config, \
-    create_parameter_model
+    create_parameter_model, assert_contains_sub_dict
+from utils import string_utils
 
 BUFFER_FLUSH_WAIT_TIME = (executor.TIME_BUFFER_MS * 1.5) / 1000.0
 
@@ -20,104 +22,222 @@ def parse_env_variables(output):
 
 class TestScriptExecutor(unittest.TestCase):
     def test_start_without_values(self):
-        self.create_executor(create_config_model('config_x'), {})
-        self.executor.start()
+        config = create_config_model('config_x', parameter_values={})
+        self.create_executor(config)
+        self.executor.start(123)
 
         process_wrapper = self.executor.process_wrapper
         self.assertEqual(None, process_wrapper.working_directory)
         self.assertEqual(['ls'], process_wrapper.command)
-        self.assertEqual({}, process_wrapper.env_variables)
+
+        expected_values = {}
+        expected_values.update(os.environ)
+        expected_values['EXECUTION_ID'] = '123'
+        self.assertEqual(expected_values, process_wrapper.all_env_variables)
 
     def test_start_with_one_value(self):
-        config = create_config_model('config_x', parameters=[create_script_param_config('id')])
-        self.create_executor(config, {'id': 918273})
-        self.executor.start()
+        config = create_config_model(
+            'config_x',
+            parameters=[create_script_param_config('id')],
+            parameter_values={'id': 918273})
+
+        self.create_executor(config)
+        self.executor.start(123)
 
         process_wrapper = self.executor.process_wrapper
         self.assertEqual(['ls', 918273], process_wrapper.command)
-        self.assertEqual({'PARAM_ID': '918273'}, process_wrapper.env_variables)
+        assert_contains_sub_dict(self,
+                                 process_wrapper.all_env_variables,
+                                 {'PARAM_ID': '918273', 'EXECUTION_ID': '123'})
 
     def test_start_with_multiple_values(self):
-        config = create_config_model('config_x', parameters=[
-            create_script_param_config('id'),
-            create_script_param_config('name', env_var='My_Name', param='-n'),
-            create_script_param_config('verbose', param='--verbose', no_value=True),
-        ])
-        self.create_executor(config, {'id': 918273, 'name': 'UserX', 'verbose': True})
-        self.executor.start()
+        config = create_config_model(
+            'config_x',
+            parameters=[
+                create_script_param_config('id'),
+                create_script_param_config('name', env_var='My_Name', param='-n'),
+                create_script_param_config('verbose', param='--verbose', no_value=True),
+            ],
+            parameter_values={'id': 918273, 'name': 'UserX', 'verbose': True})
+        self.create_executor(config)
+        self.executor.start(123)
 
         process_wrapper = self.executor.process_wrapper
         self.assertEqual(['ls', 918273, '-n', 'UserX', '--verbose'], process_wrapper.command)
-        self.assertEqual({'PARAM_ID': '918273', 'My_Name': 'UserX', 'PARAM_VERBOSE': 'true'},
-                         process_wrapper.env_variables)
+        assert_contains_sub_dict(self,
+                                 process_wrapper.all_env_variables,
+                                 {'PARAM_ID': '918273',
+                                  'My_Name': 'UserX',
+                                  'PARAM_VERBOSE': 'true',
+                                  'EXECUTION_ID': '123'})
 
     def test_env_variables_when_pty(self):
-        test_utils.set_env_value('some_env', 'test')
+        with test_utils.custom_env('some_env', 'test'):
+            config = create_config_model(
+                'config_x',
+                script_command='tests/scripts/printenv.sh',
+                requires_terminal=True,
+                parameters=[
+                    create_script_param_config('id'),
+                    create_script_param_config('name', env_var='My_Name', param='-n'),
+                    create_script_param_config('verbose', param='--verbose', no_value=True),
+                ],
+                parameter_values={'id': '918273', 'name': 'UserX', 'verbose': True})
 
-        config = create_config_model(
-            'config_x',
-            script_command='tests/scripts/printenv.sh',
-            requires_terminal=True,
-            parameters=[
-                create_script_param_config('id'),
-                create_script_param_config('name', env_var='My_Name', param='-n'),
-                create_script_param_config('verbose', param='--verbose', no_value=True),
-            ])
+            executor._process_creator = create_process_wrapper
+            self.create_executor(config)
+            self.executor.start(123)
 
-        executor._process_creator = create_process_wrapper
-        self.create_executor(config, {'id': '918273', 'name': 'UserX', 'verbose': True})
-        self.executor.start()
+            data = read_until_closed(self.executor.get_raw_output_stream(), 100)
+            output = ''.join(data)
 
-        data = read_until_closed(self.executor.get_raw_output_stream(), 100)
-        output = ''.join(data)
-
-        variables = parse_env_variables(output)
-        self.assertEqual('918273', variables.get('PARAM_ID'))
-        self.assertEqual('UserX', variables.get('My_Name'))
-        self.assertEqual('true', variables.get('PARAM_VERBOSE'))
-        self.assertEqual('test', variables.get('some_env'))
+            variables = parse_env_variables(output)
+            self.assertEqual('918273', variables.get('PARAM_ID'))
+            self.assertEqual('UserX', variables.get('My_Name'))
+            self.assertEqual('true', variables.get('PARAM_VERBOSE'))
+            self.assertEqual('test', variables.get('some_env'))
+            self.assertEqual('123', variables.get('EXECUTION_ID'))
 
     def test_env_variables_when_popen(self):
-        test_utils.set_env_value('some_env', 'test')
+        with test_utils.custom_env('some_env', 'test'):
+            config = create_config_model(
+                'config_x',
+                script_command='tests/scripts/printenv.sh',
+                requires_terminal=False,
+                parameters=[
+                    create_script_param_config('id'),
+                    create_script_param_config('name', env_var='My_Name', param='-n'),
+                    create_script_param_config('verbose', param='--verbose', no_value=True),
+                ],
+                parameter_values={'id': '918273', 'name': 'UserX', 'verbose': True})
 
-        config = create_config_model(
-            'config_x',
-            script_command='tests/scripts/printenv.sh',
-            requires_terminal=False,
-            parameters=[
-                create_script_param_config('id'),
-                create_script_param_config('name', env_var='My_Name', param='-n'),
-                create_script_param_config('verbose', param='--verbose', no_value=True),
-            ])
+            executor._process_creator = create_process_wrapper
+            self.create_executor(config)
+            self.executor.start(123)
 
-        executor._process_creator = create_process_wrapper
-        self.create_executor(config, {'id': '918273', 'name': 'UserX', 'verbose': True})
-        self.executor.start()
+            data = read_until_closed(self.executor.get_raw_output_stream(), 100)
+            output = ''.join(data)
 
-        data = read_until_closed(self.executor.get_raw_output_stream(), 100)
-        output = ''.join(data)
-
-        variables = parse_env_variables(output)
-        self.assertEqual('918273', variables.get('PARAM_ID'))
-        self.assertEqual('UserX', variables.get('My_Name'))
-        self.assertEqual('true', variables.get('PARAM_VERBOSE'))
-        self.assertEqual('test', variables.get('some_env'))
+            variables = parse_env_variables(output)
+            self.assertEqual('918273', variables.get('PARAM_ID'))
+            self.assertEqual('UserX', variables.get('My_Name'))
+            self.assertEqual('true', variables.get('PARAM_VERBOSE'))
+            self.assertEqual('test', variables.get('some_env'))
+            self.assertEqual('123', variables.get('EXECUTION_ID'))
 
     def test_start_with_multiple_values_when_one_not_exist(self):
-        config = create_config_model('config_x', parameters=[
-            create_script_param_config('id'),
-            create_script_param_config('verbose', param='--verbose', no_value=True),
-        ])
-        self.create_executor(config, {'id': 918273, 'name': 'UserX', 'verbose': True})
-        self.executor.start()
+        config = create_config_model(
+            'config_x',
+            parameters=[
+                create_script_param_config('id'),
+                create_script_param_config('verbose', param='--verbose', no_value=True),
+            ],
+            parameter_values={'id': 918273, 'name': 'UserX', 'verbose': True})
+        self.create_executor(config)
+        self.executor.start(123)
 
         process_wrapper = self.executor.process_wrapper
         self.assertEqual(['ls', 918273, '--verbose'], process_wrapper.command)
-        self.assertEqual({'PARAM_ID': '918273', 'PARAM_VERBOSE': 'true'},
-                         process_wrapper.env_variables)
+        assert_contains_sub_dict(self,
+                                 process_wrapper.all_env_variables,
+                                 {'PARAM_ID': '918273', 'PARAM_VERBOSE': 'true', 'EXECUTION_ID': '123'})
 
-    def create_executor(self, config, parameter_values):
-        self.executor = ScriptExecutor(config, parameter_values)
+    def test_pass_as(self):
+        config = create_config_model(
+            'config_x',
+            script_command='bash -c \'sleep 0.1 && echo ">$0< >$1< >$PARAM_P1< >$PARAM_P2< >$PARAM_P3<"\'',
+            parameters=[
+                create_script_param_config('p1', pass_as='argument'),
+                create_script_param_config('p2', pass_as='env_variable'),
+                create_script_param_config('p3', pass_as='stdin'),
+            ],
+            parameter_values={'p1': 'abc', 'p2': 'def', 'p3': 'xyz'})
+
+        executor._process_creator = create_process_wrapper
+        self.create_executor(config)
+        self.executor.start(123)
+
+        data = read_until_closed(self.executor.get_raw_output_stream(), 200)
+        output = ''.join(data)
+
+        self.assertEqual('xyz\n>abc< >< >< >def< ><\n', output)
+
+    def test_pass_as_stdin(self):
+        file_path = test_utils.create_file('my_script.sh', text='''
+            sleep 0.1
+            echo -n 'ababa'
+            sleep 0.1
+            echo -n 'baba'
+            sleep 0.1
+            echo -n 'bcdef'
+            sleep 0.1
+            echo 'abc'
+            sleep 0.1
+            read input1
+            read input2
+            read input3
+            read input4
+            read input5
+            read input6
+            sleep 0.1
+            echo "inputs: '$input1' '$input2' '$input3' '$input4' '$input5' '$input6'"
+        ''')
+
+        config = create_config_model(
+            'config_x',
+            script_command='bash ' + file_path,
+            parameters=[
+                create_script_param_config('p1', pass_as='stdin'),
+                create_script_param_config('p2', pass_as='stdin', stdin_expected_text='abc'),
+                create_script_param_config('p3', pass_as='stdin'),
+                create_script_param_config('p4', pass_as='stdin'),
+                create_script_param_config('p5', pass_as='stdin', no_value=True),
+                create_script_param_config('p6', pass_as='stdin', no_value=True),
+                create_script_param_config('p7', pass_as='stdin', stdin_expected_text='b'),
+            ],
+            parameter_values={'p1': 'xxx', 'p2': 'yyy', 'p3': [1, 3, 7], 'p5': True, 'p6': False, 'p7': 'zzz'})
+
+        executor._process_creator = create_process_wrapper
+        self.create_executor(config)
+        self.executor.start(123)
+
+        data = read_until_closed(self.executor.get_raw_output_stream(), 1000)
+        output = ''.join(data)
+
+        self.assertEqual(string_utils.dedent('''
+        xxx
+        1,3,7
+        true
+        false
+        ababazzz
+        bababcdefyyy
+        abc
+        inputs: 'xxx' '1,3,7' 'true' 'false' 'zzz' 'yyy'
+        '''), output)
+
+    def test_values_ui_mapping(self):
+        config = create_config_model(
+            'config_x',
+            script_command='echo ',
+            parameters=[
+                create_script_param_config('p1', type='int', values_ui_mapping={'One': '1'}),
+                create_script_param_config('p2', type='list',
+                                           allowed_values=['abc'],
+                                           values_ui_mapping={'abc': 'qwerty'}),
+            ],
+            parameter_values={'p1': '1', 'p2': 'qwerty'})
+
+        executor._process_creator = create_process_wrapper
+        self.create_executor(config)
+        self.executor.start(123)
+
+        data = read_until_closed(self.executor.get_raw_output_stream(), 1000)
+        output = ''.join(data)
+
+        self.assertEqual('One abc\n', output)
+
+    def create_executor(self, config):
+        self.executor = ScriptExecutor(config, test_utils.env_variables)
 
     def setUp(self):
         executor._process_creator = _MockProcessWrapper
@@ -223,7 +343,11 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual([], args_list)
 
     def test_parameter_multiselect_when_single_list(self):
-        parameter = create_script_param_config('p1', param='-p1', type=PARAM_TYPE_MULTISELECT)
+        parameter = create_script_param_config(
+            'p1',
+            param='-p1',
+            type=PARAM_TYPE_MULTISELECT,
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1']}, config)
@@ -231,7 +355,11 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1', 'val1'], args_list)
 
     def test_parameter_multiselect_when_single_list_as_multiarg(self):
-        parameter = create_script_param_config('p1', param='-p1', type=PARAM_TYPE_MULTISELECT)
+        parameter = create_script_param_config(
+            'p1',
+            param='-p1',
+            type=PARAM_TYPE_MULTISELECT,
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1']}, config)
@@ -239,7 +367,10 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1', 'val1'], args_list)
 
     def test_parameter_multiselect_when_multiple_list(self):
-        parameter = create_script_param_config('p1', type=PARAM_TYPE_MULTISELECT)
+        parameter = create_script_param_config(
+            'p1',
+            type=PARAM_TYPE_MULTISELECT,
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -247,7 +378,11 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['val1,val2,hello world'], args_list)
 
     def test_parameter_multiselect_when_multiple_list_and_custom_separator(self):
-        parameter = create_script_param_config('p1', type=PARAM_TYPE_MULTISELECT, multiselect_separator='; ')
+        parameter = create_script_param_config(
+            'p1',
+            type=PARAM_TYPE_MULTISELECT,
+            multiselect_separator='; ',
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -255,9 +390,11 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['val1; val2; hello world'], args_list)
 
     def test_parameter_multiselect_when_multiple_list_as_multiarg(self):
-        parameter = create_script_param_config('p1',
-                                               type=PARAM_TYPE_MULTISELECT,
-                                               multiselect_argument_type='argument_per_value')
+        parameter = create_script_param_config(
+            'p1',
+            type=PARAM_TYPE_MULTISELECT,
+            multiselect_argument_type='argument_per_value',
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -281,7 +418,12 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1=10'], args_string)
 
     def test_parameter_multiselect_when_multiple_list_without_space(self):
-        parameter = create_script_param_config('p1', param='--p1=', type=PARAM_TYPE_MULTISELECT, same_arg_param=True)
+        parameter = create_script_param_config(
+            'p1',
+            param='--p1=',
+            type=PARAM_TYPE_MULTISELECT,
+            same_arg_param=True,
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -289,10 +431,13 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['--p1=val1,val2,hello world'], args_list)
 
     def test_parameter_multiselect_when_multiple_list_and_argument_per_value_without_space(self):
-        parameter = create_script_param_config('p1', param='--p1=',
-                                               type=PARAM_TYPE_MULTISELECT,
-                                               multiselect_argument_type='argument_per_value',
-                                               same_arg_param=True)
+        parameter = create_script_param_config(
+            'p1',
+            param='--p1=',
+            type=PARAM_TYPE_MULTISELECT,
+            multiselect_argument_type='argument_per_value',
+            same_arg_param=True,
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -300,9 +445,12 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['--p1=val1', 'val2', 'hello world'], args_list)
 
     def test_parameter_multiselect_when_multiple_list_as_multiarg_repeat_param(self):
-        parameter = create_script_param_config('p1', param='-p1',
-                                               type=PARAM_TYPE_MULTISELECT,
-                                               multiselect_argument_type='repeat_param_value')
+        parameter = create_script_param_config(
+            'p1',
+            param='-p1',
+            type=PARAM_TYPE_MULTISELECT,
+            multiselect_argument_type='repeat_param_value',
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -310,10 +458,13 @@ class TestBuildCommandArgs(unittest.TestCase):
         self.assertEqual(['-p1', 'val1', '-p1', 'val2', '-p1', 'hello world'], args_list)
 
     def test_parameter_multiselect_when_multiple_list_as_multiarg_repeat_param_without_space(self):
-        parameter = create_script_param_config('p1', param='--p1=',
-                                               type=PARAM_TYPE_MULTISELECT,
-                                               multiselect_argument_type='repeat_param_value',
-                                               same_arg_param=True)
+        parameter = create_script_param_config(
+            'p1',
+            param='--p1=',
+            type=PARAM_TYPE_MULTISELECT,
+            multiselect_argument_type='repeat_param_value',
+            same_arg_param=True,
+            allowed_values=['val1', 'val2', 'hello world'])
         config = create_config_model('config_x', parameters=[parameter])
 
         args_list = self.build_command_args({'p1': ['val1', 'val2', 'hello world']}, config)
@@ -341,7 +492,9 @@ class TestBuildCommandArgs(unittest.TestCase):
         if config.script_command is None:
             config.script_command = 'ping'
 
-        script_executor = ScriptExecutor(config, param_values)
+        config.set_all_param_values(param_values)
+
+        script_executor = ScriptExecutor(config, test_utils.env_variables)
         args_string = executor.build_command_args(script_executor.get_script_parameter_values(), config)
         return args_string
 
@@ -406,6 +559,25 @@ class TestProcessOutput(unittest.TestCase):
         output = self.get_finish_output()
         self.assertEqual(output, '******| some text\nand ****** new line with some long long text |******')
 
+    def test_log_with_secure_when_ui_mapping(self):
+        parameter = create_script_param_config(
+            'p1',
+            secure=True,
+            type='list',
+            allowed_values=['abc', 'def', 'xyz'],
+            values_ui_mapping={'abc': 'qwerty'}
+        )
+        config = self._create_config(parameters=[parameter])
+
+        self.create_and_start_executor(config, {'p1': 'qwerty'})
+
+        self.write_process_output(' qwerty def abc xyz ')
+
+        self.finish_process()
+
+        output = self.get_finish_output()
+        self.assertEqual(output, ' qwerty def ****** xyz ')
+
     def test_log_with_secure_ignore_whitespaces(self):
         parameter = create_script_param_config('p1', secure=True)
         config = self._create_config(parameters=[parameter])
@@ -435,7 +607,11 @@ class TestProcessOutput(unittest.TestCase):
         self.assertEqual(output, '******\n-******-\nbobcat\ncatty\n1cat\nmy ****** is cute')
 
     def test_log_with_secure_when_multiselect(self):
-        parameter = create_script_param_config('p1', secure=True, type=PARAM_TYPE_MULTISELECT)
+        parameter = create_script_param_config(
+            'p1',
+            secure=True,
+            type=PARAM_TYPE_MULTISELECT,
+            allowed_values=['123', '456', 'password'])
         config = self._create_config(parameters=[parameter])
 
         self.create_and_start_executor(config, {'p1': ['123', 'password']})
@@ -504,8 +680,10 @@ class TestProcessOutput(unittest.TestCase):
         if parameter_values is None:
             parameter_values = {}
 
-        self.executor = ScriptExecutor(config, parameter_values)
-        self.executor.start()
+        config.set_all_param_values(parameter_values)
+
+        self.executor = ScriptExecutor(config, test_utils.env_variables)
+        self.executor.start(123)
         return self.executor
 
 
@@ -531,7 +709,12 @@ class GetSecureCommandTest(unittest.TestCase):
         self.assertEqual('ls -p1 ****** -p2 value', secure_command)
 
     def test_parameter_secure_multiselect(self):
-        parameter = create_script_param_config('p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT)
+        parameter = create_script_param_config(
+            'p1',
+            param='-p1',
+            secure=True,
+            type=PARAM_TYPE_MULTISELECT,
+            allowed_values=['one', 'two', 'three'])
 
         secure_command = self.get_secure_command([parameter], {'p1': ['one', 'two', 'three']})
 
@@ -539,7 +722,12 @@ class GetSecureCommandTest(unittest.TestCase):
 
     def test_parameter_secure_multiselect_as_multiarg(self):
         parameter = create_script_param_config(
-            'p1', param='-p1', secure=True, type=PARAM_TYPE_MULTISELECT, multiselect_argument_type='argument_per_value')
+            'p1',
+            param='-p1',
+            secure=True,
+            type=PARAM_TYPE_MULTISELECT,
+            multiselect_argument_type='argument_per_value',
+            allowed_values=['one', 'two', 'three'])
 
         secure_command = self.get_secure_command([parameter], {'p1': ['one', 'two', 'three']})
 
@@ -555,7 +743,10 @@ class GetSecureCommandTest(unittest.TestCase):
 
     def test_parameter_multiselect_and_argument_per_value(self):
         parameter = create_script_param_config(
-            'p1', param='-p1', type=PARAM_TYPE_MULTISELECT, multiselect_argument_type='argument_per_value')
+            'p1', param='-p1',
+            type=PARAM_TYPE_MULTISELECT,
+            multiselect_argument_type='argument_per_value',
+            allowed_values=['abc', 'xyz', 'def'])
 
         secure_command = self.get_secure_command([parameter], {'p1': ['abc', 'def']})
 
@@ -563,7 +754,10 @@ class GetSecureCommandTest(unittest.TestCase):
 
     def test_when_parameter_multiselect_and_comma_separated(self):
         parameter = create_script_param_config(
-            'p1', param='-p1', type=PARAM_TYPE_MULTISELECT)
+            'p1',
+            param='-p1',
+            type=PARAM_TYPE_MULTISELECT,
+            allowed_values=['abc', 'def'])
 
         secure_command = self.get_secure_command([parameter], {'p1': ['abc', 'def']})
 
@@ -593,17 +787,17 @@ class GetSecureCommandTest(unittest.TestCase):
         self.assertEqual('ls -p1 ******', secure_command)
 
     def get_secure_command(self, parameters, values):
-        config = create_config_model('config_x', parameters=parameters)
-        executor = ScriptExecutor(config, values)
+        config = create_config_model('config_x', parameters=parameters, parameter_values=values)
+        executor = ScriptExecutor(config, test_utils.env_variables)
         return executor.get_secure_command()
 
 
 class TestBuildEnvVariables(unittest.TestCase):
     def test_single_variable(self):
         param = create_parameter_model('name')
-        env_variables = _build_env_variables({'name': 'UserX'}, [param])
+        env_variables = _build_env_variables({'name': 'UserX'}, [param], 123)
 
-        self.assertEqual({'PARAM_NAME': 'UserX'}, env_variables)
+        self.assertEqual({'PARAM_NAME': 'UserX', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_multiple_variables(self):
         name_param = create_parameter_model('name')
@@ -611,84 +805,91 @@ class TestBuildEnvVariables(unittest.TestCase):
         address_param = create_parameter_model('address')
         env_variables = _build_env_variables(
             {'name': 'UserX', 'id': 918273, 'address': 'Germany'},
-            [name_param, id_param, address_param])
+            [name_param, id_param, address_param],
+            123)
 
-        self.assertEqual({'PARAM_NAME': 'UserX', 'PARAM_ID': '918273', 'PARAM_ADDRESS': 'Germany'},
+        self.assertEqual({'PARAM_NAME': 'UserX',
+                          'PARAM_ID': '918273',
+                          'PARAM_ADDRESS': 'Germany',
+                          'EXECUTION_ID': '123'},
                          env_variables)
 
     def test_missing_parameter(self):
         name_param = create_parameter_model('name')
         env_variables = _build_env_variables(
             {'name': 'UserX', 'id': 918273},
-            [name_param])
+            [name_param],
+            123)
 
-        self.assertEqual({'PARAM_NAME': 'UserX'}, env_variables)
+        self.assertEqual({'PARAM_NAME': 'UserX', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_missing_value(self):
         id_param = create_parameter_model('id')
         name_param = create_parameter_model('name')
         env_variables = _build_env_variables(
             {'name': None, 'id': 918273},
-            [name_param, id_param])
+            [name_param, id_param],
+            123)
 
-        self.assertEqual({'PARAM_ID': '918273'}, env_variables)
+        self.assertEqual({'PARAM_ID': '918273', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_list_value(self):
         id_param = create_parameter_model('id')
         name_param = create_parameter_model('name')
         env_variables = _build_env_variables(
             {'name': ['Peter', 'Schwarz'], 'id': 918273},
-            [name_param, id_param])
+            [name_param, id_param],
+            123)
 
-        self.assertEqual({'PARAM_ID': '918273'}, env_variables)
+        self.assertEqual({'PARAM_ID': '918273', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_boolean_value(self):
         verbose_param = create_parameter_model('verbose')
-        env_variables = _build_env_variables({'verbose': True}, [verbose_param])
+        env_variables = _build_env_variables({'verbose': True}, [verbose_param], 123)
 
-        self.assertEqual({'PARAM_VERBOSE': 'True'}, env_variables)
+        self.assertEqual({'PARAM_VERBOSE': 'True', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_boolean_value_when_false(self):
         verbose_param = create_parameter_model('verbose')
-        env_variables = _build_env_variables({'verbose': False}, [verbose_param])
+        env_variables = _build_env_variables({'verbose': False}, [verbose_param], 123)
 
-        self.assertEqual({'PARAM_VERBOSE': 'False'}, env_variables)
+        self.assertEqual({'PARAM_VERBOSE': 'False', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_boolean_value_when_no_value(self):
         verbose_param = create_parameter_model('verbose', no_value=True)
-        env_variables = _build_env_variables({'verbose': True}, [verbose_param])
+        env_variables = _build_env_variables({'verbose': True}, [verbose_param], 123)
 
-        self.assertEqual({'PARAM_VERBOSE': 'true'}, env_variables)
+        self.assertEqual({'PARAM_VERBOSE': 'true', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_boolean_value_when_no_value_and_false(self):
         verbose_param = create_parameter_model('verbose', no_value=True)
-        env_variables = _build_env_variables({'verbose': False}, [verbose_param])
+        env_variables = _build_env_variables({'verbose': False}, [verbose_param], 123)
 
-        self.assertEqual({}, env_variables)
+        self.assertEqual({'EXECUTION_ID': '123'}, env_variables)
 
     def test_explicit_env_var(self):
         name_param = create_parameter_model('name', env_var='My_Name')
-        env_variables = _build_env_variables({'name': 'UserX'}, [name_param])
+        env_variables = _build_env_variables({'name': 'UserX'}, [name_param], 123)
 
-        self.assertEqual({'My_Name': 'UserX'}, env_variables)
+        self.assertEqual({'My_Name': 'UserX', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_replace_characters(self):
         name_param = create_parameter_model('Мой параметер 1!')
-        env_variables = _build_env_variables({'Мой параметер 1!': 'UserX'}, [name_param])
+        env_variables = _build_env_variables({'Мой параметер 1!': 'UserX'}, [name_param], 123)
 
-        self.assertEqual({'PARAM_MOY_PARAMETER_1_': 'UserX'}, env_variables)
+        self.assertEqual({'PARAM_MOY_PARAMETER_1_': 'UserX', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_replace_squash_underscores(self):
         name_param = create_parameter_model('hello !@#$%^& world')
-        env_variables = _build_env_variables({'hello !@#$%^& world': 'UserX'}, [name_param])
+        env_variables = _build_env_variables({'hello !@#$%^& world': 'UserX'}, [name_param], 123)
 
-        self.assertEqual({'PARAM_HELLO_WORLD': 'UserX'}, env_variables)
+        self.assertEqual({'PARAM_HELLO_WORLD': 'UserX', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_replace_when_no_valid_characters(self):
         name_param = create_parameter_model(' !@#$%^&')
-        env_variables = _build_env_variables({' !@#$%^&': 'UserX'}, [name_param])
+        env_variables = _build_env_variables({' !@#$%^&': 'UserX'}, [name_param], 123)
 
-        self.assertEqual({}, env_variables)
+        self.assertEqual({'EXECUTION_ID': '123'}, env_variables)
 
     def test_conflicting_name(self):
         param1 = create_parameter_model('A+')
@@ -696,9 +897,10 @@ class TestBuildEnvVariables(unittest.TestCase):
         param3 = create_parameter_model('A=')
         param4 = create_parameter_model('A')
         env_variables = _build_env_variables({'A+': 'x', 'A-': 'y', 'A=': 'z', 'A': 'a'},
-                                             [param1, param2, param3, param4])
+                                             [param1, param2, param3, param4],
+                                             123)
 
-        self.assertEqual({'PARAM_A': 'a'}, env_variables)
+        self.assertEqual({'PARAM_A': 'a', 'EXECUTION_ID': '123'}, env_variables)
 
     def test_conflicting_name_when_explicit(self):
         param1 = create_parameter_model('A+')
@@ -706,9 +908,16 @@ class TestBuildEnvVariables(unittest.TestCase):
         param3 = create_parameter_model('A=')
         param4 = create_parameter_model('A')
         env_variables = _build_env_variables({'A+': 'x', 'A-': 'y', 'A=': 'z', 'A': 'a'},
-                                             [param1, param2, param3, param4])
+                                             [param1, param2, param3, param4],
+                                             123)
 
-        self.assertEqual({'PARAM_A': 'a', 'B': 'y'}, env_variables)
+        self.assertEqual({'PARAM_A': 'a', 'B': 'y', 'EXECUTION_ID': '123'}, env_variables)
+
+    def test_conflicting_name_when_execution_id(self):
+        param = create_parameter_model('p1', env_var='EXECUTION_ID')
+        env_variables = _build_env_variables({'p1': 'x'}, [param], 123)
+
+        self.assertEqual({'EXECUTION_ID': 'x'}, env_variables)
 
 
 def wait_buffer_flush():

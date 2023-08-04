@@ -13,11 +13,13 @@ import tornado.websocket
 from tornado import gen
 
 from auth.user import User
-from config.config_service import ConfigNotAllowedException
+from concurrency.threading_decorators import threaded
+from config.config_service import ConfigNotAllowedException, CorruptConfigFileException
 from model import external_model
 from model.external_model import parameter_to_external
 from model.model_helper import read_bool
 from model.script_config import ConfigModel
+from utils.process_utils import ExecutionException
 from web.web_auth_utils import check_authorization
 from web.web_utils import wrap_to_server_event, inject_user
 
@@ -68,13 +70,20 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
             data = message.get('data')
 
             if type == 'parameterValue':
+                param = data.get('parameter')
                 set_parameter_func = functools.partial(
                     self._set_parameter_value,
-                    data.get('parameter'),
+                    param,
                     data.get('value'),
                     data.get('clientStateVersion'))
 
-                self._start_task(set_parameter_func)
+                def handle_future_exception(result):
+                    if result.exception():
+                        LOGGER.exception(f'Failed to set parameter {param} value', exc_info=result.exception())
+
+                future = self._start_task(set_parameter_func)
+                future.add_done_callback(handle_future_exception)
+
                 return
             elif type == 'reloadModelValues':
                 parameter_values = data.get('parameterValues')
@@ -184,8 +193,11 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
         except ConfigNotAllowedException:
             self.close(code=403, reason='Access to the script is denied')
             return None
+        except CorruptConfigFileException as e:
+            self.close(code=CorruptConfigFileException.HTTP_CODE, reason=str(e))
+            return None
         except Exception:
-            message = 'Failed to load script config ' + config_name
+            message = 'Failed to load script config ' + str(config_name)
             LOGGER.exception(message)
             self.close(code=500, reason=message)
             return None
@@ -213,6 +225,22 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
         new_config = external_model.config_to_external(config_model, self.config_id, external_id)
         self.safe_write(self._create_event(event_type, new_config))
 
+        config_model.preload_script_prop.subscribe(self._send_preload_script)
+        self._send_preload_script(None, None)
+
     def _create_event(self, event_type, data):
         data['clientStateVersion'] = self._latest_client_state_version
         return wrap_to_server_event(event_type=event_type, data=data)
+
+    @threaded
+    def _send_preload_script(self, _, __):
+        if not self.config_model.preload_script:
+            return
+
+        try:
+            text = self.config_model.run_preload_script()
+            format = self.config_model.get_preload_script_format()
+
+            self.safe_write(self._create_event('preloadScript', {'output': text, 'format': format}))
+        except ExecutionException:
+            LOGGER.exception('Failed to execute preload script for ' + self.config_model.name)

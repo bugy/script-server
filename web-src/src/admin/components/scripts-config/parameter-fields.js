@@ -12,6 +12,23 @@ export const paramField = {
     description: 'Allows to specify command-line option for the parameter (e.g. -q or --quiet)'
 };
 
+export const passAsField = {
+    name: 'Pass as',
+    description: 'Specifies, how the parameter value should be sent',
+    type: 'list',
+    values: [
+        'argument + env_variable',
+        'argument',
+        'env_variable',
+        'stdin'
+    ]
+}
+
+export const stdinExpectedTextField = {
+    name: 'Stdin expected text',
+    description: 'Parameter value will be sent to stdin after this text is found in the output'
+}
+
 export const envVarField = {
     name: 'Env variable',
     description: 'Environment variable, which will be associated with the parameter (by default PARAM_{uppercase name})'
@@ -20,7 +37,18 @@ export const envVarField = {
 export const typeField = {
     name: 'Type',
     type: 'list',
-    values: ['text', 'int', 'list', 'multiselect', 'editable_list', 'file_upload', 'server_file', 'ip', 'ip4', 'ip6']
+    values: [
+        'text',
+        'int',
+        'list',
+        'multiselect',
+        'editable_list',
+        'file_upload',
+        'server_file',
+        'multiline_text',
+        'ip',
+        'ip4',
+        'ip6']
 };
 
 export const noValueField = {
@@ -59,6 +87,16 @@ export const maxField = {
 export const allowedValuesScriptField = {
     name: 'Script',
     required: true
+};
+
+export const regexPatternField = {
+    name: 'RegExp pattern',
+    required: false
+};
+
+export const regexDescriptionField = {
+    name: 'RegExp description (optional)',
+    required: false
 };
 
 export const maxLengthField = {
@@ -121,4 +159,23 @@ export const fileTypeField = {
     type: 'list',
     default: 'any',
     values: ['any', 'file', 'dir']
+};
+
+export const uiWidthWeightField = {
+    name: 'UI width weight',
+    description: 'defines field\'s width as a ratio to other fields, e.g. 1 for default, 2 means twice as wide',
+    type: 'int',
+    min: 1,
+    max: 10
+};
+
+export const uiSeparatorTypeField = {
+    name: 'UI separator (before parameter)',
+    description: 'Allows to insert a separator BEFORE the parameter. line type stands for a horizontal line',
+    type: 'list',
+    values: ['none', 'new_line', 'line']
+};
+
+export const uiSeparatorTitleField = {
+    name: 'UI separator title'
 };

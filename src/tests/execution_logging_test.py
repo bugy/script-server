@@ -17,6 +17,7 @@ from execution.logging import ScriptOutputLogger, ExecutionLoggingService, OUTPU
     LogNameCreator, ExecutionLoggingController
 from model.model_helper import AccessProhibitedException
 from model.script_config import OUTPUT_FORMAT_TERMINAL
+from model.server_conf import LoggingConfig
 from react.observable import Observable
 from tests import test_utils
 from tests.test_utils import _IdGeneratorMock, create_config_model, _MockProcessWrapper, create_audit_names, \
@@ -427,7 +428,9 @@ class TestLoggingService(unittest.TestCase):
                          start_time_millis=None,
                          exit_code=0,
                          write_post_execution_info=True,
-                         output_format=OUTPUT_FORMAT_TERMINAL):
+                         output_format=OUTPUT_FORMAT_TERMINAL,
+                         parameter_configs=None,
+                         parameter_values=None):
 
         output_stream = Observable()
 
@@ -438,7 +441,9 @@ class TestLoggingService(unittest.TestCase):
                                           start_time_millis=start_time_millis,
                                           user_id=user_id,
                                           user_name=user_name,
-                                          output_format=output_format)
+                                          output_format=output_format,
+                                          parameter_configs=parameter_configs,
+                                          parameter_values=parameter_values)
 
         if log_lines:
             for line in log_lines:
@@ -459,7 +464,9 @@ class TestLoggingService(unittest.TestCase):
                       script_name='my_script',
                       command='cmd',
                       output_format=OUTPUT_FORMAT_TERMINAL,
-                      start_time_millis=None):
+                      start_time_millis=None,
+                      parameter_configs=None,
+                      parameter_values=None):
 
         if not execution_id:
             execution_id = str(uuid.uuid1())
@@ -467,16 +474,22 @@ class TestLoggingService(unittest.TestCase):
         if user_id is None:
             user_id = user_name
 
+        if parameter_values is None:
+            parameter_values = {}
+
         all_audit_names = {audit_utils.AUTH_USERNAME: user_id}
+
+        script_config = create_config_model(script_name, output_format=output_format, parameters=parameter_configs)
+
         self.logging_service.start_logging(
             execution_id,
             user_name,
             user_id,
-            script_name,
             command,
             output_stream,
             all_audit_names,
-            output_format,
+            script_config,
+            parameter_values,
             start_time_millis)
 
         return execution_id
@@ -512,7 +525,6 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
     def test_start_logging_on_execution_start(self):
         execution_id = self.executor_service.start_script(
             create_config_model('my_script'),
-            {},
             User('userX', create_audit_names(ip='localhost')))
 
         executor = self.executor_service.get_active_executor(execution_id, USER_X)
@@ -527,11 +539,14 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
         param3 = create_script_param_config('p3', param='-y', no_value=True)
         param4 = create_script_param_config('p4', param='-z', type='int')
         config_model = create_config_model(
-            'my_script', script_command='echo', parameters=[param1, param2, param3, param4])
+            'my_script',
+            script_command='echo',
+            parameters=[param1, param2, param3, param4],
+            logging_config=LoggingConfig('test-${SCRIPT}-${p1}'))
+        config_model.set_all_param_values({'p1': 'abc', 'p3': True, 'p4': 987})
 
         execution_id = self.executor_service.start_script(
             config_model,
-            {'p1': 'abc', 'p3': True, 'p4': 987},
             User('userX', create_audit_names(ip='localhost', auth_username='sandy')))
 
         executor = self.executor_service.get_active_executor(execution_id, USER_X)
@@ -552,13 +567,15 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
         log = self.logging_service.find_log(execution_id)
         self.assertEqual('some text\nanother text', log)
 
+        log_files = os.listdir(test_utils.temp_folder)
+        self.assertEqual(['test-my_script-abc.log'], log_files)
+
     def test_exit_code(self):
         config_model = create_config_model(
             'my_script', script_command='ls', parameters=[])
 
         execution_id = self.executor_service.start_script(
             config_model,
-            {},
             User('userX', create_audit_names(ip='localhost')))
 
         executor = self.executor_service.get_active_executor(execution_id, USER_X)
@@ -578,7 +595,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
 
         authorizer = Authorizer([], [], [], [], EmptyGroupProvider())
         self.logging_service = ExecutionLoggingService(test_utils.temp_folder, LogNameCreator(), authorizer)
-        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock())
+        self.executor_service = ExecutionService(AnyUserAuthorizer(), _IdGeneratorMock(), test_utils.env_variables)
 
         self.controller = ExecutionLoggingController(self.executor_service, self.logging_service)
         self.controller.start()

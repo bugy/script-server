@@ -11,7 +11,10 @@
     {
       "name": "Simple Int",
       "param": "--simple_int",
-      "type": "int"
+      "type": "int",
+      "values_ui_mapping": {
+        "One": "1"
+      }
     },
     {
       "name": "Simple Boolean",
@@ -35,13 +38,20 @@
         "val1",
         "val3",
         "some long value"
-      ]
+      ],
+      "values_ui_mapping": {
+        "val1": "Value 1",
+        "val3": "Value 3"
+      }
     },
     {
       "name": "File upload",
       "param": "--file_upload",
       "type": "file_upload",
-      "description": "File upload testing"
+      "description": "File upload testing",
+      "ui": {
+        "width_weight": 2
+      }
     },
     {
       "name": "Multiple selection",
@@ -61,6 +71,12 @@
       "required": true,
       "param": "--required_text",
       "description": "Parameter One",
+      "ui": {
+        "separator_before": {
+          "type": "new_line",
+          "title": "Validated fields"
+        }
+      },
       "env_var": "Req_Text"
     },
     {
@@ -82,14 +98,23 @@
       "default": "5",
       "description": "Parameter Three",
       "min": "-1",
-      "max": "123"
+      "max": "123",
+      "pass_as": "argument"
     },
     {
       "name": "Default Text",
       "required": true,
       "param": "--def_text",
-      "default": "some_text",
-      "description": "Text with default value and required"
+      "default": {
+        "script": "echo ${Required List}"
+      },
+      "description": "Text with default value and required",
+      "ui": {
+        "separator_before": {
+          "type": "line",
+          "title": "Default values"
+        }
+      }
     },
     {
       "name": "Default Boolean",
@@ -112,25 +137,35 @@
       "description": "List parameter 2",
       "values": {
         "script": "ls /var | grep -v lock | grep -v backups"
-      }
+      },
+      "ui": {
+        "separator_before": {
+          "type": "new_line"
+        }
+      },
+      "pass_as": "stdin",
+      "stdin_expected_text": "--file_upload"
     },
     {
-      "name": "Secure Int",
-      "type": "int",
-      "description": "Parameter Nine",
-      "secure": true
-    },
-    {
-      "name": "Secure List",
-      "param": "--secure_list",
+      "name": "List with search",
+      "param": "--lws",
       "type": "list",
-      "default": "qwerty",
-      "description": "Parameter Ten",
-      "secure": true,
       "values": [
-        "qwerty",
-        "12345678",
-        "password"
+        "Apples",
+        "Blueberries",
+        "Bananas",
+        "Oranges",
+        "Dragon fruit",
+        "Mango",
+        "Avocado",
+        "Lychee",
+        "Pineapple",
+        "Strawberries",
+        "Durian",
+        "Cherries",
+        "Olives",
+        "Watermelon",
+        "Kiwi"
       ]
     },
     {
@@ -145,6 +180,34 @@
         "abcdefghijklmopqrstuvwxyz",
         "/home/whoever/wherever/temp/stuff/internal/my_important_file-180214.txt",
         "abcde-fghijk:lmopqr.stuvwx_yzabcd efghij.klmopq-rstuv%wxyz"
+      ]
+    },
+    {
+      "name": "Secure Int",
+      "type": "int",
+      "description": "Parameter Nine",
+      "secure": true,
+      "values_ui_mapping": {
+        "qwerty": "2232"
+      },
+      "ui": {
+        "separator_before": {
+          "type": "line"
+        }
+      },
+      "pass_as": "env_variable"
+    },
+    {
+      "name": "Secure List",
+      "param": "--secure_list",
+      "type": "list",
+      "default": "qwerty",
+      "description": "Parameter Ten",
+      "secure": true,
+      "values": [
+        "qwerty",
+        "12345678",
+        "password"
       ]
     },
     {
@@ -245,7 +308,13 @@
         "Value A",
         "Value B",
         "Value C"
-      ]
+      ],
+      "pass_as": "stdin"
+    },
+    {
+      "name": "Multiline test",
+      "param": "--multiline_text",
+      "type": "multiline_text"
     }
   ]
 }

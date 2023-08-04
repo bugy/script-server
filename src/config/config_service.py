@@ -2,17 +2,20 @@ import json
 import logging
 import os
 import re
-from collections import namedtuple
-from typing import Union
+import shutil
+from typing import NamedTuple, Optional
 
 from auth.authorization import Authorizer
 from config.exceptions import InvalidConfigException
 from model import script_config
 from model.model_helper import InvalidFileException
-from model.script_config import get_sorted_config
-from utils import os_utils, file_utils, process_utils, custom_json
+from model.script_config import get_sorted_config, ShortConfig, create_failed_short_config
+from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
+from utils.process_utils import ProcessInvoker
 from utils.string_utils import is_blank, strip
+from datetime import datetime
+
 
 SCRIPT_EDIT_CODE_MODE = 'new_code'
 SCRIPT_EDIT_UPLOAD_MODE = 'upload_script'
@@ -23,7 +26,10 @@ WORKING_DIR_FIELD = 'working_directory'
 
 LOGGER = logging.getLogger('config_service')
 
-ConfigSearchResult = namedtuple('ConfigSearchResult', ['short_config', 'path', 'config_object'])
+class ConfigSearchResult(NamedTuple):
+    short_config: ShortConfig
+    path: str
+    config_object: any
 
 
 def _script_name_to_file_name(script_name):
@@ -43,18 +49,27 @@ def _preprocess_incoming_config(config):
     config['name'] = name.strip()
 
 
+def _create_archive_filename(filename):
+    current_datetime = datetime.now()
+    formatted_datetime = current_datetime.strftime('%Y%m%d%H%M%S')
+    return f"{formatted_datetime}_{filename}.deleted"
+
+
 class ConfigService:
-    def __init__(self, authorizer, conf_folder) -> None:
+    def __init__(self, authorizer, conf_folder, process_invoker: ProcessInvoker) -> None:
         self._authorizer = authorizer  # type: Authorizer
         self._script_configs_folder = os.path.join(conf_folder, 'runners')
         self._scripts_folder = os.path.join(conf_folder, 'scripts')
+        self._scripts_deleted_folder = os.path.join(conf_folder, 'deleted')
+        self._process_invoker = process_invoker
 
         file_utils.prepare_folder(self._script_configs_folder)
+        file_utils.prepare_folder(self._scripts_deleted_folder)
 
     def load_config(self, name, user):
         self._check_admin_access(user)
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
 
         if search_result is None:
             return None
@@ -75,7 +90,7 @@ class ConfigService:
 
         name = config['name']
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
         if search_result is not None:
             raise InvalidConfigException('Another config with the same name already exists')
 
@@ -106,7 +121,7 @@ class ConfigService:
 
         name = config['name']
 
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
         if (search_result is not None) and (os.path.basename(search_result.path) != filename):
             raise InvalidConfigException('Another script found with the same name: ' + name)
 
@@ -117,6 +132,30 @@ class ConfigService:
 
         LOGGER.info('Updating script config "' + name + '" in ' + original_file_path)
         self._save_config(config, original_file_path)
+
+
+    def delete_config(self, user, name):
+        self._check_admin_access(user)
+
+        search_result = self._find_config(name, user)
+        if search_result is None:
+            raise InvalidConfigException(f'Config with the name "{name}" not found')
+
+        (short_config, path, config_object) = search_result
+
+        if not self._can_edit_script(user, short_config):
+            raise ConfigNotAllowedException(
+                f'{str(user)} has no admin access to {short_config.name}'
+            )
+
+        archive_file_name = _create_archive_filename(os.path.basename(path))
+        archive_file_path = os.path.join(self._scripts_deleted_folder, archive_file_name)
+        unique_archive_file_path = file_utils.create_unique_filename(archive_file_path, 100)
+
+        LOGGER.info(
+            f'Archiving script config "{name}" from {path} to {unique_archive_file_path}'
+        )
+        shutil.move(path, unique_archive_file_path)
 
     def load_script_code(self, script_name, user):
         if not self._authorizer.can_edit_code(user.user_id):
@@ -161,6 +200,14 @@ class ConfigService:
         config_json = json.dumps(sorted_config, indent=2)
         file_utils.write_file(path, config_json)
 
+    def load_config_file(self, path, content):
+        if path.endswith('.yaml'):
+            config_object = custom_yaml.loads(content)
+        else:
+            config_object = custom_json.loads(content)
+
+        return config_object
+
     def list_configs(self, user, mode=None):
         edit_mode = mode == 'edit'
         if edit_mode:
@@ -168,10 +215,12 @@ class ConfigService:
 
         conf_service = self
 
-        def load_script(path, content):
+        has_admin_rights = self._authorizer.is_admin(user.user_id)
+
+        def load_script(path, content) -> Optional[ShortConfig]:
             try:
-                json_object = custom_json.loads(content)
-                short_config = script_config.read_short(path, json_object)
+                config_object = self.load_config_file(path, content)
+                short_config = script_config.read_short(path, config_object)
 
                 if short_config is None:
                     return None
@@ -183,13 +232,16 @@ class ConfigService:
                     return None
 
                 return short_config
-            except:
+            except json.decoder.JSONDecodeError:
+                LOGGER.exception(CorruptConfigFileException.VERBOSE_ERROR + ': ' + path)
+                return create_failed_short_config(path, has_admin_rights)
+            except Exception:
                 LOGGER.exception('Could not load script: ' + path)
 
         return self._visit_script_configs(load_script)
 
     def load_config_model(self, name, user, parameter_values=None, skip_invalid_parameters=False):
-        search_result = self._find_config(name)
+        search_result = self._find_config(name, user)
 
         if search_result is None:
             return None
@@ -199,23 +251,33 @@ class ConfigService:
         if not self._can_access_script(user, short_config):
             raise ConfigNotAllowedException()
 
-        return self._load_script_config(path, config_object, user, parameter_values, skip_invalid_parameters)
+        return self._load_script_config(
+            path,
+            config_object,
+            user,
+            parameter_values,
+            skip_invalid_parameters,
+            self._process_invoker)
 
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
-        files = os.listdir(configs_dir)
 
-        configs = [file for file in files if file.lower().endswith(".json")]
+        files = []
+        # Read config file from within directories too
+        for _root, _dirs, _files in os.walk(configs_dir, topdown=True):
+            for name in _files:
+                files.append(os.path.join(_root, name))
+
+        configs = [file for file in files if file.lower().endswith(".json") or file.lower().endswith(".yaml")]
+        configs.sort()
 
         result = []
 
         for config_path in configs:
-            path = os.path.join(configs_dir, config_path)
-
             try:
-                content = file_utils.read_file(path)
+                content = file_utils.read_file(config_path)
 
-                visit_result = visitor(path, content)
+                visit_result = visitor(config_path, content)
                 if visit_result is not None:
                     result.append(visit_result)
 
@@ -228,31 +290,49 @@ class ConfigService:
 
         return result
 
-    def _find_config(self, name) -> Union[ConfigSearchResult, None]:
-        def find_and_load(path, content):
+    def _find_config(self, name, user) -> Optional[ConfigSearchResult]:
+        has_admin_rights = self._authorizer.is_admin(user.user_id)
+
+        def find_and_load(path: str, content):
             try:
-                json_object = custom_json.loads(content)
-                short_config = script_config.read_short(path, json_object)
+                config_object = self.load_config_file(path, content)
+                short_config = script_config.read_short(path, config_object)
 
                 if short_config is None:
                     return None
-            except:
+            except json.decoder.JSONDecodeError:
+                short_config = create_failed_short_config(path, has_admin_rights)
+                config_object = None
+
+            except Exception:
                 LOGGER.exception('Could not load script config: ' + path)
                 return None
 
             if short_config.name != name.strip():
                 return None
 
-            raise StopIteration(ConfigSearchResult(short_config, path, json_object))
+            raise StopIteration(ConfigSearchResult(short_config, path, config_object))
 
         configs = self._visit_script_configs(find_and_load)
         if not configs:
             return None
 
-        return configs[0]
+        found_config = configs[0]
+
+        if found_config.short_config.parsing_failed:
+            raise CorruptConfigFileException()
+
+        return found_config
 
     @staticmethod
-    def _load_script_config(path, content_or_json_dict, user, parameter_values, skip_invalid_parameters):
+    def _load_script_config(
+            path,
+            content_or_json_dict,
+            user,
+            parameter_values,
+            skip_invalid_parameters,
+            process_invoker):
+
         if isinstance(content_or_json_dict, str):
             json_object = custom_json.loads(content_or_json_dict)
         else:
@@ -262,6 +342,7 @@ class ConfigService:
             path,
             user.get_username(),
             user.get_audit_name(),
+            process_invoker,
             pty_enabled_default=os_utils.is_pty_supported())
 
         if parameter_values is not None:
@@ -335,7 +416,13 @@ class ConfigService:
                 code = script_config.get('code')
                 if code is None:
                     raise InvalidConfigException('script.code should be specified')
-                file_utils.write_file(script_path, code)
+
+                # Fix non-native OS line endings.
+                # From python docs:
+                #   Do not use os.linesep as a line terminator when writing files opened in text mode (the default);
+                #   use a single '\n' instead, on all platforms.
+                normalized_code = code.replace('\r\n', '\n').replace('\r', '\n')
+                file_utils.write_file(script_path, normalized_code)
 
             file_utils.make_executable(script_path)
 
@@ -355,4 +442,12 @@ class AdminAccessRequiredException(Exception):
 
 class InvalidAccessException(Exception):
     def __init__(self, message=None):
+        super().__init__(message)
+
+
+class CorruptConfigFileException(Exception):
+    HTTP_CODE = 422
+    VERBOSE_ERROR = 'Cannot parse script config file'
+
+    def __init__(self, message=VERBOSE_ERROR):
         super().__init__(message)

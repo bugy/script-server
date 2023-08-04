@@ -3,8 +3,8 @@ import logging
 import re
 
 from model.model_helper import is_empty, fill_parameter_values, InvalidFileException, list_files
-from utils import process_utils
 from utils.file_utils import FileMatcher
+from utils.process_utils import ProcessInvoker
 
 LOGGER = logging.getLogger('list_values')
 
@@ -17,9 +17,6 @@ class ValuesProvider(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_values(self, parameter_values):
         pass
-
-    def map_value(self, user_value):
-        return user_value
 
 
 class EmptyValuesProvider(ValuesProvider):
@@ -45,8 +42,8 @@ class ConstValuesProvider(ValuesProvider):
 
 class ScriptValuesProvider(ValuesProvider):
 
-    def __init__(self, script, shell) -> None:
-        script_output = process_utils.invoke(script, shell=shell)
+    def __init__(self, script, shell, process_invoker: ProcessInvoker) -> None:
+        script_output = process_invoker.invoke(script, shell=shell)
         script_output = script_output.rstrip('\n')
         self._values = [line for line in script_output.split('\n') if not is_empty(line)]
 
@@ -56,7 +53,7 @@ class ScriptValuesProvider(ValuesProvider):
 
 class DependantScriptValuesProvider(ValuesProvider):
 
-    def __init__(self, script, parameters_supplier, shell) -> None:
+    def __init__(self, script, parameters_supplier, shell, process_invoker: ProcessInvoker) -> None:
         pattern = re.compile('\${([^}]+)\}')
 
         search_start = 0
@@ -81,21 +78,22 @@ class DependantScriptValuesProvider(ValuesProvider):
         self._script_template = script
         self._parameters_supplier = parameters_supplier
         self._shell = shell
+        self._process_invoker = process_invoker
 
     def get_required_parameters(self):
         return self._required_parameters
 
     def get_values(self, parameter_values):
         for param_name in self._required_parameters:
-            value = parameter_values.get(param_name)
-            if is_empty(value):
+            value_wrapper = parameter_values.get(param_name)
+            if (value_wrapper is None) or is_empty(value_wrapper.mapped_script_value):
                 return []
 
         parameters = self._parameters_supplier()
         script = fill_parameter_values(parameters, self._script_template, parameter_values)
 
         try:
-            script_output = process_utils.invoke(script, shell=self._shell)
+            script_output = self._process_invoker.invoke(script, shell=self._shell)
         except Exception as e:
             LOGGER.warning('Failed to execute script. ' + str(e))
             return []

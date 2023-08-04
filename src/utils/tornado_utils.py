@@ -1,7 +1,13 @@
+import asyncio
 import json
 import re
+import threading
+from concurrent.futures import Future
 from urllib import parse as urllib_parse
 from urllib.parse import urljoin
+
+import tornado.ioloop
+import tornado.websocket
 
 from model.model_helper import is_empty
 from utils import string_utils
@@ -93,6 +99,10 @@ def get_secure_cookie(request_handler, key):
     return value.decode('utf-8')
 
 
+def can_write_secure_cookie(request_handler):
+    return not isinstance(request_handler, tornado.websocket.WebSocketHandler)
+
+
 def parse_header(header):
     header_split = []
     current = ''
@@ -134,3 +144,33 @@ def parse_header(header):
         sub_headers_dict[key] = value
 
     return main_value, sub_headers_dict
+
+
+separate_io_loop = None
+io_loop_lock = threading.RLock()
+
+
+def run_sync(func):
+    global separate_io_loop
+
+    if separate_io_loop is None:
+        with io_loop_lock:
+            if separate_io_loop is None:
+                io_loop_future = Future()
+
+                def run_new_ioloop():
+                    try:
+                        io_loop = asyncio.new_event_loop()
+                        io_loop_future.set_result(io_loop)
+                        io_loop.run_forever()
+                    except Exception as e:
+                        io_loop_future.set_exception(e)
+
+                # We need to run it in another thread because ioloop.current.run_sync starts/stops the current ioloop,
+                # which is not acceptable
+                thread = threading.Thread(target=run_new_ioloop, daemon=True)
+                thread.start()
+                separate_io_loop = io_loop_future.result()
+
+    future = asyncio.run_coroutine_threadsafe(func, separate_io_loop)
+    return future.result()

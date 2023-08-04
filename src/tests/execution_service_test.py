@@ -1,4 +1,5 @@
 import copy
+import time
 import unittest
 
 from parameterized import parameterized
@@ -144,6 +145,13 @@ class ExecutionServiceTest(unittest.TestCase):
 
         self.assertFalse(execution_service.can_access(execution_id, DEFAULT_USER_ID))
 
+    def test_can_access_different_user_shared_access(self):
+        execution_service = self.create_execution_service()
+        execution_id = self._start(execution_service)
+        execution_service._execution_infos[execution_id].config.access = {'shared_access': {'type': 'ALL_USERS'}}
+
+        self.assertTrue(execution_service.can_access(execution_id, 'another_user'))
+
     def test_get_audit_name(self):
         execution_service = self.create_execution_service()
         execution_id = self._start(execution_service)
@@ -163,7 +171,8 @@ class ExecutionServiceTest(unittest.TestCase):
             'test_get_user_parameter_values',
             username=DEFAULT_USER_ID,
             parameters=parameters.values())
-        execution_id = self._start_with_config(execution_service, config_model, parameter_values)
+        config_model.set_all_param_values(parameter_values)
+        execution_id = self._start_with_config(execution_service, config_model)
 
         self.assertEqual(parameter_values, execution_service.get_user_parameter_values(execution_id))
 
@@ -180,7 +189,8 @@ class ExecutionServiceTest(unittest.TestCase):
             'test_get_user_parameter_values',
             username=DEFAULT_USER_ID,
             parameters=parameters.values())
-        execution_id = self._start_with_config(execution_service, config_model, parameter_values)
+        config_model.set_all_param_values(parameter_values)
+        execution_id = self._start_with_config(execution_service, config_model)
 
         self.assertEqual({'x': 1, 'y': '2', 'z': True, 'const': 'abc'},
                          execution_service.get_script_parameter_values(execution_id))
@@ -227,25 +237,36 @@ class ExecutionServiceTest(unittest.TestCase):
         self.get_process(id1).stop()
         self.assertEqual(1, len(notifications))
 
+    def test_start_finish_listener_order(self):
+        executor._process_creator = create_process_wrapper
+
+        execution_service = self.create_execution_service()
+
+        notifications = []
+
+        execution_service.add_finish_listener(lambda _, __: notifications.append('finished'))
+        execution_service.add_start_listener(lambda _, __: notifications.append('started'))
+
+        self._start(execution_service)
+
+        if len(notifications) < 2:
+            time.sleep(0.01)
+
+        self.assertEqual(['started', 'finished'], notifications)
+
     def _start(self, execution_service, user_id=DEFAULT_USER_ID):
         return _start(execution_service, user_id)
 
-    def _start_with_config(self, execution_service, config, parameter_values=None, user_id=DEFAULT_USER_ID):
-        if parameter_values is None:
-            parameter_values = {}
-
+    def _start_with_config(self, execution_service, config, user_id=DEFAULT_USER_ID):
         user = User(user_id, DEFAULT_AUDIT_NAMES)
-        execution_id = execution_service.start_script(
-            config,
-            parameter_values,
-            user)
+        execution_id = execution_service.start_script(config, user)
         return execution_id
 
     def create_execution_service(self):
         file_download_feature = mock_object()
         file_download_feature.is_downloadable = lambda x: False
 
-        execution_service = ExecutionService(self.authorizer, self.id_generator)
+        execution_service = ExecutionService(self.authorizer, self.id_generator, test_utils.env_variables)
         self.exec_services.append(execution_service)
         return execution_service
 
@@ -385,7 +406,7 @@ class ExecutionServiceAuthorizationTest(unittest.TestCase):
         executor._process_creator = create_process
 
         authorizer = Authorizer([ANY_USER], ['admin_user'], ['history_user'], [], EmptyGroupProvider())
-        self.executor_service = ExecutionService(authorizer, _IdGeneratorMock())
+        self.executor_service = ExecutionService(authorizer, _IdGeneratorMock(), test_utils.env_variables)
 
         self.execution_id = _start(self.executor_service, self.owner_user.user_id)
 
@@ -409,10 +430,11 @@ def _start_with_config(execution_service, config, parameter_values=None, user_id
     if parameter_values is None:
         parameter_values = {}
 
+    config.set_all_param_values(parameter_values)
+
     user = User(user_id, DEFAULT_AUDIT_NAMES)
     execution_id = execution_service.start_script(
         config,
-        parameter_values,
         user)
     execution_owners[execution_id] = user
     return execution_id
@@ -423,5 +445,6 @@ def _create_script_config(parameter_configs):
         {'name': 'script_x',
          'script_path': 'ls',
          'parameters': parameter_configs},
-        'script_x.json', 'user1', 'localhost')
+        'script_x.json', 'user1', 'localhost',
+        test_utils.process_invoker)
     return config

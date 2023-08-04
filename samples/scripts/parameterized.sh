@@ -51,6 +51,6 @@ fi
 echo
 echo 'Environment variables:'
 echo 'Req_Text='"$Req_Text"
-printenv | grep -P '^PARAM_'
+printenv | grep -P '^(PARAM_|EXECUTION)'
 
-sleep 5
+sleep 3

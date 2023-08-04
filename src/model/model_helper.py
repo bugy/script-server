@@ -188,7 +188,7 @@ def is_empty(value):
     return (not value) and (value != 0) and (value is not False)
 
 
-def fill_parameter_values(parameter_configs, template, values):
+def fill_parameter_values(parameter_configs, template, value_wrappers):
     result = template
 
     for parameter_config in parameter_configs:
@@ -196,14 +196,11 @@ def fill_parameter_values(parameter_configs, template, values):
             continue
 
         parameter_name = parameter_config.name
-        value = values.get(parameter_name)
+        value_wrapper = value_wrappers.get(parameter_name)
+        value = value_wrapper.mapped_script_value if value_wrapper else None
 
         if value is None:
             value = ''
-
-        if not isinstance(value, str):
-            mapped_value = parameter_config.map_to_script(value)
-            value = parameter_config.to_script_args(mapped_value)
 
         result = result.replace('${' + parameter_name + '}', str(value))
 
@@ -288,3 +285,51 @@ class InvalidValueTypeException(Exception):
 class AccessProhibitedException(Exception):
     def __init__(self, message) -> None:
         super().__init__(message)
+
+
+def read_nested(json_object, path):
+    first_path_element = path[0]
+    value = json_object.get(first_path_element)
+
+    if len(path) == 1:
+        return value
+
+    if value is None:
+        return None
+
+    if isinstance(value, dict):
+        return read_nested(value, path[1:])
+
+    if isinstance(value, list):
+        result = []
+
+        for value_element in value:
+            nested_value = read_nested(value_element, path[1:])
+            if isinstance(nested_value, list):
+                result.extend(nested_value)
+            elif nested_value is not None:
+                result.append(nested_value)
+
+        if not result:
+            return None
+        if len(result) == 1:
+            return result[0]
+
+        return result
+
+    return None
+
+
+def read_enum(config, key, allowed_values, default=None):
+    value = config.get(key)
+    if value is None:
+        return default
+
+    value = value.strip()
+
+    value_lower = value.lower()
+    for allowed_value in allowed_values:
+        if allowed_value.lower() == value_lower:
+            return allowed_value
+
+    raise InvalidValueException(key, f'Invalid "{key}" value = {value}. Should be one of: {allowed_values}')

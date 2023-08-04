@@ -10,14 +10,23 @@ from unittest.mock import MagicMock
 
 import utils.file_utils as file_utils
 import utils.os_utils as os_utils
-from auth.auth_base import Authenticator
+from auth.auth_base import Authenticator, AuthRejectedError
 from execution.process_base import ProcessWrapper
 from model.script_config import ConfigModel, ParameterModel
-from react.properties import ObservableDict
+from model.server_conf import LoggingConfig
+from model.value_wrapper import ScriptValueWrapper
+from react.observable import read_until_closed
+from react.properties import ObservableDict, ObservableList
 from utils import audit_utils
+from utils.env_utils import EnvVariables
+from utils.process_utils import ProcessInvoker
 
 temp_folder = 'tests_temp'
 _original_env = {}
+
+_hidden_variables = ['MY_PASSWORD', 'SOME_SECRET']
+env_variables = EnvVariables(os.environ, hidden_variables=_hidden_variables)
+process_invoker = ProcessInvoker(env_variables)
 
 
 def create_file(filepath, *, overwrite=False, text='test text'):
@@ -142,70 +151,63 @@ def create_script_param_config(
         file_extensions=None,
         excluded_files=None,
         same_arg_param=None,
-        values_script_shell=None):
+        values_script_shell=None,
+        max_length=None,
+        regex=None,
+        pass_as=None,
+        stdin_expected_text=None,
+        ui_separator_type=None,
+        ui_separator_title=None,
+        values_ui_mapping=None):
+    method_params = dict(locals())
     conf = {'name': param_name}
 
-    if type is not None:
-        conf['type'] = type
+    simple_options = {
+        'type': 'type',
+        'default': 'default',
+        'required': 'required',
+        'secure': 'secure',
+        'param': 'param',
+        'env_var': 'env_var',
+        'no_value': 'no_value',
+        'constant': 'constant',
+        'multiselect_separator': 'separator',
+        'multiselect_argument_type': 'multiselect_argument_type',
+        'min': 'min',
+        'max': 'max',
+        'file_dir': 'file_dir',
+        'file_recursive': 'file_recursive',
+        'file_extensions': 'file_extensions',
+        'file_type': 'file_type',
+        'excluded_files': 'excluded_files',
+        'same_arg_param': 'same_arg_param',
+        'regex': 'regex',
+        'max_length': 'max_length',
+        'pass_as': 'pass_as',
+        'stdin_expected_text': 'stdin_expected_text',
+        'values_ui_mapping': 'values_ui_mapping',
+    }
 
     if values_script is not None:
         conf['values'] = {'script': values_script}
         if values_script_shell is not None:
             conf['values']['shell'] = values_script_shell
 
-    if default is not None:
-        conf['default'] = default
-
-    if required is not None:
-        conf['required'] = required
-
-    if secure is not None:
-        conf['secure'] = secure
-
-    if param is not None:
-        conf['param'] = param
-
-    if env_var is not None:
-        conf['env_var'] = env_var
-
-    if no_value is not None:
-        conf['no_value'] = no_value
-
-    if constant is not None:
-        conf['constant'] = constant
-
-    if multiselect_separator is not None:
-        conf['separator'] = multiselect_separator
-
-    if multiselect_argument_type is not None:
-        conf['multiselect_argument_type'] = multiselect_argument_type
-
-    if min is not None:
-        conf['min'] = min
-
-    if max is not None:
-        conf['max'] = max
-
     if allowed_values is not None:
         conf['values'] = list(allowed_values)
 
-    if file_dir is not None:
-        conf['file_dir'] = file_dir
+    if ui_separator_type or ui_separator_title:
+        separator_conf = {}
+        conf['ui'] = {'separator_before': separator_conf}
+        if ui_separator_type:
+            separator_conf['type'] = ui_separator_type
+        if ui_separator_title:
+            separator_conf['title'] = ui_separator_title
 
-    if file_recursive is not None:
-        conf['file_recursive'] = file_recursive
-
-    if file_extensions is not None:
-        conf['file_extensions'] = file_extensions
-
-    if file_type is not None:
-        conf['file_type'] = file_type
-
-    if excluded_files is not None:
-        conf['excluded_files'] = excluded_files
-
-    if same_arg_param is not None:
-        conf['same_arg_param'] = same_arg_param
+    for param_name, conf_name in simple_options.items():
+        value = method_params[param_name]
+        if value is not None:
+            conf[conf_name] = value
 
     return conf
 
@@ -220,7 +222,9 @@ def create_config_model(name, *,
                         script_command='ls',
                         output_files=None,
                         requires_terminal=None,
-                        schedulable=True):
+                        schedulable=True,
+                        logging_config: LoggingConfig = None,
+                        output_format=None):
     result_config = {}
 
     if config:
@@ -243,11 +247,19 @@ def create_config_model(name, *,
     if schedulable is not None:
         result_config['scheduling'] = {'enabled': schedulable}
 
+    if output_format:
+        result_config['output_format'] = output_format
+
+    if logging_config is not None:
+        result_config['logging'] = {
+            'execution_file': logging_config.filename_pattern,
+            'execution_date_format': logging_config.date_format}
+
     result_config['script_path'] = script_command
 
-    model = ConfigModel(result_config, path, username, audit_name)
+    model = ConfigModel(result_config, path, username, audit_name, process_invoker)
     if parameter_values is not None:
-        model.set_all_param_values(model)
+        model.set_all_param_values(parameter_values)
 
     return model
 
@@ -274,7 +286,14 @@ def create_parameter_model(name=None,
                            file_dir=None,
                            file_recursive=None,
                            other_param_values: ObservableDict = None,
-                           values_script_shell=None):
+                           values_script_shell=None,
+                           max_length=None,
+                           regex=None,
+                           pass_as=None,
+                           stdin_expected_text=None,
+                           ui_separator_type=None,
+                           ui_separator_title=None,
+                           values_ui_mapping=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -293,7 +312,14 @@ def create_parameter_model(name=None,
         allowed_values=allowed_values,
         file_dir=file_dir,
         file_recursive=file_recursive,
-        values_script_shell=values_script_shell)
+        values_script_shell=values_script_shell,
+        max_length=max_length,
+        regex=regex,
+        pass_as=pass_as,
+        stdin_expected_text=stdin_expected_text,
+        ui_separator_type=ui_separator_type,
+        ui_separator_title=ui_separator_title,
+        values_ui_mapping=values_ui_mapping)
 
     if all_parameters is None:
         all_parameters = []
@@ -302,7 +328,8 @@ def create_parameter_model(name=None,
                           username,
                           audit_name,
                           lambda: all_parameters,
-                          other_param_values=other_param_values)
+                          other_param_values=other_param_values,
+                          process_invoker=process_invoker)
 
 
 def create_simple_parameter_configs(names):
@@ -321,7 +348,13 @@ def create_parameter_model_from_config(config,
     if config is None:
         config = {}
 
-    return ParameterModel(config, username, audit_name, all_parameters, working_dir=working_dir)
+    return ParameterModel(
+        config,
+        username,
+        audit_name,
+        lambda: ObservableList(all_parameters),
+        working_dir=working_dir,
+        process_invoker=process_invoker)
 
 
 def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostname=None):
@@ -337,7 +370,42 @@ def create_audit_names(ip=None, auth_username=None, proxy_username=None, hostnam
     return result
 
 
-def set_env_value(key, value):
+class CustomEnvScope:
+    def __init__(self, key_values) -> None:
+        self._key_values = key_values
+        self._original_process_invoker = process_invoker
+        self._original_env_vars = env_variables
+
+    def __enter__(self):
+        global env_variables
+        global process_invoker
+        global _hidden_variables
+        env_variables = EnvVariables(os.environ, extra_variables=self._key_values, hidden_variables=_hidden_variables)
+        process_invoker = ProcessInvoker(env_variables)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        global env_variables
+        global process_invoker
+        env_variables = self._original_env_vars
+        process_invoker = self._original_process_invoker
+
+
+def custom_env(*args):
+    if len(args) == 0:
+        raise Exception('No env variables are specified')
+
+    if len(args) == 1 and isinstance(args[0], dict):
+        key_values = args[0]
+    elif len(args) % 2 != 0:
+        raise Exception('Even number of arguments is expected')
+    else:
+        key_values = {args[i]: args[i + 1] for i in range(0, len(args), 2)}
+
+    return CustomEnvScope(key_values)
+
+
+def set_os_environ_value(key, value):
     if key not in _original_env:
         if key in os.environ:
             _original_env[key] = value
@@ -389,22 +457,46 @@ def wait_observable_close_notification(observable, timeout):
     close_condition.wait(timeout)
 
 
-def mock_request_handler(*, arguments: dict = None, method='GET', headers=None):
+def mock_request_handler(*, arguments: dict = None, method='GET', headers=None, previous_request=None):
     if headers is None:
         headers = {}
 
     request_handler = mock_object()
 
-    def get_argument(arg_name):
+    cookies = {}
+    if previous_request and previous_request._cookies:
+        cookies.update(previous_request._cookies)
+
+    def get_argument(arg_name, default=None):
         if arguments is None:
-            return None
+            return default
         return arguments.get(arg_name)
 
+    def set_secure_cookie(cookie_name, value):
+        cookies[cookie_name] = f'!SECURE!{value}!!!'
+
+    def clear_cookie(cookie_name):
+        del cookies[cookie_name]
+
+    def get_secure_cookie(cookie_name):
+        if not previous_request or cookie_name not in cookies:
+            raise Exception('No cookie ' + cookie_name + ' is available')
+
+        value = cookies[cookie_name]
+        if not value.startswith('!SECURE!'):
+            raise Exception('Cookie ' + cookie_name + ' is not a secure cookie')
+
+        return value[8:-3].encode('utf8')
+
     request_handler.get_argument = get_argument
+    request_handler.set_secure_cookie = set_secure_cookie
+    request_handler.get_secure_cookie = get_secure_cookie
+    request_handler.clear_cookie = clear_cookie
 
     request_handler.request = mock_object()
     request_handler.request.method = method
     request_handler.request.headers = headers
+    request_handler._cookies = cookies
 
     return request_handler
 
@@ -414,6 +506,43 @@ def assert_dir_files(expected_files, dir_path, test_case: TestCase):
     actual_files = sorted(os.listdir(dir_path))
 
     test_case.assertSequenceEqual(expected_files_sorted, actual_files)
+
+
+def assert_contains_sub_dict(test_case: TestCase, big_dict: dict, sub_dict: dict):
+    for key_value in sub_dict.items():
+        if key_value not in big_dict.items():
+            test_case.fail(repr(big_dict) + ' does not contain ' + repr(sub_dict))
+
+
+def wait_and_read(process_wrapper):
+    thread = threading.Thread(target=process_wrapper.wait_finish, daemon=True)
+    thread.start()
+    thread.join(timeout=0.1)
+
+    return ''.join(read_until_closed(process_wrapper.output_stream))
+
+
+def wrap_values(parameters, values):
+    parameters_dict = {p.name: p for p in parameters}
+
+    result = {}
+    for name, value in values.items():
+        parameter = parameters_dict.get(name)
+        if parameter:
+            value_wrapper = parameter.create_value_wrapper(value)
+        else:
+            value_wrapper = ScriptValueWrapper(value, value, value)
+        result[name] = value_wrapper
+
+    return result
+
+
+def validate_value(parameter, value):
+    return parameter.validate_value(parameter.create_value_wrapper(value))
+
+
+def get_default_value(parameter_model):
+    return parameter_model.create_value_wrapper_for_default().mapped_script_value
 
 
 class _MockProcessWrapper(ProcessWrapper):
@@ -507,5 +636,22 @@ class AsyncMock(MagicMock):
 
 
 class MockAuthenticator(Authenticator):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._users = {}
+
     def authenticate(self, request_handler):
-        return request_handler.request.remote_ip
+        raise AuthRejectedError('Not implemented')
+
+    def perform_basic_auth(self, user, password):
+        if user not in self._users:
+            raise AuthRejectedError('Invalid user ' + user)
+
+        if self._users[user] != password:
+            raise AuthRejectedError('Invalid password for user ' + user)
+
+        return True
+
+    def add_user(self, username, password):
+        self._users[username] = password

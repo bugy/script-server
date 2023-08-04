@@ -26,8 +26,8 @@ def _unset_output_flags(fd, *new_attributes):
 
 
 class PtyProcessWrapper(process_base.ProcessWrapper):
-    def __init__(self, command, working_directory, env_variables):
-        super().__init__(command, working_directory, env_variables)
+    def __init__(self, command, working_directory, all_env_variables):
+        super().__init__(command, working_directory, all_env_variables)
 
         self.pty_master = None
         self.pty_slave = None
@@ -54,6 +54,9 @@ class PtyProcessWrapper(process_base.ProcessWrapper):
         fcntl.fcntl(self.pty_master, fcntl.F_SETFL, os.O_NONBLOCK)
 
     def write_to_input(self, value):
+        if self.is_finished():
+            return
+
         input_value = value
         if not input_value.endswith("\n"):
             input_value += "\n"

@@ -44,12 +44,17 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
     @testing.gen_test
     def test_reload_model(self):
         self.socket = yield self._connect('Test script 1')
-        _ = yield self.socket.read_message()
+
+        message1 = yield self.socket.read_message()
+        self._assert_message_type(message1, 'initialConfig')
+
+        message2 = yield self.socket.read_message()
+        self._assert_message_type(message2, 'preloadScript')
 
         self.socket.write_message(json.dumps({
             'event': 'reloadModelValues',
             'data': {'clientModelId': 'abcd',
-                     'parameterValues': {'list 1': 'A', 'file 1': 'z', 'list 2': 'z1.txt'}}}))
+                     'parameterValues': {'list 1': 'Value a', 'file 1': 'z', 'list 2': 'z1.txt'}}}))
 
         response = yield self.socket.read_message()
         self.assertIsNone(self.socket.close_reason)
@@ -61,7 +66,12 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
     @testing.gen_test
     def test_client_version(self):
         self.socket = yield self._connect('Test script 1')
-        _ = yield self.socket.read_message()
+
+        message1 = yield self.socket.read_message()
+        self._assert_message_type(message1, 'initialConfig')
+
+        message2 = yield self.socket.read_message()
+        self._assert_message_type(message2, 'preloadScript')
 
         self.socket.write_message(json.dumps({
             'event': 'parameterValue',
@@ -96,7 +106,7 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         self.socket.write_message(json.dumps({
             'event': 'reloadModelValues',
             'data': {'clientModelId': 'abcd',
-                     'parameterValues': {'list 1': 'A', 'file 1': 'y', 'list 2': 'y1.txt'},
+                     'parameterValues': {'list 1': 'Value a', 'file 1': 'y', 'list 2': 'y1.txt'},
                      'clientStateVersion': 7}}))
 
         self._assert_parameter_change((yield self.socket.read_message()),
@@ -120,6 +130,25 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
                           list2_values=['y1.txt', 'y2.txt', 'y3.txt'],
                           external_model_id='abcd',
                           client_version=7)
+
+    @testing.gen_test
+    def test_preload_script(self):
+        self.socket = yield self._connect('Test script 1')
+
+        message1 = yield self.socket.read_message()
+        self._assert_message_type(message1, 'initialConfig')
+
+        message2 = yield self.socket.read_message()
+        event = json.loads(message2)
+
+        self.assertEqual(
+            {'event': 'preloadScript',
+             'data': {
+                 'clientStateVersion': None,
+                 'output': '123\n',
+                 'format': 'terminal'
+             }},
+            event)
 
     def assert_model(self, response, event_type, external_model_id=None, list2_values=None,
                      client_version=None):
@@ -181,6 +210,11 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
             {'data': {'clientStateVersion': client_version}, 'event': 'clientStateVersionAccepted'},
             event)
 
+    def _assert_message_type(self, message, expected_type):
+        event = json.loads(message)
+
+        self.assertEqual(event.get('event'), expected_type)
+
     def _connect(self, script_name, init_with_values=False):
         url = 'ws://localhost:{}/scripts/{}'.format(self.port, quote(script_name))
         if init_with_values:
@@ -199,7 +233,8 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         application.auth = TornadoAuth(None)
         application.authorizer = Authorizer(ANY_USER, [], [], [], EmptyGroupProvider())
         application.identification = IpBasedIdentification(TrustedIpValidator(['127.0.0.1']), None)
-        application.config_service = ConfigService(application.authorizer, test_utils.temp_folder)
+        application.config_service = ConfigService(
+            application.authorizer, test_utils.temp_folder, test_utils.process_invoker)
 
         server = httpserver.HTTPServer(application)
         socket, self.port = testing.bind_unused_port()
@@ -217,14 +252,21 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
             {'name': 'Test script 1',
              'script_path': 'ls',
              'include': '${text 1}.json',
+             'preload_script': {
+                 'script': 'echo 123'
+             },
              'parameters': [
                  test_utils.create_script_param_config('text 1', required=True),
                  test_utils.create_script_param_config('list 1', type='list',
-                                                       allowed_values=['A', 'B', 'C']),
+                                                       allowed_values=['A', 'B', 'C'],
+                                                       values_ui_mapping={'A': 'Value a', 'C': 'Customer'},
+                                                       default='C'),
                  test_utils.create_script_param_config('file 1', type='server_file',
-                                                       file_dir=test1_files_path),
+                                                       file_dir=test1_files_path,
+                                                       ui_separator_type='line',
+                                                       ui_separator_title='Some title'),
                  test_utils.create_script_param_config('list 2', type='list',
-                                                       values_script='ls ' + test1_files_path + '/${file 1}')
+                                                       values_script='ls ${file 1}')
              ]},
             'test_script_1')
 
@@ -255,22 +297,32 @@ def _text1():
     return {'name': 'text 1', 'description': None, 'withoutValue': False, 'required': True, 'default': None,
             'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
             'fileRecursive': False, 'fileType': None,
-            'requiredParameters': []
-            }
+            'requiredParameters': [],
+            'regex': None,
+            'ui': {'separatorBefore': None, 'widthWeight': None}}
 
 
 def _list1():
-    return {'name': 'list 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
-            'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': ['A', 'B', 'C'],
+    return {'name': 'list 1', 'description': None, 'withoutValue': False, 'required': False, 'default': 'Customer',
+            'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': ['Value a', 'B', 'Customer'],
             'secure': False, 'fileRecursive': False, 'fileType': None,
-            'requiredParameters': []}
+            'requiredParameters': [],
+            'regex': None,
+            'ui': {'separatorBefore': None, 'widthWeight': None}}
 
 
 def _file1():
     return {'name': 'file 1', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
             'type': 'server_file', 'min': None, 'max': None, 'max_length': None, 'values': ['x', 'y', 'z'],
             'secure': False, 'fileRecursive': False, 'fileType': None,
-            'requiredParameters': []}
+            'requiredParameters': [],
+            'regex': None,
+            'ui': {
+                'separatorBefore': {
+                    'type': 'line',
+                    'title': 'Some title'
+                },
+                'widthWeight': None}}
 
 
 def _list2(list2_values):
@@ -278,12 +330,16 @@ def _list2(list2_values):
             'type': 'list', 'min': None, 'max': None, 'max_length': None, 'values': list2_values,
             'secure': False,
             'fileRecursive': False, 'fileType': None,
-            'requiredParameters': ['file 1']}
+            'requiredParameters': ['file 1'],
+            'regex': None,
+            'ui': {'separatorBefore': None, 'widthWeight': None}}
 
 
 def _included_text2():
     return {'name': 'included text 2', 'description': None, 'withoutValue': False, 'required': False, 'default': None,
             'type': 'text', 'min': None, 'max': None, 'max_length': None, 'values': None, 'secure': False,
             'fileRecursive': False, 'fileType': None,
-            'requiredParameters': []
+            'requiredParameters': [],
+            'regex': None,
+            'ui': {'separatorBefore': None, 'widthWeight': None}
             }

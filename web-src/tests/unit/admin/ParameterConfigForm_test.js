@@ -1,13 +1,15 @@
 'use strict';
 
 import ParameterConfigForm from '@/admin/components/scripts-config/ParameterConfigForm';
+import ParameterValuesUiMapping from '@/admin/components/scripts-config/ParameterValuesUiMapping.vue';
+import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
-import {isBlankString, setInputValue} from '@/common/utils/common';
+import Textfield from '@/common/components/textfield.vue';
+import {asyncForEachKeyValue, isBlankString, isNull, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {attachToDocument, setChipListValue, vueTicks} from '../test_utils';
-import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
+import {attachToDocument, createScriptServerTestVue, setChipListValue, vueTicks} from '../test_utils';
 
 export async function setValueByUser(form, parameterName, value) {
     const childComponent = findField(form, parameterName);
@@ -32,10 +34,10 @@ export const findField = (form, expectedName, failOnMissing = true) => {
         } else if (child.$options._componentTag === ScriptField.name) {
             fieldName = child.scriptPathField.name;
         } else {
-            fieldName = child.$props.config.name;
+            fieldName = child.$props.config?.name;
         }
 
-        if (fieldName.toLowerCase() === expectedName.toLowerCase()) {
+        if (!isNull(fieldName) && (fieldName.toLowerCase() === expectedName.toLowerCase())) {
             return child;
         }
     }
@@ -44,6 +46,54 @@ export const findField = (form, expectedName, failOnMissing = true) => {
         throw Error('Failed to find field: ' + expectedName)
     }
 };
+
+export const findUiMappingFields = (form, failOnMissing = true) => {
+    const mappingComponent = form.findComponent(ParameterValuesUiMapping)
+    if (failOnMissing) {
+        expect(mappingComponent.exists()).toBeTrue()
+    }
+
+    const result = []
+
+    const textFields = mappingComponent.findAllComponents(Textfield);
+    for (let i = 0; i < textFields.length; i += 2) {
+        const scriptField = textFields.at(i)
+        const uiField = textFields.at(i + 1)
+
+        result.push([scriptField, uiField])
+    }
+
+    return result
+}
+
+export const extractUiMappingValues = (uiMappingFields) => {
+    const result = []
+
+    for (const uiMappingFieldPair of uiMappingFields) {
+        const scriptValue = uiMappingFieldPair[0].vm.value
+        const uiValue = uiMappingFieldPair[1].vm.value
+
+        result.push([scriptValue, uiValue])
+    }
+
+    return result
+}
+
+export async function setUiMappingScriptValue(form, index, value) {
+    const pair = findUiMappingFields(form)[index]
+
+    setInputValue(pair[0].find('input').element, value, true)
+
+    await vueTicks()
+}
+
+export async function setUiMappingUiValue(form, index, value) {
+    const pair = findUiMappingFields(form)[index];
+
+    setInputValue(pair[1].find('input').element, value, true)
+
+    await vueTicks()
+}
 
 const findFieldInputElement = (form, expectedName) => {
     const field = findField(form, expectedName);
@@ -69,6 +119,7 @@ describe('Test ParameterConfigForm', function () {
         errors = [];
 
         form = mount(ParameterConfigForm, {
+            localVue: createScriptServerTestVue(),
             attachTo: attachToDocument(),
             sync: false,
             propsData: {
@@ -191,7 +242,7 @@ describe('Test ParameterConfigForm', function () {
             form.setProps({
                 value: {
                     type: 'multiselect',
-                    multiselect_argument_type: 'argument_per_value',
+                    multiselect_argument_type: 'argument_per_value'
                 }
             });
 
@@ -339,6 +390,115 @@ describe('Test ParameterConfigForm', function () {
             expect(_findField('allowed values').value).toEqual(['abc', '123', 'xyz'])
             expect(_findField('load from script').value).toBeFalse()
         });
+
+        it('Test initial width weight', async function () {
+            form.setProps({
+                value: {
+                    ui: {
+                        'width_weight': 3
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            expect(_findField('UI width weight', false).value).toBe(3)
+        });
+
+        it('Test initial width weight when no config', async function () {
+            form.setProps({
+                value: {}
+            });
+
+            await vueTicks()
+
+            expect(_findField('UI width weight', false).value).toBeNil()
+        });
+
+        it('Test initial separator', async function () {
+            form.setProps({
+                value: {
+                    ui: {
+                        'separator_before': {
+                            'type': 'line',
+                            'title': 'Some title'
+                        }
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            expect(_findField('UI separator (before parameter)', false).value).toBe('line')
+            expect(_findField('UI separator title', false).value).toBe('Some title')
+        });
+
+        it('Test initial width weight when no config', async function () {
+            form.setProps({
+                value: {}
+            });
+
+            await vueTicks()
+
+            expect(_findField('UI separator (before parameter)', false).value).toBeNil()
+            expect(_findField('UI separator title', false).value).toBeNil()
+        });
+
+        it('Test passAs when not set', async function () {
+            form.setProps({
+                value: {}
+            });
+
+            await vueTicks()
+
+            expect(_findField('Pass as').value).toBe('argument + env_variable')
+        });
+
+        it('Test passAs when set', async function () {
+            for (const passAs of ['argument', 'env_variable', 'stdin']) {
+                form.setProps({
+                    value: {'pass_as': passAs}
+                });
+
+                await vueTicks()
+
+                expect(_findField('Pass as').value).toBe(passAs)
+            }
+        });
+
+        it('Test stdin expected text', async function () {
+            form.setProps({
+                value: {
+                    'pass_as': 'stdin',
+                    'stdin_expected_text': '123'
+                }
+            });
+
+            await vueTicks()
+
+            expect(_findField('Stdin expected Text').value).toBe('123')
+        });
+
+        it('Test initial values UI mapping', async function () {
+            form.setProps({
+                value: {
+                    'type': 'list',
+                    'values_ui_mapping': {
+                        'abc': 'qwerty',
+                        ' def ': '1234'
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            expect(extractUiMappingValues(findUiMappingFields(form))).toEqual([
+                ['abc', 'qwerty'],
+                [' def ', '1234'],
+                ['', '']
+            ])
+        });
+
     });
 
     describe('Test update values in form', function () {
@@ -549,6 +709,136 @@ describe('Test ParameterConfigForm', function () {
 
             assertOutputValue('excluded_files', undefined);
         });
+
+        it('Test update ui width weight', async function () {
+            await _setValueByUser('UI width weight', 3);
+
+            assertOutputValue('ui', {'width_weight': 3});
+        });
+
+        it('Test update ui width weight to empty', async function () {
+            form.setProps({
+                value: {
+                    ui: {
+                        'width_weight': 3
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            await _setValueByUser('UI width weight', null);
+
+            assertOutputValue('ui', undefined);
+        });
+
+        it('Test update ui separator type only', async function () {
+            await _setValueByUser('UI separator (before parameter)', 'line');
+
+            assertOutputValue('ui', {'separator_before': {'type': 'line'}});
+        });
+
+        it('Test update ui separator title only', async function () {
+            await _setValueByUser('UI separator title', 'Some title');
+
+            assertOutputValue('ui', {'separator_before': {'title': 'Some title'}});
+        });
+
+        it('Test update ui separator type and title', async function () {
+            await _setValueByUser('UI separator (before parameter)', 'new_line');
+            await _setValueByUser('UI separator title', 'Another title');
+            await _setValueByUser('Type', 'list');
+
+            assertOutputValue('type', 'list')
+            assertOutputValue('ui', {
+                'separator_before': {
+                    'type': 'new_line',
+                    'title': 'Another title'
+                }
+            });
+        });
+
+        it('Test update ui separator to empty', async function () {
+            form.setProps({
+                value: {
+                    ui: {
+                        'separator_before': {
+                            'type': 'line',
+                            'title': 'Text'
+                        }
+                    }
+                }
+            });
+
+            await vueTicks()
+
+            await _setValueByUser('UI separator (before parameter)', 'none');
+            await _setValueByUser('UI separator title', '  ');
+
+            assertOutputValue('ui', undefined);
+        });
+
+        it('Test setting passAs values', async function () {
+            const userInputToExpectedMap = {
+                'argument + env_variable': undefined,
+                'argument': 'argument',
+                'env_variable': 'env_variable',
+                'stdin': 'stdin'
+            }
+
+            await asyncForEachKeyValue(userInputToExpectedMap, async (userInput, expected) => {
+                await _setValueByUser('Pass as', userInput);
+
+                assertOutputValue('pass_as', expected);
+            })
+        })
+
+        it('Test setting stdin expected text', async function () {
+            await _setValueByUser('Pass as', 'stdin');
+            await _setValueByUser('Stdin expected text', '123');
+
+            assertOutputValue('stdin_expected_text', '123');
+        })
+
+        it('Test values_ui_mapping when type set to list', async function () {
+            await _setValueByUser('Type', 'list');
+
+            expect(findUiMappingFields(form).length).toEqual(1)
+            assertOutputValue('values_ui_mapping', {});
+        });
+
+        it('Test values_ui_mapping when single empty ui value', async function () {
+            await _setValueByUser('Type', 'list')
+
+            await setUiMappingScriptValue(form, 0, 'abc')
+
+            assertOutputValue('values_ui_mapping', {'abc': ''});
+        });
+
+        it('Test values_ui_mapping when multiple values', async function () {
+            await _setValueByUser('Type', 'list')
+
+            await setUiMappingScriptValue(form, 0, 'abc')
+            await setUiMappingUiValue(form, 0, 'qwerty')
+
+            await setUiMappingScriptValue(form, 1, ' def ')
+            await setUiMappingUiValue(form, 1, ' 1234 ')
+
+            await setUiMappingScriptValue(form, 2, 'hello')
+            await setUiMappingUiValue(form, 2, 'world')
+
+            assertOutputValue('values_ui_mapping', {
+                'abc': 'qwerty',
+                ' def ': ' 1234 ',
+                'hello': 'world'
+            });
+            expect(extractUiMappingValues(findUiMappingFields(form))).toEqual([
+                ['abc', 'qwerty'],
+                [' def ', ' 1234 '],
+                ['hello', 'world'],
+                ['', '']
+            ])
+        });
     });
 
     describe('Test parameter dependencies', function () {
@@ -702,6 +992,22 @@ describe('Test ParameterConfigForm', function () {
 
             await _setValueByUser('Max', 4);
             assertLastError('Max', 'min: 5');
+        });
+
+        it('Test "max_length" field for default type', async function () {
+            expect(_findField('Max characters length')).not.toBeNil()
+        });
+
+        it('Test "max_length" field for multiline_text type', async function () {
+            await _setValueByUser('Type', 'multiline_text')
+
+            expect(_findField('Max characters length')).not.toBeNil()
+        });
+
+        it('Test "max_length" field for int type', async function () {
+            await _setValueByUser('Type', 'int')
+
+            expect(_findField('Max characters length', false)).toBeNil()
         });
     });
 

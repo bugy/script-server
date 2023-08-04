@@ -3,6 +3,7 @@ import unittest
 from ldap3 import Connection, SIMPLE, MOCK_SYNC, OFFLINE_AD_2012_R2, Server
 from ldap3.utils.dn import safe_dn
 
+from auth.auth_base import AuthRejectedError
 from auth.auth_ldap import LdapAuthenticator
 from tests import test_utils
 from tests.test_utils import mock_request_handler
@@ -58,6 +59,9 @@ class _LdapAuthenticatorMockWrapper:
 
     def authenticate(self, username, password):
         return self.authenticator.authenticate(_mock_request_handler(username, password))
+
+    def perform_basic_auth(self, username, password):
+        return self.authenticator.perform_basic_auth(username, password)
 
     def get_groups(self, username):
         return self.authenticator.get_groups(username)
@@ -306,6 +310,36 @@ class TestGroupsPersistence(unittest.TestCase):
     def authenticate(self, username, password):
         user = self.auth_wrapper.authenticate(username, password)
         self.assertEqual(user, username)
+
+
+class TestAuthenticate(unittest.TestCase):
+
+    def test_perform_basic_auth_success(self):
+        authenticated = self.auth_wrapper.perform_basic_auth('user1', '1234')
+        self.assertEqual(True, authenticated)
+        self.assertEqual(['group1'], self.auth_wrapper.get_groups('user1'))
+
+    def test_perform_basic_auth_failure(self):
+        self.assertRaisesRegex(
+            AuthRejectedError,
+            'Invalid credentials',
+            self.auth_wrapper.perform_basic_auth,
+            'user1',
+            '555')
+
+    def setUp(self):
+        test_utils.setup()
+
+        self.auth_wrapper = self.create_wrapper()
+
+        self.auth_wrapper.add_user('user1', '1234')
+        self.auth_wrapper.add_group('group1', ['user1'])
+
+    def create_wrapper(self):
+        return _LdapAuthenticatorMockWrapper('cn=$username,cn=Users,dc=buggy,dc=net', 'dc=buggy,dc=net')
+
+    def tearDown(self):
+        test_utils.cleanup()
 
 
 def _mock_request_handler(username, password):

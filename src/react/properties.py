@@ -1,10 +1,12 @@
+import logging
 from collections import UserList, UserDict
-
 from typing import Optional, Iterable as Iterable, Mapping as Mapping, TypeVar
 
 _T = TypeVar('_T')
 _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')
+
+LOGGER = logging.getLogger('script_server.properties')
 
 
 class Property:
@@ -152,9 +154,10 @@ class ObservableDict(UserDict):
 
         super().__setitem__(key, item)
 
-        if self._observers:
-            for observer in self._observers:
-                observer(key, old_value, item)
+        if item == old_value:
+            return
+
+        self._notify_observers(key, old_value, item)
 
     def __delitem__(self, key: _KT) -> None:
         old_value = self.get(key)
@@ -164,9 +167,15 @@ class ObservableDict(UserDict):
         if old_value is None:
             return
 
+        self._notify_observers(key, old_value, None)
+
+    def _notify_observers(self, key, old_value, new_value):
         if self._observers:
             for observer in self._observers:
-                observer(key, old_value, None)
+                try:
+                    observer(key, old_value, new_value)
+                except:
+                    LOGGER.exception('Failed to notify observer ' + repr(observer))
 
 
 def observable_fields(*fields):

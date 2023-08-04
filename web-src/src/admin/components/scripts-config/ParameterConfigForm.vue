@@ -8,16 +8,40 @@
                 :dropdownContainer="this.$el"
                 class="col s4" @error="handleError(typeField, $event)"/>
     </div>
+
+
     <div class="row">
-      <Textfield v-model="param" :config="paramField" class="col s4" @error="handleError(paramField, $event)"/>
-      <Checkbox v-model="noValue" :config="noValueField" class="col s3 offset-s1"
-                @error="handleError(noValueField, $event)"/>
-      <Checkbox v-if="!noValue" v-model="sameArgParam" :config="sameArgParamField"
+      <Combobox v-model="passAs"
+                :config="passAsField"
+                class="col s3"/>
+
+      <Checkbox v-if="!noValue && (passAs === 'argument' || passAs === 'argument + env_variable')"
+                v-model="sameArgParam"
+                :config="sameArgParamField"
                 class="col s3" @error="handleError(sameArgParamField, $event)"/>
+
+      <Textfield
+          v-if="passAs === 'argument' || passAs === 'argument + env_variable'"
+          v-model="param" :config="paramField" class="col s3" @error="handleError(paramField, $event)"/>
+
+      <Textfield
+          v-if="passAs === 'env_variable' || passAs === 'argument + env_variable'"
+          v-model="envVar"
+          :config="envVarField"
+          class="col s3"
+          @error="handleError(envVarField, $event)"/>
+
+      <Textfield v-if="passAs === 'stdin'"
+                 v-model="stdinExpectedText"
+                 :config="stdinExpectedTextField"
+                 class="col s6"/>
+
     </div>
+
     <div class="row">
-      <Textfield v-model="envVar" :config="envVarField" class="col s4" @error="handleError(envVarField, $event)"/>
-      <Checkbox v-model="secure" :config="secureField" class="col s3 offset-s1"
+      <Checkbox v-model="noValue" :config="noValueField" class="col s3"
+                @error="handleError(noValueField, $event)"/>
+      <Checkbox v-model="secure" :config="secureField" class="col s3"
                 @error="handleError(secureField, $event)"/>
     </div>
     <div v-if="selectedType !== 'file_upload' && !noValue" class="row">
@@ -73,20 +97,50 @@
                  title="Excluded files"
                  @error="handleError('Excluded files', $event)"/>
     </div>
-    <div v-if="selectedType === 'text' || selectedType === undefined" class="row">
+    <div v-if="selectedType === 'text' || selectedType === undefined || selectedType === 'multiline_text'" class="row">
+      <Textfield v-model="regexConfigPattern" :config="regexPatternField" class="col s4"
+                 @error="handleError(regexPatternField, $event)"/>
+      <Textfield v-model="regexConfigDescription" :config="regexDescriptionField" class="col s4"
+                 @error="handleError(regexDescriptionField, $event)"/>
       <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
                  @error="handleError(maxLengthField, $event)"/>
+    </div>
+
+    <div v-if="selectedType !== 'multiline_text'" class="row">
+      <Textfield v-model="uiWidthWeight"
+                 :config="uiWidthWeightField"
+                 class="col s2"
+                 @error="handleError(uiWidthWeightField, $event)"/>
+    </div>
+
+    <div class="row">
+      <Combobox v-model="uiSeparatorType"
+                :config="uiSeparatorTypeField"
+                class="col s2"
+                @error="handleError(uiSeparatorTypeField, $event)"/>
+      <Textfield v-model="uiSeparatorTitle"
+                 :config="uiSeparatorTitleField"
+                 class="col s4"
+                 @error="handleError(uiSeparatorTitleField, $event)"/>
+
+    </div>
+
+    <div v-if="type === 'list' || type === 'multiselect'" class="row">
+      <ParameterSeparator :separator="{'type': 'line', 'title': 'Values UI Mapping'}" class="col s12"/>
+      <ParameterValuesUiMapping v-model="valuesUiMapping" class="col s12"/>
     </div>
   </form>
 </template>
 
 <script>
+import ParameterValuesUiMapping from '@/admin/components/scripts-config/ParameterValuesUiMapping.vue';
 import Checkbox from '@/common/components/checkbox';
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
 import Textfield from '@/common/components/textfield';
-import {forEachKeyValue, isEmptyArray, isEmptyString} from '@/common/utils/common';
+import {forEachKeyValue, isBlankString, isEmptyArray, isEmptyObject, isEmptyString} from '@/common/utils/common';
+import ParameterSeparator from '@/main-app/components/scripts/ParameterSeparator.vue';
 import get from 'lodash/get';
 import Vue from 'vue';
 import {
@@ -106,12 +160,19 @@ import {
   nameField,
   noValueField,
   paramField,
+  passAsField,
   recursiveField,
+  regexDescriptionField,
+  regexPatternField,
   requiredField,
   sameArgParamField,
   secureField,
   separatorField,
-  typeField
+  stdinExpectedTextField,
+  typeField,
+  uiSeparatorTitleField,
+  uiSeparatorTypeField,
+  uiWidthWeightField
 } from './parameter-fields';
 
 function updateValue(value, configField, newValue) {
@@ -123,7 +184,7 @@ function updateValue(value, configField, newValue) {
 
 export default {
   name: 'ParameterConfigForm',
-  components: {ChipsList, TextArea, Checkbox, Combobox, Textfield},
+  components: {ParameterValuesUiMapping, ParameterSeparator, ChipsList, TextArea, Checkbox, Combobox, Textfield},
   props: {
     value: {
       type: Object,
@@ -150,23 +211,15 @@ export default {
       separator: 'separator',
       fileDir: 'file_dir',
       recursive: 'file_recursive',
-      fileType: 'file_type'
+      fileType: 'file_type',
+      stdinExpectedText: 'stdin_expected_text',
+      valuesUiMapping: 'values_ui_mapping'
     };
 
     forEachKeyValue(simpleFields, (vmField, configField) => {
       this.$watch(vmField, (newValue) => updateValue(this.value, configField, newValue));
     });
-
-    for (const child of this.$children) {
-      let fieldName;
-      if (child.$options._componentTag === ChipsList.name) {
-        fieldName = child.title;
-      } else {
-        fieldName = child.$props.config.name;
-      }
-    }
   },
-
 
   data() {
     return {
@@ -174,6 +227,8 @@ export default {
       param: null,
       sameArgParam: null,
       envVar: null,
+      passAs: null,
+      stdinExpectedText: null,
       type: null,
       noValue: null,
       required: null,
@@ -181,10 +236,13 @@ export default {
       min: null,
       max: null,
       max_length: null,
+      regexConfigPattern: null,
+      regexConfigDescription: null,
       allowedValues: null,
       allowedValuesScript: null,
       allowedValuesFromScript: null,
       allowedValuesScriptShellEnabled: null,
+      valuesUiMapping: null,
       defaultValue: null,
       constant: null,
       secure: null,
@@ -195,8 +253,13 @@ export default {
       fileType: null,
       fileExtensions: null,
       excludedFiles: null,
+      uiWidthWeight: null,
+      uiSeparatorType: null,
+      uiSeparatorTitle: null,
       nameField,
       paramField: Object.assign({}, paramField),
+      passAsField,
+      stdinExpectedTextField,
       envVarField,
       typeField,
       noValueField,
@@ -206,6 +269,8 @@ export default {
       minField,
       maxField: Object.assign({}, maxField),
       maxLengthField,
+      regexPatternField,
+      regexDescriptionField,
       allowedValuesScriptField,
       allowedValuesFromScriptField,
       defaultValueField: Object.assign({}, defaultValueField),
@@ -216,7 +281,10 @@ export default {
       fileDirField,
       recursiveField,
       fileTypeField,
-      allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField
+      allowedValuesScriptShellEnabledField: allowedValuesScriptShellEnabledField,
+      uiWidthWeightField,
+      uiSeparatorTypeField,
+      uiSeparatorTitleField
     }
   },
 
@@ -235,6 +303,8 @@ export default {
           this.min = config['min'];
           this.max = config['max'];
           this.max_length = config['max_length'];
+          this.regexConfigPattern = get(config, 'regex.pattern', '');
+          this.regexConfigDescription = get(config, 'regex.description', '');
           this.constant = !!get(config, 'constant', false);
           this.secure = !!get(config, 'secure', false);
           this.multiselectArgumentType = get(config, 'multiselect_argument_type', 'single_argument');
@@ -245,6 +315,13 @@ export default {
           this.fileType = get(config, 'file_type', 'any');
           this.fileExtensions = get(config, 'file_extensions', []);
           this.excludedFiles = get(config, 'excluded_files', []);
+          this.stdinExpectedText = get(config, 'stdin_expected_text')
+          this.passAs = get(config, 'pass_as', 'argument + env_variable')
+          this.valuesUiMapping = get(config, 'values_ui_mapping', {})
+
+          this.uiWidthWeight = config['ui']?.['width_weight']
+          this.uiSeparatorType = config['ui']?.['separator_before']?.['type']
+          this.uiSeparatorTitle = config['ui']?.['separator_before']?.['title']
 
           const defaultValue = get(config, 'default', '');
           if (this.isRecursiveFile()) {
@@ -320,6 +397,12 @@ export default {
     allowedValuesScriptShellEnabled() {
       this.updateAllowedValues();
     },
+    regexConfigPattern() {
+      this.updateRegexConfig();
+    },
+    regexConfigDescription() {
+      this.updateRegexConfig();
+    },
     defaultValue() {
       if (this.selectedType === 'multiselect') {
         updateValue(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
@@ -331,6 +414,22 @@ export default {
         updateValue(this.value, 'default', path);
       } else {
         updateValue(this.value, 'default', this.defaultValue);
+      }
+    },
+    uiWidthWeight() {
+      this.updateUiFields()
+    },
+    uiSeparatorType() {
+      this.updateUiFields()
+    },
+    uiSeparatorTitle() {
+      this.updateUiFields()
+    },
+    passAs() {
+      if (this.passAs === 'argument + env_variable') {
+        this.$delete(this.value, 'pass_as');
+      } else {
+        updateValue(this.value, 'pass_as', this.passAs);
       }
     }
   },
@@ -350,6 +449,12 @@ export default {
 
 
   methods: {
+    updateRegexConfig() {
+      updateValue(this.value, 'regex', {
+        pattern: this.regexConfigPattern,
+        description: this.regexConfigDescription
+      });
+    },
     updateAllowedValues() {
       if (this.allowedValuesFromScript) {
         updateValue(this.value, 'values', {
@@ -362,6 +467,36 @@ export default {
     },
     isRecursiveFile() {
       return (this.selectedType === 'server_file') && (this.recursive);
+    },
+    updateUiFields() {
+      const newUiConfig = {}
+
+      if (this.uiWidthWeight) {
+        newUiConfig['width_weight'] = parseInt(this.uiWidthWeight)
+      }
+
+      const separatorType = !isEmptyString(this.uiSeparatorType) && (this.uiSeparatorType !== 'none')
+          ? this.uiSeparatorType
+          : null;
+      const separatorTitle = !isBlankString(this.uiSeparatorTitle)
+          ? this.uiSeparatorTitle
+          : null;
+
+      if (separatorType || separatorTitle) {
+        newUiConfig['separator_before'] = {}
+        if (separatorType) {
+          newUiConfig['separator_before']['type'] = separatorType
+        }
+        if (separatorTitle) {
+          newUiConfig['separator_before']['title'] = separatorTitle
+        }
+      }
+
+      if (!isEmptyObject(newUiConfig)) {
+        updateValue(this.value, 'ui', newUiConfig);
+      } else {
+        this.$delete(this.value, 'ui');
+      }
     },
     handleError(fieldConfig, error) {
       let fieldName;

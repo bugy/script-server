@@ -1,6 +1,7 @@
 import unittest
 
 from execution.logging import LogNameCreator
+from model.server_conf import LoggingConfig
 from tests.test_utils import create_audit_names
 
 _DATETIME = 1525595426234  # 08:30:25.234 06 May 2018
@@ -48,9 +49,24 @@ class TestLogNameCreator(unittest.TestCase):
                         id=12345,
                         script_name='my_script',
                         datetime=_DATETIME,
-                        all_audit_names=None):
+                        all_audit_names=None,
+                        custom_logging_config: LoggingConfig = None,
+                        parameter_configs=None,
+                        parameter_values=None):
         if all_audit_names is None:
             all_audit_names = create_audit_names(auth_username='bugy')
 
+        if parameter_configs is None:
+            parameter_configs = []
+        if parameter_values is None:
+            parameter_values = {}
+
         creator = LogNameCreator(filename_pattern, date_format)
-        return creator.create_filename(id, all_audit_names, script_name, datetime)
+        return creator.create_filename(
+            id,
+            all_audit_names,
+            script_name,
+            datetime,
+            custom_logging_config,
+            parameter_configs,
+            parameter_values)

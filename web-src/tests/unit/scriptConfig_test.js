@@ -164,6 +164,7 @@ describe('Test scriptConfig module', function () {
 
             expect(store.state.scriptConfig.scriptConfig).toEqual(config);
             expect(store.state.scriptConfig.parameters).toEqual(config.parameters);
+            expect(store.state.scriptConfig.preloadScript).toBeNil()
             expect(observers[0].path).toEndWith('?initWithValues=false')
         });
 
@@ -216,6 +217,26 @@ describe('Test scriptConfig module', function () {
             config.parameters.splice(0, 1);
 
             expect(store.state.scriptConfig.parameters).toEqual(config.parameters)
+        });
+
+        it('Test preload script', function () {
+            const store = createStore();
+            store.dispatch('scriptConfig/reloadScript', {selectedScript: 'my script'});
+
+            const config = createConfig();
+
+            sendEventFromServer(createConfigEvent(config));
+
+            let preloadScript = {
+                'output': '123',
+                'format': 'terminal'
+            };
+            sendEventFromServer(JSON.stringify({
+                event: 'preloadScript',
+                data: preloadScript
+            }));
+
+            expect(store.state.scriptConfig.preloadScript).toEqual(preloadScript)
         });
     });
 
@@ -421,6 +442,32 @@ describe('Test scriptConfig module', function () {
             expect(dependantParam.loading || false).toEqual(expectedValue)
         }
 
+        async function prepareMultiDependantConfig() {
+            const config = createConfig([{
+                name: 'p1',
+                type: 'list',
+                values: [1, 2, 3],
+                'requiredParameters': ['param1']
+            }, {
+                name: 'p2',
+                type: 'list',
+                values: [9, 8, 7],
+                'requiredParameters': ['param1']
+            }])
+
+            sendEventFromServer(createConfigEvent(config));
+            await vueTicks()
+
+            store.dispatch('scriptConfig/sendParameterValue', {
+                parameterName: 'param1',
+                value: 1
+            });
+            await vueTicks()
+
+            assertLoading('p1', true)
+            assertLoading('p2', true)
+        }
+
         it('test set parameter to loading on dependency change', async function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
             await vueTicks()
@@ -474,6 +521,34 @@ describe('Test scriptConfig module', function () {
             assertLoading('dependant param', false)
         })
 
+        it('test no loading when multiple dependant parameters, clientStateVersionAccepted', async function () {
+            await prepareMultiDependantConfig()
 
+            sendEventFromServer(createClientStateVersionAcceptedEvent(3));
+            await vueTicks()
+
+            assertLoading('p1', false)
+            assertLoading('p2', false)
+        })
+
+        it('test no loading when multiple dependant parameters, parameterChanged', async function () {
+            await prepareMultiDependantConfig()
+
+            sendEventFromServer(createUpdateParameterEvent({name: 'p2', default: 'xyz'}, 3));
+            await vueTicks()
+
+            assertLoading('p1', true)
+            assertLoading('p2', false)
+        })
+
+        it('test no loading when multiple dependant parameters, parameterAdded', async function () {
+            await prepareMultiDependantConfig()
+
+            sendEventFromServer(createUpdateParameterEvent({name: 'p3', default: 'xyz'}, 3));
+            await vueTicks()
+
+            assertLoading('p1', true)
+            assertLoading('p2', true)
+        })
     })
 });

@@ -7,10 +7,17 @@
         Add
       </router-link>
       <div class="collection">
-        <router-link v-for="script in scripts" :key="script.name" :to="script.path" append
-                     class="collection-item">
-          {{ script.name }}
-        </router-link>
+
+        <template v-for="script in scripts">
+          <router-link :key="script.name"
+                       :class="{'parsing-failed': script.parsingFailed}"
+                       :to="script.path"
+                       append
+                       class="collection-item">
+            {{ script.name }}
+          </router-link>
+        </template>
+
       </div>
     </div>
   </div>
@@ -37,7 +44,13 @@ export default {
   computed: {
     ...mapState('scripts', {
       scripts: state => {
-        return state.scripts ? state.scripts.map(s => ({name: s, path: encodeURIComponent(s)})) : []
+        return state.scripts
+            ? state.scripts.map(s => ({
+              name: s.name,
+              path: encodeURIComponent(s.name),
+              parsingFailed: s.parsingFailed
+            }))
+            : []
       },
       loading: 'loading'
     })
@@ -62,4 +75,14 @@ export default {
 .add-script-btn {
   margin-bottom: 1em;
 }
+
+.scripts-list .collection-item.parsing-failed {
+  color: var(--error-color);
+  pointer-events: none;
+}
+
+.scripts-list .collection-item.parsing-failed::after {
+  content: '(failed to parse config file)';
+}
+
 </style>

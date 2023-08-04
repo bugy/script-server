@@ -32,7 +32,7 @@ or [how to configure the server](https://github.com/bugy/script-server/wiki/Serv
 
 ### Server-side
 
-Python 3.6 or higher with the following modules:
+Python 3.7 or higher with the following modules:
 
 * Tornado 5 / 6
 
@@ -68,6 +68,9 @@ For the usage please check [this ticket](https://github.com/bugy/script-server/i
 `init.py` script should be run after pulling any new changes
 
 If you are making changes to web files, use `npm run build` or `npm run serve`
+
+### A issue running on OpenBSD and maybe other UNIX systems
+See [A issue running on OpenBSD and maybe other UNIX systems](https://github.com/bugy/script-server/wiki/OpenBSD-process-termination-issues).
 
 
 ## Setup and run

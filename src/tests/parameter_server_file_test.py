@@ -6,7 +6,7 @@ from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, FILE_TYPE_D
 from model.parameter_config import WrongParameterUsageException
 from model.script_config import InvalidValueException
 from tests import test_utils
-from tests.test_utils import create_script_param_config, create_files
+from tests.test_utils import create_script_param_config, create_files, validate_value
 
 
 class ServerFileConfigTest(unittest.TestCase):
@@ -119,19 +119,19 @@ class PlainServerFileTest(unittest.TestCase):
         create_files(['abc', 'def'], os.path.join(working_dir, file_dir))
         working_dir_path = os.path.join(test_utils.temp_folder, 'work', 'dir')
         config = _create_parameter_model(recursive=False, file_dir=file_dir, working_dir=working_dir_path)
-        self.assertIsNone(config.validate_value('def'))
+        self.assertIsNone(validate_value(config, 'def'))
 
     def test_validate_failure_when_working_dir(self):
         file_dir = 'inner'
         create_files(['abc', 'def'], file_dir)
         working_dir_path = os.path.join(test_utils.temp_folder, 'work', 'dir')
         config = _create_parameter_model(recursive=False, file_dir=file_dir, working_dir=working_dir_path)
-        self.assertRegex(config.validate_value('def'), '.+ but should be in \[\]')
+        self.assertRegex(validate_value(config, 'def'), '.+ but should be in \[\]')
 
     def test_validate_failure_when_excluded_file(self):
         create_files(['abc', 'def'])
         config = _create_parameter_model(recursive=False, file_dir=test_utils.temp_folder, excluded_files=['abc'])
-        self.assertRegex(config.validate_value('abc'), '.+ but should be in \[\'def\'\]')
+        self.assertRegex(validate_value(config, 'abc'), '.+ but should be in \[\'def\'\]')
 
     def setUp(self):
         test_utils.setup()
@@ -366,50 +366,50 @@ class RecursiveServerFileTest(unittest.TestCase):
     def test_validate_missing_value(self):
         config = _create_parameter_model(recursive=True)
 
-        self.assertIsNone(config.validate_value([]))
+        self.assertIsNone(validate_value(config, []))
 
     def test_validate_existing_top_file(self):
         create_files(['abc'])
         config = _create_parameter_model(recursive=True)
 
-        self.assertIsNone(config.validate_value(['abc']))
+        self.assertIsNone(validate_value(config, ['abc']))
 
     def test_validate_existing_nested_file(self):
         create_files(['abc.txt'], os.path.join('my', 'nested', 'folder'))
         config = _create_parameter_model(recursive=True)
 
-        self.assertIsNone(config.validate_value(['my', 'nested', 'folder', 'abc.txt']))
+        self.assertIsNone(validate_value(config, ['my', 'nested', 'folder', 'abc.txt']))
 
     def test_validate_missing_top_file(self):
         config = _create_parameter_model(recursive=True)
 
-        error = config.validate_value(['abc'])
+        error = validate_value(config, ['abc'])
         self.assertRegex(error, '.+ does not exist')
 
     def test_validate_missing_nested_file(self):
         config = _create_parameter_model(recursive=True)
 
-        error = config.validate_value(['my', 'nested', 'folder', 'abc.txt'])
+        error = validate_value(config, ['my', 'nested', 'folder', 'abc.txt'])
         self.assertRegex(error, '.+ does not exist')
 
     def test_validate_fail_when_relative_reference(self):
         create_files(['abc.txt'])
         config = _create_parameter_model(recursive=True)
 
-        error = config.validate_value(['..', test_utils.temp_folder, 'abc.txt'])
+        error = validate_value(config, ['..', test_utils.temp_folder, 'abc.txt'])
         self.assertEqual('Relative path references are not allowed', error)
 
     def test_validate_success_when_extensions(self):
         create_files(['abc.txt', 'admin.log', 'doc.pdf'], 'home')
         config = _create_parameter_model(recursive=True, extensions='txt')
 
-        self.assertIsNone(config.validate_value(['home', 'abc.txt']))
+        self.assertIsNone(validate_value(config, ['home', 'abc.txt']))
 
     def test_validate_fail_when_extensions(self):
         create_files(['abc.txt', 'admin.log', 'doc.pdf'], 'home')
         config = _create_parameter_model(recursive=True, extensions='log')
 
-        error = config.validate_value(['home', 'abc.txt'])
+        error = validate_value(config, ['home', 'abc.txt'])
         self.assertRegex(error, '.+ is not allowed')
 
     def test_validate_success_when_file_type_file(self):
@@ -417,14 +417,14 @@ class RecursiveServerFileTest(unittest.TestCase):
         create_files(['.passwords'], os.path.join('home', 'private'))
         config = _create_parameter_model(recursive=True, file_type=FILE_TYPE_FILE)
 
-        self.assertIsNone(config.validate_value(['home', 'abc.txt']))
+        self.assertIsNone(validate_value(config, ['home', 'abc.txt']))
 
     def test_validate_fail_when_file_type_file(self):
         create_files(['abc.txt', 'admin.log'], 'home')
         create_files(['.passwords'], os.path.join('home', 'private'))
         config = _create_parameter_model(recursive=True, file_type=FILE_TYPE_FILE)
 
-        error = config.validate_value(['home', 'private'])
+        error = validate_value(config, ['home', 'private'])
         self.assertRegex(error, '.+ is not allowed')
 
     def test_validate_success_when_file_type_dir(self):
@@ -432,14 +432,14 @@ class RecursiveServerFileTest(unittest.TestCase):
         create_files(['tasks.list'])
         config = _create_parameter_model(recursive=True, file_type=FILE_TYPE_DIR)
 
-        self.assertIsNone(config.validate_value(['private']))
+        self.assertIsNone(validate_value(config, ['private']))
 
     def test_validate_fail_when_file_type_dir(self):
         create_files(['.passwords'], 'private')
         create_files(['tasks.list'])
         config = _create_parameter_model(recursive=True, file_type=FILE_TYPE_DIR)
 
-        error = config.validate_value(['tasks.list'])
+        error = validate_value(config, ['tasks.list'])
         self.assertRegex(error, '.+ is not allowed')
 
     def test_validate_success_when_file_type_dir_and_extensions(self):
@@ -447,14 +447,14 @@ class RecursiveServerFileTest(unittest.TestCase):
         create_files(['admin.log', 'file.txt', 'print.pdf'])
         config = _create_parameter_model(recursive=True, file_type=FILE_TYPE_DIR, extensions=['txt'])
 
-        self.assertIsNone(config.validate_value(['file.txt']))
+        self.assertIsNone(validate_value(config, ['file.txt']))
 
     def test_validate_fail_on_dir_when_file_type_dir_and_extensions(self):
         create_files(['.passwords'], 'private')
         create_files(['admin.log', 'file.txt', 'print.pdf'])
         config = _create_parameter_model(recursive=True, file_type=FILE_TYPE_DIR, extensions=['txt'])
 
-        error = config.validate_value(['private'])
+        error = validate_value(config, ['private'])
         self.assertRegex(error, '.+ is not allowed')
 
     def test_validate_fail_on_extension_when_file_type_dir_and_extensions(self):
@@ -462,7 +462,7 @@ class RecursiveServerFileTest(unittest.TestCase):
         create_files(['admin.log', 'file.txt', 'print.pdf'])
         config = _create_parameter_model(recursive=True, file_type=FILE_TYPE_DIR, extensions=['txt'])
 
-        error = config.validate_value(['print.pdf'])
+        error = validate_value(config, ['print.pdf'])
         self.assertRegex(error, '.+ is not allowed')
 
     def test_validate_fail_on_excluded_file(self):
@@ -470,7 +470,7 @@ class RecursiveServerFileTest(unittest.TestCase):
         create_files(['xyz', 'abc'], subfolder)
         config = _create_parameter_model(recursive=True, excluded_files=[os.path.join(subfolder, 'abc')])
 
-        error = config.validate_value(['work', 'another', 'abc'])
+        error = validate_value(config, ['work', 'another', 'abc'])
         self.assertRegex(error, '.+ is excluded')
 
     def test_validate_fail_on_list_excluded_subfolder(self):

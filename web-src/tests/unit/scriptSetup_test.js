@@ -1,6 +1,6 @@
 import scriptSetup from '@/main-app/store/scriptSetup';
-import Vuex from 'vuex';
 import cloneDeep from 'lodash/cloneDeep';
+import Vuex from 'vuex';
 import {createScriptServerTestVue} from './test_utils'
 
 
@@ -75,12 +75,28 @@ describe('Test scriptSetup module', function () {
         it('Test single parameter with default, initialized again', function () {
             dispatchInitFromParameters('myScript', [{name: 'param1', default: 123}])
 
+            store.dispatch('scriptSetup/setParameterValue', {
+                parameterName: 'param1',
+                value: 12
+            });
+
             store.dispatch('scriptSetup/initFromParameters', {
                 scriptName: 'myScript',
                 parameters: [{name: 'param1', default: 456}]
             });
 
-            expect(store.state.scriptSetup.parameterValues).toEqual({'param1': 123});
+            expect(store.state.scriptSetup.parameterValues).toEqual({'param1': 12});
+        });
+
+        it('Test single parameter with default, initialized again, when value is different', function () {
+            dispatchInitFromParameters('myScript', [{name: 'param1', default: 123}])
+
+            store.dispatch('scriptSetup/initFromParameters', {
+                scriptName: 'myScript',
+                parameters: [{name: 'param1', default: 456}]
+            });
+
+            expect(store.state.scriptSetup.parameterValues).toEqual({'param1': 456});
         });
 
         it('Test 2 parameters with default', function () {

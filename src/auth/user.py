@@ -25,6 +25,9 @@ class User:
             'audit_names': self.audit_names
         }
 
+    def __eq__(self, o: object) -> bool:
+        return isinstance(o, User) and (self.user_id == o.user_id)
+
 
 def from_serialized_dict(dict):
     return User(dict['user_id'], dict['audit_names'])
