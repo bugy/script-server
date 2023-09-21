@@ -262,9 +262,17 @@ class ConfigService:
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
 
+        # We will ignore folders with this prefixes (ie: hidden folders)
+        exclude_prefixes=('.')
+
         files = []
         # Read config file from within directories too
         for _root, _dirs, _files in os.walk(configs_dir, topdown=True):
+            # In place exlustion of _dirs with exlusion prefixes
+            _dirs[:] = [_dirs
+                       for _dirs in _dirs
+                       if not _dirs.startswith(exclude_prefixes)]
+                       
             for name in _files:
                 files.append(os.path.join(_root, name))
 
