@@ -56,6 +56,7 @@ class EmailCommunicator:
         self.auth_enabled = read_bool_from_config('auth_enabled', params_dict)
         self.login = params_dict.get('login')
         self.tls = read_bool_from_config('tls', params_dict)
+        self.include_files = read_bool_from_config('include_files', params_dict, default=True)
 
         self.password = self.read_password(params_dict)
         self.to_addresses = split_addresses(self.to_addresses)
@@ -103,7 +104,7 @@ class EmailCommunicator:
         if self.auth_enabled:
             server.login(self.login, self.password)
 
-        if files:
+        if self.include_files and files:
             for file in files:
                 filename = file.filename
                 part = MIMEApplication(file.content, Name=filename)
