@@ -126,8 +126,11 @@ class ConfigServiceTest(unittest.TestCase):
     def test_list_configs_when_multiple_subfolders_and_symlink(self):
         def create_config_file(name, relative_path, group=None):
             filename = os.path.basename(relative_path)
+            config = {'name': name}
+            if group is not None:
+                config['group'] = group
             test_utils.write_script_config(
-                {'name': name, 'group': group},
+                config,
                 filename,
                 config_folder=os.path.join(test_utils.temp_folder, 'runners', os.path.dirname(relative_path)))
 
@@ -139,6 +142,7 @@ class ConfigServiceTest(unittest.TestCase):
             create_config_file('conf A', 'conf_a.json')
             create_config_file('conf B', os.path.join('b', 'conf_b.json'))
             create_config_file('conf C', os.path.join('c', 'conf_c.json'), group='test group')
+            create_config_file('conf D', os.path.join('d', 'conf_d.json'), group='')
 
             configs = self.config_service.list_configs(self.user)
             actual_name_group_map = {c.name: c.group for c in configs}
@@ -150,7 +154,8 @@ class ConfigServiceTest(unittest.TestCase):
                  'conf Z': 'sub',
                  'conf A': None,
                  'conf B': 'b',
-                 'conf C': 'test group'},
+                 'conf C': 'test group',
+                 'conf D': None},
             )
 
     def tearDown(self):

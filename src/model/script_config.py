@@ -370,7 +370,7 @@ def read_short(file_path, json_object, group_by_folders: bool, script_configs_fo
     allowed_users = json_object.get('allowed_users')
     admin_users = json_object.get('admin_users')
     group = read_str_from_config(json_object, 'group', blank_to_none=True)
-    if not group and group_by_folders:
+    if ('group' not in json_object) and group_by_folders:
         relative_path = file_utils.relative_path(file_path, script_configs_folder)
         while os.path.dirname(relative_path):
             relative_path = os.path.dirname(relative_path)
