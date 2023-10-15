@@ -295,7 +295,7 @@ class ServerTest(TestCase):
                     execution_service,
                     MagicMock(),
                     MagicMock(),
-                    ConfigService(authorizer, self.conf_folder, test_utils.process_invoker),
+                    ConfigService(authorizer, self.conf_folder, True, test_utils.process_invoker),
                     MagicMock(),
                     FileUploadFeature(UserFileStorage(cookie_secret), test_utils.temp_folder),
                     file_download_feature,

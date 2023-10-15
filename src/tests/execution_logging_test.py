@@ -542,7 +542,8 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
             'my_script',
             script_command='echo',
             parameters=[param1, param2, param3, param4],
-            logging_config=LoggingConfig('test-${SCRIPT}-${p1}'))
+            logging_config=LoggingConfig('test-${SCRIPT}-${p1}'),
+            path=os.path.join('conf', 'my_script.json'))
         config_model.set_all_param_values({'p1': 'abc', 'p3': True, 'p4': 987})
 
         execution_id = self.executor_service.start_script(
@@ -568,7 +569,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
         self.assertEqual('some text\nanother text', log)
 
         log_files = os.listdir(test_utils.temp_folder)
-        self.assertEqual(['test-my_script-abc.log'], log_files)
+        self.assertEqual(['test-my_script-abc.log', 'conf'], log_files)
 
     def test_exit_code(self):
         config_model = create_config_model(

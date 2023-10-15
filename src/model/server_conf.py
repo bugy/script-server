@@ -29,6 +29,7 @@ class ServerConfig(object):
         self.allowed_users = None
         self.alerts_config = None
         self.logging_config = None
+        self.groups_config = ScriptGroupsConfig()  # type: ScriptGroupsConfig
         self.admin_config = None
         self.title = None
         self.enable_script_titles = None
@@ -71,6 +72,24 @@ class LoggingConfig:
             json_logging_config = json_config
             config.filename_pattern = json_logging_config.get('execution_file')
             config.date_format = json_logging_config.get('execution_date_format')
+
+        return config
+
+
+class ScriptGroupsConfig:
+
+    def __init__(self) -> None:
+        self.group_by_folders = True
+
+    @classmethod
+    def from_json(cls, json_config):
+        config = ScriptGroupsConfig()
+
+        if json_config:
+            config.group_by_folders = model_helper.read_bool_from_config(
+                'group_by_folders',
+                json_config,
+                default=config.group_by_folders)
 
         return config
 
@@ -184,6 +203,7 @@ def from_json(conf_path, temp_folder):
     config.alerts_config = json_object.get('alerts')
     config.callbacks_config = json_object.get('callbacks')
     config.logging_config = LoggingConfig.from_json(json_object.get('logging'))
+    config.groups_config = ScriptGroupsConfig.from_json(json_object.get('script_groups'))
     config.user_groups = user_groups
     config.admin_users = admin_users
     config.full_history_users = full_history_users

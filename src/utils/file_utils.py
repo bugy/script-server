@@ -33,7 +33,7 @@ def is_root(path):
     return os.path.dirname(path) == path
 
 
-def normalize_path(path_string, current_folder=None):
+def normalize_path(path_string, current_folder=None, follow_symlinks=True):
     path_string = os.path.expanduser(path_string)
     path_string = os.path.normpath(path_string)
 
@@ -41,13 +41,16 @@ def normalize_path(path_string, current_folder=None):
         return path_string
 
     if current_folder:
-        normalized_folder = normalize_path(current_folder)
+        normalized_folder = normalize_path(current_folder, follow_symlinks=follow_symlinks)
         return os.path.join(normalized_folder, path_string)
 
     if not os.path.exists(path_string):
         return path_string
 
-    return str(pathlib.Path(path_string).resolve())
+    if follow_symlinks:
+        return str(pathlib.Path(path_string).resolve())
+    else:
+        return str(pathlib.Path(path_string).absolute())
 
 
 def read_file(filename, byte_content=False, keep_newlines=False):
@@ -143,17 +146,22 @@ def last_modification(folder_paths):
 
 
 def relative_path(path, parent_path):
-    path = normalize_path(path)
-    parent_path = normalize_path(parent_path)
+    def normalize(path, follow_symlinks=True):
+        path = normalize_path(path, follow_symlinks=follow_symlinks)
+        if os_utils.is_win():
+            path = path.capitalize()
+        return path
 
-    if os_utils.is_win():
-        path = path.capitalize()
-        parent_path = parent_path.capitalize()
+    normalized_path = normalize(path)
+    normalized_parent_path = normalize(parent_path)
 
-    if not path.startswith(parent_path):
-        raise ValueError(path + ' is not subpath of ' + parent_path)
+    if not normalized_path.startswith(normalized_parent_path):
+        normalized_path = normalize(path, follow_symlinks=False)
+        normalized_parent_path = normalize(parent_path, follow_symlinks=False)
+        if not normalized_path.startswith(normalized_parent_path):
+            raise ValueError(path + ' is not subpath of ' + parent_path)
 
-    relative_path = path[len(parent_path):]
+    relative_path = normalized_path[len(normalized_parent_path):]
 
     if relative_path.startswith(os.path.sep):
         return relative_path[1:]

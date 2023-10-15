@@ -103,7 +103,8 @@ def main():
 
     process_invoker = ProcessInvoker(server_config.env_vars)
 
-    config_service = ConfigService(authorizer, CONFIG_FOLDER, process_invoker)
+    config_service = ConfigService(
+        authorizer, CONFIG_FOLDER, server_config.groups_config.group_by_folders, process_invoker)
 
     alerts_service = AlertsService(server_config.alerts_config)
     alerts_service = alerts_service

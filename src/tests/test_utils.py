@@ -121,10 +121,15 @@ def mock_object():
 def write_script_config(conf_object, filename, config_folder=None):
     if config_folder is None:
         config_folder = os.path.join(temp_folder, 'runners')
-    file_path = os.path.join(config_folder, filename + '.json')
+
+    if not filename.endswith('.json'):
+        filename = filename + '.json'
+
+    file_path = os.path.join(config_folder, filename)
 
     config_json = json.dumps(conf_object)
     file_utils.write_file(file_path, config_json)
+
     return file_path
 
 
@@ -222,7 +227,7 @@ def create_config_model(name, *,
                         script_command='ls',
                         output_files=None,
                         requires_terminal=None,
-                        schedulable=True,
+                        schedulable=None,
                         logging_config: LoggingConfig = None,
                         output_format=None):
     result_config = {}
@@ -236,7 +241,9 @@ def create_config_model(name, *,
         result_config['parameters'] = parameters
 
     if path is None:
-        path = name
+        path = create_file(name + '.json', text='{}', overwrite=True)
+    elif not os.path.exists(path):
+        path = create_file(path, text='{}', overwrite=True)
 
     if output_files is not None:
         result_config['output_files'] = output_files
@@ -245,7 +252,10 @@ def create_config_model(name, *,
         result_config['requires_terminal'] = requires_terminal
 
     if schedulable is not None:
-        result_config['scheduling'] = {'enabled': schedulable}
+        if 'scheduling' in result_config:
+            result_config['scheduling']['enabled'] = schedulable
+        else:
+            result_config['scheduling'] = {'enabled': schedulable}
 
     if output_format:
         result_config['output_format'] = output_format
@@ -255,9 +265,17 @@ def create_config_model(name, *,
             'execution_file': logging_config.filename_pattern,
             'execution_date_format': logging_config.date_format}
 
-    result_config['script_path'] = script_command
+    if script_command:
+        result_config['script_path'] = script_command
 
-    model = ConfigModel(result_config, path, username, audit_name, process_invoker)
+    model = ConfigModel(
+        result_config,
+        path,
+        username,
+        audit_name,
+        True,
+        temp_folder,
+        process_invoker)
     if parameter_values is not None:
         model.set_all_param_values(parameter_values)
 

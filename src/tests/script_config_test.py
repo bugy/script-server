@@ -6,7 +6,7 @@ from parameterized import parameterized
 
 from config.constants import PARAM_TYPE_SERVER_FILE, PARAM_TYPE_MULTISELECT
 from config.exceptions import InvalidConfigException
-from model.script_config import ConfigModel, InvalidValueException, TemplateProperty, ParameterNotFoundException, \
+from model.script_config import InvalidValueException, TemplateProperty, ParameterNotFoundException, \
     get_sorted_config
 from model.value_wrapper import ScriptValueWrapper
 from react.properties import ObservableDict, ObservableList
@@ -259,10 +259,10 @@ class ConfigModelListFilesTest(unittest.TestCase):
         param = create_script_param_config('recurs_file',
                                            type=PARAM_TYPE_SERVER_FILE,
                                            file_recursive=True,
-                                           file_dir=test_utils.temp_folder)
+                                           file_dir=self.subfolder)
         config_model = _create_config_model('my_conf', parameters=[param])
 
-        create_files(['file1', 'file2'])
+        create_files(['file1', 'file2'], 'sub')
         file_names = [f['name'] for f in (config_model.list_files_for_param('recurs_file', []))]
         self.assertCountEqual(['file1', 'file2'], file_names)
 
@@ -271,20 +271,23 @@ class ConfigModelListFilesTest(unittest.TestCase):
                                            type=PARAM_TYPE_SERVER_FILE,
                                            file_recursive=True,
                                            file_dir='.')
-        config_model = _create_config_model('my_conf', parameters=[param], working_dir=test_utils.temp_folder)
+        config_model = _create_config_model('my_conf', parameters=[param], working_dir=self.subfolder)
 
-        create_files(['file1', 'file2'])
+        create_files(['file1', 'file2'], 'sub')
         file_names = [f['name'] for f in (config_model.list_files_for_param('recurs_file', []))]
         self.assertCountEqual(['file1', 'file2'], file_names)
 
     def test_list_files_when_unknown_param(self):
-        config_model = _create_config_model('my_conf', parameters=[], working_dir=test_utils.temp_folder)
+        config_model = _create_config_model('my_conf', parameters=[], working_dir=self.subfolder)
 
         self.assertRaises(ParameterNotFoundException, config_model.list_files_for_param, 'recurs_file', [])
 
     def setUp(self):
         super().setUp()
         test_utils.setup()
+
+        self.subfolder = os.path.join(test_utils.temp_folder, 'sub')
+        os.mkdir(self.subfolder)
 
     def tearDown(self):
         super().tearDown()
@@ -399,14 +402,17 @@ class ParameterModelDependantValuesTest(unittest.TestCase):
 class ConfigModelIncludeTest(unittest.TestCase):
     def test_static_include_simple(self):
         included_path = test_utils.write_script_config({'script_path': 'ping google.com'}, 'included')
+        included_path = file_utils.relative_path(included_path, test_utils.temp_folder)
         config_model = _create_config_model('main_conf', script_path=None, config={'include': included_path})
 
         self.assertEqual('ping google.com', config_model.script_command)
 
     def test_static_include_multiple_inclusions(self):
         included_path_1 = test_utils.write_script_config({'script_path': 'ping google.com'}, 'included1')
+        included_path_1 = file_utils.relative_path(included_path_1, test_utils.temp_folder)
         included_path_2 = test_utils.write_script_config(
             {'script_path': 'echo 123', 'working_directory': '123'}, 'included2')
+        included_path_2 = file_utils.relative_path(included_path_2, test_utils.temp_folder)
         config_model = _create_config_model(
             'main_conf',
             script_path=None,
@@ -419,6 +425,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
             'script_path': 'ping google.com',
             'working_directory': '123'},
             'included')
+        included_path = file_utils.relative_path(included_path, test_utils.temp_folder)
         config_model = _create_config_model('main_conf', config={
             'include': included_path,
             'working_directory': 'abc'})
@@ -429,6 +436,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
         included_path = test_utils.write_script_config({'parameters': [
             create_script_param_config('param2', type='int')
         ]}, 'included1')
+        included_path = file_utils.relative_path(included_path, test_utils.temp_folder)
         config_model = _create_config_model('main_conf', config={
             'include': included_path,
             'parameters': [create_script_param_config('param1', type='text')]})
@@ -448,12 +456,14 @@ class ConfigModelIncludeTest(unittest.TestCase):
                 create_script_param_config('param2', type='int'),
                 create_script_param_config('param3'),
             ]}, 'included1')
+        included_path_1 = file_utils.relative_path(included_path_1, test_utils.temp_folder)
         included_path_2 = test_utils.write_script_config({
             'parameters': [
                 create_script_param_config('param2', type='ip4'),
                 create_script_param_config('param4'),
                 create_script_param_config(None),
             ]}, 'included2')
+        included_path_2 = file_utils.relative_path(included_path_2, test_utils.temp_folder)
 
         config_model = _create_config_model('main_conf', config={
             'include': [included_path_1, included_path_2],
@@ -482,6 +492,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
             'script_path': 'ping google.com',
             'hidden': True},
             'included')
+        included_path = file_utils.relative_path(included_path, test_utils.temp_folder)
         config_model = _create_config_model('main_conf', script_path=None, config={'include': included_path})
 
         self.assertEqual('ping google.com', config_model.script_command)
@@ -546,6 +557,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
         included_path = test_utils.write_script_config({'parameters': [
             create_script_param_config('included_param')
         ]}, 'included', folder)
+        included_path = file_utils.relative_path(included_path, test_utils.temp_folder)
         included_folder = os.path.dirname(included_path)
         config_model = _create_config_model(
             'main_conf',
@@ -554,7 +566,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
                 'include': '${p1}',
                 'working_directory': included_folder,
                 'parameters': [create_script_param_config('p1')]})
-        config_model.set_param_value('p1', 'included.json')
+        config_model.set_param_value('p1', included_path)
 
         self.assertEqual(2, len(config_model.parameters))
 
@@ -566,6 +578,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
         included_path2 = test_utils.write_script_config({'parameters': [
             create_script_param_config('included_param_Y')
         ]}, 'included2')
+        included_path2 = file_utils.relative_path(included_path2, test_utils.temp_folder)
 
         config_model.set_param_value('p1', included_path2)
 
@@ -588,6 +601,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
             create_script_param_config('included_param1'),
             create_script_param_config('included_param2')
         ]}, 'included')
+        included_path = file_utils.relative_path(included_path, test_utils.temp_folder)
         config_model = _create_config_model(
             'main_conf',
             config={
@@ -604,6 +618,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
         included_path = test_utils.write_script_config({'parameters': [
             create_script_param_config('included_param1', values_script='echo ${p1}'),
         ]}, 'included')
+        included_path = file_utils.relative_path(included_path, test_utils.temp_folder)
         config_model = _create_config_model(
             'main_conf',
             config={
@@ -659,12 +674,14 @@ class ConfigModelIncludeTest(unittest.TestCase):
             'parameters': [
                 create_script_param_config('param3', type='int'),
             ]}, 'included1')
+        included_path_1 = file_utils.relative_path(included_path_1, test_utils.temp_folder)
         included_path_2 = test_utils.write_script_config({
             'description': 'test desc',
             'parameters': [
                 create_script_param_config('param3', type='ip4'),
                 create_script_param_config('param4')
             ]}, 'included2')
+        included_path_2 = file_utils.relative_path(included_path_2, test_utils.temp_folder)
 
         config_model = _create_config_model('main_conf', config={
             'include': ['${param1}', included_path_2[:-6] + '${param2}.json'],
@@ -686,6 +703,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
 
     def prepare_config_model_with_included(self, included_params, static_param_name):
         included_path = test_utils.write_script_config({'parameters': included_params}, 'included')
+        included_path = file_utils.relative_path(included_path, test_utils.temp_folder)
         config_model = _create_config_model('main_conf', config={
             'include': '${' + static_param_name + '}',
             'parameters': [create_script_param_config(static_param_name)]})
@@ -1079,6 +1097,7 @@ class SchedulableConfigTest(unittest.TestCase):
         another_path = test_utils.write_script_config(
             {'parameters': [{'name': 'p2', 'secure': True}]},
             'another_config')
+        another_path = file_utils.relative_path(another_path, test_utils.temp_folder)
 
         self.assertTrue(config_model.schedulable)
 
@@ -1177,28 +1196,31 @@ def _create_config_model(name, *,
                          parameters=None,
                          parameter_values=None,
                          working_dir=None,
-                         script_path='echo 123',
+                         script_path='DEFAULT',
                          skip_invalid_parameters=False):
     result_config = {}
-
-    if script_path is not None:
-        result_config['script_path'] = script_path
 
     if config:
         result_config.update(config)
 
-    result_config['name'] = name
-
-    if parameters is not None:
-        result_config['parameters'] = parameters
-
-    if path is None:
-        path = name
-
     if working_dir is not None:
         result_config['working_directory'] = working_dir
 
-    model = ConfigModel(result_config, path, username, audit_name, test_utils.process_invoker)
+    if script_path == 'DEFAULT':
+        if config and 'script_path' in config:
+            script_path = None
+        else:
+            script_path = 'echo 123'
+
+    model = test_utils.create_config_model(
+        name,
+        script_command=script_path,
+        config=result_config,
+        username=username,
+        audit_name=audit_name,
+        path=path,
+        parameters=parameters)
+
     if parameter_values is not None:
         model.set_all_param_values(parameter_values, skip_invalid_parameters=skip_invalid_parameters)
 

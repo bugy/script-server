@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import tempfile
 import unittest
 from collections import OrderedDict
 from shutil import copyfile
@@ -30,6 +31,14 @@ class ConfigServiceTest(unittest.TestCase):
         self.assertEqual(1, len(configs))
         self.assertEqual('conf_x', configs[0].name)
 
+    def test_list_configs_when_one_and_symlink(self):
+        conf_path = os.path.join(test_utils.temp_folder, 'runners', 'sub', 'x.json')
+        with self._temporary_file_symlink(conf_path, {'name': 'test X'}):
+            configs = self.config_service.list_configs(self.user)
+            self.assertEqual(1, len(configs))
+            self.assertEqual('test X', configs[0].name)
+            self.assertEqual('sub', configs[0].group)
+
     def test_list_configs_when_multiple(self):
         _create_script_config_file('conf_x')
         _create_script_config_file('conf_y')
@@ -40,9 +49,9 @@ class ConfigServiceTest(unittest.TestCase):
         self.assertCountEqual(['conf_x', 'conf_y', 'A B C'], conf_names)
 
     def test_list_configs_when_multiple_and_subfolders(self):
-        _create_script_config_file('conf_x', subfolder = 's1')
-        _create_script_config_file('conf_y', subfolder = 's2')
-        _create_script_config_file('ABC', subfolder = os.path.join('s1', 'inner'))
+        _create_script_config_file('conf_x', subfolder='s1')
+        _create_script_config_file('conf_y', subfolder='s2')
+        _create_script_config_file('ABC', subfolder=os.path.join('s1', 'inner'))
 
         configs = self.config_service.list_configs(self.user)
         conf_names = [config.name for config in configs]
@@ -114,6 +123,36 @@ class ConfigServiceTest(unittest.TestCase):
         config = self.config_service.load_config_model('Name with slash /', self.user)
         self.assertEqual('Name with slash /', config.name)
 
+    def test_list_configs_when_multiple_subfolders_and_symlink(self):
+        def create_config_file(name, relative_path, group=None):
+            filename = os.path.basename(relative_path)
+            test_utils.write_script_config(
+                {'name': name, 'group': group},
+                filename,
+                config_folder=os.path.join(test_utils.temp_folder, 'runners', os.path.dirname(relative_path)))
+
+        subfolder = os.path.join(test_utils.temp_folder, 'runners', 'sub')
+        symlink_path = os.path.join(subfolder, 'x.json')
+        with self._temporary_file_symlink(symlink_path, {'name': 'test X'}):
+            create_config_file('conf Y', os.path.join('sub', 'y', 'conf_y.json'))
+            create_config_file('conf Z', os.path.join('sub', 'z', 'conf_z.json'))
+            create_config_file('conf A', 'conf_a.json')
+            create_config_file('conf B', os.path.join('b', 'conf_b.json'))
+            create_config_file('conf C', os.path.join('c', 'conf_c.json'), group='test group')
+
+            configs = self.config_service.list_configs(self.user)
+            actual_name_group_map = {c.name: c.group for c in configs}
+
+            self.assertEqual(
+                actual_name_group_map,
+                {'test X': 'sub',
+                 'conf Y': 'sub',
+                 'conf Z': 'sub',
+                 'conf A': None,
+                 'conf B': 'b',
+                 'conf C': 'test group'},
+            )
+
     def tearDown(self):
         super().tearDown()
         test_utils.cleanup()
@@ -125,7 +164,19 @@ class ConfigServiceTest(unittest.TestCase):
         self.user = User('ConfigServiceTest', {AUTH_USERNAME: 'ConfigServiceTest'})
         self.admin_user = User('admin_user', {AUTH_USERNAME: 'The Admin'})
         authorizer = Authorizer(ANY_USER, ['admin_user'], [], [], EmptyGroupProvider())
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, True, test_utils.process_invoker)
+
+    @staticmethod
+    def _temporary_file_symlink(symlink_path, file_content: dict):
+        f = tempfile.NamedTemporaryFile()
+
+        f.write(json.dumps(file_content).encode('utf-8'))
+        f.flush()
+        subdir = os.path.dirname(symlink_path)
+        os.makedirs(subdir)
+        os.symlink(f.name, symlink_path)
+
+        return f
 
 
 class ConfigServiceAuthTest(unittest.TestCase):
@@ -209,7 +260,11 @@ class ConfigServiceAuthTest(unittest.TestCase):
         authorizer = Authorizer([], ['adm_user'], [], [], EmptyGroupProvider())
         self.user1 = User('user1', {})
         self.admin_user = User('adm_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
+        self.config_service = ConfigService(
+            authorizer,
+            test_utils.temp_folder,
+            True,
+            test_utils.process_invoker)
 
 
 def script_path(path):
@@ -242,7 +297,7 @@ class ConfigServiceCreateConfigTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, True, test_utils.process_invoker)
 
     def tearDown(self):
         super().tearDown()
@@ -416,7 +471,7 @@ class ConfigServiceUpdateConfigTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, True, test_utils.process_invoker)
 
         for suffix in 'XYZ':
             name = 'Conf ' + suffix
@@ -669,7 +724,7 @@ class ConfigServiceLoadConfigForAdminTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user'], [], [], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, True, test_utils.process_invoker)
 
     def tearDown(self):
         super().tearDown()
@@ -717,7 +772,7 @@ class ConfigServiceLoadCodeTest(unittest.TestCase):
 
         authorizer = Authorizer([], ['admin_user', 'admin_non_editor'], [], ['admin_user'], EmptyGroupProvider())
         self.admin_user = User('admin_user', {})
-        self.config_service = ConfigService(authorizer, test_utils.temp_folder, test_utils.process_invoker)
+        self.config_service = ConfigService(authorizer, test_utils.temp_folder, True, test_utils.process_invoker)
 
         for pair in [('script.py', b'123'),
                      ('another.py', b'xyz'),
