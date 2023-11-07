@@ -82,4 +82,4 @@ deploy:
     on:
       tags: false
       all_branches: true
-      condition: "$TRAVIS_BRANCH =~ ^stable|master$"
+      condition: "$TRAVIS_BRANCH =~ ^stable|master|test-amd-build$"
