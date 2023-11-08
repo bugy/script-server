@@ -25,7 +25,7 @@ docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
 
 ADDITIONAL_TAG_ARG=""
 if [ ! -z "$NEW_GIT_TAG" ]; then
-  ADDITIONAL_TAG_ARG="-t '$IMAGE_NAME:$NEW_GIT_TAG'"
+  ADDITIONAL_TAG_ARG="-t $IMAGE_NAME:$NEW_GIT_TAG"
 fi
 
 docker buildx create --use
