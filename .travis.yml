@@ -31,6 +31,9 @@ before_install:
   - sudo apt-get -y install python3-pip python3-setuptools apache2-utils python3-venv
   - wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/116.0.5845.96/linux64/chromedriver-linux64.zip
   - unzip chromedriver-linux64.zip -d $HOME/.local/bin
+  - mkdir -vp ~/.docker/cli-plugins/
+  - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.11.2/buildx-v0.11.2.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
+  - chmod a+x ~/.docker/cli-plugins/docker-buildx
 install:
   - pip3 install -r requirements.txt
   - pip3 install pyasn1 --upgrade
