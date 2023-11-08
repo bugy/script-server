@@ -23,11 +23,13 @@ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
 docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
 
-docker buildx create --use
-docker buildx build --platform linux/amd64,linux/arm64 --push -f tools/Dockerfile -t "$IMAGE_NAME":"$DOCKER_TAG" .
-
-echo "NEW_GIT_TAG=$NEW_GIT_TAG"
+ADDITIONAL_TAG_ARG=""
 if [ ! -z "$NEW_GIT_TAG" ]; then
-  docker tag "$IMAGE_NAME":"$DOCKER_TAG" "$IMAGE_NAME":"$NEW_GIT_TAG"
-  docker push "$IMAGE_NAME":"$NEW_GIT_TAG"
+  ADDITIONAL_TAG_ARG="-t '$IMAGE_NAME:$NEW_GIT_TAG'"
 fi
+
+docker buildx create --use
+docker buildx build --platform linux/amd64,linux/arm64 --push -f tools/Dockerfile \
+  -t "$IMAGE_NAME":"$DOCKER_TAG" \
+  $ADDITIONAL_TAG_ARG \
+  .
