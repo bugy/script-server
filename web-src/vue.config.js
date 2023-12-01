@@ -59,6 +59,8 @@ module.exports = {
 
         const IS_VENDOR = /[\\/]node_modules[\\/]/;
 
+        config.resolve.extensions.prepend('.mjs')
+
         // ATTENTION! do not use minSize/maxSize until vue-cli moved to the 4th version of html-webpack-plugin
         // Otherwise plugin won't be able to find split packages
         config.optimization
