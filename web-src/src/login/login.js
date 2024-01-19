@@ -34,6 +34,13 @@ function checkRedirectReason() {
     return redirectReason;
 }
 
+function validateURL(url) {
+    if (!url || url.startsWith('http') || url.startsWith('/')) {
+        return url;
+    }
+    return '/';
+}
+
 function onLoad() {
     axiosInstance.get('auth/config').then(({data: config}) => {
         const loginContainer = document.getElementById('login-content-container');
@@ -109,7 +116,7 @@ function setupOAuth(loginContainer, authConfig, templateName, buttonId) {
             'token': token,
             'urlFragment': window.location.hash
         };
-        localState[NEXT_URL_KEY] = getQueryParameter(NEXT_URL_KEY);
+        localState[NEXT_URL_KEY] = validateURL(getQueryParameter(NEXT_URL_KEY));
 
         saveState(localState);
 
@@ -138,7 +145,7 @@ function processCurrentOauthState() {
             return;
         }
 
-        var nextUrl = oauthState[NEXT_URL_KEY];
+        var nextUrl = validateURL(oauthState[NEXT_URL_KEY]);
         var urlFragment = oauthState['urlFragment'];
 
         var previousLocation = getUnparameterizedUrl();
@@ -177,7 +184,7 @@ function getLoginButton() {
 
 function sendLoginRequest(formData) {
 
-    var nextUrl = getQueryParameter(NEXT_URL_KEY);
+    var nextUrl = validateURL(getQueryParameter(NEXT_URL_KEY));
     var nextUrlFragment = window.location.hash;
 
     if (nextUrl) {
