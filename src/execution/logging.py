@@ -211,6 +211,17 @@ class ExecutionLoggingService:
 
         return entry
 
+    def find_history_script(self, script_name):
+        self._renew_files_cache()
+
+        result = []
+        for file in self._ids_to_file_map.values():
+            history_entry = self._extract_history_entry(file)
+            if history_entry is not None and history_entry.script_name == script_name:
+                result.append(history_entry)
+
+        return result
+
     def find_log(self, execution_id):
         self._renew_files_cache()
 

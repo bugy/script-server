@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from datetime import datetime
 import functools
 import json
 import logging.config
@@ -16,7 +17,7 @@ from auth.user import User
 from concurrency.threading_decorators import threaded
 from config.config_service import ConfigNotAllowedException, CorruptConfigFileException
 from model import external_model
-from model.external_model import parameter_to_external
+from model.external_model import parameter_to_external, to_short_execution_log
 from model.model_helper import read_bool
 from model.script_config import ConfigModel
 from utils.process_utils import ExecutionException
@@ -189,6 +190,17 @@ class ScriptConfigSocket(tornado.websocket.WebSocketHandler):
                 return model
 
             config_model = yield (self._start_task(load_model))
+
+            def load_history():
+                running_script_ids = []
+                history_entries = self.application.execution_logging_service.find_history_script(config_model.name)
+                history_entries.sort(key=lambda x: x.start_time, reverse=True)
+                for entry in history_entries:
+                    if self.application.execution_service.is_running(entry.id, user):
+                        running_script_ids.append(entry.id)
+                return to_short_execution_log(history_entries, running_script_ids)
+
+            config_model.history = yield (self._start_task(load_history))
 
         except ConfigNotAllowedException:
             self.close(code=403, reason='Access to the script is denied')

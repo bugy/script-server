@@ -50,6 +50,8 @@
              type="text"
              v-on:keyup="inputKeyUpHandler">
     </div>
+
+    <executions-log-table v-if="scriptConfig" :rows="scriptConfig.history"/>
     <ScriptViewScheduleHolder v-if="!hideExecutionControls"
                               ref="scheduleHolder"
                               :scriptConfigComponentsHeight="scriptConfigComponentsHeight"
@@ -69,6 +71,8 @@ import {marked} from 'marked';
 import {mapActions, mapState} from 'vuex'
 import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
 import ScriptParametersView from './script-parameters-view'
+
+import ExecutionsLogTable from '@/common/components/history/executions-log'
 
 export default {
   data: function () {
@@ -96,7 +100,8 @@ export default {
     LogPanel,
     ScriptParametersView,
     ScheduleButton,
-    ScriptViewScheduleHolder
+    ScriptViewScheduleHolder,
+    ExecutionsLogTable
   },
 
   computed: {
