@@ -232,6 +232,9 @@ def create_authenticator(auth_object, temp_folder, process_invoker: ProcessInvok
     elif auth_type == 'google_oauth':
         from auth.auth_google_oauth import GoogleOauthAuthenticator
         authenticator = GoogleOauthAuthenticator(auth_object)
+    elif auth_type == 'azure_ad_oauth':
+        from auth.auth_azure_ad_oauth import AzureAdOAuthAuthenticator
+        authenticator = AzureAdOAuthAuthenticator(auth_object)
     elif auth_type == 'gitlab':
         from auth.auth_gitlab import GitlabOAuthAuthenticator
         authenticator = GitlabOAuthAuthenticator(auth_object)

@@ -6,6 +6,7 @@ from parameterized import parameterized
 
 from auth.auth_gitlab import GitlabOAuthAuthenticator
 from auth.auth_google_oauth import GoogleOauthAuthenticator
+from auth.auth_azure_ad_oauth import AzureAdOAuthAuthenticator
 from auth.auth_htpasswd import HtpasswdAuthenticator
 from auth.auth_ldap import LdapAuthenticator
 from auth.authorization import ANY_USER
@@ -263,6 +264,18 @@ class TestAuthConfig(unittest.TestCase):
             _from_json({'auth': {'type': 'google_oauth',
                                  'client_id': '1234',
                                  'secret': 'abcd'}})
+            
+    def test_azure_ad_oauth(self):
+        config = _from_json({'auth': {'type': 'azure_ad_oauth',
+                                      'auth_url': 'https://test.com/authorize',
+                                      'token_url': 'https://test.com/token',
+                                      'client_id': '1234',
+                                      'secret': 'abcd'}})
+        self.assertIsInstance(config.authenticator, AzureAdOAuthAuthenticator)
+        self.assertEquals('https://test.com/authorize', config.authenticator.auth_url)
+        self.assertEquals('https://test.com/token', config.authenticator.token_url)
+        self.assertEquals('1234', config.authenticator.client_id)
+        self.assertEquals('abcd', config.authenticator.secret)
 
     def test_gitlab_oauth(self):
         config = _from_json({
