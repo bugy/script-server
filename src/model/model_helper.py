@@ -33,7 +33,7 @@ def resolve_env_vars(value, *, full_match=False):
             return resolved
         return var_match
 
-    pattern = re.escape(ENV_VAR_PREFIX) + '\w+'
+    pattern = re.escape(ENV_VAR_PREFIX) + r'\w+'
     return re.sub(pattern, resolve_var, value)
 
 
@@ -48,13 +48,13 @@ def read_obligatory(values_dict, key, error_suffix=''):
 def read_list(values_dict, key, default=None):
     """
     Reads value from values_dict as a list
-    
+
     If value is a list, then list is returned
-    
+
     If value is missing, then default value is returned (or an empty list if not specified)
-    
+
     If value is a dictionary, then error is raised
-    
+
     Otherwise, a list of single element is returned as a value
     """
 
@@ -224,7 +224,7 @@ def replace_auth_vars(text, username, audit_name):
 
 
 def normalize_extension(extension):
-    return re.sub('^\.', '', extension).lower()
+    return re.sub(r'^\.', '', extension).lower()
 
 
 def list_files(dir, *, file_type=None, file_extensions=None, excluded_files_matcher: FileMatcher = None):
