@@ -258,7 +258,7 @@ def find_matching_files(file_pattern, script_output):
         if '#' in output_pattern:
             regex_start = output_pattern.find('#')
 
-            group_number_matches = re.findall('^#\d+#', output_pattern[regex_start:])
+            group_number_matches = re.findall(r'^#\d+#', output_pattern[regex_start:])
             if group_number_matches:
                 first_match = group_number_matches[0]
                 group_number = int(first_match[1:-1])
@@ -278,9 +278,9 @@ def find_matching_files(file_pattern, script_output):
                     if os_utils.is_linux() or os_utils.is_mac():
                         regex_pattern = '~?' + regex_pattern
                     elif os_utils.is_win():
-                        regex_pattern = '(([^\W\d_]:)|~)' + regex_pattern
+                        regex_pattern = r'(([^\W\d_]:)|~)' + regex_pattern
 
-                regex_pattern = regex_pattern.replace('#any_path', '(' + separator + '([\w.\-]|(\\\ ))+)+')
+                regex_pattern = regex_pattern.replace('#any_path', '(' + separator + r'([\w.\-]|(\\\ ))+)+')
                 found_matches = re.finditer(regex_pattern, script_output)
 
                 for match in found_matches:

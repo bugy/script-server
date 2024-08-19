@@ -12,7 +12,7 @@ class TemplateProperty:
         self._empty = empty
         self._parameters = parameters
 
-        pattern = re.compile('\${([^}]+)\}')
+        pattern = re.compile(r'\${([^}]+)\}')
 
         search_start = 0
         script_template = ''

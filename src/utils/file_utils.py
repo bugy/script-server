@@ -235,7 +235,7 @@ def _pre_3_5_recursive_glob(path_pattern, parent_path=None):
     if path_pattern.startswith('~'):
         path_pattern = os.path.expanduser(path_pattern)
 
-    file_name_regex = '([\w.-]|(\\\ ))*'
+    file_name_regex = r'([\w.-]|(\\\ ))*'
 
     pattern_chunks = path_pattern.split(os_utils.path_sep())
 
