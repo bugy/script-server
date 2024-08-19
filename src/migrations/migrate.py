@@ -135,7 +135,7 @@ def __migrate_old_files(context):
         log_basename = os.path.basename(old_file)
         filename = os.path.splitext(log_basename)[0]
 
-        match = re.fullmatch('(.+)_([^_]+)_((\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d))', filename)
+        match = re.fullmatch(r'(.+)_([^_]+)_((\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d))', filename)
         if match:
             script_name = match.group(1)
             username = match.group(2)
