@@ -101,6 +101,7 @@ h6.header {
 }
 
 #login-panel .login-google_oauth .login-info-label,
+#login-panel .login-azure_ad_oauth .login-info-label,
 #login-panel .login-gitlab .login-info-label,
 #login-panel .login-keycloak .login-info-label {
     margin-top: 16px;
@@ -146,6 +147,10 @@ h6.header {
 
 #login-google_oauth-button {
     background-image: url('../g-logo-plain.png');
+}
+
+#login-azure_ad_oauth-button {
+    background-image: url('../azure-ad-logo.png');
 }
 
 #login-panel .login-gitlab .login-info-label {
