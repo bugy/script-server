@@ -569,7 +569,7 @@ class ExecutionLoggingInitiatorTest(unittest.TestCase):
         self.assertEqual('some text\nanother text', log)
 
         log_files = os.listdir(test_utils.temp_folder)
-        self.assertEqual(['test-my_script-abc.log', 'conf'], log_files)
+        self.assertCountEqual(['test-my_script-abc.log', 'conf'], log_files)
 
     def test_exit_code(self):
         config_model = create_config_model(
