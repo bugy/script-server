@@ -289,7 +289,7 @@ class ExecutionLoggingService:
 
         parameters = {}
         for line in parameters_text.splitlines(keepends=True):
-            match = re.fullmatch('([\w_]+):(.*\r?\n)', line)
+            match = re.fullmatch(r'([\w_]+):(.*\r?\n)', line)
             if not match:
                 current_value += line
                 continue
