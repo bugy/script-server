@@ -241,6 +241,9 @@ def create_authenticator(auth_object, temp_folder, process_invoker: ProcessInvok
     elif auth_type == 'keycloak_openid':
         from auth.auth_keycloak_openid import KeycloakOpenidAuthenticator
         authenticator = KeycloakOpenidAuthenticator(auth_object)
+    elif auth_type == 'authentik':
+        from auth.auth_authentik_openid import AuthentikOpenidAuthenticator
+        authenticator = AuthentikOpenidAuthenticator(auth_object)
     elif auth_type == 'htpasswd':
         from auth.auth_htpasswd import HtpasswdAuthenticator
         authenticator = HtpasswdAuthenticator(auth_object, process_invoker)

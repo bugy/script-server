@@ -103,7 +103,8 @@ h6.header {
 #login-panel .login-google_oauth .login-info-label,
 #login-panel .login-azure_ad_oauth .login-info-label,
 #login-panel .login-gitlab .login-info-label,
-#login-panel .login-keycloak .login-info-label {
+#login-panel .login-keycloak .login-info-label,
+#login-panel .login-authentik .login-info-label {
     margin-top: 16px;
 }
 
@@ -165,4 +166,9 @@ h6.header {
 #login-keycloak-button {
     padding-left: 42px;
     background-image: url('../keycloak_icon.png');
+}
+
+#login-authentik-button {
+    padding-left: 50px;
+    background-image: url('../authentik_icon.png');
 }
