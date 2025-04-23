@@ -132,6 +132,11 @@ class ExecutionLoggingService:
                       script_config,
                       parameter_value_wrappers,
                       start_time_millis=None):
+        
+        if script_config.logging_config:
+            if not script_config.logging_config.enabled:
+                LOGGER.info(f'Logging is disabled for script {script_config.name}, skipping log creation')
+                return
 
         script_name = str(script_config.name)
 

@@ -60,9 +60,10 @@ class ServerConfig(object):
 
 
 class LoggingConfig:
-    def __init__(self, filename_pattern=None, date_format=None) -> None:
+    def __init__(self, filename_pattern=None, date_format=None, enabled=True) -> None:
         self.filename_pattern = filename_pattern
         self.date_format = date_format
+        self.enabled = enabled
 
     @classmethod
     def from_json(cls, json_config):
@@ -72,6 +73,7 @@ class LoggingConfig:
             json_logging_config = json_config
             config.filename_pattern = json_logging_config.get('execution_file')
             config.date_format = json_logging_config.get('execution_date_format')
+            config.enabled = model_helper.read_bool_from_config('enabled', json_logging_config, default=True)
 
         return config
 
