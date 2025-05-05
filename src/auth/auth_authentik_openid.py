@@ -19,10 +19,8 @@ class AuthentikOpenidAuthenticator(AbstractOauthAuthenticator):
             authenitk_url = authenitk_url + '/'
         self._authenitk_url = authenitk_url
 
-        # (oauth_authorize_url, oauth_token_url, oauth_scope, params_dict):
         super().__init__(authenitk_url + 'application/o/authorize/',
                          authenitk_url + 'application/o/token/',
-                         # "openid" scope is needed since version 20:
                          'email openid profile',
                          params_dict)
 

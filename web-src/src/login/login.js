@@ -3,7 +3,7 @@ import '@/common/materializecss/imports/cards';
 import '@/common/materializecss/imports/input-fields';
 import '@/common/style_imports';
 import '@/common/style_imports.js';
-import { axiosInstance } from '@/common/utils/axios_utils'
+import {axiosInstance} from '@/common/utils/axios_utils'
 import {
     addClass,
     contains,
@@ -42,7 +42,7 @@ function validateURL(url) {
 }
 
 function onLoad() {
-    axiosInstance.get('auth/config').then(({ data: config }) => {
+    axiosInstance.get('auth/config').then(({data: config}) => {
         const loginContainer = document.getElementById('login-content-container');
 
         if (config['type'] === 'google_oauth') {
@@ -170,7 +170,7 @@ function processCurrentOauthState() {
 
         var previousLocation = getUnparameterizedUrl();
         if (nextUrl) {
-            previousLocation += '?' + toQueryArgs({ 'next': nextUrl });
+            previousLocation += '?' + toQueryArgs({'next': nextUrl});
         }
         if (urlFragment) {
             previousLocation += urlFragment;
@@ -249,7 +249,7 @@ function sendLoginRequest(formData) {
     const loginButton = getLoginButton();
     loginButton.setAttribute('disabled', 'disabled');
 
-    axiosInstance.post(loginUrl, formData, { maxRedirects: 0 })
+    axiosInstance.post(loginUrl, formData, {maxRedirects: 0})
         .then(onSuccess)
         .catch(onError)
 }
