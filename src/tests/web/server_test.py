@@ -253,7 +253,7 @@ class ServerTest(TestCase):
         test_utils.write_script_config({'name': 's1'}, 's1', self.runners_folder)
 
         response = requests.get('http://127.0.0.1:12345/scripts', auth=HTTPBasicAuth('normal_user', 'wrong_pass'))
-        self.assertEquals(401, response.status_code)
+        self.assertEqual(401, response.status_code)
 
     @staticmethod
     def get_xsrf_token(session):

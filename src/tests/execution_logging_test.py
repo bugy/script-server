@@ -280,7 +280,7 @@ class TestLoggingService(unittest.TestCase):
         self.simulate_logging(execution_id='id4', user_id='userA')
 
         entries = self._get_entries_sorted(user_id)
-        self.assertEquals(2, len(entries))
+        self.assertEqual(2, len(entries))
 
         self.validate_history_entry(entry=entries[0], id='id1', user_id='userA')
         self.validate_history_entry(entry=entries[1], id='id4', user_id='userA')
@@ -292,7 +292,7 @@ class TestLoggingService(unittest.TestCase):
         self.simulate_logging(execution_id='id4', user_id='userA')
 
         entries = self._get_entries_sorted('power_user')
-        self.assertEquals(4, len(entries))
+        self.assertEqual(4, len(entries))
 
         self.validate_history_entry(entry=entries[0], id='id1', user_id='userA')
         self.validate_history_entry(entry=entries[1], id='id2', user_id='userB')
@@ -306,7 +306,7 @@ class TestLoggingService(unittest.TestCase):
         self.simulate_logging(execution_id='id4', user_id='userA')
 
         entries = self._get_entries_sorted('some user', system_call=True)
-        self.assertEquals(4, len(entries))
+        self.assertEqual(4, len(entries))
 
         self.validate_history_entry(entry=entries[0], id='id1', user_id='userA')
         self.validate_history_entry(entry=entries[1], id='id2', user_id='userB')
@@ -357,7 +357,7 @@ class TestLoggingService(unittest.TestCase):
         entry = self.logging_service.find_history_entry('id1', '192.168.2.12')
         self.validate_history_entry(entry, id='id1', user_name='userX', user_id='192.168.2.12')
 
-    def test_find_entry_when_windows_line_seperator(self):
+    def test_find_entry_when_windows_line_separator(self):
         self.simulate_logging(execution_id='id1', user_name='userX', user_id='192.168.2.12')
         _replace_line_separators(self.get_log_files(), '\n', '\r\n')
 
@@ -381,7 +381,7 @@ class TestLoggingService(unittest.TestCase):
         entry = self.logging_service.find_history_entry('id2', 'userA')
         self.assertIsNone(entry)
 
-    def test_find_log_when_windows_line_seperator(self):
+    def test_find_log_when_windows_line_separator(self):
         self.simulate_logging(execution_id='id1', log_lines=['hello', 'wonderful', 'world'])
         _replace_line_separators(self.get_log_files(), '\n', '\r\n')
 

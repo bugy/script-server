@@ -256,8 +256,8 @@ class TestAuthConfig(unittest.TestCase):
                                  'allowed_users': []
                              }})
         self.assertIsInstance(config.authenticator, GoogleOauthAuthenticator)
-        self.assertEquals('1234', config.authenticator.client_id)
-        self.assertEquals('abcd', config.authenticator.secret)
+        self.assertEqual('1234', config.authenticator.client_id)
+        self.assertEqual('abcd', config.authenticator.secret)
 
     def test_google_oauth_without_allowed_users(self):
         with self.assertRaisesRegex(Exception, 'access.allowed_users field is mandatory for google_oauth'):
@@ -272,10 +272,10 @@ class TestAuthConfig(unittest.TestCase):
                                       'client_id': '1234',
                                       'secret': 'abcd'}})
         self.assertIsInstance(config.authenticator, AzureAdOAuthAuthenticator)
-        self.assertEquals('https://test.com/authorize', config.authenticator.auth_url)
-        self.assertEquals('https://test.com/token', config.authenticator.token_url)
-        self.assertEquals('1234', config.authenticator.client_id)
-        self.assertEquals('abcd', config.authenticator.secret)
+        self.assertEqual('https://test.com/authorize', config.authenticator.auth_url)
+        self.assertEqual('https://test.com/token', config.authenticator.token_url)
+        self.assertEqual('1234', config.authenticator.client_id)
+        self.assertEqual('abcd', config.authenticator.secret)
 
     def test_gitlab_oauth(self):
         config = _from_json({
@@ -297,18 +297,18 @@ class TestAuthConfig(unittest.TestCase):
                                       'base_dn': 'dc=test',
                                       'version': 3}})
         self.assertIsInstance(config.authenticator, LdapAuthenticator)
-        self.assertEquals('http://test-ldap.net', config.authenticator.url)
-        self.assertEquals('|xyz|', config.authenticator.username_template.substitute(username='xyz'))
-        self.assertEquals('dc=test', config.authenticator._base_dn)
-        self.assertEquals(3, config.authenticator.version)
+        self.assertEqual('http://test-ldap.net', config.authenticator.url)
+        self.assertEqual('|xyz|', config.authenticator.username_template.substitute(username='xyz'))
+        self.assertEqual('dc=test', config.authenticator._base_dn)
+        self.assertEqual(3, config.authenticator.version)
 
     def test_ldap_multiple_urls(self):
         config = _from_json({'auth': {'type': 'ldap',
                                       'url': ['http://test-ldap-1.net', 'http://test-ldap-2.net'],
                                       'username_pattern': '|$username|'}})
         self.assertIsInstance(config.authenticator, LdapAuthenticator)
-        self.assertEquals(['http://test-ldap-1.net', 'http://test-ldap-2.net'], config.authenticator.url)
-        self.assertEquals('|xyz|', config.authenticator.username_template.substitute(username='xyz'))
+        self.assertEqual(['http://test-ldap-1.net', 'http://test-ldap-2.net'], config.authenticator.url)
+        self.assertEqual('|xyz|', config.authenticator.username_template.substitute(username='xyz'))
 
     def test_htpasswd_auth(self):
         file = test_utils.create_file('some-path', text='user1:1yL79Q78yczsM')
@@ -332,7 +332,7 @@ class TestSecurityConfig(unittest.TestCase):
     def test_default_config(self):
         config = _from_json({})
 
-        self.assertEquals('token', config.xsrf_protection)
+        self.assertEqual('token', config.xsrf_protection)
 
     @parameterized.expand([
         ('token',),
@@ -344,7 +344,7 @@ class TestSecurityConfig(unittest.TestCase):
             'xsrf_protection': xsrf_protection
         }})
 
-        self.assertEquals(xsrf_protection, config.xsrf_protection)
+        self.assertEqual(xsrf_protection, config.xsrf_protection)
 
     def test_xsrf_protection_when_unsupported(self):
         self.assertRaises(InvalidValueException, _from_json, {'security': {
@@ -375,18 +375,18 @@ class TestEnvVariables(unittest.TestCase):
     def test_default_config(self):
         config = _from_json({})
         env_vars = config.env_vars.build_env_vars()
-        self.assertEquals(env_vars, os.environ)
+        self.assertEqual(env_vars, os.environ)
 
     def test_config_when_safe_env_variables_used(self):
         config = _from_json({'title': '$$VAR1', 'auth': {'type': 'ldap', 'url': '$$MY_SECRET'}})
 
         env_vars = config.env_vars.build_env_vars()
-        self.assertEquals(env_vars, os.environ)
+        self.assertEqual(env_vars, os.environ)
         self.assertEqual('abcd', env_vars['VAR1'])
         self.assertEqual('qwerty', env_vars['MY_SECRET'])
 
-        self.assertEquals(config.title, '$$VAR1')
-        self.assertEquals(config.authenticator.url, '$$MY_SECRET')
+        self.assertEqual(config.title, '$$VAR1')
+        self.assertEqual(config.authenticator.url, '$$MY_SECRET')
 
     def test_config_when_unsafe_env_variables_used(self):
         config = _from_json({
@@ -410,18 +410,18 @@ class TestEnvVariables(unittest.TestCase):
         self.assertNotIn('EMAIL_PWD', env_vars)
         self.assertNotIn('EMAIL_PWD_2', env_vars)
 
-        self.assertEquals(config.title, '$$VAR1')
-        self.assertEquals(config.authenticator.secret, 'qwerty')
+        self.assertEqual(config.title, '$$VAR1')
+        self.assertEqual(config.authenticator.secret, 'qwerty')
 
         alert_destinations = AlertsService(config.alerts_config)._communication_service._destinations
-        self.assertEquals(alert_destinations[0]._communicator.password, '1234509')
-        self.assertEquals(alert_destinations[1]._communicator.password, '$VAR2')
+        self.assertEqual(alert_destinations[0]._communicator.password, '1234509')
+        self.assertEqual(alert_destinations[1]._communicator.password, '$VAR2')
 
         # noinspection PyTypeChecker
         callback_feature = ExecutionsCallbackFeature(None, config.callbacks_config, None)
         callback_destinations = callback_feature._communication_service._destinations
-        self.assertEquals(callback_destinations[0]._communicator.password, '007')
-        self.assertEquals(callback_destinations[1]._communicator.password, 'VAR1')
+        self.assertEqual(callback_destinations[0]._communicator.password, '007')
+        self.assertEqual(callback_destinations[1]._communicator.password, 'VAR1')
 
     def create_email_destination(self, password):
         return {'type': 'email',
