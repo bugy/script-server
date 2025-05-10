@@ -552,7 +552,7 @@ class TestReadIntFromConfig(unittest.TestCase):
 class TestReadStrFromConfig(unittest.TestCase):
     def test_normal_text(self):
         value = read_str_from_config({'key1': 'xyz'}, 'key1')
-        self.assertEquals('xyz', value)
+        self.assertEqual('xyz', value)
 
     def test_none_value_no_default(self):
         value = read_str_from_config({'key1': None}, 'key1')
@@ -560,7 +560,7 @@ class TestReadStrFromConfig(unittest.TestCase):
 
     def test_none_value_with_default(self):
         value = read_str_from_config({'key1': None}, 'key1', default='abc')
-        self.assertEquals('abc', value)
+        self.assertEqual('abc', value)
 
     def test_no_key_no_default(self):
         value = read_str_from_config({'key1': 'xyz'}, 'key2')
@@ -568,11 +568,11 @@ class TestReadStrFromConfig(unittest.TestCase):
 
     def test_no_key_with_default(self):
         value = read_str_from_config({'key1': 'xyz'}, 'key2', default='abc')
-        self.assertEquals('abc', value)
+        self.assertEqual('abc', value)
 
     def test_text_with_whitespaces(self):
         value = read_str_from_config({'key1': '  xyz  \n'}, 'key1')
-        self.assertEquals('  xyz  \n', value)
+        self.assertEqual('  xyz  \n', value)
 
     def test_text_when_blank_to_none_and_none(self):
         value = read_str_from_config({'key1': None}, 'key1', blank_to_none=True)
@@ -588,7 +588,7 @@ class TestReadStrFromConfig(unittest.TestCase):
 
     def test_text_when_blank_to_none_and_blank_and_default(self):
         value = read_str_from_config({'key1': ' \t \n'}, 'key1', blank_to_none=True, default='abc')
-        self.assertEquals('abc', value)
+        self.assertEqual('abc', value)
 
     def test_text_when_int(self):
         self.assertRaisesRegex(InvalidValueTypeException, 'Invalid key1 value: string expected, but was: 5',
