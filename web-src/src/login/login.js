@@ -51,6 +51,8 @@ function onLoad() {
             setupAzureAdOAuth(loginContainer, config);
         } else if (config['type'] === 'keycloak_openid') {
             setupKeycloakOpenid(loginContainer, config);
+        } else if (config['type'] === 'authentik') {
+            setupAuthentikAuth(loginContainer, config);
         } else if (config['type'] === 'gitlab') {
             setupGitlabOAuth(loginContainer, config);
         } else {
@@ -104,6 +106,14 @@ function setupKeycloakOpenid(loginContainer, authConfig) {
         authConfig,
         'login-keycloak-template',
         'login-keycloak-button')
+}
+
+function setupAuthentikAuth(loginContainer, authConfig) {
+    setupOAuth(
+        loginContainer,
+        authConfig,
+        'login-authentik-template',
+        'login-authentik-button')
 }
 
 function setupGitlabOAuth(loginContainer, authConfig) {
