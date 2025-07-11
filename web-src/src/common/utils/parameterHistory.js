@@ -33,23 +33,41 @@ export function saveParameterHistory(scriptName, parameterValues) {
         // Add current values to history (avoid duplicates)
         const newEntry = {
             timestamp: Date.now(),
-            values: { ...parameterValues }
+            values: { ...parameterValues },
+            favorite: false
         };
         
-        // Remove any existing entry with the same values
-        const filteredHistory = history.filter(entry => 
-            JSON.stringify(entry.values) !== JSON.stringify(newEntry.values)
+        // Check if an entry with the same values already exists
+        const existingEntryIndex = history.findIndex(entry => 
+            JSON.stringify(entry.values) === JSON.stringify(newEntry.values)
         );
         
-        // Add new entry at the beginning
-        filteredHistory.unshift(newEntry);
-        
-        // Keep only the most recent entries
-        if (filteredHistory.length > MAX_HISTORY_ENTRIES) {
-            filteredHistory.splice(MAX_HISTORY_ENTRIES);
+        let filteredHistory;
+        if (existingEntryIndex !== -1) {
+            // If entry exists, preserve its favorite status and update timestamp
+            filteredHistory = [...history];
+            filteredHistory[existingEntryIndex] = {
+                ...filteredHistory[existingEntryIndex],
+                timestamp: Date.now()
+            };
+        } else {
+            // If no duplicate exists, add new entry at the beginning
+            filteredHistory = [newEntry, ...history];
         }
         
-        localStorage.setItem(key, JSON.stringify(filteredHistory));
+        // Keep only the most recent entries (excluding favorites)
+        const nonFavoriteEntries = filteredHistory.filter(entry => !entry.favorite);
+        const favoriteEntries = filteredHistory.filter(entry => entry.favorite);
+        
+        // Limit non-favorite entries
+        if (nonFavoriteEntries.length > MAX_HISTORY_ENTRIES) {
+            nonFavoriteEntries.splice(MAX_HISTORY_ENTRIES);
+        }
+        
+        // Combine favorites first, then non-favorites
+        const finalHistory = [...favoriteEntries, ...nonFavoriteEntries];
+        
+        localStorage.setItem(key, JSON.stringify(finalHistory));
     } catch (error) {
         console.warn('Failed to save parameter history:', error);
     }
@@ -64,7 +82,13 @@ export function loadParameterHistory(scriptName) {
     try {
         const key = getStorageKey(scriptName);
         const stored = localStorage.getItem(key);
-        return stored ? JSON.parse(stored) : [];
+        const history = stored ? JSON.parse(stored) : [];
+        
+        // Ensure all entries have the favorite property (for backward compatibility)
+        return history.map(entry => ({
+            ...entry,
+            favorite: entry.favorite || false
+        }));
     } catch (error) {
         console.warn('Failed to load parameter history:', error);
         return [];
@@ -97,6 +121,12 @@ export function removeParameterHistoryEntry(scriptName, index) {
             return;
         }
         
+        // Don't allow removal of favorite entries
+        if (history[index].favorite) {
+            console.warn('Cannot remove favorite entry');
+            return;
+        }
+        
         // Remove the entry at the specified index
         history.splice(index, 1);
         
@@ -104,5 +134,43 @@ export function removeParameterHistoryEntry(scriptName, index) {
         localStorage.setItem(key, JSON.stringify(history));
     } catch (error) {
         console.warn('Failed to remove parameter history entry:', error);
+    }
+}
+
+/**
+ * Toggle favorite status of a parameter history entry
+ * @param {string} scriptName - The name of the script
+ * @param {number} index - The index of the entry to toggle (0-based)
+ */
+export function toggleFavoriteEntry(scriptName, index) {
+    try {
+        const key = getStorageKey(scriptName);
+        const history = loadParameterHistory(scriptName);
+        
+        // Check if the index is valid
+        if (index < 0 || index >= history.length) {
+            console.warn(`Invalid index: ${index} for script: ${scriptName}`);
+            return;
+        }
+        
+        // Toggle favorite status
+        history[index].favorite = !history[index].favorite;
+        
+        // Reorder entries: favorites first, then non-favorites
+        const favoriteEntries = history.filter(entry => entry.favorite);
+        const nonFavoriteEntries = history.filter(entry => !entry.favorite);
+
+        // Limit non-favorite entries
+        if (nonFavoriteEntries.length > MAX_HISTORY_ENTRIES) {
+            nonFavoriteEntries.splice(MAX_HISTORY_ENTRIES);
+        }
+        
+        // Combine favorites first, then non-favorites
+        const finalHistory = [...favoriteEntries, ...nonFavoriteEntries];
+        
+        // Save the updated history back to localStorage
+        localStorage.setItem(key, JSON.stringify(finalHistory));
+    } catch (error) {
+        console.warn('Failed to toggle favorite entry:', error);
     }
 }

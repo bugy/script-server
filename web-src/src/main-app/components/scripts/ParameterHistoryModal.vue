@@ -7,10 +7,16 @@
       </div>
       
       <div v-else>
-        <div v-for="(entry, index) in history" :key="index" class="entry">
+        <div v-for="(entry, index) in history" :key="index" class="entry" :class="{ 'favorite': entry.favorite }">
           <div class="header">
             <span class="timestamp">{{ formatTimestamp(entry.timestamp) }}</span>
             <div class="header-buttons">
+              <button class="btn-flat favorite-btn" 
+                      @click="toggleFavorite(index)"
+                      :title="entry.favorite ? 'Remove from favorites' : 'Add to favorites'"
+                      :class="{ 'favorited': entry.favorite }">
+                <i class="material-icons">{{ entry.favorite ? 'star' : 'star_border' }}</i>
+              </button>
               <button class="btn-flat use-btn" 
                       @click="useParameters(entry.values)"
                       title="Use these parameters">
@@ -18,7 +24,8 @@
               </button>
               <button class="btn-flat remove-btn" 
                       @click="removeEntry(index)"
-                      title="Remove this entry">
+                      title="Remove this entry"
+                      :disabled="entry.favorite">
                 <i class="material-icons">delete</i>
               </button>
             </div>
@@ -37,7 +44,7 @@
 </template>
 
 <script>
-import { loadParameterHistory, removeParameterHistoryEntry } from '@/common/utils/parameterHistory';
+import { loadParameterHistory, removeParameterHistoryEntry, toggleFavoriteEntry } from '@/common/utils/parameterHistory';
 
 export default {
   name: 'ParameterHistoryModal',
@@ -78,6 +85,11 @@ export default {
       this.loadHistory();
     },
     
+    toggleFavorite(index) {
+      toggleFavoriteEntry(this.scriptName, index);
+      this.loadHistory();
+    },
+    
     useParameters(values) {
       this.$emit('use-parameters', values);
       this.modalInstance?.close();
@@ -102,6 +114,12 @@ export default {
   border-radius: 4px;
   margin-bottom: 12px;
   padding: 12px;
+  transition: all 0.2s ease;
+}
+
+.entry.favorite {
+  border-color: var(--primary-color);
+  background-color: rgba(var(--primary-color-rgb), 0.05);
 }
 
 .header {
@@ -123,6 +141,27 @@ export default {
   color: var(--primary-color);
 }
 
+.favorite-btn {
+  padding: 4px;
+  min-width: 32px;
+  height: 32px;
+  line-height: 24px;
+  color: var(--font-color-secondary);
+  transition: all 0.2s ease;
+}
+
+.favorite-btn.favorited {
+  color: var(--primary-color);
+}
+
+.favorite-btn:hover {
+  color: var(--primary-color);
+}
+
+.favorite-btn i {
+  font-size: 18px;
+}
+
 .use-btn {
   padding: 4px;
   min-width: 32px;
@@ -140,6 +179,11 @@ export default {
   min-width: 32px;
   height: 32px;
   line-height: 24px;
+}
+
+.remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .remove-btn i {
