@@ -10,7 +10,8 @@ import scriptExecutor, {
     STATUS_INITIALIZING
 } from './scriptExecutor';
 import {parametersToFormData} from '@/main-app/store/mainStoreHelper';
-import axios from 'axios'
+import axios from 'axios';
+import { saveParameterHistory } from '@/common/utils/parameterHistory';
 
 export default {
     namespaced: true,
@@ -121,6 +122,9 @@ export default {
 
             const parameterValues = clone(rootState.scriptSetup.parameterValues);
             const scriptName = rootState.scriptConfig.scriptConfig.name;
+
+            // Save parameter history when script is executed
+            saveParameterHistory(scriptName, parameterValues);
 
             const formData = parametersToFormData(parameterValues);
             formData.append('__script_name', scriptName);

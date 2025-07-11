@@ -10,6 +10,7 @@ import {
 import clone from 'lodash/clone';
 import isEqual from 'lodash/isEqual';
 import Vue from 'vue';
+import { getMostRecentValues } from '@/common/utils/parameterHistory';
 
 export default {
     namespaced: true,
@@ -73,13 +74,34 @@ export default {
                 return;
             }
 
-            const values = {};
-            for (const parameter of parameters) {
-                const defaultValue = !isNull(parameter.default) ? parameter.default : null;
-                values[parameter.name] = defaultValue;
+            // Try to load historical values first
+            const historicalValues = scriptConfig ? getMostRecentValues(scriptConfig.name) : null;
+            let values = {};
 
-                if (!isNull(values[parameter.name])) {
-                    commit('MEMORIZE_DEFAULT_VALUE', {parameterName: parameter.name, defaultValue});
+            if (historicalValues) {
+                // Only use historical values for parameters that exist in current config
+                for (const parameter of parameters) {
+                    const parameterName = parameter.name;
+                    if (historicalValues.hasOwnProperty(parameterName)) {
+                        values[parameterName] = historicalValues[parameterName];
+                    } else {
+                        const defaultValue = !isNull(parameter.default) ? parameter.default : null;
+                        values[parameterName] = defaultValue;
+                    }
+
+                    if (!isNull(values[parameterName])) {
+                        commit('MEMORIZE_DEFAULT_VALUE', {parameterName: parameter.name, defaultValue: values[parameterName]});
+                    }
+                }
+            } else {
+                // No historical values, use defaults
+                for (const parameter of parameters) {
+                    const defaultValue = !isNull(parameter.default) ? parameter.default : null;
+                    values[parameter.name] = defaultValue;
+
+                    if (!isNull(values[parameter.name])) {
+                        commit('MEMORIZE_DEFAULT_VALUE', {parameterName: parameter.name, defaultValue});
+                    }
                 }
             }
 
