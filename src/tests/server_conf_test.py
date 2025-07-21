@@ -4,9 +4,9 @@ import unittest
 
 from parameterized import parameterized
 
+from auth.auth_azure_ad_oauth import AzureAdOAuthAuthenticator
 from auth.auth_gitlab import GitlabOAuthAuthenticator
 from auth.auth_google_oauth import GoogleOauthAuthenticator
-from auth.auth_azure_ad_oauth import AzureAdOAuthAuthenticator
 from auth.auth_htpasswd import HtpasswdAuthenticator
 from auth.auth_ldap import LdapAuthenticator
 from auth.authorization import ANY_USER
@@ -264,7 +264,7 @@ class TestAuthConfig(unittest.TestCase):
             _from_json({'auth': {'type': 'google_oauth',
                                  'client_id': '1234',
                                  'secret': 'abcd'}})
-            
+
     def test_azure_ad_oauth(self):
         config = _from_json({'auth': {'type': 'azure_ad_oauth',
                                       'auth_url': 'https://test.com/authorize',
@@ -293,22 +293,29 @@ class TestAuthConfig(unittest.TestCase):
     def test_ldap(self):
         config = _from_json({'auth': {'type': 'ldap',
                                       'url': 'http://test-ldap.net',
-                                      'username_pattern': '|$username|',
+                                      'ldap_user_resolver': {
+                                          'username_pattern': '|$username|'
+                                      },
                                       'base_dn': 'dc=test',
                                       'version': 3}})
         self.assertIsInstance(config.authenticator, LdapAuthenticator)
-        self.assertEqual('http://test-ldap.net', config.authenticator.url)
-        self.assertEqual('|xyz|', config.authenticator.username_template.substitute(username='xyz'))
+        ldap_connector = config.authenticator._ldap_connector
+        self.assertEqual('|xyz|', config.authenticator._ldap_user_resolver.username_template.substitute(username='xyz'))
         self.assertEqual('dc=test', config.authenticator._base_dn)
-        self.assertEqual(3, config.authenticator.version)
+        self.assertEqual('http://test-ldap.net', ldap_connector.url)
+        self.assertEqual(3, ldap_connector.version)
 
     def test_ldap_multiple_urls(self):
         config = _from_json({'auth': {'type': 'ldap',
                                       'url': ['http://test-ldap-1.net', 'http://test-ldap-2.net'],
-                                      'username_pattern': '|$username|'}})
+                                      'ldap_user_resolver': {
+                                          'username_pattern': '|$username|'
+                                      }}})
         self.assertIsInstance(config.authenticator, LdapAuthenticator)
-        self.assertEqual(['http://test-ldap-1.net', 'http://test-ldap-2.net'], config.authenticator.url)
-        self.assertEqual('|xyz|', config.authenticator.username_template.substitute(username='xyz'))
+        self.assertEqual(['http://test-ldap-1.net', 'http://test-ldap-2.net'],
+                         config.authenticator._ldap_connector.url)
+        self.assertEqual('|xyz|',
+                         config.authenticator._ldap_user_resolver.username_template.substitute(username='xyz'))
 
     def test_htpasswd_auth(self):
         file = test_utils.create_file('some-path', text='user1:1yL79Q78yczsM')
@@ -386,7 +393,7 @@ class TestEnvVariables(unittest.TestCase):
         self.assertEqual('qwerty', env_vars['MY_SECRET'])
 
         self.assertEqual(config.title, '$$VAR1')
-        self.assertEqual(config.authenticator.url, '$$MY_SECRET')
+        self.assertEqual(config.authenticator._ldap_connector.url, '$$MY_SECRET')
 
     def test_config_when_unsafe_env_variables_used(self):
         config = _from_json({
