@@ -70,8 +70,6 @@ export default {
 .button-history {
   margin-right: 16px;
   flex: 0 0 auto;
-  color: var(--primary-color);
-  border: 1px solid var(--outline-color);
   display: flex;
   align-items: center;
   justify-content: center;
