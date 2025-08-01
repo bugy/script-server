@@ -321,6 +321,48 @@ def __migrate_repeat_param_and_same_arg_param(context):
             _write_json(conf_file, json_object, content)
 
 
+@_migration('migrate_ldap_username_pattern_to_user_resolver')
+def __migrate_ldap_username_pattern_to_user_resolver(context):
+    """Migrate LDAP auth configuration to move username_pattern into ldap_user_resolver"""
+    file_path = context.conf_file
+
+    if not os.path.exists(file_path):
+        return
+
+    content = file_utils.read_file(file_path)
+    try:
+        json_object = custom_json.loads(content, object_pairs_hook=OrderedDict)
+    except:
+        LOGGER.exception('Failed to load config file for LDAP migration: ' + file_path)
+        return
+
+    if 'auth' not in json_object:
+        return
+
+    auth_config = json_object['auth']
+    if not isinstance(auth_config, dict):
+        return
+
+    if auth_config.get('type') != 'ldap':
+        return
+
+    if 'username_pattern' not in auth_config:
+        return
+    if 'ldap_user_resolver' in auth_config and 'username_pattern' in auth_config['ldap_user_resolver']:
+        return
+
+    username_pattern = auth_config['username_pattern']
+    del auth_config['username_pattern']
+
+    if 'ldap_user_resolver' not in auth_config:
+        auth_config['ldap_user_resolver'] = {}
+
+    auth_config['ldap_user_resolver']['username_pattern'] = username_pattern
+
+    LOGGER.info('Migrating LDAP username_pattern to ldap_user_resolver in ' + file_path)
+    _write_json(file_path, json_object, content)
+
+
 def _write_json(file_path, json_object, old_content):
     space_matches = re.findall(r'^\s+', old_content, flags=re.MULTILINE)
     if space_matches:

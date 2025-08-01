@@ -3,7 +3,7 @@ import logging
 import os
 from string import Template
 
-from ldap3 import Connection, SIMPLE
+from ldap3 import Connection, SIMPLE, Server
 from ldap3.core.exceptions import LDAPAttributeError
 from ldap3.utils.conv import escape_filter_chars
 
@@ -39,7 +39,7 @@ def _resolve_base_dn(full_username):
         return ''
 
 
-def _search(dn, search_request, attributes, connection):
+def _ldap_search(dn, search_request, attributes, connection):
     search_string = search_request.as_search_string()
 
     success = connection.search(dn, search_string, attributes=attributes)
@@ -53,7 +53,7 @@ def _search(dn, search_request, attributes, connection):
 
 
 def _load_multiple_entries_values(dn, search_request, attribute_name, connection):
-    entries = _search(dn, search_request, [attribute_name], connection)
+    entries = _ldap_search(dn, search_request, [attribute_name], connection)
     if entries is None:
         return []
 
@@ -77,31 +77,24 @@ class LdapAuthenticator(auth_base.Authenticator):
     def __init__(self, params_dict, temp_folder):
         super().__init__()
 
-        self.url = model_helper.read_obligatory(params_dict, 'url', ' for LDAP auth')
+        self._ldap_connector = LdapConnector(
+            model_helper.read_obligatory(params_dict, 'url', ' for LDAP auth'),
+            params_dict.get('version')
+        )
 
-        username_pattern = strip(params_dict.get('username_pattern'))
-        if username_pattern:
-            self.username_template = Template(username_pattern)
-        else:
-            self.username_template = None
+        self._ldap_user_resolver = LdapUserResolver(
+            params_dict.get('ldap_user_resolver'),
+            self._ldap_connector)
 
         base_dn = params_dict.get('base_dn')
         if base_dn:
             self._base_dn = base_dn.strip()
         else:
-            resolved_base_dn = _resolve_base_dn(username_pattern)
-
-            if resolved_base_dn:
-                LOGGER.info('Resolved base dn: ' + resolved_base_dn)
-                self._base_dn = resolved_base_dn
-            else:
+            self._base_dn = self._ldap_user_resolver.auto_resolve_base_dn()
+            if not self._base_dn:
                 LOGGER.warning(
                     'Cannot resolve LDAP base dn, so using empty. Please specify it using "base_dn" attribute')
                 self._base_dn = ''
-
-        self.version = params_dict.get("version")
-        if not self.version:
-            self.version = 3
 
         self._groups_file = os.path.join(temp_folder, 'ldap_groups.json')
         self._user_groups = self._load_groups(self._groups_file)
@@ -119,13 +112,10 @@ class LdapAuthenticator(auth_base.Authenticator):
     def _authenticate_internal(self, username, password):
         LOGGER.info('Logging in user ' + username)
 
-        if self.username_template:
-            full_username = self.username_template.substitute(username=username)
-        else:
-            full_username = username
+        full_username = self._ldap_user_resolver.resolve_ldap_username(username, self._base_dn)
 
         try:
-            connection = self._connect(full_username, password)
+            connection = self._ldap_connector.connect(full_username, password)
 
             if connection.bound:
                 try:
@@ -154,18 +144,6 @@ class LdapAuthenticator(auth_base.Authenticator):
             raise auth_base.AuthRejectedError('Invalid credentials')
 
         raise auth_base.AuthFailureError(error)
-
-    def _connect(self, full_username, password):
-        connection = Connection(
-            self.url,
-            user=full_username,
-            password=password,
-            authentication=SIMPLE,
-            read_only=True,
-            version=self.version
-        )
-        connection.bind()
-        return connection
 
     def _get_groups(self, user):
         groups = self._user_groups.get(user)
@@ -213,15 +191,8 @@ class LdapAuthenticator(auth_base.Authenticator):
             LOGGER.warning('Unsupported username pattern for ' + full_username)
             return full_username, None
 
-        entries = _search(base_dn, search_request, ['uid'], connection)
-        if not entries:
-            return full_username, None
+        entry = LdapConnector.find_user(base_dn, search_request, connection)
 
-        if len(entries) > 1:
-            LOGGER.warning('More than one user found by filter: ' + str(search_request))
-            return full_username, None
-
-        entry = entries[0]
         return get_entry_dn(entry), entry.uid.value
 
     def _load_groups(self, groups_file):
@@ -248,3 +219,123 @@ class SearchRequest:
 
     def __str__(self) -> str:
         return self.as_search_string()
+
+
+class LdapConnector:
+    def __init__(self, url, version):
+        self.url = url
+        self.version = version
+        if not self.version:
+            self.version = 3
+
+    def connect(self, full_username, password):
+        server = Server(self.url, connect_timeout=10)
+        connection = Connection(
+            server,
+            user=full_username,
+            password=password,
+            authentication=SIMPLE,
+            read_only=True,
+            version=self.version,
+        )
+        connection.bind()
+        return connection
+
+    @staticmethod
+    def find_user(base_dn, search_request, connection, attributes=None):
+        if attributes is None:
+            attributes = ['uid']
+
+        entries = _ldap_search(base_dn, search_request, attributes, connection)
+        if not entries:
+            return None
+
+        if len(entries) > 1:
+            LOGGER.warning('More than one user found by filter: ' + str(search_request))
+            return None
+
+        return entries[0]
+
+
+class LdapUserResolver:
+    def __init__(self, config, ldap_connector: LdapConnector) -> None:
+        self.username_template = None
+        self.username_pattern = None
+        self.search_by_attribute = None
+        self.admin_user = None
+        self.admin_password = None
+        self.ldap_connector = ldap_connector
+
+        if config:
+            username_pattern = strip(config.get('username_pattern'))
+            search_by_attribute = strip(config.get('search_by_attribute'))
+
+            # Validate that either username_pattern or search_by_attribute is specified
+            if not username_pattern and not search_by_attribute:
+                raise ValueError(
+                    'Either username_pattern or search_by_attribute must be specified in ldap_user_resolver.')
+
+            if username_pattern and search_by_attribute:
+                raise ValueError(
+                    'Cannot specify both username_pattern and search_by_attribute in ldap_user_resolver. Choose one method.')
+
+            if username_pattern:
+                self.username_template = Template(username_pattern)
+                self.username_pattern = username_pattern
+
+            if search_by_attribute:
+                self.search_by_attribute = search_by_attribute
+                self.admin_user = model_helper.read_obligatory(
+                    config,
+                    'admin_user',
+                    ' for ldap_user_resolver with search_by_attribute'
+                )
+                self.admin_password = model_helper.read_obligatory(
+                    config,
+                    'admin_password',
+                    ' for ldap_user_resolver with search_by_attribute'
+                )
+
+    def resolve_ldap_username(self, username, base_dn):
+        if self.username_template:
+            return self.username_template.substitute(username=username)
+        elif self.search_by_attribute:
+            resolved_dn = self._find_user_dn_by_attribute(username, base_dn)
+            return resolved_dn
+        else:
+            return username
+
+    def auto_resolve_base_dn(self):
+        if self.username_pattern:
+            resolved_base_dn = _resolve_base_dn(self.username_pattern)
+            if resolved_base_dn:
+                LOGGER.info('Resolved base dn: ' + resolved_base_dn)
+            return resolved_base_dn
+
+        if self.search_by_attribute:
+            resolved_base_dn = _resolve_base_dn(self.admin_user)
+            if not resolved_base_dn:
+                raise Exception('"base_dn" is required for search_by_attribute user resolution')
+            return resolved_base_dn
+
+        return None
+
+    def _find_user_dn_by_attribute(self, username, base_dn):
+        admin_connection = self.ldap_connector.connect(self.admin_user, self.admin_password)
+
+        try:
+            if not admin_connection.bound:
+                error_msg = f'Failed to bind with admin LDAP user: {admin_connection.last_error}'
+                LOGGER.error(error_msg)
+                raise auth_base.AuthFailureError(error_msg)
+
+            search_request = SearchRequest(f'({self.search_by_attribute}=%s)', username)
+
+            user = self.ldap_connector.find_user(base_dn, search_request, admin_connection)
+            if user is None:
+                raise auth_base.AuthRejectedError('Invalid credentials')
+
+            return get_entry_dn(user)
+
+        finally:
+            admin_connection.unbind()
