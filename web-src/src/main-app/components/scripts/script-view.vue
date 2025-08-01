@@ -19,12 +19,6 @@
               @click="stopScript">
         {{ stopButtonLabel }}
       </button>
-      <button class="button-history btn btn-flat"
-              @click="openParameterHistory"
-              title="Parameter History">
-        <i class="material-icons">history</i>
-        History
-      </button>
       <div v-if="schedulable" class="button-gap"></div>
       <ScheduleButton v-if="schedulable" :disabled="!enableScheduleButton" @click="openSchedule"/>
     </div>
@@ -60,7 +54,6 @@
                               ref="scheduleHolder"
                               :scriptConfigComponentsHeight="scriptConfigComponentsHeight"
                               @close="scheduleMode = false"/>
-    <ParameterHistoryModal ref="parameterHistoryModal" :scriptName="selectedScript" @use-parameters="handleUseParameters"/>
   </div>
 </template>
 
@@ -71,7 +64,6 @@ import {deepCloneObject, forEachKeyValue, isEmptyObject, isEmptyString, isNull} 
 import ScheduleButton from '@/main-app/components/scripts/ScheduleButton';
 import ScriptLoadingText from '@/main-app/components/scripts/ScriptLoadingText';
 import ScriptViewScheduleHolder from '@/main-app/components/scripts/ScriptViewScheduleHolder';
-import ParameterHistoryModal from '@/main-app/components/scripts/ParameterHistoryModal';
 import DOMPurify from 'dompurify';
 import {marked} from 'marked';
 import {mapActions, mapState} from 'vuex'
@@ -104,8 +96,7 @@ export default {
     LogPanel,
     ScriptParametersView,
     ScheduleButton,
-    ScriptViewScheduleHolder,
-    ParameterHistoryModal
+    ScriptViewScheduleHolder
   },
 
   computed: {
@@ -339,16 +330,7 @@ export default {
       this.$refs.logPanel.appendLog(text);
     },
 
-    openParameterHistory() {
-      this.$refs.parameterHistoryModal.open();
-    },
 
-    handleUseParameters(values) {
-      // Set all parameter values using the scriptSetup store
-      for (const [parameterName, value] of Object.entries(values)) {
-        this.$store.dispatch('scriptSetup/setParameterValue', { parameterName, value });
-      }
-    }
   },
 
   watch: {
@@ -510,20 +492,6 @@ export default {
   margin-left: 16px;
   flex: 1 1 104px;
   color: var(--font-on-primary-color-main)
-}
-
-.button-history {
-  margin-left: 16px;
-  flex: 1 1 auto;
-  color: var(--primary-color);
-  border: 1px solid var(--outline-color);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.button-history i {
-  font-size: 18px;
 }
 
 .schedule-button {
