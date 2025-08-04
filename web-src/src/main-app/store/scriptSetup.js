@@ -10,7 +10,7 @@ import {
 import clone from 'lodash/clone';
 import isEqual from 'lodash/isEqual';
 import Vue from 'vue';
-import { getMostRecentValues } from '@/common/utils/parameterHistory';
+import { getMostRecentValues, shouldUseHistoricalValues } from '@/common/utils/parameterHistory';
 
 export default {
     namespaced: true,
@@ -78,7 +78,7 @@ export default {
             const historicalValues = scriptConfig ? getMostRecentValues(scriptConfig.name) : null;
             let values = {};
 
-            if (historicalValues) {
+            if (historicalValues && shouldUseHistoricalValues(scriptConfig.name)) {
                 // Only use historical values for parameters that exist in current config
                 for (const parameter of parameters) {
                     const parameterName = parameter.name;

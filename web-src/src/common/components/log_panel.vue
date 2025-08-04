@@ -10,7 +10,7 @@
       <i class="material-icons">content_copy</i>
     </a>
     <a class="download-text-button btn-icon-flat waves-effect waves-circle" @click="downloadLog">
-      <i class="material-icons">arrow_downward</i>
+      <i class="material-icons">file_download</i>
     </a>
   </div>
 </template>

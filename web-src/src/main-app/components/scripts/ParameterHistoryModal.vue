@@ -2,6 +2,17 @@
   <div ref="modal" class="modal">
     <div class="modal-content">
       
+      <div class="use-historical-values-toggle">
+        <label>
+          <input 
+            type="checkbox" 
+            v-model="useHistoricalValues"
+            @change="saveToggleState"
+          />
+          <span>Use historical values when available</span>
+        </label>
+      </div>
+      
       <div v-if="!history.length">
         <p>No parameter history available for this script.</p>
       </div>
@@ -52,11 +63,12 @@ export default {
     scriptName: { type: String, required: true }
   },
   data() {
-    return { history: [] }
+    return { history: [], useHistoricalValues: false }
   },
   mounted() {
     this.loadHistory();
     this.initModal();
+    this.loadToggleState();
   },
   beforeDestroy() {
     this.modalInstance?.destroy();
@@ -77,6 +89,7 @@ export default {
     
     open() {
       this.loadHistory();
+      this.loadToggleState();
       this.modalInstance?.open();
     },
     
@@ -103,6 +116,14 @@ export default {
     
     formatTimestamp(timestamp) {
       return new Date(timestamp).toLocaleString();
+    },
+
+    saveToggleState() {
+      localStorage.setItem(`useHistoricalValues_${this.scriptName}`, this.useHistoricalValues);
+    },
+    
+    loadToggleState() {
+      this.useHistoricalValues = localStorage.getItem(`useHistoricalValues_${this.scriptName}`) === 'true';
     }
   }
 }
@@ -119,7 +140,6 @@ export default {
 
 .entry.favorite {
   border-color: var(--primary-color);
-  background-color: rgba(var(--primary-color-rgb), 0.05);
 }
 
 .header {
@@ -146,7 +166,6 @@ export default {
   min-width: 32px;
   height: 32px;
   line-height: 24px;
-  color: var(--font-color-secondary);
   transition: all 0.2s ease;
 }
 
@@ -208,7 +227,12 @@ export default {
 }
 
 .value {
-  color: var(--font-color-secondary);
   word-break: break-word;
+}
+
+.use-historical-values-toggle {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 </style> 

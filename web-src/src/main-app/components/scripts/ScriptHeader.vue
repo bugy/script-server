@@ -69,17 +69,15 @@ export default {
 
 .button-history {
   margin-right: 16px;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 40px;
   height: 40px;
+  line-height: 40px;
   padding: 0;
   min-width: 40px;
+  color: var(--font-color-medium);
 }
 
 .button-history i {
-  font-size: 18px;
+  font-size: 24px;
 }
 </style>

@@ -174,3 +174,17 @@ export function toggleFavoriteEntry(scriptName, index) {
         console.warn('Failed to toggle favorite entry:', error);
     }
 }
+
+/**
+ * Check if historical values should be used for a script
+ * @param {string} scriptName - The name of the script
+ * @returns {boolean} True if historical values should be used, false otherwise
+ */
+export function shouldUseHistoricalValues(scriptName) {
+    try {
+        return localStorage.getItem(`useHistoricalValues_${scriptName}`) === 'true';
+    } catch (error) {
+        console.warn('Failed to check historical values toggle:', error);
+        return false;
+    }
+}
