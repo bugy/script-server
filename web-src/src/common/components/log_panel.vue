@@ -9,6 +9,9 @@
     <a class="copy-text-button btn-icon-flat waves-effect waves-circle" @click="copyLogToClipboard">
       <i class="material-icons">content_copy</i>
     </a>
+    <a class="download-text-button btn-icon-flat waves-effect waves-circle" @click="downloadLog">
+      <i class="material-icons">file_download</i>
+    </a>
   </div>
 </template>
 
@@ -124,6 +127,19 @@ export default {
       copyToClipboard(this.output.element);
     },
 
+    downloadLog: function () {
+      const content = this.output.element.innerText || this.output.element.textContent || '';
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'log-output.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+
     renderOutputElement: function () {
       if (!this.output || !this.$el) {
         return
@@ -230,6 +246,16 @@ export default {
 }
 
 .log-panel .copy-text-button i {
+  color: var(--font-color-disabled);
+}
+
+.log-panel .download-text-button {
+  position: absolute;
+  right: 50px;
+  bottom: 4px;
+}
+
+.log-panel .download-text-button i {
   color: var(--font-color-disabled);
 }
 

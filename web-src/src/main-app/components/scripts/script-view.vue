@@ -328,7 +328,9 @@ export default {
 
     appendLog: function (text) {
       this.$refs.logPanel.appendLog(text);
-    }
+    },
+
+
   },
 
   watch: {
