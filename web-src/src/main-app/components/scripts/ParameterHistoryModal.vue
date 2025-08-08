@@ -9,7 +9,7 @@
             v-model="useHistoricalValues"
             @change="saveToggleState"
           />
-          <span>Use historical values when available</span>
+          <span>Use historical values as defaults</span>
         </label>
       </div>
       
