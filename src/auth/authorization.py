@@ -11,6 +11,18 @@ def _normalize_user(user):
     return user
 
 
+def _is_domain_pattern(pattern):
+    return isinstance(pattern, str) and pattern.startswith('*@')
+
+
+def _matches_domain_pattern(user, pattern):
+    if not user or not pattern or not _is_domain_pattern(pattern):
+        return False
+
+    domain = pattern[1:]  # remove the '*' character
+    return user.endswith(domain)
+
+
 def _normalize_users(allowed_users):
     if isinstance(allowed_users, list):
         if ANY_USER in allowed_users:
@@ -54,8 +66,15 @@ class Authorizer:
         if normalized_allowed_users == ANY_USER:
             return True
 
-        if _normalize_user(user_id) in normalized_allowed_users:
+        normalized_user = _normalize_user(user_id)
+        
+        if normalized_user in normalized_allowed_users:
             return True
+
+        # Check for domain patterns (e.g., "*@mydomain.com")
+        for pattern in normalized_allowed_users:
+            if _is_domain_pattern(pattern) and _matches_domain_pattern(normalized_user, pattern):
+                return True
 
         user_groups = self._groups_provider.get_groups(user_id)
         if not user_groups:
