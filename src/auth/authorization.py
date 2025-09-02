@@ -68,7 +68,7 @@ class Authorizer:
 
         # Check for domain patterns (e.g., "*@mydomain.com")
         for pattern in normalized_allowed_users:
-            if _is_domain_pattern(pattern) and _matches_email_domain_pattern(normalized_user, pattern):
+            if _matches_email_domain_pattern(normalized_user, pattern):
                 return True
 
         user_groups = self._groups_provider.get_groups(user_id)
