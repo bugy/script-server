@@ -97,8 +97,6 @@ class ConfigModel:
         for parameter in self.parameters:
             self.parameter_values[parameter.name] = parameter.create_value_wrapper_for_default()
 
-        self._reload_parameters({})
-
         self._included_config_prop.subscribe(lambda old, new: self._reload(old))
 
     def set_param_value(self, param_name, value):
@@ -185,6 +183,8 @@ class ConfigModel:
                                        self.parameter_values,
                                        self.working_directory)
             self.parameters.append(parameter)
+
+        self._reload_parameters({})
 
         self._validate_parameter_configs()
 

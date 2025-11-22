@@ -667,7 +667,7 @@ class ConfigModelIncludeTest(unittest.TestCase):
     @parameterized.expand([
         (2, 'test desc', [('param3', 'int'), ('param4', 'text')]),
         (3, None, [('param3', 'int')]),
-        (None, None, []),
+        (None, None, [('param3', 'int')]),
     ])
     def test_dynamic_include_when_multiple_includes(self, param2_value, expected_description, additional_parameters):
         included_path_1 = test_utils.write_script_config({
