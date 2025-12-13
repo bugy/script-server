@@ -35,7 +35,7 @@ def _map_groups(groups: List[str], group_mapping: Optional[Dict[str, str]]) -> L
 class AuthentikOpenidAuthenticator(AbstractOauthAuthenticator):
     def __init__(self, params_dict):
         # Support both spellings for backwards compatibility
-        authentik_url = params_dict.get('authentik_url') or params_dict.get('authenitk_url')
+        authentik_url = params_dict.get('authentik_url') or params_dict.get('authentik_url')
         if not authentik_url:
             raise Exception('authentik_url is required: should contain Authentik URL, e.g. https://authentik.example.com/')
 
