@@ -59,7 +59,7 @@ before_script:
   #  - npm run test:unit-ci
   - cd ..
 script:
-  #  - python3 tools/build.py
+  - python3 tools/build.py
   - tools/run_e2e_tests.sh
 after_script:
   - tools/report_allure.sh
