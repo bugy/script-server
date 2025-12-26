@@ -1,0 +1,19 @@
+services:
+  script-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./conf:/app/conf
+      - ./samples/scripts:/app/samples/scripts:ro
+      - script-server-logs:/app/logs
+    environment:
+      # - AUTHENTIK_CLIENT_SECRET=your-secret-here
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+volumes:
+  script-server-logs:
+
