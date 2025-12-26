@@ -31,7 +31,11 @@ env:
 before_install:
   - sudo apt-get -y install python3-pip python3-setuptools apache2-utils python3-venv jq
   - mkdir -p $HOME/.local/bin
-  - CHROMEDRIVER_VERSION=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json | jq -r '.channels.Stable.version')
+  - CHROME_VERSION=$(google-chrome --version | awk '{print $3}')
+  - echo "Installed Chrome version: $CHROME_VERSION"
+  - CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json" | jq -r --arg ver "$CHROME_VERSION" '.versions[] | select(.version == $ver) | .version' | head -1)
+  - if [ -z "$CHROMEDRIVER_VERSION" ]; then echo "Exact version not found, using Chrome version directly"; CHROMEDRIVER_VERSION=$CHROME_VERSION; fi
+  - echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"
   - wget https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip
   - unzip chromedriver-linux64.zip
   - mv chromedriver-linux64/chromedriver $HOME/.local/bin/chromedriver
