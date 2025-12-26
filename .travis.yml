@@ -30,12 +30,13 @@ env:
     - NODE_OPTIONS=--openssl-legacy-provider
 before_install:
   - sudo apt-get -y install python3-pip python3-setuptools apache2-utils python3-venv jq
+  - mkdir -p $HOME/.local/bin
   - CHROMEDRIVER_VERSION=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json | jq -r '.channels.Stable.version')
   - wget https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip
   - unzip chromedriver-linux64.zip
   - mv chromedriver-linux64/chromedriver $HOME/.local/bin/chromedriver
   - chmod +x $HOME/.local/bin/chromedriver
-  - mkdir -vp ~/.docker/cli-plugins/
+  - mkdir -p ~/.docker/cli-plugins/
   - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.30.1/buildx-v0.30.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
   - chmod a+x ~/.docker/cli-plugins/docker-buildx
 install:
