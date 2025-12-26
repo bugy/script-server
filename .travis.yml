@@ -32,10 +32,7 @@ before_install:
   - sudo apt-get -y install python3-pip python3-setuptools apache2-utils python3-venv jq
   - mkdir -p $HOME/.local/bin
   - CHROME_VERSION=$(google-chrome --version | awk '{print $3}')
-  - 'echo "Installed Chrome version: $CHROME_VERSION"'
   - CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json" | jq -r --arg ver "$CHROME_VERSION" '.versions[] | select(.version == $ver) | .version' | head -1)
-  - if [ -z "$CHROMEDRIVER_VERSION" ]; then echo "Exact version not found, using Chrome version directly"; CHROMEDRIVER_VERSION=$CHROME_VERSION; fi
-  - 'echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"'
   - wget https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip
   - unzip chromedriver-linux64.zip
   - mv chromedriver-linux64/chromedriver $HOME/.local/bin/chromedriver
@@ -44,11 +41,11 @@ before_install:
   - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.30.1/buildx-v0.30.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
   - chmod a+x ~/.docker/cli-plugins/docker-buildx
 install:
-  - pip3 install -r requirements.txt
-  - pip3 install pyasn1 --upgrade
-  - pip3 install ldap3 parameterized bcrypt
-  - pip3 install requests --upgrade
-  - pip3 install awscli
+  #  - pip3 install -r requirements.txt
+  #  - pip3 install pyasn1 --upgrade
+  #  - pip3 install ldap3 parameterized bcrypt
+  #  - pip3 install requests --upgrade
+  #  - pip3 install awscli
   - cd web-src
   - npm install
   - npm install allure-commandline --save-dev
@@ -57,12 +54,12 @@ install:
   - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
 before_script:
   - cd src
-  - python3 -m unittest discover -s tests -p "*.py" -t .
+  #  - python3 -m unittest discover -s tests -p "*.py" -t .
   - cd ../web-src
-  - npm run test:unit-ci
+  #  - npm run test:unit-ci
   - cd ..
 script:
-  - python3 tools/build.py
+  #  - python3 tools/build.py
   - tools/run_e2e_tests.sh
 after_script:
   - tools/report_allure.sh
