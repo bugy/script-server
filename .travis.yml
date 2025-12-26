@@ -41,7 +41,7 @@ before_install:
   - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.30.1/buildx-v0.30.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
   - chmod a+x ~/.docker/cli-plugins/docker-buildx
 install:
-  #  - pip3 install -r requirements.txt
+  - pip3 install -r requirements.txt
   #  - pip3 install pyasn1 --upgrade
   #  - pip3 install ldap3 parameterized bcrypt
   #  - pip3 install requests --upgrade
