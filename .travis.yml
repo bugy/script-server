@@ -42,10 +42,10 @@ before_install:
   - chmod a+x ~/.docker/cli-plugins/docker-buildx
 install:
   - pip3 install -r requirements.txt
-  #  - pip3 install pyasn1 --upgrade
-  #  - pip3 install ldap3 parameterized bcrypt
-  #  - pip3 install requests --upgrade
-  #  - pip3 install awscli
+  - pip3 install pyasn1 --upgrade
+  - pip3 install ldap3 parameterized bcrypt
+  - pip3 install requests --upgrade
+  - pip3 install awscli
   - cd web-src
   - npm install
   - npm install allure-commandline --save-dev
@@ -54,9 +54,9 @@ install:
   - e2e_venv/bin/pip install -r src/e2e_tests/requirements.txt
 before_script:
   - cd src
-  #  - python3 -m unittest discover -s tests -p "*.py" -t .
+  - python3 -m unittest discover -s tests -p "*.py" -t .
   - cd ../web-src
-  #  - npm run test:unit-ci
+  - npm run test:unit-ci
   - cd ..
 script:
   - python3 tools/build.py
