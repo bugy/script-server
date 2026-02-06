@@ -17,7 +17,7 @@ class AzureAdOAuthAuthenticator(AbstractOauthAuthenticator):
         super().__init__(
             self.auth_url,
             self.token_url,
-            'openid email profile',
+            'openid profile email User.Read',
             params_dict,
         )
 
