@@ -117,8 +117,7 @@ class IpBasedIdentification(Identification):
         expiry_time = date_utils.get_current_millis() + days_to_ms(self.EXPIRES_DAYS)
         new_token = client_id + '&' + str(expiry_time)
         server_config = request_handler.application.server_config
-        request_handler.set_secure_cookie(
-            self.COOKIE_KEY, new_token, expires_days=self.EXPIRES_DAYS, secure=server_config.cookie_secure, httponly=server_config.cookie_httponly)
+        request_handler.set_secure_cookie(self.COOKIE_KEY, new_token, expires_days=self.EXPIRES_DAYS, secure=server_config.cookie_secure, httponly=server_config.cookie_httponly)
 
     def _can_write(self, request_handler):
         return can_write_secure_cookie(request_handler)
