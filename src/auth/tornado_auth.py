@@ -89,7 +89,7 @@ class TornadoAuth:
         LOGGER.info('Authenticated user ' + username)
 
         server_config = request_handler.application.server_config
-        request_handler.set_secure_cookie('username', username, expires_days=self.authenticator.auth_expiration_days, httponly=server_config.cookie_httponly, secure=server_config.cookie_secure)
+        request_handler.set_secure_cookie('username', username, expires_days=self.authenticator.auth_expiration_days, httponly=True, secure=server_config.cookie_secure)
 
         path = tornado.escape.url_unescape(request_handler.get_argument('next', '/'))
 

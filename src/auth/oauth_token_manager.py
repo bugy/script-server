@@ -24,7 +24,8 @@ class OAuthTokenManager:
         if not self._enabled:
             return
 
-        request_handler.set_secure_cookie('token', token_response.access_token)
+        server_config = request_handler.application.server_config
+        request_handler.set_secure_cookie('token', token_response.access_token, httponly=True, secure=server_config.cookie_secure)
 
         if token_response.should_refresh():
             refresh_token = token_response.refresh_token
@@ -33,7 +34,7 @@ class OAuthTokenManager:
                 self._refresh_tokens[username] = refresh_token
                 self._schedule_token_refresh(username, refresh_token, token_response.resolve_next_refresh_datetime())
 
-            request_handler.set_secure_cookie('token_details', token_response.serialize_details())
+            request_handler.set_secure_cookie('token_details', token_response.serialize_details(), httponly=True, secure=server_config.cookie_secure)
 
     def can_restore_state(self, request_handler):
         if not self._enabled:

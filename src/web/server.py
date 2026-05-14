@@ -865,7 +865,7 @@ def init(server_config: ServerConfig,
         'compress_response': True,
         'xsrf_cookies': server_config.xsrf_protection != XSRF_PROTECTION_DISABLED,
         'xsrf_cookie_kwargs': {
-            'httponly': server_config.cookie_httponly, 
+            'httponly': True, 
             'secure': server_config.cookie_secure,
             'samesite': 'Lax'
         },
