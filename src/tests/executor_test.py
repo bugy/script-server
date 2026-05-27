@@ -30,10 +30,12 @@ class TestScriptExecutor(unittest.TestCase):
         self.assertEqual(None, process_wrapper.working_directory)
         self.assertEqual(['ls'], process_wrapper.command)
 
-        expected_values = {}
-        expected_values.update(os.environ)
+        expected_values = dict(os.environ)
         expected_values['EXECUTION_ID'] = '123'
-        self.assertEqual(expected_values, process_wrapper.all_env_variables)
+        expected_values.pop('PYTEST_CURRENT_TEST', None)
+        actual = dict(process_wrapper.all_env_variables)
+        actual.pop('PYTEST_CURRENT_TEST', None)
+        self.assertEqual(expected_values, actual)
 
     def test_start_with_one_value(self):
         config = create_config_model(
