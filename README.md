@@ -1,5 +1,7 @@
 > **Fork** — This is a community-maintained fork of [bugy/script-server](https://github.com/bugy/script-server) (original author: [@bugy](https://github.com/bugy)). The upstream project is no longer actively maintained. See [What's new in this fork](#whats-new-in-this-fork) for the changes made here.
 
+[![CI](https://github.com/knep/script-server/actions/workflows/ci.yml/badge.svg)](https://github.com/knep/script-server/actions/workflows/ci.yml)
+
 # script-server
 
 Script-server is a Web UI for scripts.
@@ -12,7 +14,7 @@ No script modifications are needed - you configure each script in Script server 
 [Admin interface screenshots](https://github.com/bugy/script-server/wiki/Admin-interface)
 
 ## Features
-- Different types of script parameters (text, flag, dropdown, file upload, etc.)
+- Different types of script parameters (text, integer, date, flag, dropdown, file upload, etc.)
 - Real-time script output
 - Users can send input during script execution
 - Auth (optional): LDAP, Google OAuth, htpasswd file
@@ -147,6 +149,27 @@ and the only **known** vulnerabilities are:
   linked [Wiki page](https://github.com/bugy/script-server/wiki/Script-config#output_format)
 
 ## What's new in this fork
+
+### 2025-05-27 — New `date` parameter type
+
+A new `date` parameter type shows a native date picker in the UI and passes the selected date to the script in a configurable format.
+
+**Configuration example:**
+```json
+{
+  "name": "start_date",
+  "type": "date",
+  "date_format": "%d/%m/%Y"
+}
+```
+
+- `date_format` is a Python [strftime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) format string. Default: `%Y-%m-%d` (ISO 8601).
+- The UI always shows a calendar date picker. The script receives the date in the configured format.
+
+### 2025-05-27 — GitHub Actions CI + secure cookies
+
+- GitHub Actions CI added ([view workflows](https://github.com/knep/script-server/actions)): Python 3.10/3.11/3.12 matrix + Node 20 frontend tests on every push and pull request.
+- Cookies (`username`, `token`, XSRF) are now set with `HttpOnly`, `SameSite=Lax`, and `Secure` flags. The `Secure` flag can be disabled in `conf.json` via `"cookie_secure": false` for HTTP-only deployments.
 
 ### 2025-05-27 — Python 3.12 compatibility
 
