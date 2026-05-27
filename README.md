@@ -169,6 +169,3 @@ Contributions are welcome:
 - Bug reports and feature proposals
 - Pull requests (fixes, features, documentation)
 - Any other improvements you can think of
-
-## Special thanks
-![JetBrains logo](https://github.com/JetBrains/logos/blob/master/web/jetbrains/jetbrains.svg)
