@@ -625,7 +625,7 @@ describe('Test ScriptField', function () {
         for (let radio of dialogWrapper.findAll('.radio-group label').wrappers) {
             if (radio.get('span').text() === modeText) {
                 radio.get('input').trigger('click')
-                await timeout(5)
+                await timeout(50)
                 return
             }
         }
