@@ -1,6 +1,44 @@
-> **Fork** — This is a community-maintained fork of [bugy/script-server](https://github.com/bugy/script-server) (original author: [@bugy](https://github.com/bugy)). The upstream project is no longer actively maintained. See [What's new in this fork](#whats-new-in-this-fork) for the changes made here.
+> **Fork** — This is a community-maintained fork of [bugy/script-server](https://github.com/bugy/script-server) (original author: [@bugy](https://github.com/bugy)). The upstream project is no longer actively maintained.
 
 [![CI](https://github.com/knep/script-server/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/knep/script-server/actions/workflows/ci.yml)
+
+## What's new in this fork
+
+### 2025-05-27 — New `date` parameter type
+
+A new `date` parameter type shows a native date picker in the UI and passes the selected date to the script in a configurable format.
+
+**Configuration example:**
+```json
+{
+  "name": "start_date",
+  "type": "date",
+  "date_format": "%d/%m/%Y"
+}
+```
+
+- `date_format` is a Python [strftime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) format string. Default: `%Y-%m-%d` (ISO 8601).
+- The UI always shows a calendar date picker. The script receives the date in the configured format.
+
+### 2025-05-27 — GitHub Actions CI + secure cookies
+
+- GitHub Actions CI added ([view workflows](https://github.com/knep/script-server/actions)): Python 3.10/3.11/3.12 matrix + Node 22 frontend tests on every push and pull request.
+- Cookies (`username`, `token`, XSRF) are now set with `HttpOnly`, `SameSite=Lax`, and `Secure` flags. The `Secure` flag can be disabled in `conf.json` via `"cookie_secure": false` for HTTP-only deployments.
+
+### 2025-05-27 — Python 3.12 compatibility
+
+**Python version support:** updated minimum from Python 3.7 (end-of-life since June 2023) to **Python 3.9+** (Python 3.12 recommended).
+
+**Fixes:**
+- Replaced invalid string escape sequences (`\d`, `\w`, `\/`, `\ `, `\|`, `\p`, `\[`, `\.`) with raw strings (`r'...'`) in test files — these would become `SyntaxError` in Python 3.14
+- Replaced deprecated `thread.setDaemon(True)` with `thread.daemon = True` in `user_file_storage.py` and `auth_abstract_oauth.py`
+
+**Dependencies (`requirements.txt`):**
+- Raised Tornado floor from `>=4` to `>=6.1` (Tornado 4/5 are incompatible with Python 3.12)
+- Added `requests>=2.28` as an explicit dependency (used by HTTP notification destinations)
+- Documented optional dependencies (`ldap3`, `bcrypt`) with install instructions
+
+---
 
 # script-server
 
@@ -147,42 +185,6 @@ and the only **known** vulnerabilities are:
 
 * `output_format`=`html_iframe`, see the reasoning in the
   linked [Wiki page](https://github.com/bugy/script-server/wiki/Script-config#output_format)
-
-## What's new in this fork
-
-### 2025-05-27 — New `date` parameter type
-
-A new `date` parameter type shows a native date picker in the UI and passes the selected date to the script in a configurable format.
-
-**Configuration example:**
-```json
-{
-  "name": "start_date",
-  "type": "date",
-  "date_format": "%d/%m/%Y"
-}
-```
-
-- `date_format` is a Python [strftime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) format string. Default: `%Y-%m-%d` (ISO 8601).
-- The UI always shows a calendar date picker. The script receives the date in the configured format.
-
-### 2025-05-27 — GitHub Actions CI + secure cookies
-
-- GitHub Actions CI added ([view workflows](https://github.com/knep/script-server/actions)): Python 3.10/3.11/3.12 matrix + Node 20 frontend tests on every push and pull request.
-- Cookies (`username`, `token`, XSRF) are now set with `HttpOnly`, `SameSite=Lax`, and `Secure` flags. The `Secure` flag can be disabled in `conf.json` via `"cookie_secure": false` for HTTP-only deployments.
-
-### 2025-05-27 — Python 3.12 compatibility
-
-**Python version support:** updated minimum from Python 3.7 (end-of-life since June 2023) to **Python 3.9+** (Python 3.12 recommended).
-
-**Fixes:**
-- Replaced invalid string escape sequences (`\d`, `\w`, `\/`, `\ `, `\|`, `\p`, `\[`, `\.`) with raw strings (`r'...'`) in test files — these would become `SyntaxError` in Python 3.14
-- Replaced deprecated `thread.setDaemon(True)` with `thread.daemon = True` in `user_file_storage.py` and `auth_abstract_oauth.py`
-
-**Dependencies (`requirements.txt`):**
-- Raised Tornado floor from `>=4` to `>=6.1` (Tornado 4/5 are incompatible with Python 3.12)
-- Added `requests>=2.28` as an explicit dependency (used by HTTP notification destinations)
-- Documented optional dependencies (`ldap3`, `bcrypt`) with install instructions
 
 ## Contribution
 
