@@ -592,7 +592,7 @@ class TestDump(_OauthTestCase):
                 return
 
             timer = threading.Timer(0.01, callback)
-            timer.setDaemon(True)
+            timer.daemon = True
             timer.start()
 
             self.timer_invocations += 1

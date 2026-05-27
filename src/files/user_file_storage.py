@@ -64,11 +64,11 @@ class UserFileStorage:
                             shutil.rmtree(folder_path)
 
             timer = threading.Timer(period_sec, clean_results)
-            timer.setDaemon(True)
+            timer.daemon = True
             timer.start()
 
         timer = threading.Timer(period_sec, clean_results)
-        timer.setDaemon(True)
+        timer.daemon = True
         timer.start()
 
     def _stop_autoclean(self):

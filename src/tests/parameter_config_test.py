@@ -775,11 +775,11 @@ class TestSingleParameterValidation(unittest.TestCase):
         self.assertIsNone(error)
 
     @parameterized.expand([
-        ('a\d', 'ab', 'some desc', 'some desc'),
-        ('a\d', '12', 'desc 2', 'desc 2'),
-        ('a\d', 'a12', 'some long description', 'some long description'),
-        ('\d+\wa+', 'aaaa', 'some desc', 'some desc'),
-        ('\d+\wa+', 'aaaa', None, '\d+\wa+'),
+        (r'a\d', 'ab', 'some desc', 'some desc'),
+        (r'a\d', '12', 'desc 2', 'desc 2'),
+        (r'a\d', 'a12', 'some long description', 'some long description'),
+        (r'\d+\wa+', 'aaaa', 'some desc', 'some desc'),
+        (r'\d+\wa+', 'aaaa', None, r'\d+\wa+'),
     ])
     def test_regex_validation_when_fail_with_description(self, regex, value, description, expected_description):
         parameter = create_parameter_model('param', regex={'pattern': regex, 'description': description})
@@ -789,10 +789,10 @@ class TestSingleParameterValidation(unittest.TestCase):
         self.assertEqual(error, "does not match regex pattern: " + expected_description)
 
     @parameterized.expand([
-        ('a\d', 'a1',),
-        ('\da', '2a',),
-        ('a\d+', 'a12',),
-        ('\d+\wa+', '1Xaaaa'),
+        (r'a\d', 'a1',),
+        (r'\da', '2a',),
+        (r'a\d+', 'a12',),
+        (r'\d+\wa+', '1Xaaaa'),
         (None, '1Xaaaa'),
     ])
     def test_regex_validation_when_success(self, regex, value):

@@ -28,9 +28,9 @@ class TestSplitCommand(unittest.TestCase):
     def test_complex_command_win(self):
         test_utils.set_win()
 
-        command_split = process_utils.split_command('"c:\program files\python\python.exe" test.py')
+        command_split = process_utils.split_command(r'"c:\program files\python\python.exe" test.py')
 
-        self.assertEqual(command_split, ['c:\program files\python\python.exe', 'test.py'])
+        self.assertEqual(command_split, [r'c:\program files\python\python.exe', 'test.py'])
 
     def test_unwrap_double_quotes_win(self):
         test_utils.set_win()
