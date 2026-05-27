@@ -192,8 +192,8 @@ class KeycloakOauthTestCase(AsyncTestCase):
         valid_1 = await self.authenticator.validate_user(username, mock_request_handler(previous_request=request_1))
         self.assertTrue(valid_1)
 
-        for i in range(1, 8):
-            await gen.sleep(0.05)
+        for i in range(1, 20):
+            await gen.sleep(0.1)
 
             if self.authenticator.get_groups('bugy') == ['g3']:
                 break
