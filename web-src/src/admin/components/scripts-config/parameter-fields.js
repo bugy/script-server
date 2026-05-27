@@ -40,6 +40,7 @@ export const typeField = {
     values: [
         'text',
         'int',
+        'date',
         'list',
         'multiselect',
         'editable_list',
@@ -49,6 +50,11 @@ export const typeField = {
         'ip',
         'ip4',
         'ip6']
+};
+
+export const dateFormatField = {
+    name: 'Date format',
+    description: 'Python strftime format for the date passed to the script (e.g. %Y-%m-%d, %d/%m/%Y, %Y%m%d). Default: %Y-%m-%d'
 };
 
 export const noValueField = {

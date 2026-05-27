@@ -105,6 +105,10 @@
       <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
                  @error="handleError(maxLengthField, $event)"/>
     </div>
+    <div v-if="selectedType === 'date'" class="row">
+      <Textfield v-model="dateFormat" :config="dateFormatField" class="col s6"
+                 @error="handleError(dateFormatField, $event)"/>
+    </div>
 
     <div v-if="selectedType !== 'multiline_text'" class="row">
       <Textfield v-model="uiWidthWeight"
@@ -148,6 +152,7 @@ import {
   allowedValuesScriptField,
   allowedValuesScriptShellEnabledField,
   constantField,
+  dateFormatField,
   defaultValueField,
   descriptionField,
   envVarField,
@@ -213,7 +218,8 @@ export default {
       recursive: 'file_recursive',
       fileType: 'file_type',
       stdinExpectedText: 'stdin_expected_text',
-      valuesUiMapping: 'values_ui_mapping'
+      valuesUiMapping: 'values_ui_mapping',
+      dateFormat: 'date_format'
     };
 
     forEachKeyValue(simpleFields, (vmField, configField) => {
@@ -256,7 +262,9 @@ export default {
       uiWidthWeight: null,
       uiSeparatorType: null,
       uiSeparatorTitle: null,
+      dateFormat: null,
       nameField,
+      dateFormatField,
       paramField: Object.assign({}, paramField),
       passAsField,
       stdinExpectedTextField,
@@ -318,6 +326,7 @@ export default {
           this.stdinExpectedText = get(config, 'stdin_expected_text')
           this.passAs = get(config, 'pass_as', 'argument + env_variable')
           this.valuesUiMapping = get(config, 'values_ui_mapping', {})
+          this.dateFormat = get(config, 'date_format', '')
 
           this.uiWidthWeight = config['ui']?.['width_weight']
           this.uiSeparatorType = config['ui']?.['separator_before']?.['type']

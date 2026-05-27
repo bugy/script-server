@@ -24,6 +24,7 @@
 <script>
 import Checkbox from '@/common/components/checkbox'
 import Combobox from '@/common/components/combobox'
+import DateField from '@/common/components/inputs/DateField'
 import FileUpload from '@/common/components/file_upload'
 import ServerFileField from '@/common/components/server_file_field'
 import TextArea from '@/common/components/TextArea'
@@ -79,6 +80,8 @@ export default {
         return Combobox;
       } else if (parameter.type === 'file_upload') {
         return FileUpload;
+      } else if (parameter.type === 'date') {
+        return DateField;
       } else if (parameter.type === 'multiline_text') {
         return TextArea;
       } else {

@@ -163,7 +163,8 @@ def create_script_param_config(
         stdin_expected_text=None,
         ui_separator_type=None,
         ui_separator_title=None,
-        values_ui_mapping=None):
+        values_ui_mapping=None,
+        date_format=None):
     method_params = dict(locals())
     conf = {'name': param_name}
 
@@ -191,6 +192,7 @@ def create_script_param_config(
         'pass_as': 'pass_as',
         'stdin_expected_text': 'stdin_expected_text',
         'values_ui_mapping': 'values_ui_mapping',
+        'date_format': 'date_format',
     }
 
     if values_script is not None:
@@ -311,7 +313,8 @@ def create_parameter_model(name=None,
                            stdin_expected_text=None,
                            ui_separator_type=None,
                            ui_separator_title=None,
-                           values_ui_mapping=None):
+                           values_ui_mapping=None,
+                           date_format=None):
     config = create_script_param_config(
         name,
         type=type,
@@ -337,7 +340,8 @@ def create_parameter_model(name=None,
         stdin_expected_text=stdin_expected_text,
         ui_separator_type=ui_separator_type,
         ui_separator_title=ui_separator_title,
-        values_ui_mapping=values_ui_mapping)
+        values_ui_mapping=values_ui_mapping,
+        date_format=date_format)
 
     if all_parameters is None:
         all_parameters = []

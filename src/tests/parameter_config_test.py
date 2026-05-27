@@ -230,6 +230,18 @@ class ParameterModelMapValueTest(unittest.TestCase):
                                                  multiselect_separator='_')
         self.assertEqual('abc_456_def', parameter_model.to_script_args(['abc', '456', 'def']))
 
+    def test_map_to_script_date_default_format(self):
+        parameter_model = create_parameter_model('param1', type='date')
+        self.assertEqual('2024-03-15', parameter_model.map_to_script('2024-03-15'))
+
+    def test_map_to_script_date_custom_format(self):
+        parameter_model = create_parameter_model('param1', type='date', date_format='%d/%m/%Y')
+        self.assertEqual('15/03/2024', parameter_model.map_to_script('2024-03-15'))
+
+    def test_map_to_script_date_compact_format(self):
+        parameter_model = create_parameter_model('param1', type='date', date_format='%Y%m%d')
+        self.assertEqual('20240315', parameter_model.map_to_script('2024-03-15'))
+
 
 class TestDefaultValue(unittest.TestCase):
 
@@ -677,6 +689,30 @@ class TestSingleParameterValidation(unittest.TestCase):
 
         error = validate_value(parameter, 0)
         self.assertIsNone(error)
+
+    def test_date_parameter_when_valid(self):
+        parameter = create_parameter_model('param', type='date')
+
+        error = validate_value(parameter, '2024-03-15')
+        self.assertIsNone(error)
+
+    def test_date_parameter_when_invalid_format(self):
+        parameter = create_parameter_model('param', type='date')
+
+        error = validate_value(parameter, '15/03/2024')
+        self.assert_error(error)
+
+    def test_date_parameter_when_not_a_date(self):
+        parameter = create_parameter_model('param', type='date')
+
+        error = validate_value(parameter, 'hello')
+        self.assert_error(error)
+
+    def test_date_parameter_when_invalid_day(self):
+        parameter = create_parameter_model('param', type='date')
+
+        error = validate_value(parameter, '2024-02-30')
+        self.assert_error(error)
 
     def test_file_upload_parameter_when_valid(self):
         parameter = create_parameter_model('param', type='file_upload')
