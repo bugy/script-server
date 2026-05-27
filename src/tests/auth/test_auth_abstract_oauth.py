@@ -157,13 +157,18 @@ def mock_request_handler(code):
 
     handler_mock.get_secure_cookie = lambda cookie: secure_cookies.get(cookie)
 
-    def set_secure_cookie(cookie, value):
+    def set_secure_cookie(cookie, value, **kwargs):
         secure_cookies[cookie] = value.encode('utf-8')
 
     def clear_secure_cookie(cookie):
         if cookie in secure_cookies:
             del secure_cookies[cookie]
 
+    server_config = mock_object()
+    server_config.cookie_secure = False
+
+    handler_mock.application = mock_object()
+    handler_mock.application.server_config = server_config
     handler_mock.set_secure_cookie = set_secure_cookie
     handler_mock.clear_cookie = clear_secure_cookie
 

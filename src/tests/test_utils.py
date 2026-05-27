@@ -490,7 +490,7 @@ def mock_request_handler(*, arguments: dict = None, method='GET', headers=None, 
             return default
         return arguments.get(arg_name)
 
-    def set_secure_cookie(cookie_name, value):
+    def set_secure_cookie(cookie_name, value, **kwargs):
         cookies[cookie_name] = f'!SECURE!{value}!!!'
 
     def clear_cookie(cookie_name):
@@ -506,10 +506,17 @@ def mock_request_handler(*, arguments: dict = None, method='GET', headers=None, 
 
         return value[8:-3].encode('utf8')
 
+    server_config = mock_object()
+    server_config.cookie_secure = False
+
+    application = mock_object()
+    application.server_config = server_config
+
     request_handler.get_argument = get_argument
     request_handler.set_secure_cookie = set_secure_cookie
     request_handler.get_secure_cookie = get_secure_cookie
     request_handler.clear_cookie = clear_cookie
+    request_handler.application = application
 
     request_handler.request = mock_object()
     request_handler.request.method = method

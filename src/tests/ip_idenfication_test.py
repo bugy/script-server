@@ -15,6 +15,8 @@ def mock_request_handler(ip=None, x_forwarded_for=None, x_real_ip=None, saved_to
     handler_mock.application = mock_object()
     handler_mock.application.auth = TornadoAuth(None)
     handler_mock.application.identification = IpBasedIdentification(TrustedIpValidator(['127.0.0.1']), user_header_name)
+    handler_mock.application.server_config = mock_object()
+    handler_mock.application.server_config.cookie_secure = False
 
     handler_mock.request = mock_object()
     handler_mock.request.headers = {}
@@ -38,7 +40,7 @@ def mock_request_handler(ip=None, x_forwarded_for=None, x_real_ip=None, saved_to
             return values.encode('utf8')
         return None
 
-    def set_secure_cookie(key, value, expires_days=30):
+    def set_secure_cookie(key, value, expires_days=30, **kwargs):
         cookies[key] = value
 
     def clear_cookie(key):

@@ -278,6 +278,7 @@ class ServerTest(TestCase):
         config.port = port
         config.address = address
         config.xsrf_protection = xsrf_protection
+        config.cookie_secure = False
         config.max_request_size_mb = 1
 
         authorizer = Authorizer(ANY_USER, ['admin_user'], [], ['admin_user'], EmptyGroupProvider())
