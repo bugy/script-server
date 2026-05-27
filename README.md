@@ -1,6 +1,6 @@
 > **Fork** — This is a community-maintained fork of [bugy/script-server](https://github.com/bugy/script-server) (original author: [@bugy](https://github.com/bugy)). The upstream project is no longer actively maintained. See [What's new in this fork](#whats-new-in-this-fork) for the changes made here.
 
-[![CI](https://github.com/knep/script-server/actions/workflows/ci.yml/badge.svg)](https://github.com/knep/script-server/actions/workflows/ci.yml)
+[![CI](https://github.com/knep/script-server/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/knep/script-server/actions/workflows/ci.yml)
 
 # script-server
 

@@ -31,10 +31,12 @@ jobs:
 
       - name: Run unit tests
         working-directory: src
+        env:
+          PYTHONPATH: .
         run: pytest tests/ -q --tb=short
 
   frontend-tests:
-    name: Frontend (Node 20)
+    name: Frontend (Node 22)
     runs-on: ubuntu-latest
 
     steps:
@@ -43,7 +45,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: web-src/package-lock.json
 
