@@ -42,6 +42,7 @@ const ScriptEditDialog = () => import('@/admin/components/scripts-config/script-
 
 export default {
   name: 'ScriptPathField',
+  emits: ['change'],
   components: {ScriptEditDialog, Combobox, TextField, CodeEditorDialog, CodeEditor},
   props: {
     originalPath: String,
