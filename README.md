@@ -148,8 +148,27 @@ Internet connection is **not** needed. All the files are loaded from the server.
 For detailed steps on Linux with virtualenv, see the [Installation guide](https://github.com/bugy/script-server/wiki/Installing-on-virtualenv-(linux)).
 
 ##### As a Docker container
-Pre-built images are available on [Docker Hub](https://hub.docker.com/r/bugy/script-server/tags).  
-For usage instructions, see [this ticket](https://github.com/bugy/script-server/issues/171#issuecomment-461620836).
+
+Images for this fork are published on [GitHub Container Registry](https://github.com/knep/script-server/pkgs/container/script-server):
+
+```bash
+# Pull the latest image (built from master)
+docker pull ghcr.io/knep/script-server:latest
+
+# Run with your script configs and logs persisted
+docker run -d \
+  -p 5000:5000 \
+  -v /path/to/your/conf/runners:/app/conf/runners \
+  -v /path/to/your/logs:/app/logs \
+  ghcr.io/knep/script-server:latest
+```
+
+Available tags:
+| Tag | Source |
+|-----|--------|
+| `latest` | `master` branch — most recent changes |
+| `stable` | `stable` branch |
+| `1.2.3` / `1.2` | Git tag `v1.2.3` |
 
 ### For development
 1. Clone this repository
