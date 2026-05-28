@@ -261,11 +261,24 @@ class ServerTest(TestCase):
         self.assertEqual(400, response.status_code)
         self._assert_security_headers(response)
 
+    def test_hsts_present_when_cookie_secure(self):
+        self.start_server(12345, '127.0.0.1', cookie_secure=True)
+        response = self._user_session.get('http://127.0.0.1:12345/scripts')
+        hsts = response.headers.get('Strict-Transport-Security', '')
+        self.assertIn('max-age=31536000', hsts, 'HSTS header missing when cookie_secure=True')
+
+    def test_hsts_absent_when_not_cookie_secure(self):
+        self.start_server(12345, '127.0.0.1', cookie_secure=False)
+        response = self._user_session.get('http://127.0.0.1:12345/scripts')
+        self.assertNotIn('Strict-Transport-Security', response.headers,
+                         'HSTS header must not be sent over plain HTTP')
+
     def _assert_security_headers(self, response):
         for header, expected in [
             ('X-Frame-Options', 'DENY'),
             ('X-Content-Type-Options', 'nosniff'),
             ('Referrer-Policy', 'strict-origin-when-cross-origin'),
+            ('Permissions-Policy', 'camera=(), microphone=(), geolocation=()'),
         ]:
             self.assertEqual(expected, response.headers.get(header),
                              'Wrong or missing header: ' + header)
@@ -317,13 +330,13 @@ class ServerTest(TestCase):
         response = self._user_session.get('http://127.0.0.1:12345/conf')
         self.assertEqual(response.status_code, 200)
 
-    def start_server(self, port, address, *, xsrf_protection=XSRF_PROTECTION_TOKEN):
+    def start_server(self, port, address, *, xsrf_protection=XSRF_PROTECTION_TOKEN, cookie_secure=False):
         file_download_feature = FileDownloadFeature(UserFileStorage(b'some_secret'), test_utils.temp_folder)
         config = ServerConfig()
         config.port = port
         config.address = address
         config.xsrf_protection = xsrf_protection
-        config.cookie_secure = False
+        config.cookie_secure = cookie_secure
         config.max_request_size_mb = 1
 
         authorizer = Authorizer(ANY_USER, ['admin_user'], [], ['admin_user'], EmptyGroupProvider())

@@ -99,6 +99,9 @@ def _set_security_headers(handler):
         "frame-ancestors 'none'; "
         "object-src 'none'"
     )
+    handler.set_header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    if handler.application.server_config.cookie_secure:
+        handler.set_header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
 
 
 class BaseRequestHandler(tornado.web.RequestHandler):
