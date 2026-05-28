@@ -4,6 +4,21 @@
 
 ## What's new in this fork
 
+### 2026-05-28 — Docker image on GitHub Container Registry
+
+A Docker image for this fork is now published automatically on every commit to `master`:
+
+```bash
+docker run -d \
+  -p 5000:5000 \
+  -v /path/to/your/conf/runners:/app/conf/runners \
+  -v /path/to/your/logs:/app/logs \
+  ghcr.io/knep/script-server:latest
+```
+
+Available tags: `latest` (master), `stable`, and semver tags (e.g. `1.19.0`) on git releases.  
+See the full [installation instructions](#as-a-docker-container) below.
+
 ### 2026-05-28 — New `time` parameter type
 
 A new `time` parameter type shows a native time picker in the UI and passes the selected time to the script in a configurable format.
