@@ -38,6 +38,19 @@ Object.defineProperty(globalThis.HTMLElement.prototype, 'offsetParent', {
     }
 })
 
+// jsdom has no layout engine, so HTMLElement.innerText is not implemented
+// (reads return undefined, writes don't create text nodes). Map it to
+// textContent — equivalent for the plain-text usages in the app/tests.
+Object.defineProperty(globalThis.HTMLElement.prototype, 'innerText', {
+    configurable: true,
+    get() {
+        return this.textContent
+    },
+    set(value) {
+        this.textContent = value
+    }
+})
+
 // Register the app's custom directives globally for every mounted component.
 // Vue 3 / VTU v2 has no `createLocalVue`; directives go through config.global instead.
 // This replaces the old `createScriptServerTestVue()` + `localVue` mount option.

@@ -22,11 +22,10 @@ import {
     savePosition
 } from './terminal_test_utils';
 
-function addChangedLinesListener(testCase) {
+function addChangedLinesListener(model) {
     const changedLinesField = [];
-    testCase.changedLines = changedLinesField;
 
-    testCase.model.addListener({
+    model.addListener({
         linesChanges: function (changedLines) {
             changedLinesField.push(changedLines);
         },
@@ -35,56 +34,60 @@ function addChangedLinesListener(testCase) {
 
         }
     });
+
+    return changedLinesField;
 }
 
 describe('Test terminal model', function () {
+    let changedLines, model, notifications;
+
 
     beforeEach(function () {
-        this.model = new TerminalModel();
+        model = new TerminalModel();
     });
 
     describe('Test simple writes', function () {
 
         it('Test write one char', function () {
-            this.model.write('a')
+            model.write('a')
 
-            expect(this.model.lines).toEqual(['a'])
+            expect(model.lines).toEqual(['a'])
         });
 
         it('Test write a string', function () {
-            this.model.write('hello world')
+            model.write('hello world')
 
-            expect(this.model.lines).toEqual(['hello world'])
+            expect(model.lines).toEqual(['hello world'])
         });
 
         it('Test write multiline string', function () {
-            this.model.write('hello world\n1\nanother line');
+            model.write('hello world\n1\nanother line');
 
-            expect(this.model.lines).toEqual(['hello world', '1', 'another line'])
+            expect(model.lines).toEqual(['hello world', '1', 'another line'])
         });
 
         it('Test multiple writes one char', function () {
-            this.model.write('a');
-            this.model.write('b');
-            this.model.write('c');
+            model.write('a');
+            model.write('b');
+            model.write('c');
 
-            expect(this.model.lines).toEqual(['abc'])
+            expect(model.lines).toEqual(['abc'])
         });
 
         it('Test multiple writes string', function () {
-            this.model.write('Lorem ');
-            this.model.write('ipsum');
-            this.model.write(' dolor');
+            model.write('Lorem ');
+            model.write('ipsum');
+            model.write(' dolor');
 
-            expect(this.model.lines).toEqual(['Lorem ipsum dolor'])
+            expect(model.lines).toEqual(['Lorem ipsum dolor'])
         });
 
         it('Test multiple writes with newline', function () {
-            this.model.write('sit\n');
-            this.model.write('am\net, ');
-            this.model.write('consectetur');
+            model.write('sit\n');
+            model.write('am\net, ');
+            model.write('consectetur');
 
-            expect(this.model.lines).toEqual(['sit', 'am', 'et, consectetur'])
+            expect(model.lines).toEqual(['sit', 'am', 'et, consectetur'])
         });
     });
 
@@ -124,69 +127,69 @@ describe('Test terminal model', function () {
     describe('Test styles', function () {
 
         it('Test text without styles', function () {
-            this.model.write('Lorem');
+            model.write('Lorem');
 
-            expect(this.model.lines).toEqual(['Lorem'])
-            expect(this.model.getStyle(0)).toBeNil()
+            expect(model.lines).toEqual(['Lorem'])
+            expect(model.getStyle(0)).toBeNil()
         });
 
         it('Test colored text', function () {
-            this.model.write(format(31) + 'ipsum');
+            model.write(format(31) + 'ipsum');
 
-            expect(this.model.lines).toEqual(['ipsum'])
-            assertStyles(this.model.getStyle(0), [new StyledRange(0, 5, new Style({color: 'red'}))]);
+            expect(model.lines).toEqual(['ipsum'])
+            assertStyles(model.getStyle(0), [new StyledRange(0, 5, new Style({color: 'red'}))]);
         });
 
         it('Test text style', function () {
-            this.model.write(format(1) + 'ipsum');
+            model.write(format(1) + 'ipsum');
 
-            expect(this.model.lines).toEqual(['ipsum'])
-            assertStyles(this.model.getStyle(0), [new StyledRange(0, 5, new Style({styles: ['bold']}))]);
+            expect(model.lines).toEqual(['ipsum'])
+            assertStyles(model.getStyle(0), [new StyledRange(0, 5, new Style({styles: ['bold']}))]);
         });
 
         it('Test text style zero-padded', function () {
-            this.model.write(format('02') + 'ipsum');
+            model.write(format('02') + 'ipsum');
 
-            expect(this.model.lines).toEqual(['ipsum'])
-            assertStyles(this.model.getStyle(0), [new StyledRange(0, 5, new Style({styles: ['dim']}))]);
+            expect(model.lines).toEqual(['ipsum'])
+            assertStyles(model.getStyle(0), [new StyledRange(0, 5, new Style({styles: ['dim']}))]);
         });
 
         it('Test mixed colored text', function () {
-            this.model.write(format(31) + '12345 ' + format(0) + '678 ' + format(32) + '90ab');
+            model.write(format(31) + '12345 ' + format(0) + '678 ' + format(32) + '90ab');
 
-            expect(this.model.lines).toEqual(['12345 678 90ab'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['12345 678 90ab'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 6, new Style({color: 'red'})),
                 new StyledRange(10, 14, new Style({color: 'green'}))]);
         });
 
         it('Test mixed colored text with new lines', function () {
-            this.model.write(
+            model.write(
                 format(33) + '123 ' + format(34) + '45\n'
                 + ' 6789 ' + format(31) + '0ab' + format(0) + ' ' + format(35) + 'cdefgh ijklmn' + format(0) + ' \n'
                 + 'op\n'
                 + format(36) + 'qrstuv');
 
-            expect(this.model.lines).toEqual(['123 45', ' 6789 0ab cdefgh ijklmn ', 'op', 'qrstuv'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['123 45', ' 6789 0ab cdefgh ijklmn ', 'op', 'qrstuv'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 4, new Style({color: 'yellow'})),
                 new StyledRange(4, 6, new Style({color: 'blue'}))]);
-            assertStyles(this.model.getStyle(1), [
+            assertStyles(model.getStyle(1), [
                 new StyledRange(0, 6, new Style({color: 'blue'})),
                 new StyledRange(6, 9, new Style({color: 'red'})),
                 new StyledRange(10, 23, new Style({color: 'magenta'}))]);
 
-            expect(this.model.getStyle(2)).toBeNil()
+            expect(model.getStyle(2)).toBeNil()
 
-            assertStyles(this.model.getStyle(3), [
+            assertStyles(model.getStyle(3), [
                 new StyledRange(0, 6, new Style({color: 'cyan'}))]);
         });
 
         it('Test color + background + styles', function () {
-            this.model.write(format(37, 41, 1, 4) + '12345');
+            model.write(format(37, 41, 1, 4) + '12345');
 
-            expect(this.model.lines).toEqual(['12345'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['12345'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 5, new Style({
                     color: 'lightgray',
                     background: 'red',
@@ -195,13 +198,13 @@ describe('Test terminal model', function () {
         });
 
         it('Test change color', function () {
-            this.model.write(format(31, 41) + '123'
+            model.write(format(31, 41) + '123'
                 + format(32) + '4'
                 + format(39) + '567'
                 + format(33) + '890abc');
 
-            expect(this.model.lines).toEqual(['1234567890abc'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['1234567890abc'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 3, new Style({color: 'red', background: 'red'})),
                 new StyledRange(3, 4, new Style({color: 'green', background: 'red'})),
                 new StyledRange(4, 7, new Style({background: 'red'})),
@@ -209,7 +212,7 @@ describe('Test terminal model', function () {
         });
 
         it('Test change styles', function () {
-            this.model.write(
+            model.write(
                 format(34) + '123'
                 + format(1) + '45'
                 + format(4) + '67890'
@@ -222,8 +225,8 @@ describe('Test terminal model', function () {
                 + format(28) + 'mno'
                 + format(2) + 'pq');
 
-            expect(this.model.lines).toEqual(['1234567890abcdefghijklmnopq'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['1234567890abcdefghijklmnopq'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 3, new Style({color: 'blue'})),
                 new StyledRange(3, 5, new Style({color: 'blue', styles: ['bold']})),
                 new StyledRange(5, 10, new Style({color: 'blue', styles: ['bold', 'underlined']})),
@@ -236,7 +239,7 @@ describe('Test terminal model', function () {
         });
 
         it('Test replace style on ', function () {
-            this.model.write(
+            model.write(
                 format(34) + '123'
                 + format(1) + '45'
                 + format(4) + '67890'
@@ -249,8 +252,8 @@ describe('Test terminal model', function () {
                 + format(28) + 'mno'
                 + format(2) + 'pq');
 
-            expect(this.model.lines).toEqual(['1234567890abcdefghijklmnopq'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['1234567890abcdefghijklmnopq'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 3, new Style({color: 'blue'})),
                 new StyledRange(3, 5, new Style({color: 'blue', styles: ['bold']})),
                 new StyledRange(5, 10, new Style({color: 'blue', styles: ['bold', 'underlined']})),
@@ -263,83 +266,83 @@ describe('Test terminal model', function () {
         });
 
         it('Test fully replace styled line with another styled line', function () {
-            this.model.write(format(31) + '12345' + format(32) + '\r67890');
+            model.write(format(31) + '12345' + format(32) + '\r67890');
 
-            expect(this.model.lines).toEqual(['67890'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['67890'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 5, new Style({color: 'green'}))]);
         });
 
         it('Test fully replace unstyled line with a styled line', function () {
-            this.model.write('12345' + format(32) + '\r67890');
+            model.write('12345' + format(32) + '\r67890');
 
-            expect(this.model.lines).toEqual(['67890'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['67890'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 5, new Style({color: 'green'}))]);
         });
 
         it('Test fully replace styled line with an unstyled line', function () {
-            this.model.write(format(31) + '12345' + format(0) + '\r67890');
+            model.write(format(31) + '12345' + format(0) + '\r67890');
 
-            expect(this.model.lines).toEqual(['67890'])
-            assertStyles(this.model.getStyle(0), []);
+            expect(model.lines).toEqual(['67890'])
+            assertStyles(model.getStyle(0), []);
         });
 
         it('Test replace beginning of styled line', function () {
-            this.model.write(format(31) + '12345' + format(0, 42) + '\rabc');
+            model.write(format(31) + '12345' + format(0, 42) + '\rabc');
 
-            expect(this.model.lines).toEqual(['abc45'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['abc45'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 3, new Style({background: 'green'})),
                 new StyledRange(3, 5, new Style({color: 'red'}))]);
         });
 
         it('Test replace mid of styled line', function () {
-            this.model.write(format(31) + '12345' + format(0, 42) + moveCursorLeft(4) + 'abc');
+            model.write(format(31) + '12345' + format(0, 42) + moveCursorLeft(4) + 'abc');
 
-            expect(this.model.lines).toEqual(['1abc5'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['1abc5'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 1, new Style({color: 'red'})),
                 new StyledRange(1, 4, new Style({background: 'green'})),
                 new StyledRange(4, 5, new Style({color: 'red'}))]);
         });
 
         it('Test replace end of styled line', function () {
-            this.model.write(format(31) + '12345' + format(0, 42) + moveCursorLeft(2) + 'abc');
+            model.write(format(31) + '12345' + format(0, 42) + moveCursorLeft(2) + 'abc');
 
-            expect(this.model.lines).toEqual(['123abc'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['123abc'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 3, new Style({color: 'red'})),
                 new StyledRange(3, 6, new Style({background: 'green'}))]);
         });
 
         it('Test replace multiple styles', function () {
-            this.model.write('123' + format(31) + '456' + format(42) + '78' + format(2) + '90'
+            model.write('123' + format(31) + '456' + format(42) + '78' + format(2) + '90'
                 + format(0, 33) + '\r' + 'abcdefghi');
 
-            expect(this.model.lines).toEqual(['abcdefghi0'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['abcdefghi0'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 9, new Style({color: 'yellow'})),
                 new StyledRange(9, 10, new Style({color: 'red', background: 'green', styles: ['dim']}))]);
         });
 
         it('Test replace multiple styles without format', function () {
-            this.model.write(format(31) + '123' + format(2) + '456' + format(42) + '78' + format(0, 33) + '90'
+            model.write(format(31) + '123' + format(2) + '456' + format(42) + '78' + format(0, 33) + '90'
                 + format(0) + '\r' + moveCursorRight(1) + 'abcdefgh');
 
-            expect(this.model.lines).toEqual(['1abcdefgh0'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['1abcdefgh0'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 1, new Style({color: 'red'})),
                 new StyledRange(9, 10, new Style({color: 'yellow'}))]);
         });
 
         it('Test replace multiple styles with intervals', function () {
-            this.model.write(
+            model.write(
                 format(31) + 'abcd' + format(2) + 'efg' + format(44) + 'h' + format(0) + 'ij' + format(33) + 'klmno'
                 + format(0, 32) + '\r' + moveCursorRight(1) + '1' + moveCursorRight(5) + '23' + moveCursorRight(2) + '45');
 
-            expect(this.model.lines).toEqual(['a1cdefg23jk45no'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual(['a1cdefg23jk45no'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 1, new Style({color: 'red'})),
                 new StyledRange(1, 2, new Style({color: 'green'})),
                 new StyledRange(2, 4, new Style({color: 'red'})),
@@ -355,283 +358,283 @@ describe('Test terminal model', function () {
     describe('Test changed lines', function () {
 
         beforeEach(function () {
-            addChangedLinesListener(this);
+            changedLines = addChangedLinesListener(model);
         });
 
         it('Test write one char', function () {
-            this.model.write('a');
+            model.write('a');
 
-            expect(this.changedLines).toEqual([[0]])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test text with newline', function () {
-            this.model.write('hello world\n');
+            model.write('hello world\n');
 
-            expect(this.changedLines).toEqual([[0]])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test write multiline string', function () {
-            this.model.write('hello world\n1\nanother line');
+            model.write('hello world\n1\nanother line');
 
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test multiple writes', function () {
-            this.model.write('12');
-            this.model.write('3');
+            model.write('12');
+            model.write('3');
 
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test write after multiline', function () {
-            this.model.write('hello\n');
-            this.model.write('world');
+            model.write('hello\n');
+            model.write('world');
 
-            expect(this.changedLines).toEqual([[0], [1]])
+            expect(changedLines).toEqual([[0], [1]])
         });
 
         it('Test write with first char newline', function () {
-            this.model.write('hello');
-            this.model.write('\nworld');
+            model.write('hello');
+            model.write('\nworld');
 
-            expect(this.changedLines).toEqual([[0], [1]])
+            expect(changedLines).toEqual([[0], [1]])
         });
 
         it('Test multiple newlines', function () {
-            this.model.write('123\n\n\n456');
+            model.write('123\n\n\n456');
 
-            expect(this.changedLines).toEqual([[0, 3]])
+            expect(changedLines).toEqual([[0, 3]])
         });
 
         it('Test multiple writes with newline', function () {
-            this.model.write('123\n');
-            this.model.write('45\n678');
-            this.model.write('9\n10\n11');
+            model.write('123\n');
+            model.write('45\n678');
+            model.write('9\n10\n11');
 
-            expect(this.changedLines).toEqual([[0], [1, 2], [2, 3, 4]])
+            expect(changedLines).toEqual([[0], [1, 2], [2, 3, 4]])
         });
     });
 
     describe('Test cursor move', function () {
 
         it('Test caret return without changes', function () {
-            this.model.write('12345\r');
+            model.write('12345\r');
 
-            expect(this.model.lines).toEqual(['12345'])
+            expect(model.lines).toEqual(['12345'])
         });
 
         it('Test caret return and char change', function () {
-            this.model.write('12345\ra');
+            model.write('12345\ra');
 
-            expect(this.model.lines).toEqual(['a2345'])
+            expect(model.lines).toEqual(['a2345'])
         });
 
         it('Test caret return and long change', function () {
-            this.model.write('12345\rabcdef');
+            model.write('12345\rabcdef');
 
-            expect(this.model.lines).toEqual(['abcdef'])
+            expect(model.lines).toEqual(['abcdef'])
         });
 
         it('Test caret return and newline', function () {
-            this.model.write('12345\r\nabcdef');
+            model.write('12345\r\nabcdef');
 
-            expect(this.model.lines).toEqual(['12345', 'abcdef'])
+            expect(model.lines).toEqual(['12345', 'abcdef'])
         });
 
         it('Test caret return and newline after a char', function () {
-            this.model.write('12345\ra\nbcdef');
+            model.write('12345\ra\nbcdef');
 
-            expect(this.model.lines).toEqual(['a2345', 'bcdef'])
+            expect(model.lines).toEqual(['a2345', 'bcdef'])
         });
 
         it('Test caret return in multiple lines', function () {
-            this.model.write('12345\ra\nb\n\rcdef');
+            model.write('12345\ra\nb\n\rcdef');
 
-            expect(this.model.lines).toEqual(['a2345', 'b', 'cdef'])
+            expect(model.lines).toEqual(['a2345', 'b', 'cdef'])
         });
 
         it('Test move cursor up when one line only', function () {
-            this.model.write('12345' + moveCursorUp(1) + 'abc');
+            model.write('12345' + moveCursorUp(1) + 'abc');
 
-            expect(this.model.lines).toEqual(['12345abc'])
+            expect(model.lines).toEqual(['12345abc'])
         });
 
         it('Test move cursor up from the second line', function () {
-            this.model.write('12345\nabc' + moveCursorUp(1) + 'def');
+            model.write('12345\nabc' + moveCursorUp(1) + 'def');
 
-            expect(this.model.lines).toEqual(['123def', 'abc'])
+            expect(model.lines).toEqual(['123def', 'abc'])
         });
 
         it('Test move cursor up when upper line is shorter', function () {
-            this.model.write('1\nabc' + moveCursorUp(1) + 'def');
+            model.write('1\nabc' + moveCursorUp(1) + 'def');
 
-            expect(this.model.lines).toEqual(['1  def', 'abc'])
+            expect(model.lines).toEqual(['1  def', 'abc'])
         });
 
         it('Test move cursor up above terminal', function () {
-            this.model.write('123\n456\n78' + moveCursorUp(100) + 'def');
+            model.write('123\n456\n78' + moveCursorUp(100) + 'def');
 
-            expect(this.model.lines).toEqual(['12def', '456', '78'])
+            expect(model.lines).toEqual(['12def', '456', '78'])
         });
 
         it('Test move cursor up, when 2 writes and second write moves up to itself', function () {
-            this.model.write('12345\n');
-            this.model.write('abc\nde' + moveCursorUp(1) + 'fgh');
+            model.write('12345\n');
+            model.write('abc\nde' + moveCursorUp(1) + 'fgh');
 
-            expect(this.model.lines).toEqual(['12345', 'abfgh', 'de'])
+            expect(model.lines).toEqual(['12345', 'abfgh', 'de'])
         });
 
         it('Test move cursor up, when 2 writes and second write moves up 1 line to previous write', function () {
-            this.model.write('12345\n');
-            this.model.write('abc' + moveCursorUp(1) + 'def');
+            model.write('12345\n');
+            model.write('abc' + moveCursorUp(1) + 'def');
 
-            expect(this.model.lines).toEqual(['123def', 'abc'])
+            expect(model.lines).toEqual(['123def', 'abc'])
         });
 
         it('Test move cursor up, when 2 writes and second write moves up 2 lines to previous write', function () {
-            this.model.write('12345\n');
-            this.model.write('abc\nde' + moveCursorUp(2) + 'fgh');
+            model.write('12345\n');
+            model.write('abc\nde' + moveCursorUp(2) + 'fgh');
 
-            expect(this.model.lines).toEqual(['12fgh', 'abc', 'de'])
+            expect(model.lines).toEqual(['12fgh', 'abc', 'de'])
         });
 
         it('Test move cursor down to unexisting line', function () {
-            this.model.write('1' + moveCursorDown(1) + 'abc');
+            model.write('1' + moveCursorDown(1) + 'abc');
 
-            expect(this.model.lines).toEqual(['1abc'])
+            expect(model.lines).toEqual(['1abc'])
         });
 
         it('Test move cursor down N to unexisting line', function () {
-            this.model.write('12345' + moveCursorDown(3) + 'a');
+            model.write('12345' + moveCursorDown(3) + 'a');
 
-            expect(this.model.lines).toEqual(['12345a'])
+            expect(model.lines).toEqual(['12345a'])
         });
 
         it('Test move cursor down to empty line', function () {
-            this.model.write('1\n' + moveCursorUp(1) + moveCursorDown(1) + 'abc');
+            model.write('1\n' + moveCursorUp(1) + moveCursorDown(1) + 'abc');
 
-            expect(this.model.lines).toEqual(['1', 'abc'])
+            expect(model.lines).toEqual(['1', 'abc'])
         });
 
         it('Test move cursor down 3 times, when only 2 empty lines', function () {
-            this.model.write('1\n\n' + moveCursorUp(2) + moveCursorDown(3) + 'abc');
+            model.write('1\n\n' + moveCursorUp(2) + moveCursorDown(3) + 'abc');
 
-            expect(this.model.lines).toEqual(['1', '', 'abc'])
+            expect(model.lines).toEqual(['1', '', 'abc'])
         });
 
         it('Test move cursor down N to unexisting line', function () {
-            this.model.write('12345' + moveCursorDown(3) + 'a');
+            model.write('12345' + moveCursorDown(3) + 'a');
 
-            expect(this.model.lines).toEqual(['12345a'])
+            expect(model.lines).toEqual(['12345a'])
         });
 
         it('Test move cursor down when bottom line is shorter', function () {
-            this.model.write('12\n34\n56' + moveCursorUp(3) + '\rabcdef' + moveCursorDown(2) + 'gh');
+            model.write('12\n34\n56' + moveCursorUp(3) + '\rabcdef' + moveCursorDown(2) + 'gh');
 
-            expect(this.model.lines).toEqual(['abcdef', '34', '56    gh'])
+            expect(model.lines).toEqual(['abcdef', '34', '56    gh'])
         });
 
         it('Test move cursor down when bottom line is longer', function () {
-            this.model.write('12\n3456789\n' + moveCursorUp(2) + '\ra' + moveCursorDown(1) + 'bc');
+            model.write('12\n3456789\n' + moveCursorUp(2) + '\ra' + moveCursorDown(1) + 'bc');
 
-            expect(this.model.lines).toEqual(['a2', '3bc6789'])
+            expect(model.lines).toEqual(['a2', '3bc6789'])
         });
 
         it('Test move cursor down N to existing line', function () {
-            this.model.write('12\n34\n56\n78\n' + moveCursorUp(4) + 'a' + moveCursorDown(3) + 'b');
+            model.write('12\n34\n56\n78\n' + moveCursorUp(4) + 'a' + moveCursorDown(3) + 'b');
 
-            expect(this.model.lines).toEqual(['a2', '34', '56', '7b'])
+            expect(model.lines).toEqual(['a2', '34', '56', '7b'])
         });
 
         it('Test move cursor down multiple times', function () {
-            this.model.write('12\n34\n56\n78\n90\n' + moveCursorUp(5)
+            model.write('12\n34\n56\n78\n90\n' + moveCursorUp(5)
                 + moveCursorDown(2) + moveCursorDown(1) + 'b');
 
-            expect(this.model.lines).toEqual(['12', '34', '56', 'b8', '90'])
+            expect(model.lines).toEqual(['12', '34', '56', 'b8', '90'])
         });
 
         it('Test move cursor right 1 position', function () {
-            this.model.write('123' + moveCursorRight(1) + 'abc');
+            model.write('123' + moveCursorRight(1) + 'abc');
 
-            expect(this.model.lines).toEqual(['123 abc'])
+            expect(model.lines).toEqual(['123 abc'])
         });
 
         it('Test move cursor right N positions', function () {
-            this.model.write('123' + moveCursorRight(5) + 'abc');
+            model.write('123' + moveCursorRight(5) + 'abc');
 
-            expect(this.model.lines).toEqual(['123     abc'])
+            expect(model.lines).toEqual(['123     abc'])
         });
 
         it('Test move cursor right when existing text is shorter', function () {
-            this.model.write('123\r' + moveCursorRight(5) + 'abc');
+            model.write('123\r' + moveCursorRight(5) + 'abc');
 
-            expect(this.model.lines).toEqual(['123  abc'])
+            expect(model.lines).toEqual(['123  abc'])
         });
 
         it('Test move cursor right when existing text is longer', function () {
-            this.model.write('1234567890\r' + moveCursorRight(5) + 'abc');
+            model.write('1234567890\r' + moveCursorRight(5) + 'abc');
 
-            expect(this.model.lines).toEqual(['12345abc90'])
+            expect(model.lines).toEqual(['12345abc90'])
         });
 
         it('Test move cursor right multiple times', function () {
-            this.model.write('1234567890\r' + moveCursorRight(3) + moveCursorRight(1) + moveCursorRight(2) + 'abc');
+            model.write('1234567890\r' + moveCursorRight(3) + moveCursorRight(1) + moveCursorRight(2) + 'abc');
 
-            expect(this.model.lines).toEqual(['123456abc0'])
+            expect(model.lines).toEqual(['123456abc0'])
         });
 
         it('Test move cursor left 1 position and single char', function () {
-            this.model.write('12345' + moveCursorLeft(1) + 'a');
+            model.write('12345' + moveCursorLeft(1) + 'a');
 
-            expect(this.model.lines).toEqual(['1234a'])
+            expect(model.lines).toEqual(['1234a'])
         });
 
         it('Test move cursor left 1 position and long string', function () {
-            this.model.write('12345' + moveCursorLeft(1) + 'abcde');
+            model.write('12345' + moveCursorLeft(1) + 'abcde');
 
-            expect(this.model.lines).toEqual(['1234abcde'])
+            expect(model.lines).toEqual(['1234abcde'])
         });
 
         it('Test move cursor left N positions ', function () {
-            this.model.write('12345' + moveCursorLeft(4) + 'abc');
+            model.write('12345' + moveCursorLeft(4) + 'abc');
 
-            expect(this.model.lines).toEqual(['1abc5'])
+            expect(model.lines).toEqual(['1abc5'])
         });
 
         it('Test move cursor left out of terminal', function () {
-            this.model.write('12345' + moveCursorLeft(100) + 'abc');
+            model.write('12345' + moveCursorLeft(100) + 'abc');
 
-            expect(this.model.lines).toEqual(['abc45'])
+            expect(model.lines).toEqual(['abc45'])
         });
 
         it('Test move cursor right left has no effect', function () {
-            this.model.write('12345' + moveCursorRight(5) + moveCursorLeft(5) + 'abc');
+            model.write('12345' + moveCursorRight(5) + moveCursorLeft(5) + 'abc');
 
-            expect(this.model.lines).toEqual(['12345abc'])
+            expect(model.lines).toEqual(['12345abc'])
         });
 
         it('Test move cursor left right has no effect', function () {
-            this.model.write('12345' + moveCursorLeft(3) + moveCursorRight(3) + 'abc');
+            model.write('12345' + moveCursorLeft(3) + moveCursorRight(3) + 'abc');
 
-            expect(this.model.lines).toEqual(['12345abc'])
+            expect(model.lines).toEqual(['12345abc'])
         });
 
         it('Test move cursor down up has no effect', function () {
-            this.model.write('12345' + moveCursorDown(5) + moveCursorUp(5) + 'abc');
+            model.write('12345' + moveCursorDown(5) + moveCursorUp(5) + 'abc');
 
-            expect(this.model.lines).toEqual(['12345abc'])
+            expect(model.lines).toEqual(['12345abc'])
         });
 
         it('Test move cursor up down has no effect', function () {
-            this.model.write('12\n34\n56\n78\n90' + moveCursorUp(3) + moveCursorDown(3) + 'abc');
+            model.write('12\n34\n56\n78\n90' + moveCursorUp(3) + moveCursorDown(3) + 'abc');
 
-            expect(this.model.lines).toEqual(['12', '34', '56', '78', '90abc'])
+            expect(model.lines).toEqual(['12', '34', '56', '78', '90abc'])
         });
     });
 
     describe('Test clear line command', function () {
         beforeEach(function () {
-            addChangedLinesListener(this);
+            changedLines = addChangedLinesListener(model);
 
             sinon.stub(console, 'log').returns(void 0);
         });
@@ -641,309 +644,309 @@ describe('Test terminal model', function () {
         });
 
         it('Test clear line to the right in the middle, same write', function () {
-            this.model.write('123456' + moveCursorLeft(3) + clearLineToRight());
+            model.write('123456' + moveCursorLeft(3) + clearLineToRight());
 
-            expect(this.model.lines).toEqual(['123'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test clear line to the right at the beginning, same write', function () {
-            this.model.write('123456' + moveCursorLeft(6) + clearLineToRight());
+            model.write('123456' + moveCursorLeft(6) + clearLineToRight());
 
-            expect(this.model.lines).toEqual([''])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual([''])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test clear line to the right in the middle, second write', function () {
-            this.model.write('123456' + moveCursorLeft(3));
-            this.model.write(clearLineToRight());
+            model.write('123456' + moveCursorLeft(3));
+            model.write(clearLineToRight());
 
-            expect(this.model.lines).toEqual(['123'])
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(model.lines).toEqual(['123'])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test clear line to the right before last, second write', function () {
-            this.model.write('123456' + moveCursorLeft(1));
-            this.model.write(clearLineToRight());
+            model.write('123456' + moveCursorLeft(1));
+            model.write(clearLineToRight());
 
-            expect(this.model.lines).toEqual(['12345'])
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(model.lines).toEqual(['12345'])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test clear line to the right after last, second write', function () {
-            this.model.write('123456');
-            this.model.write(clearLineToRight());
+            model.write('123456');
+            model.write(clearLineToRight());
 
-            expect(this.model.lines).toEqual(['123456'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123456'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test clear line to the right one position after last, second write', function () {
-            this.model.write('123456' + moveCursorRight(1));
-            this.model.write(clearLineToRight());
+            model.write('123456' + moveCursorRight(1));
+            model.write(clearLineToRight());
 
-            expect(this.model.lines).toEqual(['123456'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123456'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test clear line to the right many positions after last, second write', function () {
-            this.model.write('123456' + moveCursorRight(5));
-            this.model.write(clearLineToRight());
+            model.write('123456' + moveCursorRight(5));
+            model.write(clearLineToRight());
 
-            expect(this.model.lines).toEqual(['123456'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123456'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test clear line to the right, one line above, second write', function () {
-            this.model.write('123456\nabc' + moveCursorUp(1));
-            this.model.write(clearLineToRight());
+            model.write('123456\nabc' + moveCursorUp(1));
+            model.write(clearLineToRight());
 
-            expect(this.model.lines).toEqual(['123', 'abc'])
-            expect(this.changedLines).toEqual([[0, 1], [0]])
+            expect(model.lines).toEqual(['123', 'abc'])
+            expect(changedLines).toEqual([[0, 1], [0]])
         });
 
         it('Test clear line to the left in the middle, same write', function () {
-            this.model.write('123456' + moveCursorLeft(3) + clearLineToLeft());
+            model.write('123456' + moveCursorLeft(3) + clearLineToLeft());
 
-            expect(this.model.lines).toEqual(['   456'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['   456'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test clear line to the left in the middle, second write', function () {
-            this.model.write('123456' + moveCursorLeft(3));
-            this.model.write(clearLineToLeft());
+            model.write('123456' + moveCursorLeft(3));
+            model.write(clearLineToLeft());
 
-            expect(this.model.lines).toEqual(['   456'])
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(model.lines).toEqual(['   456'])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test clear line to the left before last, second write', function () {
-            this.model.write('123456' + moveCursorLeft(1));
-            this.model.write(clearLineToLeft());
+            model.write('123456' + moveCursorLeft(1));
+            model.write(clearLineToLeft());
 
-            expect(this.model.lines).toEqual(['     6'])
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(model.lines).toEqual(['     6'])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test clear line to the left after last, second write', function () {
-            this.model.write('123456');
-            this.model.write(clearLineToLeft());
+            model.write('123456');
+            model.write(clearLineToLeft());
 
-            expect(this.model.lines).toEqual([''])
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(model.lines).toEqual([''])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test clear line to the left one position after last, second write', function () {
-            this.model.write('123456' + moveCursorRight(1));
-            this.model.write(clearLineToLeft());
+            model.write('123456' + moveCursorRight(1));
+            model.write(clearLineToLeft());
 
-            expect(this.model.lines).toEqual([''])
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(model.lines).toEqual([''])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test clear line to the left at position 1, second write', function () {
-            this.model.write('123456' + moveCursorLeft(5));
-            this.model.write(clearLineToLeft());
+            model.write('123456' + moveCursorLeft(5));
+            model.write(clearLineToLeft());
 
-            expect(this.model.lines).toEqual([' 23456'])
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(model.lines).toEqual([' 23456'])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test clear line to the left at position 0, second write', function () {
-            this.model.write('123456' + moveCursorLeft(6));
-            this.model.write(clearLineToLeft());
+            model.write('123456' + moveCursorLeft(6));
+            model.write(clearLineToLeft());
 
-            expect(this.model.lines).toEqual(['123456'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123456'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test clear line to the left, one line above, second write', function () {
-            this.model.write('123456\nabc' + moveCursorUp(1));
-            this.model.write(clearLineToLeft());
+            model.write('123456\nabc' + moveCursorUp(1));
+            model.write(clearLineToLeft());
 
-            expect(this.model.lines).toEqual(['   456', 'abc'])
-            expect(this.changedLines).toEqual([[0, 1], [0]])
+            expect(model.lines).toEqual(['   456', 'abc'])
+            expect(changedLines).toEqual([[0, 1], [0]])
         });
 
         it('Test clear full in the middle, same write', function () {
-            this.model.write('123456' + moveCursorLeft(3) + clearFullLine());
+            model.write('123456' + moveCursorLeft(3) + clearFullLine());
 
-            expect(this.model.lines).toEqual([''])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual([''])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test clear full in the middle, second write', function () {
-            this.model.write('123456' + moveCursorLeft(3));
-            this.model.write(clearFullLine());
+            model.write('123456' + moveCursorLeft(3));
+            model.write(clearFullLine());
 
-            expect(this.model.lines).toEqual([''])
-            expect(this.changedLines).toEqual([[0], [0]])
+            expect(model.lines).toEqual([''])
+            expect(changedLines).toEqual([[0], [0]])
         });
 
         it('Test clear full line, one line above, second write', function () {
-            this.model.write('123456\nabc' + moveCursorUp(1));
-            this.model.write(clearFullLine());
+            model.write('123456\nabc' + moveCursorUp(1));
+            model.write(clearFullLine());
 
-            expect(this.model.lines).toEqual(['', 'abc'])
-            expect(this.changedLines).toEqual([[0, 1], [0]])
+            expect(model.lines).toEqual(['', 'abc'])
+            expect(changedLines).toEqual([[0, 1], [0]])
         });
 
         it('Test clear line wrong parameter', function () {
-            this.model.write('123456' + moveCursorLeft(3) + clearLine(3));
+            model.write('123456' + moveCursorLeft(3) + clearLine(3));
 
-            expect(this.model.lines).toEqual(['123456'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123456'])
+            expect(changedLines).toEqual([[0]])
             expect(console.log.args[0][0]).toBe('WARN! Unsupported [3K command');
         });
     });
 
     describe('Test move cursor to position', function () {
         beforeEach(function () {
-            addChangedLinesListener(this);
+            changedLines = addChangedLinesListener(model);
         });
 
         it('Test move to middle in the first line', function () {
-            this.model.write('123456' + moveToPosition(0, 3) + 'abc');
+            model.write('123456' + moveToPosition(0, 3) + 'abc');
 
-            expect(this.model.lines).toEqual(['123abc'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123abc'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test move to explicit beginning in the first line', function () {
-            this.model.write('123456' + moveToPosition(0, 0) + 'abc');
+            model.write('123456' + moveToPosition(0, 0) + 'abc');
 
-            expect(this.model.lines).toEqual(['abc456'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['abc456'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test move to the end in the first line', function () {
-            this.model.write('123456' + moveToPosition(0, 6) + 'abc');
+            model.write('123456' + moveToPosition(0, 6) + 'abc');
 
-            expect(this.model.lines).toEqual(['123456abc'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123456abc'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test move after the end in the first line', function () {
-            this.model.write('123456' + moveToPosition(0, 7) + 'abc');
+            model.write('123456' + moveToPosition(0, 7) + 'abc');
 
-            expect(this.model.lines).toEqual(['123456 abc'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['123456 abc'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test move after the end in the second line, when 3 lines', function () {
-            this.model.write('12\n3456\n789' + moveToPosition(1, 7) + 'abc');
+            model.write('12\n3456\n789' + moveToPosition(1, 7) + 'abc');
 
-            expect(this.model.lines).toEqual(['12', '3456   abc', '789'])
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(model.lines).toEqual(['12', '3456   abc', '789'])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test move to the second line from the end, when 3 lines available', function () {
-            this.model.write('1234\n5678\n90' + moveToPosition(1, 3) + 'abc');
+            model.write('1234\n5678\n90' + moveToPosition(1, 3) + 'abc');
 
-            expect(this.model.lines).toEqual(['1234', '567abc', '90'])
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(model.lines).toEqual(['1234', '567abc', '90'])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test move to the first line from the end, when 3 lines available', function () {
-            this.model.write('1234\n5678\n90' + moveToPosition(0, 2) + 'abc');
+            model.write('1234\n5678\n90' + moveToPosition(0, 2) + 'abc');
 
-            expect(this.model.lines).toEqual(['12abc', '5678', '90'])
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(model.lines).toEqual(['12abc', '5678', '90'])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test move to the implicit beginning from the end, when 3 lines available', function () {
-            this.model.write('1234\n5678\n90' + moveToPosition('', '') + 'abc');
+            model.write('1234\n5678\n90' + moveToPosition('', '') + 'abc');
 
-            expect(this.model.lines).toEqual(['abc4', '5678', '90'])
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(model.lines).toEqual(['abc4', '5678', '90'])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test move to the last line, when 3 lines available', function () {
-            this.model.write('1234\n5678\n90' + moveCursorUp(2) + moveToPosition(2, 1) + 'abc');
+            model.write('1234\n5678\n90' + moveCursorUp(2) + moveToPosition(2, 1) + 'abc');
 
-            expect(this.model.lines).toEqual(['1234', '5678', '9abc'])
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(model.lines).toEqual(['1234', '5678', '9abc'])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test move to the second line, when only one is available', function () {
-            this.model.write('123456' + moveToPosition(1, 0) + 'abc');
+            model.write('123456' + moveToPosition(1, 0) + 'abc');
 
-            expect(this.model.lines).toEqual(['abc456'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['abc456'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test move to the third line, when only two are available', function () {
-            this.model.write('12345\n67890' + moveCursorUp(1) + moveToPosition(2, 2) + 'abc');
+            model.write('12345\n67890' + moveCursorUp(1) + moveToPosition(2, 2) + 'abc');
 
-            expect(this.model.lines).toEqual(['12345', '67abc'])
-            expect(this.changedLines).toEqual([[0, 1]])
+            expect(model.lines).toEqual(['12345', '67abc'])
+            expect(changedLines).toEqual([[0, 1]])
         });
 
         it('Test move to line without specified column, when 1 line', function () {
-            this.model.write('12345' + moveToPosition(0, '') + 'abc');
+            model.write('12345' + moveToPosition(0, '') + 'abc');
 
-            expect(this.model.lines).toEqual(['abc45'])
-            expect(this.changedLines).toEqual([[0]])
+            expect(model.lines).toEqual(['abc45'])
+            expect(changedLines).toEqual([[0]])
         });
 
         it('Test move to the first line without specified column, when 2 lines', function () {
-            this.model.write('12345\n67890' + moveToPosition(0, '') + 'abc');
+            model.write('12345\n67890' + moveToPosition(0, '') + 'abc');
 
-            expect(this.model.lines).toEqual(['abc45', '67890'])
-            expect(this.changedLines).toEqual([[0, 1]])
+            expect(model.lines).toEqual(['abc45', '67890'])
+            expect(changedLines).toEqual([[0, 1]])
         });
 
         it('Test move to the second line without specified column, when 2 lines', function () {
-            this.model.write('12345\n67890' + moveToPosition(1, '') + 'abc');
+            model.write('12345\n67890' + moveToPosition(1, '') + 'abc');
 
-            expect(this.model.lines).toEqual(['12345', 'abc90'])
-            expect(this.changedLines).toEqual([[0, 1]])
+            expect(model.lines).toEqual(['12345', 'abc90'])
+            expect(changedLines).toEqual([[0, 1]])
         });
 
         it('Test f command', function () {
-            this.model.write('1234\n56\n7890' + moveToPosition(1, 1, 'f') + 'abc');
+            model.write('1234\n56\n7890' + moveToPosition(1, 1, 'f') + 'abc');
 
-            expect(this.model.lines).toEqual(['1234', '5abc', '7890'])
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(model.lines).toEqual(['1234', '5abc', '7890'])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test without any arguments', function () {
-            this.model.write('1234\n56\n7890' + escapePrefix + 'H' + 'abc');
+            model.write('1234\n56\n7890' + escapePrefix + 'H' + 'abc');
 
-            expect(this.model.lines).toEqual(['abc4', '56', '7890'])
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(model.lines).toEqual(['abc4', '56', '7890'])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test changed lines, when no text', function () {
-            this.model.write('1234\n56');
-            this.model.write(moveToPosition(0, 0));
+            model.write('1234\n56');
+            model.write(moveToPosition(0, 0));
 
-            expect(this.model.lines).toEqual(['1234', '56'])
-            expect(this.changedLines).toEqual([[0, 1]])
+            expect(model.lines).toEqual(['1234', '56'])
+            expect(changedLines).toEqual([[0, 1]])
         });
 
         it('Test changed lines, when text in the first line', function () {
-            this.model.write('1234\n56\n789');
-            this.model.write(moveToPosition(0, 1) + 'abc');
+            model.write('1234\n56\n789');
+            model.write(moveToPosition(0, 1) + 'abc');
 
-            expect(this.model.lines).toEqual(['1abc', '56', '789'])
-            expect(this.changedLines).toEqual([[0, 1, 2], [0]])
+            expect(model.lines).toEqual(['1abc', '56', '789'])
+            expect(changedLines).toEqual([[0, 1, 2], [0]])
         });
 
         it('Test changed lines, when text in the second line', function () {
-            this.model.write('1234\n56\n789');
-            this.model.write(moveToPosition(1, 1) + 'abc');
+            model.write('1234\n56\n789');
+            model.write(moveToPosition(1, 1) + 'abc');
 
-            expect(this.model.lines).toEqual(['1234', '5abc', '789'])
-            expect(this.changedLines).toEqual([[0, 1, 2], [1]])
+            expect(model.lines).toEqual(['1234', '5abc', '789'])
+            expect(changedLines).toEqual([[0, 1, 2], [1]])
         });
 
         it('Test changed lines, when text in the last line', function () {
-            this.model.write('1234\n56\n789');
-            this.model.write(moveToPosition(2, 2) + 'abc');
+            model.write('1234\n56\n789');
+            model.write(moveToPosition(2, 2) + 'abc');
 
-            expect(this.model.lines).toEqual(['1234', '56', '78abc'])
-            expect(this.changedLines).toEqual([[0, 1, 2], [2]])
+            expect(model.lines).toEqual(['1234', '56', '78abc'])
+            expect(changedLines).toEqual([[0, 1, 2], [2]])
         });
     });
 
@@ -957,37 +960,37 @@ describe('Test terminal model', function () {
         });
 
         it('Test restore in the first line', function () {
-            this.model.write('1234' + savePosition() + '5678' + restorePosition() + 'abc');
+            model.write('1234' + savePosition() + '5678' + restorePosition() + 'abc');
 
-            expect(this.model.lines).toEqual(['1234abc8'])
+            expect(model.lines).toEqual(['1234abc8'])
         });
 
         it('Test restore in the first line, when 3 lines', function () {
-            this.model.write('123' + savePosition() + '45\n678\n90' + restorePosition() + 'abc');
+            model.write('123' + savePosition() + '45\n678\n90' + restorePosition() + 'abc');
 
-            expect(this.model.lines).toEqual(['123abc', '678', '90'])
+            expect(model.lines).toEqual(['123abc', '678', '90'])
         });
 
         it('Test restore in the last line, when 3 lines', function () {
-            this.model.write('123\n4567\n8' + savePosition() + '90' + moveCursorUp(2) + 'X'
+            model.write('123\n4567\n8' + savePosition() + '90' + moveCursorUp(2) + 'X'
                 + restorePosition() + 'abc');
 
-            expect(this.model.lines).toEqual(['123X', '4567', '8abc'])
+            expect(model.lines).toEqual(['123X', '4567', '8abc'])
         });
 
         it('Test restore position without save', function () {
-            this.model.write('1234' + restorePosition() + 'abc');
+            model.write('1234' + restorePosition() + 'abc');
 
-            expect(this.model.lines).toEqual(['1234abc'])
+            expect(model.lines).toEqual(['1234abc'])
             expect(console.log.args[0][0]).toBe('WARN! trying to restore cursor position, but nothing is saved');
         });
 
         it('Test restore position after clear', function () {
-            this.model.write('1234' + savePosition());
-            this.model.clear();
-            this.model.write('abc' + restorePosition() + 'XYZ');
+            model.write('1234' + savePosition());
+            model.clear();
+            model.write('abc' + restorePosition() + 'XYZ');
 
-            expect(this.model.lines).toEqual(['abcXYZ'])
+            expect(model.lines).toEqual(['abcXYZ'])
             expect(console.log.args[0][0]).toBe('WARN! trying to restore cursor position, but nothing is saved');
         });
     });
@@ -1006,10 +1009,9 @@ describe('Test terminal model', function () {
         }
 
         beforeEach(function () {
-            const notifications = [];
-            this.notifications = notifications;
+            notifications = [];
 
-            this.model.addListener({
+            model.addListener({
                 linesChanges: function (changedLines) {
                     notifications.push(changedLinesNotification(changedLines))
                 },
@@ -1031,110 +1033,110 @@ describe('Test terminal model', function () {
         });
 
         it('Clear full screen for single line', function () {
-            this.model.write('123' + clearScreen() + 'abc');
+            model.write('123' + clearScreen() + 'abc');
 
-            expect(this.model.lines).toEqual(['abc'])
-            expect(this.notifications).toEqual([clearedNotification(), changedLinesNotification([0])])
+            expect(model.lines).toEqual(['abc'])
+            expect(notifications).toEqual([clearedNotification(), changedLinesNotification([0])])
         });
 
         it('Clear full screen for multiline', function () {
-            this.model.write('123\n456\n789' + clearScreen() + 'abc');
+            model.write('123\n456\n789' + clearScreen() + 'abc');
 
-            expect(this.model.lines).toEqual(['abc'])
-            expect(this.notifications).toEqual([clearedNotification(), changedLinesNotification([0])])
+            expect(model.lines).toEqual(['abc'])
+            expect(notifications).toEqual([clearedNotification(), changedLinesNotification([0])])
         });
 
         it('Clear screen to the bottom for multiline', function () {
-            this.model.write('12\n3456\n7\n890' + moveToPosition(1, 1) + clearScreenDown() + 'abc');
+            model.write('12\n3456\n7\n890' + moveToPosition(1, 1) + clearScreenDown() + 'abc');
 
-            expect(this.model.lines).toEqual(['12', '3abc'])
-            expect(this.notifications).toEqual([linesDeletedNotification(2, 4), changedLinesNotification([0, 1])])
+            expect(model.lines).toEqual(['12', '3abc'])
+            expect(notifications).toEqual([linesDeletedNotification(2, 4), changedLinesNotification([0, 1])])
         });
 
         it('Clear screen to the bottom for multiline, when separate writes', function () {
-            this.model.write('12\n3456\n7\n890' + moveToPosition(1, 1));
-            expect(this.notifications).toEqual([changedLinesNotification([0, 1, 2, 3])])
-            clearArray(this.notifications);
+            model.write('12\n3456\n7\n890' + moveToPosition(1, 1));
+            expect(notifications).toEqual([changedLinesNotification([0, 1, 2, 3])])
+            clearArray(notifications);
 
-            this.model.write(clearScreenDown());
-            expect(this.notifications).toEqual([linesDeletedNotification(2, 4)])
-            clearArray(this.notifications);
+            model.write(clearScreenDown());
+            expect(notifications).toEqual([linesDeletedNotification(2, 4)])
+            clearArray(notifications);
 
-            this.model.write('abc');
-            expect(this.notifications).toEqual([changedLinesNotification([1])])
+            model.write('abc');
+            expect(notifications).toEqual([changedLinesNotification([1])])
 
-            expect(this.model.lines).toEqual(['12', '3abc'])
+            expect(model.lines).toEqual(['12', '3abc'])
         });
 
         it('Clear screen to the bottom, when single line', function () {
-            this.model.write('12345' + moveCursorLeft(2) + clearScreenDown() + 'abc');
+            model.write('12345' + moveCursorLeft(2) + clearScreenDown() + 'abc');
 
-            expect(this.model.lines).toEqual(['123abc'])
-            expect(this.notifications).toEqual([changedLinesNotification([0])])
+            expect(model.lines).toEqual(['123abc'])
+            expect(notifications).toEqual([changedLinesNotification([0])])
         });
 
         it('Clear screen to the top', function () {
-            this.model.write('12\n3456\n7\n890' + moveToPosition(1, 1) + clearScreenUp() + 'abc');
+            model.write('12\n3456\n7\n890' + moveToPosition(1, 1) + clearScreenUp() + 'abc');
 
-            expect(this.model.lines).toEqual([' abc', '7', '890'])
-            expect(this.notifications).toEqual([
+            expect(model.lines).toEqual([' abc', '7', '890'])
+            expect(notifications).toEqual([
                 clearedNotification(),
                 changedLinesNotification([0, 1, 2])])
         });
 
         it('Clear screen to the top, when separate writes', function () {
-            this.model.write('12\n3456\n');
-            this.model.write('7\n890' + moveToPosition(1, 1));
-            expect(this.notifications).toEqual([
+            model.write('12\n3456\n');
+            model.write('7\n890' + moveToPosition(1, 1));
+            expect(notifications).toEqual([
                 changedLinesNotification([0, 1]),
                 changedLinesNotification([2, 3])])
-            clearArray(this.notifications);
+            clearArray(notifications);
 
-            this.model.write(clearScreenUp());
-            expect(this.notifications).toEqual([
+            model.write(clearScreenUp());
+            expect(notifications).toEqual([
                 clearedNotification(),
                 changedLinesNotification([0, 1, 2])])
-            clearArray(this.notifications);
+            clearArray(notifications);
 
-            this.model.write('abc');
+            model.write('abc');
 
-            expect(this.model.lines).toEqual([' abc', '7', '890'])
-            expect(this.notifications).toEqual([changedLinesNotification([0])])
+            expect(model.lines).toEqual([' abc', '7', '890'])
+            expect(notifications).toEqual([changedLinesNotification([0])])
         });
 
         it('Clear screen to the top, when single line', function () {
-            this.model.write('12345' + moveCursorLeft(2) + clearScreenUp() + 'X');
+            model.write('12345' + moveCursorLeft(2) + clearScreenUp() + 'X');
 
-            expect(this.model.lines).toEqual(['   X5'])
-            expect(this.notifications).toEqual([changedLinesNotification([0])])
+            expect(model.lines).toEqual(['   X5'])
+            expect(notifications).toEqual([changedLinesNotification([0])])
         });
 
         it('Test styles, when clear all', function () {
-            this.model.write(format(31) + '123\n' + format(32) + '45' + format(33, 41) + '\n678'
+            model.write(format(31) + '123\n' + format(32) + '45' + format(33, 41) + '\n678'
                 + clearScreen() + format(1) + 'abc');
 
-            expect(this.model.lines).toEqual(['abc'])
-            assertStyles(this.model.getStyle(0), [new StyledRange(0, 3, new Style({styles: ['bold']}))]);
+            expect(model.lines).toEqual(['abc'])
+            assertStyles(model.getStyle(0), [new StyledRange(0, 3, new Style({styles: ['bold']}))]);
         });
 
         it('Test styles, when clear to the bottom', function () {
-            this.model.write(format(31) + '123\n' + format(32) + '45' + format(33, 44) + '678\n90\nX'
+            model.write(format(31) + '123\n' + format(32) + '45' + format(33, 44) + '678\n90\nX'
                 + moveCursorUp(2) + clearScreenDown() + 'ab\n' + format(2) + 'c');
 
-            expect(this.model.lines).toEqual(['123', '4ab78', 'c'])
-            assertStyles(this.model.getStyle(0), [new StyledRange(0, 3, new Style({color: 'red'}))]);
-            assertStyles(this.model.getStyle(1), [
+            expect(model.lines).toEqual(['123', '4ab78', 'c'])
+            assertStyles(model.getStyle(0), [new StyledRange(0, 3, new Style({color: 'red'}))]);
+            assertStyles(model.getStyle(1), [
                 new StyledRange(0, 1, new Style({color: 'green'})),
                 new StyledRange(1, 3, new Style({color: 'yellow', 'background': 'blue'})),
                 new StyledRange(3, 5, new Style({color: 'yellow', 'background': 'blue'}))
             ]);
-            assertStyles(this.model.getStyle(2), [
+            assertStyles(model.getStyle(2), [
                 new StyledRange(0, 1, new Style({color: 'yellow', 'background': 'blue', styles: ['dim']}))]);
-            assertStyles(this.model.getStyle(3), null);
+            assertStyles(model.getStyle(3), null);
         });
 
         it('Test styles, when clear to the top', function () {
-            this.model.write(format(31) + '123\n'
+            model.write(format(31) + '123\n'
                 + format(32) + '45' + format(33, 44) + '678\n'
                 + format(0, 35) + '90\n'
                 + 'X'
@@ -1142,45 +1144,45 @@ describe('Test terminal model', function () {
                 + 'ab\n'
                 + format(36, 2) + 'c');
 
-            expect(this.model.lines).toEqual([' ab78', 'c0', 'X'])
-            assertStyles(this.model.getStyle(0), [
+            expect(model.lines).toEqual([' ab78', 'c0', 'X'])
+            assertStyles(model.getStyle(0), [
                 new StyledRange(0, 1, new Style({color: 'green'})),
                 new StyledRange(1, 3, new Style({color: 'magenta'})),
                 new StyledRange(3, 5, new Style({color: 'yellow', 'background': 'blue'}))
             ]);
-            assertStyles(this.model.getStyle(1), [
+            assertStyles(model.getStyle(1), [
                 new StyledRange(0, 1, new Style({color: 'cyan', styles: ['dim']})),
                 new StyledRange(1, 2, new Style({color: 'magenta'}))]);
-            assertStyles(this.model.getStyle(2), [
+            assertStyles(model.getStyle(2), [
                 new StyledRange(0, 1, new Style({color: 'magenta'}))]);
         });
 
         it('Test move cursor down after clear to the bottom', function () {
-            this.model.write('1234\n56\n789\n0' + moveToPosition(1, 1) + clearScreenDown()
+            model.write('1234\n56\n789\n0' + moveToPosition(1, 1) + clearScreenDown()
                 + moveCursorDown(1) + 'abc');
 
-            expect(this.model.lines).toEqual(['1234', '5abc'])
+            expect(model.lines).toEqual(['1234', '5abc'])
         });
 
         it('Test move cursor down after clear to the top', function () {
-            this.model.write('1234\n56\n789\n0' + moveToPosition(2, 1) + clearScreenUp()
+            model.write('1234\n56\n789\n0' + moveToPosition(2, 1) + clearScreenUp()
                 + moveCursorDown(2) + 'abc');
 
-            expect(this.model.lines).toEqual(['  9', '0abc'])
+            expect(model.lines).toEqual(['  9', '0abc'])
         });
 
         it('Test clear with argument 3', function () {
-            this.model.write('1234\n56\n789' + moveToPosition(1, 1) + escapePrefix + '3J' + 'abc');
+            model.write('1234\n56\n789' + moveToPosition(1, 1) + escapePrefix + '3J' + 'abc');
 
-            expect(this.model.lines).toEqual(['abc'])
-            expect(this.notifications).toEqual([clearedNotification(), changedLinesNotification([0])])
+            expect(model.lines).toEqual(['abc'])
+            expect(notifications).toEqual([clearedNotification(), changedLinesNotification([0])])
         });
 
         it('Test clear with argument 4', function () {
-            this.model.write('1234\n56\n789' + moveToPosition(1, 1) + escapePrefix + '4J' + 'abc');
+            model.write('1234\n56\n789' + moveToPosition(1, 1) + escapePrefix + '4J' + 'abc');
 
-            expect(this.model.lines).toEqual(['1234', '5abc', '789'])
-            expect(this.notifications).toEqual([changedLinesNotification([0, 1, 2])])
+            expect(model.lines).toEqual(['1234', '5abc', '789'])
+            expect(notifications).toEqual([changedLinesNotification([0, 1, 2])])
             expect(console.log.args[0][0]).toBe('WARN! Unsupported [4J command');
         });
     });
@@ -1188,50 +1190,50 @@ describe('Test terminal model', function () {
     describe('Test inline images', function () {
 
         it('Test set inline image, when not exists', function () {
-            addChangedLinesListener(this);
+            changedLines = addChangedLinesListener(model);
 
-            this.model.write('abc\ndef');
-            this.model.setInlineImage('my-img.png', 'hello.jpg');
+            model.write('abc\ndef');
+            model.setInlineImage('my-img.png', 'hello.jpg');
 
-            expect(this.model.inlineImages).toEqual({'my-img.png': 'hello.jpg'})
-            expect(this.changedLines).toEqual([[0, 1]])
+            expect(model.inlineImages).toEqual({'my-img.png': 'hello.jpg'})
+            expect(changedLines).toEqual([[0, 1]])
         });
 
         it('Test set inline image, when exists', function () {
-            addChangedLinesListener(this);
+            changedLines = addChangedLinesListener(model);
 
-            this.model.write('abc\n_ my-img.png _ \ndef');
-            this.model.setInlineImage('my-img.png', 'hello.jpg');
+            model.write('abc\n_ my-img.png _ \ndef');
+            model.setInlineImage('my-img.png', 'hello.jpg');
 
-            expect(this.changedLines).toEqual([[0, 1, 2], [1]])
+            expect(changedLines).toEqual([[0, 1, 2], [1]])
         });
 
         it('Test set inline image, when exists and multiple', function () {
-            addChangedLinesListener(this);
+            changedLines = addChangedLinesListener(model);
 
-            this.model.write('abc\n_ my-img.png _ \ndef\nmy-img.png\nhij\nmy-img.png');
-            this.model.setInlineImage('my-img.png', 'hello.jpg');
+            model.write('abc\n_ my-img.png _ \ndef\nmy-img.png\nhij\nmy-img.png');
+            model.setInlineImage('my-img.png', 'hello.jpg');
 
-            expect(this.changedLines).toEqual([[0, 1, 2, 3, 4, 5], [1, 3, 5]])
+            expect(changedLines).toEqual([[0, 1, 2, 3, 4, 5], [1, 3, 5]])
         });
 
         it('Test remove inline image, when not exists', function () {
-            addChangedLinesListener(this);
+            changedLines = addChangedLinesListener(model);
 
-            this.model.write('abc\n_ my-img.png _ \ndef');
-            this.model.removeInlineImage('my-img.png');
+            model.write('abc\n_ my-img.png _ \ndef');
+            model.removeInlineImage('my-img.png');
 
-            expect(this.changedLines).toEqual([[0, 1, 2]])
+            expect(changedLines).toEqual([[0, 1, 2]])
         });
 
         it('Test remove inline image, when exists', function () {
-            addChangedLinesListener(this);
+            changedLines = addChangedLinesListener(model);
 
-            this.model.setInlineImage('my-img.png', 'hello.jpg');
-            this.model.write('abc\n_ my-img.png _ \ndef');
-            this.model.removeInlineImage('my-img.png');
+            model.setInlineImage('my-img.png', 'hello.jpg');
+            model.write('abc\n_ my-img.png _ \ndef');
+            model.removeInlineImage('my-img.png');
 
-            expect(this.changedLines).toEqual([[0, 1, 2], [1]])
+            expect(changedLines).toEqual([[0, 1, 2], [1]])
         });
     });
 });
