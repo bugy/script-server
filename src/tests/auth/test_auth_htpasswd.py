@@ -1,4 +1,5 @@
 import sys
+import unittest
 from unittest import TestCase, mock
 from unittest.mock import patch
 
@@ -66,6 +67,7 @@ class TestHtpasswdAuthenticator(TestCase):
 
             self._assert_authenticated(username, password, authenticator)
 
+    @unittest.skipIf(sys.version_info >= (3, 13), 'crypt module removed in Python 3.13+')
     def test_authenticate_success_when_crypt(self):
         if self.verifier == 'htpasswd' and os_utils.is_win():
             return
@@ -109,6 +111,7 @@ class TestHtpasswdAuthenticator(TestCase):
 
         self._assert_rejected('my_user', 'my_pass', authenticator)
 
+    @unittest.skipIf(sys.version_info >= (3, 13), 'crypt module removed in Python 3.13+')
     def test_authenticate_failure_when_crypt_with_plain_password(self):
         if self.verifier == 'htpasswd' and os_utils.is_win():
             return

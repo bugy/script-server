@@ -124,7 +124,12 @@ class _BuiltItVerifier:
             return hashed_password == expected
 
         elif not os_utils.is_win():
-            import crypt
+            try:
+                import crypt
+            except ImportError:
+                raise InvalidServerConfigException(
+                    'htpasswd contains DES-crypt passwords which are not supported on Python 3.13+. '
+                    'Please regenerate passwords using bcrypt (htpasswd -B) or SHA-1 (htpasswd -s).')
             hashed_password = crypt.crypt(password, existing_password[:2])
             return hashed_password == existing_password
 
