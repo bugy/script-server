@@ -2,12 +2,8 @@
 import scripts from '@/admin/store/scripts-module'
 import {axiosInstance} from '@/common/utils/axios_utils';
 import MockAdapter from 'axios-mock-adapter';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import {createScriptServerTestVue} from '../test_utils'
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-
 let axiosMock;
 const flushPromises = () => new Promise(resolve => setTimeout(resolve));
 
@@ -21,7 +17,7 @@ describe('Test admin script module', function () {
     let store;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
+        store = createVuexStore({
             modules: {
                 scripts: scripts
             }
