@@ -18,6 +18,7 @@ REALM_URL = 'http://my-keycloak.net/realms/master'
 
 access_expiration_duration = 0.5
 refresh_expiration_duration = 2.0
+auth_info_ttl = 1.0
 
 
 class OauthServerMock:
@@ -187,7 +188,7 @@ class KeycloakOauthTestCase(AsyncTestCase):
 
         self.oauth_server.set_groups('bugy', ['g3'])
 
-        await gen.sleep(access_expiration_duration + 0.2)
+        await gen.sleep(auth_info_ttl + 0.5)
 
         valid_1 = await self.authenticator.validate_user(username, mock_request_handler(previous_request=request_1))
         self.assertTrue(valid_1)
@@ -296,7 +297,7 @@ class KeycloakOauthTestCase(AsyncTestCase):
             'client_id': 'my-client',
             'secret': 'top_secret',
             'group_support': True,
-            'auth_info_ttl': 0.4,
+            'auth_info_ttl': auth_info_ttl,
             'state_dump_file': dump_file
         })
 
