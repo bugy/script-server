@@ -1,14 +1,9 @@
 import scriptSetup from '@/main-app/store/scriptSetup';
 import cloneDeep from 'lodash/cloneDeep';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import {createScriptServerTestVue} from './test_utils'
-
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-
 function createStore(sentData) {
-    return new Vuex.Store({
+    return createVuexStore({
         modules: {
             scriptSetup: cloneDeep(scriptSetup),
             scriptConfig: {
