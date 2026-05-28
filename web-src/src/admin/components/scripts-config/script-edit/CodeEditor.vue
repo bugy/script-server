@@ -27,13 +27,23 @@ import Combobox from '@/common/components/combobox'
 import Textfield from '@/common/components/textfield'
 import {forEachKeyValue, isEmptyString, isNull} from '@/common/utils/common'
 
-ace.config.setModuleUrl('ace/theme/monokai', require('file-loader!ace-builds/src-noconflict/theme-monokai'))
-ace.config.setModuleUrl('ace/mode/javascript', require('file-loader!ace-builds/src-noconflict/mode-javascript.js'))
-ace.config.setModuleUrl('ace/mode/python', require('file-loader!ace-builds/src-noconflict/mode-python.js'))
-ace.config.setModuleUrl('ace/mode/sh', require('file-loader!ace-builds/src-noconflict/mode-sh.js'))
-ace.config.setModuleUrl('ace/mode/powershell', require('file-loader!ace-builds/src-noconflict/mode-powershell.js'))
-ace.config.setModuleUrl('ace/mode/raku', require('file-loader!ace-builds/src-noconflict/mode-raku.js'))
-ace.config.setModuleUrl('ace/mode/r', require('file-loader!ace-builds/src-noconflict/mode-r.js'))
+// Vite: import asset URLs with the `?url` suffix instead of webpack's
+// `require('file-loader!...')`. ace loads these theme/mode files lazily by URL.
+import monokaiThemeUrl from 'ace-builds/src-noconflict/theme-monokai?url'
+import modeJavascriptUrl from 'ace-builds/src-noconflict/mode-javascript.js?url'
+import modePythonUrl from 'ace-builds/src-noconflict/mode-python.js?url'
+import modeShUrl from 'ace-builds/src-noconflict/mode-sh.js?url'
+import modePowershellUrl from 'ace-builds/src-noconflict/mode-powershell.js?url'
+import modeRakuUrl from 'ace-builds/src-noconflict/mode-raku.js?url'
+import modeRUrl from 'ace-builds/src-noconflict/mode-r.js?url'
+
+ace.config.setModuleUrl('ace/theme/monokai', monokaiThemeUrl)
+ace.config.setModuleUrl('ace/mode/javascript', modeJavascriptUrl)
+ace.config.setModuleUrl('ace/mode/python', modePythonUrl)
+ace.config.setModuleUrl('ace/mode/sh', modeShUrl)
+ace.config.setModuleUrl('ace/mode/powershell', modePowershellUrl)
+ace.config.setModuleUrl('ace/mode/raku', modeRakuUrl)
+ace.config.setModuleUrl('ace/mode/r', modeRUrl)
 
 
 const allowedLanguages = {
