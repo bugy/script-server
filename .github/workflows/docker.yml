@@ -16,6 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web-src/package-lock.json
+
+      - name: Build frontend
+        working-directory: web-src
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+        run: npm ci && npm run build
+        # Outputs to ../web/ (see web-src/vue.config.js outputDir)
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
