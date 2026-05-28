@@ -1,16 +1,44 @@
-import {clearArray, removeElement, SocketClosedError} from '@/common/utils/common';
-import scriptConfig, {__RewireAPI__ as SocketRewireAPI} from '@/main-app/store/scriptConfig';
-import Vuex from 'vuex';
+import {clearArray, SocketClosedError} from '@/common/utils/common';
+import {createStore as createVuexStore} from 'vuex';
 import {createScriptServerTestVue, timeout, vueTicks} from './test_utils'
 
+// Vitest replacement for babel-plugin-rewire: scriptConfig imports ReactiveWebSocket
+// from rxWebsocket. Mock it with a fake socket that records observers and sent data.
+// reconnectionDelay is no longer overridden: the first reconnect is scheduled at
+// (attempt-1)*delay = 0ms, so a single disconnect reconnects immediately under real timers.
+const socketMock = vi.hoisted(() => {
+    const observers = [];
+    const sentData = [];
 
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
+    function ReactiveWebSocket(path, callback) {
+        const observer = {callback, path};
+        observers.push(observer);
+        let closed = false;
+
+        this.close = () => {
+            const i = observers.indexOf(observer);
+            if (i >= 0) observers.splice(i, 1);
+            closed = true;
+        };
+        this.send = (data) => sentData.push(data);
+        this.isClosed = () => closed;
+        this.isOpen = () => !closed;
+    }
+
+    return {observers, sentData, ReactiveWebSocket};
+});
+
+vi.mock('@/common/connections/rxWebsocket', async (importActual) => ({
+    ...(await importActual()),
+    ReactiveWebSocket: socketMock.ReactiveWebSocket
+}));
+
+import scriptConfig from '@/main-app/store/scriptConfig';
 
 const DEFAULT_SCRIPT_NAME = 'testScript'
 
 function createStore() {
-    return new Vuex.Store({
+    return createVuexStore({
         modules: {
             scriptConfig: scriptConfig(),
             scripts: {
@@ -110,40 +138,20 @@ function createClientStateVersionAcceptedEvent(clientStateVersion) {
 }
 
 describe('Test scriptConfig module', function () {
-    let observers = [];
+    const observers = socketMock.observers;
+    const sentData = socketMock.sentData;
 
     beforeEach(function () {
-        const sentData = [];
-
-        this.sentData = sentData;
-
-        SocketRewireAPI.__Rewire__('ReactiveWebSocket', function (path, callback) {
-            const observer = {callback, path}
-            observers.push(observer);
-            let closed = false;
-
-            this.close = () => {
-                removeElement(observers, observer);
-                closed = true;
-            };
-
-            this.send = (data) => {
-                sentData.push(data);
-            };
-
-            this.isClosed = () => closed;
-            this.isOpen = () => !closed;
-        });
-
-        SocketRewireAPI.__Rewire__('reconnectionDelay', 10);
-
-        this.disconnectSocket = async function (awaitTimeout) {
-            const observer = observers[0];
-            observers.splice(0, 1);
-            observer.callback.onError(new SocketClosedError());
-            await timeout(awaitTimeout);
-        };
+        observers.length = 0;
+        sentData.length = 0;
     });
+
+    async function disconnectSocket(awaitTimeout) {
+        const observer = observers[0];
+        observers.splice(0, 1);
+        observer.callback.onError(new SocketClosedError());
+        await timeout(awaitTimeout);
+    }
 
     function sendEventFromServer(event) {
         observers[0].callback.onNext(event)
@@ -261,7 +269,7 @@ describe('Test scriptConfig module', function () {
             const config = createConfig();
             sendEventFromServer(createConfigEvent(config));
 
-            await this.disconnectSocket(50);
+            await disconnectSocket(50);
 
             const newObserver = observers[0];
 
@@ -277,7 +285,7 @@ describe('Test scriptConfig module', function () {
             const config = createConfig();
             sendEventFromServer(createConfigEvent(config));
 
-            await this.disconnectSocket(50);
+            await disconnectSocket(50);
 
             expect(store.state.scriptConfig.scriptConfig).toEqual(config)
             config.name = 'new name';
@@ -297,7 +305,7 @@ describe('Test scriptConfig module', function () {
 
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
-            expect(this.sentData).toEqual([createSentValueEvent('param1', 123, 1)])
+            expect(sentData).toEqual([createSentValueEvent('param1', 123, 1)])
         });
 
         it('Test send same value multiple times', function () {
@@ -308,7 +316,7 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
-            expect(this.sentData).toEqual([createSentValueEvent('param1', 123, 1)])
+            expect(sentData).toEqual([createSentValueEvent('param1', 123, 1)])
         });
 
         it('Test send same parameter different values', function () {
@@ -319,7 +327,7 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 456});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 123});
 
-            expect(this.sentData).toEqual([
+            expect(sentData).toEqual([
                 createSentValueEvent('param1', 123, 1),
                 createSentValueEvent('param1', 456, 2),
                 createSentValueEvent('param1', 123, 3)
@@ -333,7 +341,7 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param2', value: 123});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 'hello'});
 
-            expect(this.sentData).toEqual([
+            expect(sentData).toEqual([
                 createSentValueEvent('param2', 123, 1),
                 createSentValueEvent('param1', 'hello', 2)
             ])
@@ -349,19 +357,19 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param2', value: 123});
             store.dispatch('scriptConfig/sendParameterValue', {parameterName: 'param1', value: 'hello'});
 
-            clearArray(this.sentData);
+            clearArray(sentData);
 
-            await this.disconnectSocket(100);
+            await disconnectSocket(100);
 
-            expect(this.sentData).toEqual(
+            expect(sentData).toEqual(
                 [createInitialValuesEvent({param2: 123, param1: 'hello'})])
             expect(observers[0].path).toEndWith('?initWithValues=true')
 
-            clearArray(this.sentData);
+            clearArray(sentData);
 
             sendEventFromServer(createConfigEvent(config));
 
-            expect(this.sentData).toEqual([
+            expect(sentData).toEqual([
                 createSentValueEvent('param2', 123),
                 createSentValueEvent('param1', 'hello')
             ])
@@ -387,10 +395,10 @@ describe('Test scriptConfig module', function () {
             store.dispatch('scriptConfig/reloadModel',
                 {parameterValues: parameterValues, clientModelId: modelId, scriptName: DEFAULT_SCRIPT_NAME});
 
-            expect(this.sentData).toEqual([createReloadModelRequest(modelId, parameterValues)])
+            expect(sentData).toEqual([createReloadModelRequest(modelId, parameterValues)])
             expect(store.state.scriptConfig.loading).toBeTrue()
 
-            clearArray(this.sentData)
+            clearArray(sentData)
 
             const newConfig = createConfig()
             newConfig.name = 'New name'
@@ -400,7 +408,7 @@ describe('Test scriptConfig module', function () {
 
             expect(store.state.scriptConfig.loading).toBeFalse()
             expect(store.state.scriptConfig.scriptConfig).toEqual(newConfig)
-            expect(this.sentData).toBeEmpty()
+            expect(sentData).toBeEmpty()
         })
 
         it('Test ignore reload for different script', async function () {
@@ -413,7 +421,7 @@ describe('Test scriptConfig module', function () {
                     scriptName: DEFAULT_SCRIPT_NAME
                 });
 
-            expect(this.sentData).toEqual([])
+            expect(sentData).toEqual([])
             expect(store.state.scriptConfig.loading).toBeFalse()
         })
     })
