@@ -14,8 +14,9 @@
 import {isNull, toBoolean} from '@/common/utils/common';
 
 export default {
+  emits: ['update:modelValue', 'error'],
   props: {
-    'value': {
+    'modelValue': {
       type: [Boolean, String, Number]
     },
     'config': Object,
@@ -26,32 +27,32 @@ export default {
 
   computed: {
     boolValue() {
-      return toBoolean(this.value);
+      return toBoolean(this.modelValue);
     }
   },
 
   mounted: function () {
-    this.$refs.checkbox.indeterminate = isNull(this.value)
+    this.$refs.checkbox.indeterminate = isNull(this.modelValue)
     this.emitValueChange();
   },
 
   methods: {
     emitValueChange() {
       if (this.$refs.checkbox.indeterminate) {
-        this.$emit('input', undefined);
+        this.$emit('update:modelValue', undefined);
         return;
       }
 
-      this.$emit('input', this.$refs.checkbox.checked);
+      this.$emit('update:modelValue', this.$refs.checkbox.checked);
     }
   },
 
   watch: {
-    value: {
+    modelValue: {
       immediate: true,
       handler() {
         this.$nextTick(() => {
-          if (this.value !== this.boolValue) {
+          if (this.modelValue !== this.boolValue) {
             this.emitValueChange();
           }
         });

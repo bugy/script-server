@@ -38,7 +38,7 @@ export default {
     this.resizeListener();
   },
 
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     window.removeEventListener('resize', this.resizeListener);
   },
 

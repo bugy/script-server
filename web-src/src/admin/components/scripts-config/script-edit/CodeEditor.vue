@@ -2,9 +2,9 @@
   <div :class="{'light-theme': lightTheme}" class="code-editor">
     <div class="row">
       <Textfield :config="pathField" :disabled="!pathEditable"
-                 :value="path"
+                 :modelValue="path"
                  class="inline col s8"
-                 @input="$emit('pathChanged', $event)"/>
+                 @update:modelValue="$emit('pathChanged', $event)"/>
       <Combobox v-model="language" :config="languagesConfig" :dropdownContainer="dropdownContainer"
                 class="inline col l2 offset-l2 m3 offset-m1 s3 offset-s1"/>
     </div>
@@ -82,7 +82,7 @@ export default {
       fontSize: 13
     })
     editor.getSession().on('change', () => {
-      this.$emit('input', editor.getSession().getValue())
+      this.$emit('update:modelValue', editor.getSession().getValue())
     })
 
     const backgroundColor = getComputedStyle(this.$el).getPropertyValue('--background-color')
@@ -103,7 +103,7 @@ export default {
 
     this.selectSyntax()
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.editor.container.remove()
     this.editor.destroy()
   },

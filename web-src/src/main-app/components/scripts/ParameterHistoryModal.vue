@@ -70,7 +70,7 @@ export default {
     this.initModal();
     this.loadToggleState();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.modalInstance?.destroy();
   },
   methods: {

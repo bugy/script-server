@@ -12,8 +12,9 @@ import clone from 'lodash/clone';
 
 export default {
   name: 'ChipsList',
+  emits: ['update:modelValue', 'error'],
   props: {
-    value: {
+    modelValue: {
       type: Array,
       default: () => []
     },
@@ -31,7 +32,7 @@ export default {
     instance.$input[0].addEventListener('input', this.onTextInput);
   },
 
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     const instance = M.Chips.getInstance(this.$refs.chips);
     if (instance) {
       instance.$input[0].removeEventListener('blur', this.onFocusLost);
@@ -40,7 +41,7 @@ export default {
   },
 
   watch: {
-    value: {
+    modelValue: {
       immediate: true,
       handler(newValue) {
         if (!isNull(this.$refs.chips)) {
@@ -65,11 +66,11 @@ export default {
 
     updateValue() {
       const instance = M.Chips.getInstance(this.$refs.chips);
-      this.$emit('input', instance.chipsData.map(d => d.tag));
+      this.$emit('update:modelValue', instance.chipsData.map(d => d.tag));
     },
 
     updateChips() {
-      this.initChips(this.value.map(v => ({tag: v})));
+      this.initChips(this.modelValue.map(v => ({tag: v})));
     },
 
     onFocusLost() {
@@ -130,8 +131,8 @@ export default {
         return
       }
 
-      const mergedValues = clone(this.value).concat(newValues)
-      this.$emit('input', mergedValues);
+      const mergedValues = clone(this.modelValue).concat(newValues)
+      this.$emit('update:modelValue', mergedValues);
     }
   }
 }

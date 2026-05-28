@@ -3,9 +3,9 @@
     <div @click.capture="activateTextField"
          @keydown.capture="activateTextField">
       <TextField :config="scriptPathField"
-                 :value="inPathMode ? plainPath : scriptValue.path"
+                 :modelValue="inPathMode ? plainPath : scriptValue.path"
                  class="path-textfield"
-                 @input="onPathInput"/>
+                 @update:modelValue="onPathInput"/>
 
       <a v-if="canEditCode"
          v-trim-text

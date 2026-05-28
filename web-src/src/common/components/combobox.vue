@@ -51,10 +51,11 @@ import CircleSpinner from '@/common/components/CircleSpinner'
 
 export default {
   name: 'Combobox',
+  emits: ['update:modelValue', 'error'],
   components: {CircleSpinner, ComboboxSearch},
   props: {
     'config': Object,
-    'value': [String, Array],
+    'modelValue': [String, Array],
     'disabled': {
       type: Boolean,
       default: false
@@ -102,7 +103,7 @@ export default {
       }
     },
 
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
         if (!this._fixValueByAllowedValues(this.config.values)) {
@@ -150,7 +151,7 @@ export default {
     })
   },
 
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     const instance = M.FormSelect.getInstance(this.$refs.selectField);
     instance.destroy();
   },
@@ -158,38 +159,38 @@ export default {
   methods: {
     emitValueChange(value) {
       this._validate(this.asArray(value));
-      this.$emit('input', value);
+      this.$emit('update:modelValue', value);
     },
 
     _fixValueByAllowedValues(allowedValues) {
-      if (isNull(this.value) || (this.value === '') || (this.value === []) || (this.forceValue)) {
+      if (isNull(this.modelValue) || (this.modelValue === '') || (this.modelValue === []) || (this.forceValue)) {
         return false;
       }
 
       var newValue;
       if (this.config.multiselect) {
-        if (!Array.isArray(this.value)) {
-          if (contains(allowedValues, this.value)) {
-            newValue = [this.value];
+        if (!Array.isArray(this.modelValue)) {
+          if (contains(allowedValues, this.modelValue)) {
+            newValue = [this.modelValue];
           } else {
             newValue = [];
           }
 
         } else {
           newValue = [];
-          for (var i = 0; i < this.value.length; i++) {
-            var valueElement = this.value[i];
+          for (var i = 0; i < this.modelValue.length; i++) {
+            var valueElement = this.modelValue[i];
             if (contains(allowedValues, valueElement)) {
               newValue.push(valueElement)
             }
           }
 
-          if (newValue.length === this.value.length) {
+          if (newValue.length === this.modelValue.length) {
             return false;
           }
         }
       } else {
-        if (contains(allowedValues, this.value)) {
+        if (contains(allowedValues, this.modelValue)) {
           return false;
         }
 
@@ -298,8 +299,8 @@ export default {
       }
 
       let disabledOptions = []
-      if ((this.forceValue) && !isEmptyString(this.value) && !isEmptyArray(this.value)) {
-        const valueAsArray = this.asArray(this.value)
+      if ((this.forceValue) && !isEmptyString(this.modelValue) && !isEmptyArray(this.modelValue)) {
+        const valueAsArray = this.asArray(this.modelValue)
         for (const valueElement of valueAsArray) {
           if (!newOptionValues.includes(valueElement)) {
             const disabledOption = {
@@ -316,7 +317,7 @@ export default {
       this.options = newOptions
 
       if (!this._fixValueByAllowedValues(this.config.values)) {
-        this._selectValue(this.value)
+        this._selectValue(this.modelValue)
       }
 
       if (!isEmptyArray(disabledOptions)) {

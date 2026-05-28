@@ -283,10 +283,9 @@ export default {
         return;
       }
 
-      const charCode = event.keyCode || event.which;
-      const char = String.fromCharCode(charCode);
+      const char = event.key;
 
-      if (!/\w/u.test(char)) {
+      if (!char || char.length !== 1 || !/\w/u.test(char)) {
         return;
       }
 

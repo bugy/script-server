@@ -16,11 +16,12 @@ import {isEmptyString, isNull, uuidv4} from "@/common/utils/common";
 
 export default {
   name: 'TimePicker',
+  emits: ['update:modelValue', 'error'],
   props: {
     label: {
       type: String
     },
-    value: {
+    modelValue: {
       type: String
     },
     required: {
@@ -37,11 +38,11 @@ export default {
   mounted: function () {
     this.id = 'timepicker_' + uuidv4();
 
-    this.$refs.timePicker.value = this.value;
+    this.$refs.timePicker.value = this.modelValue;
     M.updateTextFields();
   },
   watch: {
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
         if (isNull(this.$refs.timePicker)) {
@@ -83,7 +84,7 @@ export default {
       this.doValidation(trimmedValue);
 
       if (isEmptyString(this.error)) {
-        this.$emit('input', trimmedValue);
+        this.$emit('update:modelValue', trimmedValue);
       }
     }
   },

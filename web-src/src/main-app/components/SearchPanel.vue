@@ -5,9 +5,9 @@
              name="searchField"
              placeholder="Search script"
              type="search"
-             v-bind:value="value"
+             v-bind:value="modelValue"
              @blur="focusLostHandler"
-             v-on:input="$emit('input', $event.target.value)">
+             v-on:input="$emit('update:modelValue', $event.target.value)">
     </div>
     <input :alt="showSearchField ? 'Clear search' : 'Search script'" :src="searchImage"
            class="search-button"
@@ -24,6 +24,7 @@ import {setInputValue} from '@/common/utils/common';
 
 export default {
   name: 'SearchPanel',
+  emits: ['update:modelValue'],
   data() {
     return {
       showSearchField: false,
@@ -31,7 +32,7 @@ export default {
     }
   },
   props: {
-    value: {
+    modelValue: {
       type: String,
       default: ''
     }
@@ -57,7 +58,7 @@ export default {
     },
 
     focusLostHandler() {
-      if (this.value === '') {
+      if (this.modelValue === '') {
         this.showSearchField = false;
       }
     }

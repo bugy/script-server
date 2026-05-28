@@ -4,7 +4,7 @@
             :id="elementId"
             ref="textArea"
             :required="config.required"
-            :value="value"
+            :value="modelValue"
             class="materialize-textarea"
             type="text"
             @input="textAreaChanged">
@@ -21,8 +21,9 @@ import {isBlankString, isEmptyString, isNull} from '@/common/utils/common';
 export default {
   name: 'TextArea',
 
+  emits: ['update:modelValue', 'error'],
   props: {
-    'value': [String],
+    'modelValue': [String],
     'config': Object
   },
 
@@ -37,7 +38,7 @@ export default {
   },
 
   watch: {
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
         const textArea = this.$refs.textArea;
@@ -59,17 +60,17 @@ export default {
       }
     },
     'config.max_length'() {
-      this.doValidation(this.value)
+      this.doValidation(this.modelValue)
     }
   },
 
   computed: {
     elementId() {
-      return this._uid;
+      return this.$.uid;
     },
 
     labelActive() {
-      if (!isEmptyString(this.value)) {
+      if (!isEmptyString(this.modelValue)) {
         return true;
       }
 
@@ -88,7 +89,7 @@ export default {
       const value = textArea.value;
 
       this.doValidation(value);
-      this.$emit('input', value);
+      this.$emit('update:modelValue', value);
     },
 
     initTextArea() {

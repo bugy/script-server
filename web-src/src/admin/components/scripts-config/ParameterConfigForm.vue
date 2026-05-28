@@ -192,7 +192,7 @@ export default {
   name: 'ParameterConfigForm',
   components: {ParameterValuesUiMapping, ParameterSeparator, ChipsList, TextArea, Checkbox, Combobox, Textfield},
   props: {
-    value: {
+    modelValue: {
       type: Object,
       default: null
     }
@@ -225,7 +225,7 @@ export default {
     };
 
     forEachKeyValue(simpleFields, (vmField, configField) => {
-      this.$watch(vmField, (newValue) => updateValue(this.value, configField, newValue));
+      this.$watch(vmField, (newValue) => updateValue(this.modelValue, configField, newValue));
     });
   },
 
@@ -301,7 +301,7 @@ export default {
   },
 
   watch: {
-    value: {
+    modelValue: {
       immediate: true,
       handler(config) {
         if (config) {
@@ -387,16 +387,16 @@ export default {
     },
     fileExtensions(fileExtensions) {
       if (isEmptyArray(fileExtensions)) {
-        this.$delete(this.value, 'file_extensions');
+        delete this.modelValue['file_extensions'];
       } else {
-        updateValue(this.value, 'file_extensions', fileExtensions);
+        updateValue(this.modelValue, 'file_extensions', fileExtensions);
       }
     },
     excludedFiles(excludedFiles) {
       if (isEmptyArray(excludedFiles)) {
-        this.$delete(this.value, 'excluded_files');
+        delete this.modelValue['excluded_files'];
       } else {
-        updateValue(this.value, 'excluded_files', excludedFiles);
+        updateValue(this.modelValue, 'excluded_files', excludedFiles);
       }
     },
     allowedValuesFromScript() {
@@ -419,15 +419,15 @@ export default {
     },
     defaultValue() {
       if (this.selectedType === 'multiselect') {
-        updateValue(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
+        updateValue(this.modelValue, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
       } else if (this.isRecursiveFile()) {
         let path = this.defaultValue.split('/').filter(s => !isEmptyString(s));
         if (this.defaultValue.startsWith('/')) {
           path = ['/', ...path];
         }
-        updateValue(this.value, 'default', path);
+        updateValue(this.modelValue, 'default', path);
       } else {
-        updateValue(this.value, 'default', this.defaultValue);
+        updateValue(this.modelValue, 'default', this.defaultValue);
       }
     },
     uiWidthWeight() {
@@ -441,9 +441,9 @@ export default {
     },
     passAs() {
       if (this.passAs === 'argument + env_variable') {
-        this.$delete(this.value, 'pass_as');
+        delete this.modelValue['pass_as'];
       } else {
-        updateValue(this.value, 'pass_as', this.passAs);
+        updateValue(this.modelValue, 'pass_as', this.passAs);
       }
     }
   },
@@ -464,19 +464,19 @@ export default {
 
   methods: {
     updateRegexConfig() {
-      updateValue(this.value, 'regex', {
+      updateValue(this.modelValue, 'regex', {
         pattern: this.regexConfigPattern,
         description: this.regexConfigDescription
       });
     },
     updateAllowedValues() {
       if (this.allowedValuesFromScript) {
-        updateValue(this.value, 'values', {
+        updateValue(this.modelValue, 'values', {
           script: this.allowedValuesScript,
           shell: this.allowedValuesScriptShellEnabled
         });
       } else {
-        updateValue(this.value, 'values', this.allowedValues);
+        updateValue(this.modelValue, 'values', this.allowedValues);
       }
     },
     isRecursiveFile() {
@@ -507,9 +507,9 @@ export default {
       }
 
       if (!isEmptyObject(newUiConfig)) {
-        updateValue(this.value, 'ui', newUiConfig);
+        updateValue(this.modelValue, 'ui', newUiConfig);
       } else {
-        this.$delete(this.value, 'ui');
+        delete this.modelValue['ui'];
       }
     },
     handleError(fieldConfig, error) {

@@ -5,7 +5,7 @@
            :disabled="disabled"
            :required="config.required"
            type="time"
-           :value="value"
+           :value="modelValue"
            :class="{validate: !disabled}"
            @change="inputChanged"/>
     <label :for="id" :class="{active: !!value}">{{ config.name }}</label>
@@ -17,8 +17,9 @@ import {isNull} from '@/common/utils/common';
 
 export default {
   name: 'TimeField',
+  emits: ['update:modelValue', 'error'],
   props: {
-    value: {
+    modelValue: {
       type: String,
       default: null
     },
@@ -39,12 +40,12 @@ export default {
   },
 
   mounted() {
-    this.id = this._uid;
-    this.validate(this.value);
+    this.id = this.$.uid;
+    this.validate(this.modelValue);
   },
 
   watch: {
-    value(newValue) {
+    modelValue(newValue) {
       this.validate(newValue);
     }
   },
@@ -53,7 +54,7 @@ export default {
     inputChanged() {
       const value = this.$refs.timeInput.value || null;
       this.validate(value);
-      this.$emit('input', value);
+      this.$emit('update:modelValue', value);
     },
 
     validate(value) {

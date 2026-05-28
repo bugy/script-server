@@ -17,7 +17,7 @@
       </a>
     </div>
     <div class="collapsible-body">
-      <ParameterConfigForm :value="param" @error="handleError($event)"/>
+      <ParameterConfigForm :modelValue="param" @error="handleError($event)"/>
     </div>
   </li>
 </template>
@@ -63,9 +63,9 @@ export default {
 
       const fieldName = error['fieldName'];
       if (isEmptyString(error.message)) {
-        this.$delete(this.errors, fieldName);
+        delete this.errors[fieldName];
       } else {
-        this.$set(this.errors, fieldName, error.message);
+        this.errors[fieldName] = error.message;
       }
     }
   }

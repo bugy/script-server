@@ -9,13 +9,13 @@
       <component
           :is="getComponentType(parameter)"
           :config="parameter"
-          :value="getParameterValue(parameter)"
+          :modelValue="getParameterValue(parameter)"
           :class="{'inline': isInline(parameter)}"
           class="parameter"
           :style="getGridCellStyle(parameter)"
           :forceValue="forcedValueParameters.includes(parameter.name)"
           @error="handleError(parameter, $event)"
-          @input="setParameterValue(parameter.name, $event)"/>
+          @update:modelValue="setParameterValue(parameter.name, $event)"/>
     </template>
   </div>
 </template>
@@ -62,7 +62,7 @@ export default {
     })
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     window.removeEventListener('resize', this.recalculateParamsLayout)
   },
 

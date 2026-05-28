@@ -157,7 +157,7 @@ export default {
     }
   },
   mounted: function () {
-    this.id = this._uid;
+    this.id = this.$.uid;
 
     M.updateTextFields();
   },
