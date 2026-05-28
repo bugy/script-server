@@ -12,6 +12,12 @@ import $ from 'jquery'
 import {config, enableAutoUnmount} from '@vue/test-utils'
 import vueDirectives from '@/common/vueDirectives'
 import {forEachKeyValue} from '@/common/utils/common'
+// Populate the global materialize `M` (and the `Component` base class) the same
+// way the running app does. In the app, importing any materialize piece sets up
+// the shared global `M`; components such as TimePicker reference `M.updateTextFields`
+// / `M.validate_field` (from materialize forms) without importing it themselves.
+// Loading input-fields here pulls in `global` + `forms` so that global exists in tests.
+import '@/common/materializecss/imports/input-fields'
 
 expect.extend(domMatchers)
 expect.extend(jestExtended)
