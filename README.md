@@ -19,16 +19,19 @@ A new `time` parameter type shows a native time picker in the UI and passes the 
 
 - `time_format` is a Python [strftime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) format string. Default: `%H:%M` (24-hour HH:MM).
 - The UI always shows a native time picker. The script receives the time in the configured format.
+- An invalid `time_format` (e.g. `"HH:MM"` instead of `"%H:%M"`) is now detected at startup with a clear error message.
 
 ### 2026-05-28 — HTTP security headers
 
-All responses now include the following security headers:
+All responses (including WebSocket upgrade responses) now include the following security headers:
 
-| Header | Value |
-|--------|-------|
-| `X-Content-Type-Options` | `nosniff` |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Content-Security-Policy` | `default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'; object-src 'none'` |
+| Header | Value | Condition |
+|--------|-------|-----------|
+| `X-Content-Type-Options` | `nosniff` | Always |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Always |
+| `Content-Security-Policy` | `default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'; object-src 'none'` | Always |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Always |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | HTTPS only (`cookie_secure: true`) |
 
 `X-Frame-Options: DENY` was already present; `frame-ancestors 'none'` in the CSP provides equivalent coverage for modern browsers.
 
@@ -47,15 +50,18 @@ A new `date` parameter type shows a native date picker in the UI and passes the 
 
 - `date_format` is a Python [strftime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) format string. Default: `%Y-%m-%d` (ISO 8601).
 - The UI always shows a calendar date picker. The script receives the date in the configured format.
+- An invalid `date_format` (e.g. `"DD/MM/YYYY"` instead of `"%d/%m/%Y"`) is now detected at startup with a clear error message.
 
 ### 2025-05-27 — GitHub Actions CI + secure cookies
 
-- GitHub Actions CI added ([view workflows](https://github.com/knep/script-server/actions)): Python 3.10/3.11/3.12 matrix + Node 22 frontend tests on every push and pull request.
+- GitHub Actions CI added ([view workflows](https://github.com/knep/script-server/actions)): Python 3.10/3.11/3.12/3.13 matrix + Node 22 frontend tests on every push and pull request.
 - Cookies (`username`, `token`, XSRF) are now set with `HttpOnly`, `SameSite=Lax`, and `Secure` flags. The `Secure` flag can be disabled in `conf.json` via `"cookie_secure": false` for HTTP-only deployments.
 
-### 2025-05-27 — Python 3.12 compatibility
+### 2025-05-27 — Python 3.12/3.13 compatibility
 
-**Python version support:** updated minimum from Python 3.7 (end-of-life since June 2023) to **Python 3.9+** (Python 3.12 recommended).
+**Python version support:** updated minimum from Python 3.7 (end-of-life since June 2023) to **Python 3.9+** (Python 3.13 recommended).
+
+**Python 3.13 note:** the `crypt` standard-library module was removed in Python 3.13. If your `htpasswd` file contains DES-crypt passwords (entries that do not start with `$2y$`, `$apr1$`, or `{SHA}`), the server will refuse to start with a clear error message. Regenerate those passwords using bcrypt (`htpasswd -B`) or SHA-1 (`htpasswd -s`).
 
 **Fixes:**
 - Replaced invalid string escape sequences (`\d`, `\w`, `\/`, `\ `, `\|`, `\p`, `\[`, `\.`) with raw strings (`r'...'`) in test files — these would become `SyntaxError` in Python 3.14
