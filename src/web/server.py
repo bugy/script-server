@@ -279,6 +279,9 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
 
         self.executor = None
 
+    def set_default_headers(self):
+        _set_security_headers(self)
+
     @check_authorization
     @inject_user
     def open(self, user, execution_id):

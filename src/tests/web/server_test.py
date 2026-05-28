@@ -231,6 +231,38 @@ class ServerTest(TestCase):
         script_content = file_utils.read_file(script_path)
         self.assertEqual('abcdef', script_content)
 
+    # --- Security header tests ---
+
+    def test_security_headers_on_api_response(self):
+        self.start_server(12345, '127.0.0.1')
+        response = self._user_session.get('http://127.0.0.1:12345/scripts')
+        self.assertEqual(200, response.status_code)
+        self._assert_security_headers(response)
+
+    def test_security_headers_on_websocket_response(self):
+        self.start_server(12345, '127.0.0.1')
+        # Plain HTTP GET to the WebSocket endpoint (no Upgrade headers) → Tornado returns 400.
+        # set_default_headers() is called before the handshake check, so security
+        # headers must be present in the error response.
+        response = requests.get('http://127.0.0.1:12345/executions/io/1')
+        self.assertEqual(400, response.status_code)
+        self._assert_security_headers(response)
+
+    def _assert_security_headers(self, response):
+        for header, expected in [
+            ('X-Frame-Options', 'DENY'),
+            ('X-Content-Type-Options', 'nosniff'),
+            ('Referrer-Policy', 'strict-origin-when-cross-origin'),
+        ]:
+            self.assertEqual(expected, response.headers.get(header),
+                             'Wrong or missing header: ' + header)
+
+        csp = response.headers.get('Content-Security-Policy', '')
+        self.assertIn("default-src 'self'", csp, 'CSP missing default-src')
+        self.assertIn("frame-ancestors 'none'", csp, 'CSP missing frame-ancestors')
+
+    # --- end security header tests ---
+
     def test_on_fly_auth(self):
         self.start_server(12345, '127.0.0.1')
 
