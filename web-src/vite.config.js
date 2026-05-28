@@ -76,6 +76,15 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./tests/unit/setup.js'],
-        include: ['tests/unit/**/*_test.js']
+        include: ['tests/unit/**/*_test.js'],
+        server: {
+            deps: {
+                // Force Vite (and our custom plugins) to transform materialize-css
+                // instead of esbuild pre-bundling it. Required so the
+                // `materialize-component-export` plugin runs in tests, exposing the
+                // `Component` base class that materialize's components extend.
+                inline: [/materialize-css/]
+            }
+        }
     }
 })

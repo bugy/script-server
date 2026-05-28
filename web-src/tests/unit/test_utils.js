@@ -1,18 +1,14 @@
-import {forEachKeyValue} from '@/common/utils/common';
-import Vue from 'vue';
-import {createLocalVue} from '@vue/test-utils'
-import vueDirectives from '@/common/vueDirectives'
+import {nextTick} from 'vue';
+import {mount} from '@vue/test-utils';
 
 export async function vueTicks(count = 3) {
     if (count === 0) {
         return Promise.resolve(null);
     }
 
-    let promise = Vue.nextTick();
+    let promise = nextTick();
     for (let i = 0; i < (count - 1); i++) {
-        promise.then(function () {
-            return Vue.nextTick();
-        });
+        promise = promise.then(() => nextTick());
     }
     return promise;
 }
@@ -23,11 +19,17 @@ export async function timeout(ms) {
     });
 }
 
+// Vue 3 removed instance `$on`. To emulate parent v-model two-way binding in
+// tests, we register `onUpdate:modelValue` / `onError` listeners as props after
+// mount: when the component emits, we push the value back into its `modelValue`
+// prop (mirroring what a parent `v-model` would do) and capture errors.
 export function wrapVModel(inputComponent) {
-    inputComponent.vm.$on('input', function (value) {
-        inputComponent.setProps({value});
+    inputComponent.setProps({
+        'onUpdate:modelValue': (value) => inputComponent.setProps({modelValue: value}),
+        'onError': (error) => {
+            inputComponent.currentError = error
+        }
     });
-    inputComponent.vm.$on('error', error => inputComponent.currentError = error);
 }
 
 export function setDeepProp(wrapper, key, value) {
@@ -97,39 +99,26 @@ export function setChipListValue(chipListComponent, value) {
     }
 }
 
-export function createVue(component, properties, store = null, vue = null) {
-    document.body.insertAdjacentHTML('afterbegin', '<div id="top-level-element"></div>');
-    const topLevelElement = document.getElementById('top-level-element');
-
-    if (vue === null) {
-        vue = Vue
-    }
-    const ComponentClass = vue.extend(component);
-    const vm = new ComponentClass({
-        store,
-        propsData: properties
-    }).$mount(topLevelElement);
-
-    vm.$on('input', function (value) {
-        vm.value = value
+// Vue 3 / VTU v2 replacement for the old `new ComponentClass().$mount()` helper.
+// Returns a VTU wrapper (callers use wrapper.vm, wrapper.unmount(), etc.).
+export function createVue(component, properties, store = null) {
+    return mount(component, {
+        attachTo: attachToDocument(),
+        props: properties,
+        global: store ? {plugins: [store]} : {}
     });
-
-    return vm;
 }
 
-export function destroy(component) {
-    component.destroy();
+export function destroy(wrapper) {
+    wrapper.unmount();
 }
 
 export const flushPromises = () => new Promise(resolve => setTimeout(resolve));
 
-export const createScriptServerTestVue = () => {
-    const vue = createLocalVue()
-    forEachKeyValue(vueDirectives, (id, definition) => {
-        vue.directive(id, definition)
-    })
-    return vue
-}
+// Deprecated no-op kept for backward compatibility: in Vue 3 / VTU v2 there is no
+// `createLocalVue`. The app's directives are registered globally in setup.js via
+// `config.global.directives`, so the old `localVue` mount option is unnecessary.
+export const createScriptServerTestVue = () => undefined;
 
 export const attachToDocument = () => {
     const element = document.createElement('div')

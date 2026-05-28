@@ -9,7 +9,9 @@ import {expect, afterEach} from 'vitest'
 import * as domMatchers from '@testing-library/jest-dom/matchers'
 import jestExtended from 'jest-extended'
 import $ from 'jquery'
-import {enableAutoUnmount} from '@vue/test-utils'
+import {config, enableAutoUnmount} from '@vue/test-utils'
+import vueDirectives from '@/common/vueDirectives'
+import {forEachKeyValue} from '@/common/utils/common'
 
 expect.extend(domMatchers)
 expect.extend(jestExtended)
@@ -17,6 +19,25 @@ expect.extend(jestExtended)
 // Make jQuery globally available (materialize-css and some components rely on it)
 globalThis.$ = $
 globalThis.jQuery = $
+
+// jsdom has no layout engine, so HTMLElement.offsetParent is always null. Some
+// materialize-css components (e.g. Dropdown positioning) call
+// `el.offsetParent.getBoundingClientRect()` and would crash. Provide a sane
+// fallback so those components can run under jsdom. (Karma used a real browser.)
+// Note: jsdom already defines offsetParent (returning null); override it forcibly.
+Object.defineProperty(globalThis.HTMLElement.prototype, 'offsetParent', {
+    configurable: true,
+    get() {
+        return this.parentElement || document.body
+    }
+})
+
+// Register the app's custom directives globally for every mounted component.
+// Vue 3 / VTU v2 has no `createLocalVue`; directives go through config.global instead.
+// This replaces the old `createScriptServerTestVue()` + `localVue` mount option.
+forEachKeyValue(vueDirectives, (id, definition) => {
+    config.global.directives[id] = definition
+})
 
 // Auto-unmount Vue wrappers after every test (Vue 3 equivalent of enableAutoDestroy)
 enableAutoUnmount(afterEach)
