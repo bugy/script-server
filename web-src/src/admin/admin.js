@@ -1,18 +1,16 @@
 import '@/common/materializecss/imports/tabs'
 import '@/common/style_imports';
-import Vue from 'vue';
+import {createApp} from 'vue';
 import AdminApp from './AdminApp';
-import './AdminApp';
 import router from './router/router';
 import vueDirectives from '@/common/vueDirectives'
 import {forEachKeyValue} from '@/common/utils/common'
 
+const app = createApp(AdminApp)
+
 forEachKeyValue(vueDirectives, (id, definition) => {
-    Vue.directive(id, definition)
+    app.directive(id, definition)
 })
 
-//noinspection JSAnnotator
-new Vue({
-    router,
-    render: h => h(AdminApp)
-}).$mount('#admin-page');
+app.use(router)
+app.mount('#admin-page')
