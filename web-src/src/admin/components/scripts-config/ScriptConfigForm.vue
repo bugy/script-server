@@ -5,7 +5,7 @@
       <TextField v-model="group" :config="groupField" class="col s5 offset-s1"/>
     </div>
     <div class="row">
-      <ScriptPathField :config-name="newName" :new-config="isNew" :original-path="value['script_path']"
+      <ScriptPathField :config-name="newName" :new-config="isNew" :original-path="modelValue['script_path']"
                        class="col s6" @change="updateScript"/>
       <TextField v-model="workingDirectory" :config="workDirField" class="col s5 offset-s1"/>
     </div>
