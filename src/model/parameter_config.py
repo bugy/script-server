@@ -115,6 +115,7 @@ class ParameterModel(object):
         self.excluded_files_matcher = _resolve_excluded_files(config, 'excluded_files', self._list_files_dir)
 
         self.date_format = config.get('date_format', '%Y-%m-%d')
+        self.time_format = config.get('time_format', '%H:%M')
         self.constant = read_bool_from_config('constant', config, default=False)
 
         ui_config = config.get('ui')
@@ -325,6 +326,13 @@ class ParameterModel(object):
             except ValueError:
                 pass
 
+        if self.type == 'time' and isinstance(user_value, str) and user_value:
+            try:
+                time_obj = datetime.strptime(user_value, '%H:%M')
+                return time_obj.strftime(self.time_format)
+            except ValueError:
+                pass
+
         if isinstance(user_value, list):
             return [self._ui_value_mapper.map_to_script_value(single_value) for single_value in user_value]
         else:
@@ -399,6 +407,13 @@ class ParameterModel(object):
                 return None
             except ValueError:
                 return 'should be a valid date in YYYY-MM-DD format, but was ' + value_string
+
+        if self.type == 'time':
+            try:
+                datetime.strptime(user_value, '%H:%M')
+                return None
+            except ValueError:
+                return 'should be a valid time in HH:MM format, but was ' + value_string
 
         if self.type in ('ip', 'ip4', 'ip6'):
             try:

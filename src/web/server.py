@@ -85,9 +85,25 @@ def exception_to_code_and_message(exception):
     return None, None
 
 
+def _set_security_headers(handler):
+    handler.set_header('X-Frame-Options', 'DENY')
+    handler.set_header('X-Content-Type-Options', 'nosniff')
+    handler.set_header('Referrer-Policy', 'strict-origin-when-cross-origin')
+    handler.set_header(
+        'Content-Security-Policy',
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' ws: wss:; "
+        "frame-ancestors 'none'; "
+        "object-src 'none'"
+    )
+
+
 class BaseRequestHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
-        self.set_header('X-Frame-Options', 'DENY')
+        _set_security_headers(self)
 
         if self.application.server_config.xsrf_protection == XSRF_PROTECTION_TOKEN:
             # This is needed to initialize cookie (by default tornado does it only on html template rendering)
@@ -119,7 +135,7 @@ class BaseRequestHandler(tornado.web.RequestHandler):
 
 class BaseStaticHandler(tornado.web.StaticFileHandler):
     def set_default_headers(self):
-        self.set_header('X-Frame-Options', 'DENY')
+        _set_security_headers(self)
 
 
 class GetServerConf(BaseRequestHandler):

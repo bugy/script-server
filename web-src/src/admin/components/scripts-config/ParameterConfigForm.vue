@@ -109,6 +109,10 @@
       <Textfield v-model="dateFormat" :config="dateFormatField" class="col s6"
                  @error="handleError(dateFormatField, $event)"/>
     </div>
+    <div v-if="selectedType === 'time'" class="row">
+      <Textfield v-model="timeFormat" :config="timeFormatField" class="col s6"
+                 @error="handleError(timeFormatField, $event)"/>
+    </div>
 
     <div v-if="selectedType !== 'multiline_text'" class="row">
       <Textfield v-model="uiWidthWeight"
@@ -174,6 +178,7 @@ import {
   secureField,
   separatorField,
   stdinExpectedTextField,
+  timeFormatField,
   typeField,
   uiSeparatorTitleField,
   uiSeparatorTypeField,
@@ -219,7 +224,8 @@ export default {
       fileType: 'file_type',
       stdinExpectedText: 'stdin_expected_text',
       valuesUiMapping: 'values_ui_mapping',
-      dateFormat: 'date_format'
+      dateFormat: 'date_format',
+      timeFormat: 'time_format'
     };
 
     forEachKeyValue(simpleFields, (vmField, configField) => {
@@ -263,8 +269,10 @@ export default {
       uiSeparatorType: null,
       uiSeparatorTitle: null,
       dateFormat: null,
+      timeFormat: null,
       nameField,
       dateFormatField,
+      timeFormatField,
       paramField: Object.assign({}, paramField),
       passAsField,
       stdinExpectedTextField,
@@ -327,6 +335,7 @@ export default {
           this.passAs = get(config, 'pass_as', 'argument + env_variable')
           this.valuesUiMapping = get(config, 'values_ui_mapping', {})
           this.dateFormat = get(config, 'date_format', '')
+          this.timeFormat = get(config, 'time_format', '')
 
           this.uiWidthWeight = config['ui']?.['width_weight']
           this.uiSeparatorType = config['ui']?.['separator_before']?.['type']

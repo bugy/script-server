@@ -25,6 +25,7 @@
 import Checkbox from '@/common/components/checkbox'
 import Combobox from '@/common/components/combobox'
 import DateField from '@/common/components/inputs/DateField'
+import TimeField from '@/common/components/inputs/TimeField'
 import FileUpload from '@/common/components/file_upload'
 import ServerFileField from '@/common/components/server_file_field'
 import TextArea from '@/common/components/TextArea'
@@ -82,6 +83,8 @@ export default {
         return FileUpload;
       } else if (parameter.type === 'date') {
         return DateField;
+      } else if (parameter.type === 'time') {
+        return TimeField;
       } else if (parameter.type === 'multiline_text') {
         return TextArea;
       } else {

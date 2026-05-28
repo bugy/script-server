@@ -4,6 +4,34 @@
 
 ## What's new in this fork
 
+### 2026-05-28 — New `time` parameter type
+
+A new `time` parameter type shows a native time picker in the UI and passes the selected time to the script in a configurable format.
+
+**Configuration example:**
+```json
+{
+  "name": "start_time",
+  "type": "time",
+  "time_format": "%H:%M"
+}
+```
+
+- `time_format` is a Python [strftime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) format string. Default: `%H:%M` (24-hour HH:MM).
+- The UI always shows a native time picker. The script receives the time in the configured format.
+
+### 2026-05-28 — HTTP security headers
+
+All responses now include the following security headers:
+
+| Header | Value |
+|--------|-------|
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Content-Security-Policy` | `default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'; object-src 'none'` |
+
+`X-Frame-Options: DENY` was already present; `frame-ancestors 'none'` in the CSP provides equivalent coverage for modern browsers.
+
 ### 2025-05-27 — New `date` parameter type
 
 A new `date` parameter type shows a native date picker in the UI and passes the selected date to the script in a configurable format.
@@ -52,7 +80,7 @@ No script modifications are needed - you configure each script in Script server 
 [Admin interface screenshots](https://github.com/bugy/script-server/wiki/Admin-interface)
 
 ## Features
-- Different types of script parameters (text, integer, date, flag, dropdown, file upload, etc.)
+- Different types of script parameters (text, integer, date, time, flag, dropdown, file upload, etc.)
 - Real-time script output
 - Users can send input during script execution
 - Auth (optional): LDAP, Google OAuth, htpasswd file

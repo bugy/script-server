@@ -242,6 +242,18 @@ class ParameterModelMapValueTest(unittest.TestCase):
         parameter_model = create_parameter_model('param1', type='date', date_format='%Y%m%d')
         self.assertEqual('20240315', parameter_model.map_to_script('2024-03-15'))
 
+    def test_map_to_script_time_default_format(self):
+        parameter_model = create_parameter_model('param1', type='time')
+        self.assertEqual('14:30', parameter_model.map_to_script('14:30'))
+
+    def test_map_to_script_time_custom_format(self):
+        parameter_model = create_parameter_model('param1', type='time', time_format='%H%M')
+        self.assertEqual('1430', parameter_model.map_to_script('14:30'))
+
+    def test_map_to_script_time_with_seconds_format(self):
+        parameter_model = create_parameter_model('param1', type='time', time_format='%H:%M:%S')
+        self.assertEqual('14:30:00', parameter_model.map_to_script('14:30'))
+
 
 class TestDefaultValue(unittest.TestCase):
 
@@ -712,6 +724,42 @@ class TestSingleParameterValidation(unittest.TestCase):
         parameter = create_parameter_model('param', type='date')
 
         error = validate_value(parameter, '2024-02-30')
+        self.assert_error(error)
+
+    def test_time_parameter_when_valid(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '14:30')
+        self.assertIsNone(error)
+
+    def test_time_parameter_when_midnight(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '00:00')
+        self.assertIsNone(error)
+
+    def test_time_parameter_when_end_of_day(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '23:59')
+        self.assertIsNone(error)
+
+    def test_time_parameter_when_invalid_format(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '14:30:00')
+        self.assert_error(error)
+
+    def test_time_parameter_when_not_a_time(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, 'hello')
+        self.assert_error(error)
+
+    def test_time_parameter_when_invalid_hour(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '25:00')
         self.assert_error(error)
 
     def test_file_upload_parameter_when_valid(self):
