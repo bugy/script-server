@@ -1,0 +1,18 @@
+services:
+  script-server:
+    image: ghcr.io/knep/script-server:latest
+    container_name: script-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      # Script configurations (required) — put your .json runner files here
+      - ./conf/runners:/app/conf/runners
+      # Execution logs
+      - ./logs:/app/logs
+      # Optional: server configuration (auth, SSL, port, etc.)
+      # - ./conf/conf.json:/app/conf/conf.json:ro
+      # Optional: htpasswd file for basic auth
+      # - ./conf/.htpasswd:/app/conf/.htpasswd:ro
+      # Optional: custom theme (CSS/images)
+      # - ./conf/theme:/app/conf/theme:ro
