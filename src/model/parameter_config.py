@@ -149,6 +149,16 @@ class ParameterModel(object):
             if not self.file_dir:
                 raise Exception('Parameter ' + param_log_name + ' has missing config file_dir')
 
+        if self.type == 'date' and self.date_format and '%' not in self.date_format:
+            raise Exception(
+                'Parameter "' + param_log_name + '" has invalid date_format "' + self.date_format
+                + '": must contain at least one strftime directive (e.g. %Y, %m, %d)')
+
+        if self.type == 'time' and self.time_format and '%' not in self.time_format:
+            raise Exception(
+                'Parameter "' + param_log_name + '" has invalid time_format "' + self.time_format
+                + '": must contain at least one strftime directive (e.g. %H, %M)')
+
     def str_name(self):
         names = (name for name in (self.name, self.param, self.description) if name)
         return next(names, 'unknown')

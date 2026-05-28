@@ -254,6 +254,44 @@ class ParameterModelMapValueTest(unittest.TestCase):
         parameter_model = create_parameter_model('param1', type='time', time_format='%H:%M:%S')
         self.assertEqual('14:30:00', parameter_model.map_to_script('14:30'))
 
+    # --- date_format / time_format config validation ---
+
+    def test_date_format_valid_custom(self):
+        # Should not raise — contains % directives
+        create_parameter_model('param1', type='date', date_format='%d/%m/%Y')
+
+    def test_date_format_invalid_no_directives(self):
+        self.assertRaisesRegex(
+            Exception,
+            'invalid date_format.*DD/MM/YYYY.*strftime directive',
+            create_parameter_model, 'param1', type='date', date_format='DD/MM/YYYY')
+
+    def test_date_format_invalid_java_style(self):
+        self.assertRaisesRegex(
+            Exception,
+            'invalid date_format',
+            create_parameter_model, 'param1', type='date', date_format='yyyy-MM-dd')
+
+    def test_date_format_validation_only_for_date_type(self):
+        # Same string on a text parameter should never raise
+        create_parameter_model('param1', type='text', date_format='DD/MM/YYYY')
+
+    def test_time_format_valid_custom(self):
+        # Should not raise — contains % directives
+        create_parameter_model('param1', type='time', time_format='%I:%M %p')
+
+    def test_time_format_invalid_no_directives(self):
+        self.assertRaisesRegex(
+            Exception,
+            'invalid time_format.*HH:MM.*strftime directive',
+            create_parameter_model, 'param1', type='time', time_format='HH:MM')
+
+    def test_time_format_validation_only_for_time_type(self):
+        # Same string on a text parameter should never raise
+        create_parameter_model('param1', type='text', time_format='HH:MM')
+
+    # --- end format validation tests ---
+
 
 class TestDefaultValue(unittest.TestCase):
 
