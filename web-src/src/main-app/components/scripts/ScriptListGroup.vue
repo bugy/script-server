@@ -9,9 +9,11 @@
       </i>
     </a>
 
-    <ScriptListItem v-for="innerScript in group.scripts"
-                    v-if="group.isActive" :key="innerScript.name"
-                    :script="innerScript"/>
+    <template v-if="group.isActive">
+      <ScriptListItem v-for="innerScript in group.scripts"
+                      :key="innerScript.name"
+                      :script="innerScript"/>
+    </template>
   </div>
 </template>
 
