@@ -1,14 +1,13 @@
 <template>
   <div ref="parametersPanel" :style="{ 'grid-template-columns': 'repeat(' + gridColumns + ', minmax(0, 1fr))'}"
        class="script-parameters-panel">
-    <template v-for="parameter in parameters">
+    <template v-for="parameter in parameters" :key="parameter.name">
       <ParameterSeparator
           v-if="parameter.ui?.separatorBefore && !startsWithNewLine(parameter)"
           :separator="parameter.ui?.separatorBefore"
           :style="'grid-column-start: span ' + gridColumns"/>
       <component
           :is="getComponentType(parameter)"
-          :key="parameter.name"
           :config="parameter"
           :value="getParameterValue(parameter)"
           :class="{'inline': isInline(parameter)}"
@@ -160,7 +159,7 @@ export default {
 </script>
 
 <style scoped>
-.script-parameters-panel >>> {
+.script-parameters-panel {
   margin-top: 15px;
   margin-right: 0;
   display: grid;
@@ -168,13 +167,13 @@ export default {
   row-gap: 8px;
 }
 
-.script-parameters-panel >>> .parameter.inline {
+.script-parameters-panel :deep(.parameter.inline) {
   margin-left: 0;
 }
 
-.script-parameters-panel >>> .parameter input,
-.script-parameters-panel >>> .parameter textarea,
-.script-parameters-panel >>> .parameter .file-upload-field-value {
+.script-parameters-panel :deep(.parameter input),
+.script-parameters-panel :deep(.parameter textarea),
+.script-parameters-panel :deep(.parameter .file-upload-field-value) {
   margin: 0;
 
   font-size: 1rem;
@@ -182,7 +181,7 @@ export default {
   line-height: 1.5em;
 }
 
-.script-parameters-panel >>> .parameter textarea {
+.script-parameters-panel :deep(.parameter textarea) {
   padding-bottom: 0;
   padding-top: 0;
 
@@ -190,35 +189,35 @@ export default {
   box-sizing: content-box;
 }
 
-.script-parameters-panel >>> .parameter > label {
+.script-parameters-panel :deep(.parameter > label) {
   transform: none;
   font-size: 1rem;
 }
 
-.script-parameters-panel >>> .parameter > label.active {
+.script-parameters-panel :deep(.parameter > label.active) {
   transform: translateY(-70%) scale(0.8);
 }
 
-.script-parameters-panel >>> .input-field input[type=checkbox] + span {
+.script-parameters-panel :deep(.input-field input[type=checkbox] + span) {
   padding-left: 28px;
 }
 
-.script-parameters-panel >>> .input-field .select-wrapper + label {
+.script-parameters-panel :deep(.input-field .select-wrapper + label) {
   transform: scale(0.8);
   top: -18px;
 }
 
-.script-parameters-panel >>> .input-field:after {
+.script-parameters-panel :deep(.input-field:after) {
   top: 1.7em;
   left: 0.1em;
 }
 
-.script-parameters-panel >>> .file-upload-field .btn-icon-flat {
+.script-parameters-panel :deep(.file-upload-field .btn-icon-flat) {
   top: -7px;
   right: -4px;
 }
 
-.script-parameters-panel >>> .dropdown-content {
+.script-parameters-panel :deep(.dropdown-content) {
   max-width: 50vw;
   min-width: 100%;
   white-space: nowrap;
@@ -226,7 +225,7 @@ export default {
   margin-bottom: 0;
 }
 
-.script-parameters-panel >>> .dropdown-content > li > span {
+.script-parameters-panel :deep(.dropdown-content > li > span) {
   overflow-x: hidden;
   text-overflow: ellipsis;
 }

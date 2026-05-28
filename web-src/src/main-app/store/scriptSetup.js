@@ -9,7 +9,6 @@ import {
 } from '@/common/utils/common';
 import clone from 'lodash/clone';
 import isEqual from 'lodash/isEqual';
-import Vue from 'vue';
 import { getMostRecentValues, shouldUseHistoricalValues } from '@/common/utils/parameterHistory';
 
 export default {
@@ -158,7 +157,7 @@ export default {
         },
         UPDATE_SINGLE_VALUE(state, {parameterName, value}) {
             if (state.parameterValues[parameterName] !== value) {
-                Vue.set(state.parameterValues, parameterName, value);
+                state.parameterValues[parameterName] = value;
                 removeElement(state.forcedValueParameters, parameterName)
             }
         },

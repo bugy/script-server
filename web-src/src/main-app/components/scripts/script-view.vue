@@ -560,7 +560,7 @@ export default {
   line-height: 2em;
 }
 
-.script-view >>> .log-panel {
+.script-view :deep(.log-panel) {
   margin-top: 12px;
 }
 

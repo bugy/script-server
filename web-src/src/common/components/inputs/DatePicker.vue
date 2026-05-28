@@ -77,7 +77,7 @@ export default {
 </script>
 
 <style scoped>
-.date-picker.headless >>> .datepicker-date-display {
+.date-picker.headless :deep(.datepicker-date-display) {
   display: none;
 }
 </style>

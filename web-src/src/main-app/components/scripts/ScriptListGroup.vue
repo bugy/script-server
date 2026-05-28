@@ -48,7 +48,7 @@ export default {
   line-height: 16px;
 }
 
-.script-list-group >>> .collection-item.script-list-item {
+.script-list-group :deep(.collection-item.script-list-item) {
   padding-left: 36px;
 }
 

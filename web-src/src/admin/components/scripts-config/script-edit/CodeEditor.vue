@@ -203,15 +203,15 @@ export default {
   padding-right: 0;
 }
 
->>> .input-field.col label {
+:deep(.input-field.col label) {
   left: 0
 }
 
->>> .input-field > label:not(.label-icon).active {
+:deep(.input-field > label:not(.label-icon).active) {
   transform: translateY(-12px) scale(0.8);
 }
 
->>> .input-field input {
+:deep(.input-field input) {
   height: 2.6rem;
 }
 

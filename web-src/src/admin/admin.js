@@ -3,6 +3,7 @@ import '@/common/style_imports';
 import {createApp} from 'vue';
 import AdminApp from './AdminApp';
 import router from './router/router';
+import store from './store/index';
 import vueDirectives from '@/common/vueDirectives'
 import {forEachKeyValue} from '@/common/utils/common'
 
@@ -12,5 +13,5 @@ forEachKeyValue(vueDirectives, (id, definition) => {
     app.directive(id, definition)
 })
 
-app.use(router)
+app.use(router).use(store)
 app.mount('#admin-page')

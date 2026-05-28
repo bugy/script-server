@@ -2,8 +2,20 @@ import {defineConfig} from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import {fileURLToPath, URL} from 'node:url'
 
+// Vite plugin: materialize-css/js/component.js is a plain class declaration
+// with no exports. The original webpack build used exports-loader to extract it.
+// This plugin appends `export default Component;` so it can be imported normally.
+const materializeComponentPlugin = {
+    name: 'materialize-component-export',
+    transform(code, id) {
+        if (id.includes('materialize-css/js/component.js')) {
+            return {code: code + '\nexport default Component;\n', map: null}
+        }
+    }
+}
+
 export default defineConfig({
-    plugins: [vue()],
+    plugins: [vue(), materializeComponentPlugin],
 
     // Relative public path — equivalent to vue.config.js publicPath: ''
     base: '',

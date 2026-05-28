@@ -1,5 +1,4 @@
 import {getWebsocketUrl, isNull, isWebsocketClosed} from '@/common/utils/common';
-import Vue from 'vue';
 import {axiosInstance} from '@/common/utils/axios_utils';
 
 export const STATUS_INITIALIZING = 'initializing';
@@ -159,7 +158,7 @@ export default (id, scriptName, parameterValues) => {
             },
 
             ADD_INLINE_IMAGE(state, {output_path, download_url}) {
-                Vue.set(state.inlineImages, output_path, download_url);
+                state.inlineImages[output_path] = download_url;
             },
 
             SET_STATUS(state, status) {

@@ -150,7 +150,6 @@ import Textfield from '@/common/components/textfield';
 import {forEachKeyValue, isBlankString, isEmptyArray, isEmptyObject, isEmptyString} from '@/common/utils/common';
 import ParameterSeparator from '@/main-app/components/scripts/ParameterSeparator.vue';
 import get from 'lodash/get';
-import Vue from 'vue';
 import {
   allowedValuesFromScriptField,
   allowedValuesScriptField,
@@ -186,10 +185,7 @@ import {
 } from './parameter-fields';
 
 function updateValue(value, configField, newValue) {
-  if (!value.hasOwnProperty(configField)) {
-    Object.assign(value, {[configField]: newValue});
-  }
-  Vue.set(value, configField, newValue);
+  value[configField] = newValue;
 }
 
 export default {
@@ -374,19 +370,19 @@ export default {
     noValue: {
       immediate: true,
       handler(noValue) {
-        Vue.set(this.paramField, 'required', noValue);
+        this.paramField.required = noValue;
       }
     },
     constant: {
       immediate: true,
       handler(constant) {
-        Vue.set(this.defaultValueField, 'required', constant);
-        Vue.set(this.defaultValueField, 'name', constant ? 'Constant value' : defaultValueField.name);
+        this.defaultValueField.required = constant;
+        this.defaultValueField.name = constant ? 'Constant value' : defaultValueField.name;
       }
     },
     min: {
       handler(min) {
-        Vue.set(this.maxField, 'min', min);
+        this.maxField.min = min;
       }
     },
     fileExtensions(fileExtensions) {
@@ -530,11 +526,11 @@ export default {
 </script>
 
 <style scoped>
-.parameter-config-form >>> .col.checkbox {
+.parameter-config-form :deep(.col.checkbox) {
   margin-top: 2.1em;
 }
 
-.parameter-config-form >>> .row {
+.parameter-config-form :deep(.row) {
   margin-bottom: 0;
 }
 </style>

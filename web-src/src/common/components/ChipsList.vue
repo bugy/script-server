@@ -157,7 +157,7 @@ export default {
   top: -13px;
 }
 
-.chips-list >>> .chip {
+.chips-list :deep(.chip) {
   margin-bottom: 3px;
 }
 

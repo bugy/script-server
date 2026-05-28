@@ -8,9 +8,8 @@
       </router-link>
       <div class="collection">
 
-        <template v-for="script in scripts">
-          <router-link :key="script.name"
-                       :class="{'parsing-failed': script.parsingFailed}"
+        <template v-for="script in scripts" :key="script.name">
+          <router-link :class="{'parsing-failed': script.parsingFailed}"
                        :to="script.path"
                        append
                        class="collection-item">

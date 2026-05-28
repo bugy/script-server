@@ -127,11 +127,11 @@ export default {
   top: 12px;
 }
 
->>> .input-field:after {
+:deep(.input-field:after) {
   left: 0;
 }
 
->>> .path-textfield input {
+:deep(.path-textfield input) {
   padding-right: 1em;
   box-sizing: border-box;
   text-overflow: ellipsis;

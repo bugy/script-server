@@ -70,7 +70,7 @@ export default {
   flex-direction: column;
 }
 
-.main-app-content >>> .input-field label {
+.main-app-content :deep(.input-field label) {
   top: 0;
 
   text-overflow: ellipsis;

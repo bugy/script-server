@@ -175,7 +175,7 @@ export default {
 
 <style scoped>
 .collapsible-header:last-child,
-.collapsible >>> .collapsible-body {
+.collapsible :deep(.collapsible-body) {
   border-bottom: none;
 }
 

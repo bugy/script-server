@@ -235,7 +235,7 @@ export default {
   box-shadow: 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
 }
 
-.log-panel >>> .log-content.terminal-output img {
+.log-panel :deep(.log-content.terminal-output img) {
   max-width: 100%
 }
 
@@ -260,7 +260,7 @@ export default {
 }
 
 /*noinspection CssInvalidPropertyValue,CssOverwrittenProperties*/
-.log-panel >>> .log-content {
+.log-panel :deep(.log-content) {
   display: block;
   overflow-y: auto;
   height: 100%;
