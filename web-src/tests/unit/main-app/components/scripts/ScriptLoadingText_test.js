@@ -1,18 +1,30 @@
 'use strict';
-import ScriptLoadingText, {__RewireAPI__ as CommonRewire} from '@/main-app/components/scripts/ScriptLoadingText';
 import {mount} from '@vue/test-utils';
 import {attachToDocument, timeout, vueTicks} from '../../../test_utils';
+
+// Vue 3 / Vitest replacement for babel-plugin-rewire: ScriptLoadingText imports
+// `randomInt` from common utils to pick loading phrases. Mock just that export
+// with a reconfigurable vi.fn (keeping all other real utils via importActual).
+const {randomIntMock} = vi.hoisted(() => ({randomIntMock: vi.fn(() => 0)}));
+vi.mock('@/common/utils/common', async (importActual) => ({
+    ...(await importActual()),
+    randomInt: randomIntMock
+}));
+
+import ScriptLoadingText from '@/main-app/components/scripts/ScriptLoadingText';
 
 const DEFAULT_DELAY = 10;
 
 function rewireRandomInt(newRandom) {
-    CommonRewire.__Rewire__('randomInt', newRandom);
+    randomIntMock.mockImplementation(newRandom);
 }
 
 describe('Test ScriptLoadingText', function () {
     let loadingText;
 
     beforeEach(function () {
+        randomIntMock.mockReset();
+        randomIntMock.mockImplementation(() => 0);
         loadingText = mount(ScriptLoadingText, {
             attachTo: attachToDocument(),
             props: {
@@ -22,7 +34,7 @@ describe('Test ScriptLoadingText', function () {
     });
 
     afterEach(function () {
-        loadingText.destroy();
+        loadingText.unmount();
     });
 
     describe('Test dynamic loading text', function () {
