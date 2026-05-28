@@ -239,6 +239,19 @@ class ServerTest(TestCase):
         self.assertEqual(200, response.status_code)
         self._assert_security_headers(response)
 
+    def test_security_headers_on_static_response(self):
+        self.start_server(12345, '127.0.0.1')
+        # Theme files are served by BaseStaticHandler and are accessible without
+        # authentication (they appear in the allowed_during_login list).
+        theme_dir = os.path.join(self.conf_folder, 'theme')
+        os.makedirs(theme_dir, exist_ok=True)
+        with open(os.path.join(theme_dir, 'style.css'), 'w') as f:
+            f.write('body { color: red; }')
+
+        response = requests.get('http://127.0.0.1:12345/theme/style.css')
+        self.assertEqual(200, response.status_code)
+        self._assert_security_headers(response)
+
     def test_security_headers_on_websocket_response(self):
         self.start_server(12345, '127.0.0.1')
         # Plain HTTP GET to the WebSocket endpoint (no Upgrade headers) → Tornado returns 400.
