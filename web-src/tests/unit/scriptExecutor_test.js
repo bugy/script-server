@@ -1,21 +1,17 @@
-import scriptExecutor, {__RewireAPI__ as ExecutorRewireAPI} from '@/main-app/store/scriptExecutor';
+import scriptExecutor from '@/main-app/store/scriptExecutor';
 
 import {axiosInstance} from '@/common/utils/axios_utils';
 import MockAdapter from 'axios-mock-adapter';
 import {Server, WebSocket} from 'mock-socket';
 import * as sinon from 'sinon';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import {createScriptServerTestVue, timeout} from './test_utils'
 
 let axiosMock;
 
 window.WebSocket = WebSocket;
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-
 function createStore() {
-    return new Vuex.Store({
+    return createVuexStore({
         modules: {
             scriptExecutor: scriptExecutor(123, 'my script', {})
         }
@@ -49,7 +45,10 @@ describe('Test scriptExecutor module', function () {
     beforeEach(function () {
         axiosMock = new MockAdapter(axiosInstance)
 
-        websocketServer = new Server('ws://localhost:9876/executions/io/123');
+        // The executor builds its socket URL from window.location.host (via
+        // getWebsocketUrl), so match the mock server to the current jsdom host
+        // rather than a hard-coded port.
+        websocketServer = new Server(`ws://${window.location.host}/executions/io/123`);
         websocketServer.on('connection', socket => {
             currentSocket = socket;
         });
@@ -57,8 +56,6 @@ describe('Test scriptExecutor module', function () {
     afterEach(function () {
         axiosMock.restore()
         websocketServer.stop();
-
-        ExecutorRewireAPI.__ResetDependency__('oneSecDelay', 1000);
     });
 
     async function mockSocketClose(socketCloseCode, status) {
@@ -150,24 +147,33 @@ describe('Test scriptExecutor module', function () {
             expect(store.state.scriptExecutor.killTimeoutSec).toBe(5)
         });
 
+        // The kill countdown uses setInterval(..., oneSecDelay) with oneSecDelay = 1000.
+        // babel-plugin-rewire shrank that const to run fast; under Vitest we keep the
+        // real value and drive the interval with fake timers instead.
         it('Test kill fields after short timeout', async function () {
-            ExecutorRewireAPI.__Rewire__('oneSecDelay', 50);
+            vi.useFakeTimers();
+            try {
+                await store.dispatch('scriptExecutor/stopExecution');
+                await vi.advanceTimersByTimeAsync(1000); // one tick
 
-            await store.dispatch('scriptExecutor/stopExecution');
-            await timeout(75);
-
-            expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-            expect(store.state.scriptExecutor.killTimeoutSec).toBe(4)
+                expect(store.state.scriptExecutor.killEnabled).toBeFalse()
+                expect(store.state.scriptExecutor.killTimeoutSec).toBe(4)
+            } finally {
+                vi.useRealTimers();
+            }
         });
 
         it('Test kill fields after long timeout', async function () {
-            ExecutorRewireAPI.__Rewire__('oneSecDelay', 5);
+            vi.useFakeTimers();
+            try {
+                await store.dispatch('scriptExecutor/stopExecution');
+                await vi.advanceTimersByTimeAsync(5000); // five ticks -> countdown reaches 0
 
-            await store.dispatch('scriptExecutor/stopExecution');
-            await timeout(50);
-
-            expect(store.state.scriptExecutor.killEnabled).toBeTrue()
-            expect(store.state.scriptExecutor.killTimeoutSec).toBeNil()
+                expect(store.state.scriptExecutor.killEnabled).toBeTrue()
+                expect(store.state.scriptExecutor.killTimeoutSec).toBeNil()
+            } finally {
+                vi.useRealTimers();
+            }
         });
 
         it('Test kill fields after error', async function () {
