@@ -34,9 +34,11 @@ export default {
         selectScriptByHash({state, commit}) {
             let encodedScriptName;
             let queryParameters;
-            if (router.currentRoute.name === 'script') {
-                encodedScriptName = router.currentRoute.params['scriptName'];
-                queryParameters = router.currentRoute.query;
+            // Vue Router 4: router.currentRoute is a ref — read .value.
+            const currentRoute = router.currentRoute.value;
+            if (currentRoute.name === 'script') {
+                encodedScriptName = currentRoute.params['scriptName'];
+                queryParameters = currentRoute.query;
             } else {
                 queryParameters = null;
                 encodedScriptName = null;

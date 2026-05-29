@@ -51,7 +51,7 @@ export default {
   },
 
   mounted() {
-    const currentPath = this.$router.currentRoute.path;
+    const currentPath = this.$router.currentRoute.value.path;
     this.$refs.appLayout.setSidebarVisibility(isEmptyString(currentPath) || (currentPath === '/'));
 
     this.$router.afterEach((to) => {
