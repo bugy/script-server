@@ -52,7 +52,7 @@ export default {
         return;
       }
 
-      delete this.parameters[index];
+      this.parameters.splice(index, 1);
 
       const toast = M.toast({
         html: '<span>Deleted ' + param.name + '</span>' +
