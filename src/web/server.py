@@ -887,7 +887,12 @@ def init(server_config: ServerConfig,
         'compress_response': True,
         'xsrf_cookies': server_config.xsrf_protection != XSRF_PROTECTION_DISABLED,
         'xsrf_cookie_kwargs': {
-            'httponly': True,
+            # The XSRF cookie is a double-submit CSRF token, not a secret: in
+            # token mode (the default) the browser JS must read it and echo it
+            # back in the X-XSRFToken header. It therefore must NOT be httponly,
+            # otherwise every POST (e.g. starting an execution) is rejected with
+            # 403 "_xsrf argument missing".
+            'httponly': False,
             'secure': server_config.cookie_secure,
             'samesite': 'Lax'
         },
