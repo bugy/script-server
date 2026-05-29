@@ -8,7 +8,7 @@
            :value="modelValue"
            :class="{validate: !disabled}"
            @change="inputChanged"/>
-    <label :for="id" :class="{active: !!value}">{{ config.name }}</label>
+    <label :for="id" :class="{active: !!modelValue}">{{ config.name }}</label>
   </div>
 </template>
 

@@ -21,6 +21,25 @@ The web frontend was upgraded from Vue 2 (Vue CLI + Webpack + Karma) to a modern
 
 Dev commands are unchanged: `npm run serve` (dev server) and `npm run build` (production build).
 
+### 2026-05-28 — docker-compose.yml for easy deployment
+
+A `docker-compose.yml` is now included at the root of the repository for quick local deployments:
+
+```bash
+# Start
+docker compose up -d
+
+# Stop
+docker compose down
+```
+
+Mount your script configs in `./conf/runners/` and logs will be written to `./logs/`.  
+See the full [docker-compose instructions](#with-docker-compose) below.
+
+### 2026-05-28 — Frontend unit tests for `date` and `time` components
+
+Unit tests added for the `DateField` and `TimeField` Vue components (42 tests total), covering label/input rendering, two-way value binding, and required-field validation.
+
 ### 2026-05-28 — Docker image on GitHub Container Registry
 
 A Docker image for this fork is now published automatically on every commit to `master`:
@@ -201,6 +220,29 @@ Available tags:
 | `latest` | `master` branch — most recent changes |
 | `stable` | `stable` branch |
 | `1.2.3` / `1.2` | Git tag `v1.2.3` |
+
+##### With docker-compose
+
+A ready-to-use `docker-compose.yml` is included at the root of the repository:
+
+```bash
+# Clone or download docker-compose.yml, then:
+docker compose up -d
+```
+
+Place your script runner configs in `./conf/runners/` (created automatically on first run).  
+Execution logs are written to `./logs/`.
+
+To customise the server (auth, SSL, port…), uncomment the optional volume lines in `docker-compose.yml`:
+
+```yaml
+volumes:
+  - ./conf/runners:/app/conf/runners
+  - ./logs:/app/logs
+  # - ./conf/conf.json:/app/conf/conf.json:ro   # server config
+  # - ./conf/.htpasswd:/app/conf/.htpasswd:ro   # htpasswd auth
+  # - ./conf/theme:/app/conf/theme:ro           # custom CSS/images
+```
 
 ### For development
 1. Clone this repository
