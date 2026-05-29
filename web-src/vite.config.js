@@ -17,7 +17,8 @@ const materializeComponentPlugin = {
 export default defineConfig({
     plugins: [vue(), materializeComponentPlugin],
 
-    // Relative public path — equivalent to vue.config.js publicPath: ''
+    // Relative public path (assets referenced as ./...), so the build can be
+    // served from any sub-path.
     base: '',
 
     resolve: {
