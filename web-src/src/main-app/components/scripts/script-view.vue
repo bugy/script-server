@@ -355,6 +355,12 @@ export default {
 
     logChunks: {
       immediate: true,
+      // deep: the store appends log chunks in place (logChunks.push), so the
+      // array reference doesn't change. Vue 3 non-deep watchers compare by
+      // reference and would never fire on append (Vue 2 fired anyway via its
+      // isObject special-case). Without this, streamed output never reaches the
+      // log panel. The handler stays incremental via nextLogIndex.
+      deep: true,
       handler(newValue, oldValue) {
         const updateLog = () => {
           if (isNull(newValue)) {
