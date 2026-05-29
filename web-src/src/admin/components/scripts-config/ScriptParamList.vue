@@ -45,6 +45,12 @@ export default {
     });
   },
 
+  beforeUnmount() {
+    // Stop the scroll-to-new-param poll so it can't fire after the component
+    // is gone (the panel ref would be null).
+    clearInterval(this.scrollInterval);
+  },
+
   methods: {
     deleteParam(param) {
       const index = this.parameters.indexOf(param);
@@ -129,10 +135,17 @@ export default {
     },
 
     scrollToNewParam() {
-      const parameterElements = this.$refs.parametersPanel.getElementsByTagName('li');
+      const panel = this.$refs.parametersPanel;
+      if (!panel) {
+        return;
+      }
+
+      const parameterElements = panel.getElementsByTagName('li');
       const newParamElement = parameterElements[parameterElements.length - 2];
 
-      newParamElement.scrollIntoView();
+      // Optional chaining guards against the element not being there yet and
+      // against environments without scrollIntoView (e.g. jsdom in tests).
+      newParamElement?.scrollIntoView?.();
     },
 
     setParameterKey(parameter) {
@@ -149,13 +162,14 @@ export default {
         return;
       }
 
-      let interval = null;
-      interval = setInterval(() => {
+      clearInterval(this.scrollInterval);
+      this.scrollInterval = setInterval(() => {
         try {
           this.scrollToNewParam();
         } finally {
           if (!this.openingNewParam) {
-            clearInterval(interval);
+            clearInterval(this.scrollInterval);
+            this.scrollInterval = null;
           }
         }
       }, 40);

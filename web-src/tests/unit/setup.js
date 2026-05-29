@@ -38,6 +38,13 @@ Object.defineProperty(globalThis.HTMLElement.prototype, 'offsetParent', {
     }
 })
 
+// jsdom doesn't implement scrollIntoView at all (no layout engine). Several
+// components and materialize helpers call it; stub it as a no-op so they don't
+// throw under jsdom (an unhandled throw from a timer/interval can fail the run).
+if (!globalThis.Element.prototype.scrollIntoView) {
+    globalThis.Element.prototype.scrollIntoView = function () {}
+}
+
 // jsdom has no layout engine, so HTMLElement.innerText is not implemented
 // (reads return undefined, writes don't create text nodes). Map it to
 // textContent — equivalent for the plain-text usages in the app/tests.
