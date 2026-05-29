@@ -5,7 +5,7 @@
       <TextField v-model="group" :config="groupField" class="col s5 offset-s1"/>
     </div>
     <div class="row">
-      <ScriptPathField :config-name="newName" :new-config="isNew" :original-path="value['script_path']"
+      <ScriptPathField :config-name="newName" :new-config="isNew" :original-path="modelValue['script_path']"
                        class="col s6" @change="updateScript"/>
       <TextField v-model="workingDirectory" :config="workDirField" class="col s5 offset-s1"/>
     </div>
@@ -95,7 +95,7 @@ export default {
   components: {ScriptPathField, Combobox, TextArea, ChipsList, TextField, CheckBox},
 
   props: {
-    value: {
+    modelValue: {
       type: Object,
       default: null
     },
@@ -151,16 +151,16 @@ export default {
     forEachKeyValue(simpleFields, (vmField, configField) => {
       this.$watch(vmField, (newValue) => {
         if (isNull(newValue) || isEmptyString(newValue)) {
-          this.$delete(this.value, configField);
+          delete this.modelValue[configField];
         } else {
-          this.$set(this.value, configField, newValue);
+          this.modelValue[configField] = newValue;
         }
       });
     });
   },
 
   watch: {
-    value: {
+    modelValue: {
       immediate: true,
       handler(config) {
         this.newName = config.name;
@@ -200,9 +200,9 @@ export default {
     },
     globalInstances() {
       if (this.globalInstances) {
-        this.$set(this.value, 'access', {'shared_access': {'type': 'ALL_USERS'}});
+        this.modelValue['access'] = {'shared_access': {'type': 'ALL_USERS'}};
       } else {
-        this.$delete(this.value, 'access');
+        delete this.modelValue['access'];
       }
     },
     schedulingEnabled() {
@@ -215,7 +215,7 @@ export default {
 
   methods: {
     updateScript(newScriptObject) {
-      this.value['script'] = newScriptObject
+      this.modelValue['script'] = newScriptObject
     },
     updateAllowedUsers() {
       this.updateAccessFieldInValue(this.allowAllUsers, 'allowedUsers', 'allowed_users');
@@ -227,16 +227,16 @@ export default {
       const newValue = this[vmPropertyName];
 
       if (isEmptyArray(newValue)) {
-        this.$delete(this.value, valuePropertyName);
+        delete this.modelValue[valuePropertyName];
       } else {
         if (allowAll) {
           if (newValue.includes('*')) {
-            this.value[valuePropertyName] = newValue;
+            this.modelValue[valuePropertyName] = newValue;
           } else {
-            this.value[valuePropertyName] = [...newValue, '*'];
+            this.modelValue[valuePropertyName] = [...newValue, '*'];
           }
         } else {
-          this.value[valuePropertyName] = newValue;
+          this.modelValue[valuePropertyName] = newValue;
         }
       }
     },
@@ -254,9 +254,9 @@ export default {
         if (!isNull(this.schedulingAutoCleanup) && (!this.schedulingAutoCleanupDisabled)) {
           schedulingConf['auto_cleanup'] = this.schedulingAutoCleanup
         }
-        this.$set(this.value, 'scheduling', schedulingConf)
+        this.modelValue['scheduling'] = schedulingConf
       } else {
-        this.$delete(this.value, 'scheduling')
+        delete this.modelValue['scheduling']
       }
     }
   }

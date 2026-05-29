@@ -3,9 +3,9 @@
     <div @click.capture="activateTextField"
          @keydown.capture="activateTextField">
       <TextField :config="scriptPathField"
-                 :value="inPathMode ? plainPath : scriptValue.path"
+                 :modelValue="inPathMode ? plainPath : scriptValue.path"
                  class="path-textfield"
-                 @input="onPathInput"/>
+                 @update:modelValue="onPathInput"/>
 
       <a v-if="canEditCode"
          v-trim-text
@@ -42,6 +42,7 @@ const ScriptEditDialog = () => import('@/admin/components/scripts-config/script-
 
 export default {
   name: 'ScriptPathField',
+  emits: ['change'],
   components: {ScriptEditDialog, Combobox, TextField, CodeEditorDialog, CodeEditor},
   props: {
     originalPath: String,
@@ -127,11 +128,11 @@ export default {
   top: 12px;
 }
 
->>> .input-field:after {
+:deep(.input-field:after) {
   left: 0;
 }
 
->>> .path-textfield input {
+:deep(.path-textfield input) {
   padding-right: 1em;
   box-sizing: border-box;
   text-overflow: ellipsis;

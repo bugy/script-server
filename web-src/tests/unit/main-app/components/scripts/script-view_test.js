@@ -1,19 +1,14 @@
 'use strict';
 import ScriptView from '@/main-app/components/scripts/script-view';
 import {mount} from '@vue/test-utils';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import {attachToDocument, createScriptServerTestVue} from '../../../test_utils'
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-
-
 describe('Test ScriptView', function () {
     let scriptView;
     let store;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
+        store = createVuexStore({
             modules: {
                 scripts: {
                     namespaced: true,
@@ -47,16 +42,13 @@ describe('Test ScriptView', function () {
 
         scriptView = mount(ScriptView, {
             attachTo: attachToDocument(),
-            store,
-            localVue
+            global: {plugins: [store]},
         });
-
-        scriptView.vm.$parent.$forceUpdate();
         await scriptView.vm.$nextTick();
     });
 
     afterEach(function () {
-        scriptView.destroy();
+        scriptView.unmount();
     });
 
     describe('Test log content', function () {
@@ -73,11 +65,8 @@ describe('Test ScriptView', function () {
 
             const newScriptView = mount(ScriptView, {
                 attachTo: attachToDocument(),
-                store,
-                localVue
+                global: {plugins: [store]},
             });
-
-            newScriptView.vm.$parent.$forceUpdate();
             await newScriptView.vm.$nextTick();
 
             try {
@@ -85,7 +74,7 @@ describe('Test ScriptView', function () {
                 expect(logText).toEqual('abc');
 
             } finally {
-                newScriptView.destroy();
+                newScriptView.unmount();
             }
         });
     });

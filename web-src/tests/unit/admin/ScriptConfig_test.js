@@ -3,19 +3,15 @@
 import ScriptConfig from '@/admin/components/scripts-config/ScriptConfig';
 import ScriptConfigForm from '@/admin/components/scripts-config/ScriptConfigForm';
 import {mount} from '@vue/test-utils';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import {attachToDocument, createScriptServerTestVue, vueTicks} from '../test_utils';
 import {findField, setValueByUser} from './ParameterConfigForm_test';
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-
 describe('Test ScriptConfig', function () {
     let store;
     let configComponent;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
+        store = createVuexStore({
             modules: {
                 scriptConfig: {
                     namespaced: true,
@@ -37,10 +33,9 @@ describe('Test ScriptConfig', function () {
         });
 
         configComponent = mount(ScriptConfig, {
-            store,
-            localVue,
+            global: {plugins: [store]},
             attachTo: attachToDocument(),
-            propsData: {scriptName: 'script1'}
+            props: {scriptName: 'script1'}
         });
 
         await vueTicks();
@@ -49,17 +44,17 @@ describe('Test ScriptConfig', function () {
     afterEach(async function () {
         await vueTicks();
 
-        configComponent.destroy();
+        configComponent.unmount();
     });
 
     const _findField = (expectedName, failOnMissing = true) => {
-        const form = configComponent.find(ScriptConfigForm);
-        return findField(form.vm, expectedName, failOnMissing);
+        const form = configComponent.findComponent(ScriptConfigForm);
+        return findField(form, expectedName, failOnMissing);
     };
 
     async function _setValueByUser(fieldName, value) {
         const form = configComponent.findComponent(ScriptConfigForm);
-        await setValueByUser(form.vm, fieldName, value);
+        await setValueByUser(form, fieldName, value);
     }
 
     describe('Test show config', function () {

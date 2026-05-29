@@ -1,21 +1,16 @@
 'use strict';
 import {mount} from '@vue/test-utils';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import VueRouter from 'vue-router';
 import MainAppSidebar from '@/main-app/components/MainAppSidebar';
 import {attachToDocument, createScriptServerTestVue, vueTicks} from '../../test_utils';
 import router from '@/main-app/router/router';
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-localVue.use(VueRouter);
-
 describe('Test MainAppSidebar', function () {
     let sidebar;
     let store;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
+        store = createVuexStore({
             modules: {
                 serverConfig: {
                     namespaced: true,
@@ -34,17 +29,13 @@ describe('Test MainAppSidebar', function () {
 
         sidebar = mount(MainAppSidebar, {
             attachTo: attachToDocument(),
-            store,
-            localVue,
-            router
+            global: {plugins: [store, router]},
         });
-
-        sidebar.vm.$parent.$forceUpdate();
         await sidebar.vm.$nextTick();
     });
 
     afterEach(function () {
-        sidebar.destroy();
+        sidebar.unmount();
     });
 
     describe('Test title', function () {

@@ -152,7 +152,7 @@ export default {
       this.$nextTick(this.calcAvailableSpace);
     }
   },
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     window.removeEventListener('resize', this.onResize);
   }
 }

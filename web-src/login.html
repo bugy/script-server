@@ -6,9 +6,8 @@
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1" name="viewport">
 
-    <link href="<%= BASE_URL %>favicon.ico" rel="icon">
+    <link href="./favicon.ico" rel="icon">
     <link href="./theme/theme.css" rel="stylesheet">
-
 </head>
 
 <body id="login-body" class="valign-wrapper script-server">
@@ -67,12 +66,13 @@
     </div>
 </script>
 
-
 <script id="login-authentik-template" type="text/template">
     <div>
         <input type="submit" id="login-authentik-button" class="login-button oauth-button" value="Sign in w. Authentik">
         <div class="login-info-label"></div>
     </div>
 </script>
+
+<script type="module" src="/src/login/login.js"></script>
 
 </html>

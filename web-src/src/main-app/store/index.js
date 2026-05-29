@@ -1,8 +1,7 @@
 import historyModule from '@/common/store/executions-module';
 import {isNull, logError} from '@/common/utils/common';
 import get from 'lodash/get';
-import Vue from 'vue'
-import Vuex from 'vuex'
+import {createStore} from 'vuex'
 import authModule from '@/common/store/auth';
 import scheduleModule from './scriptSchedule';
 import pageModule from './page';
@@ -15,9 +14,7 @@ import serverConfigModule from './serverConfig';
 import {axiosInstance} from '@/common/utils/axios_utils';
 
 
-Vue.use(Vuex);
-
-const store = new Vuex.Store({
+const store = createStore({
     modules: {
         scripts: scriptsModule,
         serverConfig: serverConfigModule,
@@ -53,7 +50,7 @@ const store = new Vuex.Store({
     },
     mutations: {},
 
-    strict: process.env.NODE_ENV !== 'production'
+    strict: import.meta.env.MODE !== 'production'
 });
 
 store.watch((state) => state.scripts.selectedScript, (selectedScript) => {

@@ -15,11 +15,12 @@ import '@/common/materializecss/imports/datepicker'
 
 export default {
   name: "DatePicker",
+  emits: ['update:modelValue'],
   props: {
     label: {
       type: String
     },
-    value: {
+    modelValue: {
       type: Date
     },
     showHeaderInModal: {
@@ -38,17 +39,17 @@ export default {
     const datepicker = M.Datepicker.init(this.$refs.datePicker, {
       defaultTime: 'now',
       autoClose: true,
-      defaultDate: this.value,
+      defaultDate: this.modelValue,
       setDefaultDate: true,
       minDate: new Date(),
       firstDay: 1,
       yearRange: 5,
       onSelect: newDate => {
-        if (newDate.getTime() === this.value.getTime()) {
+        if (newDate.getTime() === this.modelValue.getTime()) {
           return;
         }
 
-        this.$nextTick(() => this.$emit('input', newDate));
+        this.$nextTick(() => this.$emit('update:modelValue', newDate));
       },
       onDraw: () => {
         const svgs = getElementsByTagNameRecursive(datepicker.$el[0].parentNode, 'svg');
@@ -56,12 +57,12 @@ export default {
       }
     });
   },
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     const instance = M.Datepicker.getInstance(this.$refs.datePicker);
     instance.destroy();
   },
   watch: {
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
         if (isNull(this.$refs.datePicker)) {
@@ -77,7 +78,7 @@ export default {
 </script>
 
 <style scoped>
-.date-picker.headless >>> .datepicker-date-display {
+.date-picker.headless :deep(.datepicker-date-display) {
   display: none;
 }
 </style>

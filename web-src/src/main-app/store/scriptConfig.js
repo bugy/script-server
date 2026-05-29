@@ -17,7 +17,6 @@ import {
     toQueryArgs
 } from '@/common/utils/common';
 import clone from 'lodash/clone';
-import Vue from 'vue';
 import {preprocessParameter} from '../utils/model_helper';
 
 const internalState = {
@@ -172,7 +171,7 @@ export default () => ({
             forEachKeyValue(newParametersDict, (name, parameter) => {
                 if (name in oldParametersDict) {
                     const index = state.parameters.indexOf(oldParametersDict[name]);
-                    Vue.set(state.parameters, index, parameter);
+                    state.parameters[index] = parameter;
                 } else {
                     state.parameters.push(parameter);
                 }
@@ -207,7 +206,7 @@ export default () => ({
             parameter.awaitedVersion = oldParameter.awaitedVersion
 
             _preprocessParameter(parameter, state.scriptConfig);
-            Vue.set(parameters, foundIndex, parameter);
+            parameters[foundIndex] = parameter;
         },
 
         REMOVE_PARAMETER(state, data) {
@@ -252,7 +251,7 @@ export default () => ({
         SET_AWAIT_DEPENDENCY(state, {parameterName, shouldAwait, newStateVersion}) {
             for (const parameter of state.parameters) {
                 if (parameter.name === parameterName) {
-                    Vue.set(parameter, 'loading', shouldAwait)
+                    parameter.loading = shouldAwait
                     parameter.awaitedVersion = newStateVersion
                 }
             }
@@ -269,7 +268,7 @@ export default () => ({
                 }
 
                 if ((parameter.awaitedVersion) && (parameter.awaitedVersion <= clientStateVersion)) {
-                    Vue.set(parameter, 'loading', false)
+                    parameter.loading = false
                     parameter.awaitedVersion = null
                 }
             }

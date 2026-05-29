@@ -35,12 +35,13 @@ import FileDialog from './file_dialog'
 export default {
   name: 'server_file_field',
 
+  emits: ['update:modelValue', 'error'],
   components: {
     FileDialog
   },
 
   props: {
-    'value': [Array],
+    'modelValue': [Array],
     'config': Object
   },
 
@@ -55,11 +56,11 @@ export default {
 
   computed: {
     valueText() {
-      if (isEmptyArray(this.value)) {
+      if (isEmptyArray(this.modelValue)) {
         return '';
       }
 
-      const valueText = this.value.join('/');
+      const valueText = this.modelValue.join('/');
       if (!this.isMounted || !this.$refs.inputField) {
         return valueText;
       }
@@ -96,10 +97,10 @@ export default {
 
     this.isMounted = true;
 
-    this.validate(this.value)
+    this.validate(this.modelValue)
   },
 
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     const modal = M.Modal.getInstance(this.$refs.modal);
     modal.destroy();
   },
@@ -110,8 +111,8 @@ export default {
 
       this.validate(path)
 
-      if (!arraysEqual(this.value, path)) {
-        this.$emit('input', path);
+      if (!arraysEqual(this.modelValue, path)) {
+        this.$emit('update:modelValue', path);
       }
     },
 
@@ -141,7 +142,7 @@ export default {
       const modal = M.Modal.getInstance(this.$refs.modal);
       modal.open();
 
-      this.$refs.fileDialog.setChosenFile(this.value);
+      this.$refs.fileDialog.setChosenFile(this.modelValue);
       this.dialogOpened = true;
       this.$refs.fileDialog.focus();
     },

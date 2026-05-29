@@ -21,46 +21,12 @@
 </template>
 
 <script>
-import executions from '@/common/store/executions-module';
-import Vue from 'vue';
-import Vuex, {mapActions, mapState} from 'vuex';
-import scriptConfig from './store/script-config-module';
-import scripts from './store/scripts-module';
+import {mapActions, mapState} from 'vuex';
 import File_upload from '@/common/components/file_upload'
-import authModule from '@/common/store/auth';
-
-Vue.use(Vuex);
-
-const store = new Vuex.Store({
-  state: {
-    subheader: null
-  },
-  modules: {
-    'history': executions(),
-    scripts: scripts,
-    scriptConfig: scriptConfig,
-    auth: authModule
-  },
-  actions: {
-    setSubheader({commit}, subheader) {
-      commit('SET_SUBHEADER', subheader);
-    }
-  },
-  mutations: {
-    SET_SUBHEADER(state, subheader) {
-      if (subheader) {
-        state.subheader = subheader;
-      } else {
-        state.subheader = null;
-      }
-    }
-  }
-});
 
 export default {
   name: 'AdminApp',
   components: {File_upload},
-  store,
 
   mounted() {
     M.Tabs.init(this.$refs.tabs, {});

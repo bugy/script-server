@@ -15,11 +15,12 @@
                @click.prevent="openPath([])"><i class="material-icons">home</i></a>
             <a v-if="path.length > 3" class="breadcrumb" href="#"
                @click.prevent="navigateUp(2)">...</a>
-            <a v-for="(item, index) in path"
-               v-if="(path.length <= 3) || (index >= (path.length - 2))"
-               class="breadcrumb"
-               href="#"
-               @click.prevent="navigateUp(path.length - index - 1)">{{ item }}</a>
+            <template v-for="(item, index) in path" :key="index">
+              <a v-if="(path.length <= 3) || (index >= (path.length - 2))"
+                 class="breadcrumb"
+                 href="#"
+                 @click.prevent="navigateUp(path.length - index - 1)">{{ item }}</a>
+            </template>
           </div>
         </div>
       </nav>
@@ -198,7 +199,9 @@ export default {
           children = [];
         }
 
-        if (this.path === path) {
+        // Vue 3 wraps reactive arrays in a Proxy, so `this.path === path` is never
+        // true after `this.path = path`. Compare by value to detect a stale load.
+        if (arraysEqual(this.path, path)) {
           children.sort(stringComparator('type').andThen(stringComparator('name')));
           this.files = children;
           this.loading = false;
@@ -212,7 +215,9 @@ export default {
         }
 
       } catch (e) {
-        if (this.path === path) {
+        // Vue 3 wraps reactive arrays in a Proxy, so `this.path === path` is never
+        // true after `this.path = path`. Compare by value to detect a stale load.
+        if (arraysEqual(this.path, path)) {
           this.error = 'Failed to load files';
           this.files = [];
           this.loading = false;
@@ -283,10 +288,9 @@ export default {
         return;
       }
 
-      const charCode = event.keyCode || event.which;
-      const char = String.fromCharCode(charCode);
+      const char = event.key;
 
-      if (!/\w/u.test(char)) {
+      if (!char || char.length !== 1 || !/\w/u.test(char)) {
         return;
       }
 

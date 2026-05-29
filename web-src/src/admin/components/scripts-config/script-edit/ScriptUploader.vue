@@ -1,11 +1,11 @@
 <template>
   <div class="script-uploader">
-    <Textfield :config="uploadToFieldConfig" :disabled="!pathEditable" :value="path"/>
+    <Textfield :config="uploadToFieldConfig" :disabled="!pathEditable" :modelValue="path"/>
     <File_upload v-if="!codeLoadingError"
                  :config="localScriptFieldConfig"
-                 :value="value"
+                 :modelValue="modelValue"
                  @error="$emit('error', $event)"
-                 @input="$emit('input', $event)"/>
+                 @update:modelValue="$emit('update:modelValue', $event)"/>
     <div v-if="codeLoadingError" class="info-text error">{{ codeLoadingError }}</div>
   </div>
 </template>
@@ -24,7 +24,7 @@ export default {
     pathEditable: {
       type: Boolean
     },
-    value: null,
+    modelValue: null,
     codeLoadingError: String
   },
   data() {

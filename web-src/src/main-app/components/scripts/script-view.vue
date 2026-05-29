@@ -88,7 +88,7 @@ export default {
   },
 
   mounted: function () {
-    this.id = 'script-panel-' + this._uid;
+    this.id = 'script-panel-' + this.$.uid;
   },
 
   components: {
@@ -258,7 +258,7 @@ export default {
 
   methods: {
     inputKeyUpHandler: function (event) {
-      if (event.keyCode === 13) {
+      if (event.key === 'Enter') {
         const inputField = this.$refs.inputField;
 
         this.sendUserInput(inputField.value);
@@ -560,7 +560,7 @@ export default {
   line-height: 2em;
 }
 
-.script-view >>> .log-panel {
+.script-view :deep(.log-panel) {
   margin-top: 12px;
 }
 

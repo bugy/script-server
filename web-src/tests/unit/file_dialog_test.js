@@ -6,10 +6,12 @@ import {mount} from '@vue/test-utils';
 import {attachToDocument, triggerDoubleClick, triggerKeyEvent, triggerSingleClick, vueTicks} from './test_utils';
 
 describe('Test FileDialog', function () {
+    let chosenPath, dialogClosed, fileDialog, loadFiles;
+
     beforeEach(function () {
-        this.dialogClosed = false;
-        this.chosenPath = null;
-        this.loadFiles = function (path) {
+        dialogClosed = false;
+        chosenPath = null;
+        loadFiles = function (path) {
             const prefix = isEmptyArray(path)
                 ? ''
                 : path.map(p => p[p.indexOf('_') + 1]).reduce((p1, p2) => p1 + p2) + '_';
@@ -23,18 +25,18 @@ describe('Test FileDialog', function () {
             ]
         };
 
-        this.fileDialog = mount(FileDialog, {
+        fileDialog = mount(FileDialog, {
             attachTo: attachToDocument(),
-            propsData: {
-                onClose: () => this.dialogClosed = true,
-                onFileSelect: (path) => this.chosenPath = path,
-                loadFiles: this.loadFiles
+            props: {
+                onClose: () => dialogClosed = true,
+                onFileSelect: (path) => chosenPath = path,
+                loadFiles: loadFiles
             }
         });
     });
 
     afterEach(async function () {
-        this.fileDialog.destroy();
+        fileDialog.unmount();
     });
 
     function getFileElements(fileDialog) {
@@ -73,22 +75,22 @@ describe('Test FileDialog', function () {
 
     function findBreadcrumbElement(path, fileDialog) {
         const pathElements = getBreadcrumbElements(fileDialog);
-        return pathElements.find(element => element.innerText === path);
+        return pathElements.find(element => element.textContent === path);
     }
 
     function getBreadcrumbNames(fileDialog) {
         const elements = getBreadcrumbElements(fileDialog);
-        return elements.map(element => element.innerText);
+        return elements.map(element => element.textContent);
     }
 
     describe('Test file display', function () {
 
         it('Test root folder', async function () {
-            const expectedFiles = this.loadFiles([]).map(file => file.name);
+            const expectedFiles = loadFiles([]).map(file => file.name);
 
             await vueTicks();
 
-            const displayedNames = getDisplayedFileNames(this.fileDialog);
+            const displayedNames = getDisplayedFileNames(fileDialog);
 
             expect(expectedFiles).toIncludeSameMembers(displayedNames);
         });
@@ -103,7 +105,7 @@ describe('Test FileDialog', function () {
 
             await vueTicks();
 
-            const displayedNames = getDisplayedFileNames(this.fileDialog);
+            const displayedNames = getDisplayedFileNames(fileDialog);
 
             expect(expectedFiles).toEqual(displayedNames);
         });
@@ -119,7 +121,7 @@ describe('Test FileDialog', function () {
 
             await vueTicks();
 
-            const elements = getFileElements(this.fileDialog);
+            const elements = getFileElements(fileDialog);
             var fileTypes = toMap(elements, getFileElementName, getFileElementType);
 
             expect(fileTypes).toEqual(expectedFileTypes);
@@ -127,11 +129,11 @@ describe('Test FileDialog', function () {
 
         it('Test level 1', async function () {
             const path = ['logs'];
-            const expectedFiles = this.loadFiles(path).map(file => file.name);
+            const expectedFiles = loadFiles(path).map(file => file.name);
 
-            await navigateTo(path, this.fileDialog);
+            await navigateTo(path, fileDialog);
 
-            const displayedNames = getDisplayedFileNames(this.fileDialog);
+            const displayedNames = getDisplayedFileNames(fileDialog);
 
             expect(expectedFiles).toIncludeSameMembers(displayedNames);
         });
@@ -139,10 +141,10 @@ describe('Test FileDialog', function () {
         it('Test level 4', async function () {
             const path = ['logs', 'l_temp', 'lt_temp', 'ltt_logs'];
 
-            const expectedFiles = this.loadFiles(path).map(file => file.name);
-            await navigateTo(path, this.fileDialog);
+            const expectedFiles = loadFiles(path).map(file => file.name);
+            await navigateTo(path, fileDialog);
 
-            const displayedNames = getDisplayedFileNames(this.fileDialog);
+            const displayedNames = getDisplayedFileNames(fileDialog);
 
             expect(expectedFiles).toIncludeSameMembers(displayedNames);
         });
@@ -153,112 +155,112 @@ describe('Test FileDialog', function () {
         it('Test double click dir', async function () {
             await vueTicks();
 
-            const logsElement = findFileElement('logs', this.fileDialog);
+            const logsElement = findFileElement('logs', fileDialog);
             triggerDoubleClick(logsElement);
 
-            expect(this.fileDialog.vm.path).toEqual(['logs'])
+            expect(fileDialog.vm.path).toEqual(['logs'])
         });
 
         it('Test double click dir twice', async function () {
             await vueTicks();
 
-            const logsElement = findFileElement('logs', this.fileDialog);
+            const logsElement = findFileElement('logs', fileDialog);
             triggerDoubleClick(logsElement);
 
             await vueTicks();
 
-            const tempElement = findFileElement('l_temp', this.fileDialog);
+            const tempElement = findFileElement('l_temp', fileDialog);
             triggerDoubleClick(tempElement);
 
-            expect(this.fileDialog.vm.path).toEqual(['logs', 'l_temp'])
+            expect(fileDialog.vm.path).toEqual(['logs', 'l_temp'])
         });
 
         it('Test navigate on setChosenFile', async function () {
-            this.fileDialog.vm.setChosenFile(['temp', 't_logs', '']);
+            fileDialog.vm.setChosenFile(['temp', 't_logs', '']);
 
             await vueTicks();
 
-            expect(this.fileDialog.vm.path).toEqual(['temp', 't_logs'])
+            expect(fileDialog.vm.path).toEqual(['temp', 't_logs'])
         });
 
         it('Test navigate breadcrumbs to home', async function () {
-            await navigateTo(['temp', 't_logs'], this.fileDialog);
+            await navigateTo(['temp', 't_logs'], fileDialog);
 
-            const homeElement = findBreadcrumbElement('home', this.fileDialog);
+            const homeElement = findBreadcrumbElement('home', fileDialog);
             triggerSingleClick(homeElement);
 
-            expect(this.fileDialog.vm.path).toEqual([])
+            expect(fileDialog.vm.path).toEqual([])
         });
 
         it('Test navigate breadcrumbs to same, when 1 level', async function () {
-            await navigateTo(['temp'], this.fileDialog);
+            await navigateTo(['temp'], fileDialog);
 
-            const homeElement = findBreadcrumbElement('temp', this.fileDialog);
+            const homeElement = findBreadcrumbElement('temp', fileDialog);
             triggerSingleClick(homeElement);
 
-            expect(this.fileDialog.vm.path).toEqual(['temp'])
+            expect(fileDialog.vm.path).toEqual(['temp'])
         });
 
         it('Test navigate breadcrumbs to same', async function () {
-            await navigateTo(['temp', 't_logs'], this.fileDialog);
+            await navigateTo(['temp', 't_logs'], fileDialog);
 
-            const homeElement = findBreadcrumbElement('t_logs', this.fileDialog);
+            const homeElement = findBreadcrumbElement('t_logs', fileDialog);
             triggerSingleClick(homeElement);
 
-            expect(this.fileDialog.vm.path).toEqual(['temp', 't_logs'])
+            expect(fileDialog.vm.path).toEqual(['temp', 't_logs'])
         });
 
         it('Test navigate breadcrumbs to previous', async function () {
-            await navigateTo(['temp', 't_logs'], this.fileDialog);
+            await navigateTo(['temp', 't_logs'], fileDialog);
 
-            const homeElement = findBreadcrumbElement('temp', this.fileDialog);
+            const homeElement = findBreadcrumbElement('temp', fileDialog);
             triggerSingleClick(homeElement);
 
-            expect(this.fileDialog.vm.path).toEqual(['temp'])
+            expect(fileDialog.vm.path).toEqual(['temp'])
         });
 
         it('Test navigate ellipsized breadcrumbs to same', async function () {
-            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], this.fileDialog);
+            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], fileDialog);
 
-            const homeElement = findBreadcrumbElement('tttl_temp', this.fileDialog);
+            const homeElement = findBreadcrumbElement('tttl_temp', fileDialog);
             triggerSingleClick(homeElement);
 
-            expect(this.fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'])
+            expect(fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'])
         });
 
         it('Test navigate ellipsized breadcrumbs to previous', async function () {
-            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], this.fileDialog);
+            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], fileDialog);
 
-            const homeElement = findBreadcrumbElement('ttt_logs', this.fileDialog);
+            const homeElement = findBreadcrumbElement('ttt_logs', fileDialog);
             triggerSingleClick(homeElement);
 
-            expect(this.fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp', 'ttt_logs'])
+            expect(fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp', 'ttt_logs'])
         });
 
         it('Test navigate ellipsized breadcrumbs to ellipsis', async function () {
-            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], this.fileDialog);
+            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], fileDialog);
 
-            const homeElement = findBreadcrumbElement('...', this.fileDialog);
+            const homeElement = findBreadcrumbElement('...', fileDialog);
             triggerSingleClick(homeElement);
 
-            expect(this.fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp'])
+            expect(fileDialog.vm.path).toEqual(['temp', 't_temp', 'tt_temp'])
         });
 
         it('Test navigate on backspace', async function () {
-            await navigateTo(['temp', 't_logs'], this.fileDialog);
+            await navigateTo(['temp', 't_logs'], fileDialog);
 
-            triggerKeyEvent(this.fileDialog.element, 'keyup', 8);
+            triggerKeyEvent(fileDialog.element, 'keyup', 8);
 
-            expect(this.fileDialog.vm.path).toEqual(['temp'])
+            expect(fileDialog.vm.path).toEqual(['temp'])
         });
 
         it('Test navigate on enter', async function () {
             await vueTicks();
 
-            triggerSingleClick(findFileElement('logs', this.fileDialog));
-            triggerKeyEvent(this.fileDialog.element, 'keypress', 13);
+            triggerSingleClick(findFileElement('logs', fileDialog));
+            triggerKeyEvent(fileDialog.element, 'keypress', 13);
 
-            expect(this.fileDialog.vm.path).toEqual(['logs'])
+            expect(fileDialog.vm.path).toEqual(['logs'])
         });
     });
 
@@ -267,45 +269,45 @@ describe('Test FileDialog', function () {
         it('Test root breadcrumbs', async function () {
             await vueTicks();
 
-            const breadcrumbs = getBreadcrumbNames(this.fileDialog);
+            const breadcrumbs = getBreadcrumbNames(fileDialog);
             expect(breadcrumbs).toEqual(['home'])
         });
 
         it('Test breadcrumbs with 1 level', async function () {
             const dir = 'logs';
-            await navigateTo([dir], this.fileDialog);
+            await navigateTo([dir], fileDialog);
 
-            const breadcrumbs = getBreadcrumbNames(this.fileDialog);
+            const breadcrumbs = getBreadcrumbNames(fileDialog);
             expect(breadcrumbs).toEqual(['home', dir])
         });
 
         it('Test breadcrumbs with 2 levels', async function () {
             const path = ['logs', 'l_temp'];
-            await navigateTo(path, this.fileDialog);
+            await navigateTo(path, fileDialog);
 
-            const breadcrumbs = getBreadcrumbNames(this.fileDialog);
+            const breadcrumbs = getBreadcrumbNames(fileDialog);
             expect(breadcrumbs).toEqual(['home', ...path])
         });
 
         it('Test breadcrumbs with 3 levels', async function () {
             const path = ['logs', 'l_temp', 'lt_temp'];
-            await navigateTo(path, this.fileDialog);
+            await navigateTo(path, fileDialog);
 
-            const breadcrumbs = getBreadcrumbNames(this.fileDialog);
+            const breadcrumbs = getBreadcrumbNames(fileDialog);
             expect(breadcrumbs).toEqual(['home', ...path])
         });
 
         it('Test breadcrumbs with 4 levels', async function () {
-            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], this.fileDialog);
+            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp'], fileDialog);
 
-            const breadcrumbs = getBreadcrumbNames(this.fileDialog);
+            const breadcrumbs = getBreadcrumbNames(fileDialog);
             expect(breadcrumbs).toEqual(['home', '...', 'ttt_logs', 'tttl_temp'])
         });
 
         it('Test breadcrumbs with 5 levels', async function () {
-            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp', 'tttlt_temp'], this.fileDialog);
+            await navigateTo(['temp', 't_temp', 'tt_temp', 'ttt_logs', 'tttl_temp', 'tttlt_temp'], fileDialog);
 
-            const breadcrumbs = getBreadcrumbNames(this.fileDialog);
+            const breadcrumbs = getBreadcrumbNames(fileDialog);
             expect(breadcrumbs).toEqual(['home', '...', 'tttl_temp', 'tttlt_temp'])
         });
     });
@@ -315,26 +317,26 @@ describe('Test FileDialog', function () {
         it('Test initial selection', async function () {
             await vueTicks();
 
-            expect(this.fileDialog.vm.selectedFile).toBeNil()
+            expect(fileDialog.vm.selectedFile).toBeNil()
         });
 
         it('Test select on click', async function () {
             await vueTicks();
 
             const filename = 'passwords.txt';
-            triggerSingleClick(findFileElement(filename, this.fileDialog));
+            triggerSingleClick(findFileElement(filename, fileDialog));
 
-            expect(this.fileDialog.vm.selectedFile.name).toBe(filename)
+            expect(fileDialog.vm.selectedFile.name).toBe(filename)
         });
 
         it('Test select element', async function () {
             await vueTicks();
 
             const filename = 'admin.log';
-            triggerSingleClick(findFileElement(filename, this.fileDialog));
+            triggerSingleClick(findFileElement(filename, fileDialog));
             await vueTicks();
 
-            const activeElement = findActiveFileElement(this.fileDialog);
+            const activeElement = findActiveFileElement(fileDialog);
 
             expect(activeElement).not.toBeNil()
             expect(getFileElementName(activeElement)).toBe(filename)
@@ -343,38 +345,38 @@ describe('Test FileDialog', function () {
         it('Test select element on setChosenFile', async function () {
             const filename = 'tl_private';
 
-            this.fileDialog.vm.setChosenFile(['temp', 't_logs', filename]);
+            fileDialog.vm.setChosenFile(['temp', 't_logs', filename]);
             await vueTicks();
 
-            const activeElement = findActiveFileElement(this.fileDialog);
+            const activeElement = findActiveFileElement(fileDialog);
 
             expect(activeElement).not.toBeNil()
             expect(getFileElementName(activeElement)).toBe(filename)
         });
 
         it('Test unselect element on setChosenFile([])', async function () {
-            this.fileDialog.vm.setChosenFile(['temp', 't_logs', 'tl_private']);
+            fileDialog.vm.setChosenFile(['temp', 't_logs', 'tl_private']);
             await vueTicks();
 
-            this.fileDialog.vm.setChosenFile([]);
+            fileDialog.vm.setChosenFile([]);
             await vueTicks();
 
-            const activeElement = findActiveFileElement(this.fileDialog);
+            const activeElement = findActiveFileElement(fileDialog);
             expect(activeElement).toBeNil()
         });
 
         it('Test select element on setChosenFile, when not opened', async function () {
-            this.fileDialog.setProps({opened: false});
+            fileDialog.setProps({opened: false});
 
             const filename = 'l_temp';
 
-            this.fileDialog.vm.setChosenFile(['logs', filename]);
+            fileDialog.vm.setChosenFile(['logs', filename]);
             await vueTicks();
 
-            this.fileDialog.setProps({opened: true});
+            fileDialog.setProps({opened: true});
             await vueTicks();
 
-            const activeElement = findActiveFileElement(this.fileDialog);
+            const activeElement = findActiveFileElement(fileDialog);
 
             expect(activeElement).not.toBeNil()
             expect(getFileElementName(activeElement)).toBe(filename)

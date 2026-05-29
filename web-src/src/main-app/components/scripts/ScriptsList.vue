@@ -1,8 +1,8 @@
 <template>
   <div ref="scriptList" class="scripts-list collection">
-    <template v-for="item in items">
-      <ScriptListGroup v-if="item.isGroup" :key="item.name" :group="item" @group-clicked="groupClicked($event)"/>
-      <ScriptListItem v-else :key="item.name" :script="item"/>
+    <template v-for="item in items" :key="item.name">
+      <ScriptListGroup v-if="item.isGroup" :group="item" @group-clicked="groupClicked($event)"/>
+      <ScriptListItem v-else :script="item"/>
     </template>
   </div>
 </template>

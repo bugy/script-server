@@ -92,7 +92,7 @@ export default {
     }
   },
 
-  destroyed: function () {
+  unmounted: function () {
     if (this.loaderTimer) {
       clearInterval(this.loaderTimer);
       this.loaderTimer = null;

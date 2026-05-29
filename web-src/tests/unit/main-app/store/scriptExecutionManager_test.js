@@ -1,23 +1,63 @@
 import {isNull} from '@/common/utils/common';
-import scriptExecutionManagerModule, {__RewireAPI__ as ExecutionManagerRewire,} from '@/main-app/store/scriptExecutionManager';
 import {axiosInstance} from '@/common/utils/axios_utils';
-import {STATUS_INITIALIZING} from '@/main-app/store/scriptExecutor';
 import MockAdapter from 'axios-mock-adapter';
 import cloneDeep from 'lodash/cloneDeep';
 import {WebSocket} from 'mock-socket';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import {createScriptServerTestVue, flushPromises, timeout} from '../../test_utils';
+
+// Vue 3 / Vitest replacement for babel-plugin-rewire: the manager imports the
+// `scriptExecutor` factory (default export) to build executor modules. We mock
+// that module with a lightweight executor factory. Defined via vi.hoisted so it
+// is available inside the (hoisted) vi.mock factory.
+const {createMockExecutor} = vi.hoisted(() => {
+    const STATUS_INITIALIZING = 'initializing';
+
+    function createMockExecutor(id, scriptName, parameterValues) {
+        return {
+            namespaced: true,
+            state: {
+                id: id,
+                parameterValues: parameterValues,
+                status: STATUS_INITIALIZING,
+                scriptName: scriptName
+            },
+            actions: {
+                start({state, commit}, executionId) {
+                    commit('SET_STARTED', executionId)
+                },
+                setFinished({state}) {
+                    state.status = 'finished';
+                },
+                setError({state}) {
+                    state.status = 'error';
+                }
+            },
+            mutations: {
+                SET_STARTED(state, executionId) {
+                    state.id = executionId
+                    state.status = 'executing';
+                }
+            }
+        };
+    }
+
+    return {createMockExecutor};
+});
+
+// Keep the real STATUS_* named exports; only replace the default factory.
+vi.mock('@/main-app/store/scriptExecutor', async (importActual) => ({
+    ...(await importActual()),
+    default: createMockExecutor
+}));
+
+import scriptExecutionManagerModule from '@/main-app/store/scriptExecutionManager';
 
 let axiosMock;
 window.WebSocket = WebSocket;
 
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-
-ExecutionManagerRewire.__Rewire__('scriptExecutor', createMockExecutor);
-
 function createStore() {
-    return new Vuex.Store({
+    return createVuexStore({
         modules: {
             executions: cloneDeep(scriptExecutionManagerModule),
             scripts: {
@@ -309,33 +349,3 @@ describe('Test scriptExecutionManager', function () {
     });
 
 });
-
-
-function createMockExecutor(id, scriptName, parameterValues) {
-    return {
-        namespaced: true,
-        state: {
-            id: id,
-            parameterValues: parameterValues,
-            status: STATUS_INITIALIZING,
-            scriptName: scriptName
-        },
-        actions: {
-            start({state, commit}, executionId) {
-                commit('SET_STARTED', executionId)
-            },
-            setFinished({state}) {
-                state.status = 'finished';
-            },
-            setError({state}) {
-                state.status = 'error';
-            }
-        },
-        mutations: {
-            SET_STARTED(state, executionId) {
-                state.id = executionId
-                state.status = 'executing';
-            }
-        }
-    };
-}

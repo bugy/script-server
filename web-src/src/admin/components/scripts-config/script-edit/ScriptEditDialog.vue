@@ -10,7 +10,7 @@
         <Textfield v-show="inPathMode" ref="plainPathField"
                    v-model="plainPath"
                    :config="pathFieldConfig"
-                   @error="$set(modeErrors, 'new_path', $event)"/>
+                   @error="modeErrors['new_path'] = $event"/>
         <CodeEditor v-show="inEditorMode" ref="codeEditor"
                     :code-loaded="codeLoaded"
                     :loading-error="codeLoadingError || codeLoadingEditorError"
@@ -18,14 +18,14 @@
                     :original-code="originalCode"
                     :path="editorScriptPath"
                     :path-editable="false"
-                    @input="code = $event"
+                    @update:modelValue="code = $event"
                     @languageChange="editorLanguageConfig = $event"/>
         <ScriptUploader v-show="inUploadMode"
                         ref="scriptUploader"
                         v-model="uploadedScript"
                         :code-loading-error="codeLoadingError"
                         :path="targetUploadPath"
-                        @error="$set(modeErrors, 'upload_script', $event)"/>
+                        @error="modeErrors['upload_script'] = $event"/>
       </div>
       <div :class="{borderless: inEditorMode}" class="card-action">
         <span v-if="hasIgnoredChanges" class="ignored-changes-warning valign-wrapper">
@@ -101,7 +101,7 @@ export default {
             this.codeLoadingEditorError = data['code_edit_error']
 
             if (!isBlankString(this.codeLoadingEditorError)) {
-              this.$set(this.modeErrors, EDITOR_MODE, this.codeLoadingEditorError)
+              this.modeErrors[EDITOR_MODE] = this.codeLoadingEditorError
             }
           })
           .catch(error => {
@@ -112,7 +112,7 @@ export default {
               errorText = get(error, 'response.data')
             }
 
-            this.$set(this.modeErrors, EDITOR_MODE, errorText)
+            this.modeErrors[EDITOR_MODE] = errorText
             this.codeLoadingError = errorText
           });
     }
@@ -150,7 +150,7 @@ export default {
 
     this.$refs.modal.addEventListener('transitionend', () => this.$refs.codeEditor.resize())
   },
-  beforeDestroy() {
+  beforeUnmount() {
     const modal = M.Modal.getInstance(this.$refs.modal)
     modal.destroy()
   },

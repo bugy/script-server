@@ -11,8 +11,8 @@ describe('Test ChipList', function () {
     beforeEach(async function () {
         chipList = mount(ChipsList, {
             attachTo: attachToDocument(),
-            propsData: {
-                value: ['abc', 'def'],
+            props: {
+                modelValue: ['abc', 'def'],
             }
         })
         chipList.vm.$parent.$forceUpdate()
@@ -23,7 +23,7 @@ describe('Test ChipList', function () {
 
     afterEach(async function () {
         await vueTicks()
-        chipList.destroy()
+        chipList.unmount()
     })
 
     describe('Test setting value', function () {

@@ -5,19 +5,14 @@ import ScriptsList from '@/main-app/components/scripts/ScriptsList';
 import router from '@/main-app/router/router';
 import {mount} from '@vue/test-utils';
 import VueRouter from 'vue-router';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import {attachToDocument, createScriptServerTestVue, triggerSingleClick, vueTicks} from '../../test_utils';
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-localVue.use(VueRouter);
-
 describe('Test ScriptConfig', function () {
     let store;
     let listComponent;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
+        store = createVuexStore({
             modules: {
                 scripts: {
                     namespaced: true,
@@ -33,9 +28,7 @@ describe('Test ScriptConfig', function () {
         });
 
         listComponent = mount(ScriptsList, {
-            store,
-            localVue,
-            router,
+            global: {plugins: [store, router]},
             attachTo: attachToDocument()
         });
 
@@ -45,7 +38,7 @@ describe('Test ScriptConfig', function () {
     afterEach(async function () {
         await vueTicks();
 
-        listComponent.destroy();
+        listComponent.unmount();
     });
 
     function getText(item) {

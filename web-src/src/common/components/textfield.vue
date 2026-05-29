@@ -6,7 +6,7 @@
            :disabled="disabled"
            :required="config.required"
            :type="fieldType"
-           :value="value"
+           :value="modelValue"
            :class="{validate : !disabled, autocomplete: autocomplete}"
            @input="inputFieldChanged"/>
     <label :for="id" v-bind:class="{ active: labelActive }">{{ config.name }}</label>
@@ -20,8 +20,9 @@ import {isBlankString, isEmptyString, isFullRegexMatch, isNull} from '@/common/u
 
 export default {
   name: 'Textfield',
+  emits: ['update:modelValue', 'error'],
   props: {
-    'value': [String, Number],
+    'modelValue': [String, Number],
     'config': Object,
     disabled: {
       type: Boolean,
@@ -49,7 +50,7 @@ export default {
     },
 
     labelActive() {
-      if (!isEmptyString(this.value)) {
+      if (!isEmptyString(this.modelValue)) {
         return true;
       }
 
@@ -72,7 +73,7 @@ export default {
 
   mounted: function () {
     this.inputFieldChanged();
-    this.id = this._uid;
+    this.id = this.$.uid;
 
     if (this.autocomplete) {
       this.autocompleteWrapper = M.Autocomplete.init(this.$refs.textField, {minLength: 0})
@@ -82,24 +83,24 @@ export default {
     }
   },
 
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     if (this.autocompleteWrapper) {
       this.autocompleteWrapper.destroy();
     }
   },
 
   watch: {
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
         var textField = this.$refs.textField;
 
         if (!isNull(textField) && (textField.value === newValue)) {
-          this._doValidation(this.value);
+          this._doValidation(this.modelValue);
         } else {
           this.$nextTick(function () {
             if (this.$refs.textField) {
-              this._doValidation(this.value);
+              this._doValidation(this.modelValue);
             }
           }.bind(this));
         }
@@ -134,7 +135,7 @@ export default {
       var value = textField.value;
 
       this._doValidation(value);
-      this.$emit('input', value);
+      this.$emit('update:modelValue', value);
     },
 
     getValidationError(value, textField) {
@@ -174,7 +175,7 @@ export default {
     triggerRevalidationOnWatch() {
       this.$nextTick(() => {
         if (this.$refs.textField) {
-          this._doValidation(this.value);
+          this._doValidation(this.modelValue);
           M.validate_field(cash(this.$refs.textField));
         }
       });

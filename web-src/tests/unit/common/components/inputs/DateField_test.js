@@ -10,13 +10,13 @@ describe('Test DateField', function () {
 
     beforeEach(async function () {
         datefield = mount(DateField, {
-            propsData: {
+            props: {
                 config: {
                     name: 'Start date',
                     required: false,
                     description: 'Pick a start date'
                 },
-                value: '2025-05-27'
+                modelValue: '2025-05-27'
             }
         });
         wrapVModel(datefield);
@@ -60,7 +60,7 @@ describe('Test DateField', function () {
         });
 
         it('Test label has no active class when value is empty', async function () {
-            datefield.setProps({value: ''});
+            datefield.setProps({modelValue: ''});
             await vueTicks();
 
             expect(datefield.find('label').classes()).not.toContain('active');
@@ -72,15 +72,15 @@ describe('Test DateField', function () {
 
         it('Test displays initial value', function () {
             expect(datefield.find('input').element.value).toBe('2025-05-27');
-            expect(datefield.vm.value).toBe('2025-05-27');
+            expect(datefield.vm.modelValue).toBe('2025-05-27');
         });
 
         it('Test external value change updates input', async function () {
-            datefield.setProps({value: '2026-01-01'});
+            datefield.setProps({modelValue: '2026-01-01'});
             await vueTicks();
 
             expect(datefield.find('input').element.value).toBe('2026-01-01');
-            expect(datefield.vm.value).toBe('2026-01-01');
+            expect(datefield.vm.modelValue).toBe('2026-01-01');
         });
 
         it('Test user change emits input event with new value', async function () {
@@ -89,7 +89,7 @@ describe('Test DateField', function () {
             await input.trigger('change');
             await vueTicks();
 
-            expect(datefield.vm.value).toBe('2026-06-15');
+            expect(datefield.vm.modelValue).toBe('2026-06-15');
         });
 
         it('Test user change to another valid date', async function () {
@@ -98,7 +98,7 @@ describe('Test DateField', function () {
             await input.trigger('change');
             await vueTicks();
 
-            expect(datefield.vm.value).toBe('2025-12-31');
+            expect(datefield.vm.modelValue).toBe('2025-12-31');
         });
 
     });
@@ -110,7 +110,7 @@ describe('Test DateField', function () {
         });
 
         it('Test no error when not required and value becomes empty', async function () {
-            datefield.setProps({value: ''});
+            datefield.setProps({modelValue: ''});
             await vueTicks();
 
             expect(datefield.currentError).toBe('');
@@ -118,7 +118,7 @@ describe('Test DateField', function () {
 
         it('Test required error when required and value is empty string', async function () {
             setDeepProp(datefield, 'config.required', true);
-            datefield.setProps({value: ''});
+            datefield.setProps({modelValue: ''});
             await vueTicks();
 
             expect(datefield.currentError).toBe('required');
@@ -126,7 +126,7 @@ describe('Test DateField', function () {
 
         it('Test required error when required and value is null', async function () {
             setDeepProp(datefield, 'config.required', true);
-            datefield.setProps({value: null});
+            datefield.setProps({modelValue: null});
             await vueTicks();
 
             expect(datefield.currentError).toBe('required');
@@ -134,7 +134,7 @@ describe('Test DateField', function () {
 
         it('Test no error when required and value is present', async function () {
             setDeepProp(datefield, 'config.required', true);
-            datefield.setProps({value: '2025-09-01'});
+            datefield.setProps({modelValue: '2025-09-01'});
             await vueTicks();
 
             expect(datefield.currentError).toBe('');
@@ -142,11 +142,11 @@ describe('Test DateField', function () {
 
         it('Test error clears when value provided after being empty', async function () {
             setDeepProp(datefield, 'config.required', true);
-            datefield.setProps({value: ''});
+            datefield.setProps({modelValue: ''});
             await vueTicks();
             expect(datefield.currentError).toBe('required');
 
-            datefield.setProps({value: '2025-12-01'});
+            datefield.setProps({modelValue: '2025-12-01'});
             await vueTicks();
             expect(datefield.currentError).toBe('');
         });
@@ -154,7 +154,7 @@ describe('Test DateField', function () {
         it('Test no error when disabled even if required and empty', async function () {
             datefield.setProps({disabled: true});
             setDeepProp(datefield, 'config.required', true);
-            datefield.setProps({value: ''});
+            datefield.setProps({modelValue: ''});
             await vueTicks();
 
             expect(datefield.currentError).toBe('');
@@ -162,14 +162,14 @@ describe('Test DateField', function () {
 
         it('Test data-error attribute reflects current error', async function () {
             setDeepProp(datefield, 'config.required', true);
-            datefield.setProps({value: ''});
+            datefield.setProps({modelValue: ''});
             await vueTicks();
 
             expect(datefield.find('div').attributes('data-error')).toBe('required');
         });
 
         it('Test data-error attribute is empty when no error', async function () {
-            datefield.setProps({value: '2025-05-27'});
+            datefield.setProps({modelValue: '2025-05-27'});
             await vueTicks();
 
             expect(datefield.find('div').attributes('data-error')).toBe('');

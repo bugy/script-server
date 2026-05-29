@@ -1,16 +1,12 @@
 'use strict';
 import ExecutionDetails from '@/common/components/history/execution-details'
+import ReadOnlyField from '@/common/components/readonly-field';
 import historyModule from '@/common/store/executions-module';
 import {axiosInstance} from '@/common/utils/axios_utils';
 import {mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
-import Vuex from 'vuex';
+import {createStore as createVuexStore} from 'vuex';
 import {attachToDocument, createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
-
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-
 let axiosMock;
 
 
@@ -26,7 +22,7 @@ describe('Test history details', function () {
     let store;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
+        store = createVuexStore({
             modules: {
                 history: historyModule()
             }
@@ -34,8 +30,7 @@ describe('Test history details', function () {
 
         executionDetails = mount(ExecutionDetails, {
             attachTo: attachToDocument(),
-            store,
-            localVue
+            global: {plugins: [store]},
         });
 
         axiosMock = new MockAdapter(axiosInstance)
@@ -44,19 +39,19 @@ describe('Test history details', function () {
     });
 
     afterEach(function () {
-        executionDetails.destroy();
+        executionDetails.unmount();
         axiosMock.restore()
     });
 
     describe('Test visualisation', function () {
 
             function assertField(fieldName, expectedValue) {
-                const foundChild = executionDetails.vm.$children.find(child =>
-                    (child.$options._componentTag === 'readonly-field')
-                    && (child.$props.title === fieldName));
+                // Vue 3 removed `vm.$children`; use VTU v2 findAllComponents instead.
+                const foundChild = executionDetails.findAllComponents(ReadOnlyField)
+                    .find(child => child.props('title') === fieldName);
 
                 expect(foundChild).not.toBeNil()
-                expect(foundChild.$props.value).toEqual(expectedValue)
+                expect(foundChild.props('value')).toEqual(expectedValue)
             }
 
             function assertLog(expectedLog) {

@@ -52,7 +52,7 @@ export default {
         return;
       }
 
-      this.$delete(this.parameters, index);
+      this.parameters.splice(index, 1);
 
       const toast = M.toast({
         html: '<span>Deleted ' + param.name + '</span>' +
@@ -77,8 +77,8 @@ export default {
       }
 
       const prevParam = this.parameters[index - 1];
-      this.$set(this.parameters, index - 1, param);
-      this.$set(this.parameters, index, prevParam);
+      this.parameters[index - 1] = param;
+      this.parameters[index] = prevParam;
     },
 
     moveDown(param) {
@@ -88,8 +88,8 @@ export default {
       }
 
       const nextParam = this.parameters[index + 1];
-      this.$set(this.parameters, index + 1, param);
-      this.$set(this.parameters, index, nextParam);
+      this.parameters[index + 1] = param;
+      this.parameters[index] = nextParam;
     },
 
     addParam() {
@@ -175,7 +175,7 @@ export default {
 
 <style scoped>
 .collapsible-header:last-child,
-.collapsible >>> .collapsible-body {
+.collapsible :deep(.collapsible-body) {
   border-bottom: none;
 }
 

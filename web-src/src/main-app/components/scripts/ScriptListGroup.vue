@@ -9,9 +9,11 @@
       </i>
     </a>
 
-    <ScriptListItem v-for="innerScript in group.scripts"
-                    v-if="group.isActive" :key="innerScript.name"
-                    :script="innerScript"/>
+    <template v-if="group.isActive">
+      <ScriptListItem v-for="innerScript in group.scripts"
+                      :key="innerScript.name"
+                      :script="innerScript"/>
+    </template>
   </div>
 </template>
 
@@ -48,7 +50,7 @@ export default {
   line-height: 16px;
 }
 
-.script-list-group >>> .collection-item.script-list-item {
+.script-list-group :deep(.collection-item.script-list-item) {
   padding-left: 36px;
 }
 

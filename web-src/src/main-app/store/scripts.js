@@ -1,5 +1,5 @@
 import {isEmptyObject, isEmptyString, isNull} from '@/common/utils/common';
-import Vue from 'vue';
+import {nextTick} from 'vue';
 import router from '../router/router';
 import {scriptNameToHash} from '../utils/model_helper';
 import {axiosInstance} from '@/common/utils/axios_utils';
@@ -63,7 +63,7 @@ export default {
             commit('SELECT_SCRIPT', {selectedScript: newSelectedScript, predefinedParameters: queryParameters});
 
             if (!isEmptyObject(queryParameters)) {
-                Vue.nextTick(() => router.replace({query: null}));
+                nextTick(() => router.replace({query: null}));
             }
         }
     },

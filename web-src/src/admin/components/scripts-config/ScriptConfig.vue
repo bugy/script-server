@@ -75,7 +75,7 @@ export default {
   height: 100%;
 }
 
-.script-config >>> h5 {
+.script-config :deep(h5) {
   margin-left: 0.75rem;
   margin-top: 0.5rem;
   margin-bottom: 2rem;
@@ -100,7 +100,7 @@ footer.page-footer {
   display: flex;
 }
 
-.script-config >>> footer.page-footer a.btn-flat {
+.script-config :deep(footer.page-footer a.btn-flat) {
   height: 48px;
   line-height: 48px;
   width: 136px;
@@ -113,16 +113,16 @@ footer.page-footer {
   flex: 1 1 0;
 }
 
-.script-config >>> footer.page-footer .preloader-wrapper {
+.script-config :deep(footer.page-footer .preloader-wrapper) {
   width: 30px;
   height: 30px;
 }
 
-.script-config >>> footer.page-footer .spinner-layer {
+.script-config :deep(footer.page-footer .spinner-layer) {
   border: var(--font-on-primary-color-dark-main);
 }
 
-.script-config >>> footer.page-footer .btn-flat i {
+.script-config :deep(footer.page-footer .btn-flat i) {
   font-size: 24px;
 }
 

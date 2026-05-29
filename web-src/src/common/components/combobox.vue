@@ -46,15 +46,16 @@ import {
   removeClass
 } from '@/common/utils/common';
 import ComboboxSearch from './ComboboxSearch';
-import Vue from 'vue'
+import {nextTick} from 'vue'
 import CircleSpinner from '@/common/components/CircleSpinner'
 
 export default {
   name: 'Combobox',
+  emits: ['update:modelValue', 'error'],
   components: {CircleSpinner, ComboboxSearch},
   props: {
     'config': Object,
-    'value': [String, Array],
+    'modelValue': [String, Array],
     'disabled': {
       type: Boolean,
       default: false
@@ -102,7 +103,7 @@ export default {
       }
     },
 
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
         if (!this._fixValueByAllowedValues(this.config.values)) {
@@ -150,7 +151,7 @@ export default {
     })
   },
 
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     const instance = M.FormSelect.getInstance(this.$refs.selectField);
     instance.destroy();
   },
@@ -158,38 +159,38 @@ export default {
   methods: {
     emitValueChange(value) {
       this._validate(this.asArray(value));
-      this.$emit('input', value);
+      this.$emit('update:modelValue', value);
     },
 
     _fixValueByAllowedValues(allowedValues) {
-      if (isNull(this.value) || (this.value === '') || (this.value === []) || (this.forceValue)) {
+      if (isNull(this.modelValue) || (this.modelValue === '') || (this.modelValue === []) || (this.forceValue)) {
         return false;
       }
 
       var newValue;
       if (this.config.multiselect) {
-        if (!Array.isArray(this.value)) {
-          if (contains(allowedValues, this.value)) {
-            newValue = [this.value];
+        if (!Array.isArray(this.modelValue)) {
+          if (contains(allowedValues, this.modelValue)) {
+            newValue = [this.modelValue];
           } else {
             newValue = [];
           }
 
         } else {
           newValue = [];
-          for (var i = 0; i < this.value.length; i++) {
-            var valueElement = this.value[i];
+          for (var i = 0; i < this.modelValue.length; i++) {
+            var valueElement = this.modelValue[i];
             if (contains(allowedValues, valueElement)) {
               newValue.push(valueElement)
             }
           }
 
-          if (newValue.length === this.value.length) {
+          if (newValue.length === this.modelValue.length) {
             return false;
           }
         }
       } else {
-        if (contains(allowedValues, this.value)) {
+        if (contains(allowedValues, this.modelValue)) {
           return false;
         }
 
@@ -298,8 +299,8 @@ export default {
       }
 
       let disabledOptions = []
-      if ((this.forceValue) && !isEmptyString(this.value) && !isEmptyArray(this.value)) {
-        const valueAsArray = this.asArray(this.value)
+      if ((this.forceValue) && !isEmptyString(this.modelValue) && !isEmptyArray(this.modelValue)) {
+        const valueAsArray = this.asArray(this.modelValue)
         for (const valueElement of valueAsArray) {
           if (!newOptionValues.includes(valueElement)) {
             const disabledOption = {
@@ -316,19 +317,19 @@ export default {
       this.options = newOptions
 
       if (!this._fixValueByAllowedValues(this.config.values)) {
-        this._selectValue(this.value)
+        this._selectValue(this.modelValue)
       }
 
       if (!isEmptyArray(disabledOptions)) {
         // for Firefox we cannot select and disable simultaneously,
         // so we have to select an element first, and then mark it as disabled in a next iteration
-        Vue.nextTick(() => {
+        nextTick(() => {
           for (let disabledOption of disabledOptions) {
             const foundOption = this.options.find(o => o.value === disabledOption.value)
-            Vue.set(foundOption, 'disabled', true)
+            foundOption.disabled = true
           }
 
-          Vue.nextTick(() => {
+          nextTick(() => {
             this.rebuildCombobox()
           })
         })
@@ -377,18 +378,18 @@ export default {
 </script>
 
 <style scoped>
-.combobox >>> .search-hidden {
+.combobox :deep(.search-hidden) {
   display: none;
 }
 
-.main-app-content .combobox >>> .select-dropdown.dropdown-content .combobox-search-header {
+.main-app-content .combobox :deep(.select-dropdown.dropdown-content .combobox-search-header) {
   background-color: var(--background-color);
   position: sticky;
   top: 0;
   z-index: 1;
 }
 
-.combobox.loading >>> svg {
+.combobox.loading :deep(svg) {
   display: none;
 }
 
@@ -401,11 +402,11 @@ export default {
   top: 2px;
 }
 
-.loading-spinner >>> .spinner-layer {
+.loading-spinner :deep(.spinner-layer) {
   border-color: var(--font-color-disabled);
 }
 
-.loading-spinner >>> .circle {
+.loading-spinner :deep(.circle) {
   border-width: 2px;
 }
 

@@ -37,7 +37,7 @@ export default {
       this.$emit('click');
     }
   },
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     window.removeEventListener('resize', this.onResize);
   }
 }

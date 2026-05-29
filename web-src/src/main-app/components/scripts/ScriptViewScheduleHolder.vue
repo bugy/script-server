@@ -38,7 +38,7 @@ export default {
     this.resizeListener();
   },
 
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     window.removeEventListener('resize', this.resizeListener);
   },
 
@@ -120,7 +120,7 @@ div:not(.modal) > .schedule-panel {
   background-color: var(--background-color-level-4dp);
 }
 
-div > .schedule-panel >>> .card-action {
+div > .schedule-panel :deep(.card-action) {
   background: none;
 }
 </style>
