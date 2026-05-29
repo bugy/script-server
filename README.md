@@ -4,6 +4,23 @@
 
 ## What's new in this fork
 
+### 2026-05-28 — Frontend migrated to Vue 3 + Vite + Vitest
+
+The web frontend was upgraded from Vue 2 (Vue CLI + Webpack + Karma) to a modern toolchain:
+
+- **Vue 2 → Vue 3**: v-model refactor (`value`/`input` → `modelValue`/`update:modelValue`),
+  `emits` declarations, lifecycle hook renames (`beforeDestroy`/`destroyed` →
+  `beforeUnmount`/`unmounted`), removal of `Vue.set`/`Vue.delete`/`$set`/`$delete` (Vue 3
+  Proxy reactivity), `:deep()` CSS selectors, and Vue Router 4 / Vuex 4.
+- **Vue CLI + Webpack → Vite**: faster builds; assets are emitted into a single hashed
+  `web/assets/` folder (the server's web-build check was updated accordingly).
+- **Karma + Mocha → Vitest** (jsdom): the unit suite runs headless without a browser
+  (`npm run test:unit-ci`). A few materialize-CSS browser-only behaviours (dropdown/modal
+  animations, layout measurements) are skipped under jsdom.
+- Removed the obsolete `vue.config.js`, `babel.config.js`, and Karma entry point.
+
+Dev commands are unchanged: `npm run serve` (dev server) and `npm run build` (production build).
+
 ### 2026-05-28 — Docker image on GitHub Container Registry
 
 A Docker image for this fork is now published automatically on every commit to `master`:
@@ -191,7 +208,11 @@ Available tags:
 
 `init.py` should be run after pulling any new changes.
 
-If you are making changes to web files, use `npm run build` or `npm run serve`.
+**Frontend** (`web-src/`, Vue 3 + Vite). If you are making changes to web files:
+- `npm install` once to install dependencies
+- `npm run serve` — Vite dev server (proxies API calls to the backend on port 5000)
+- `npm run build` — production build into `web/`
+- `npm run test:unit-ci` — run the Vitest unit suite (headless, jsdom)
 
 ### A note on OpenBSD and some other UNIX systems
 See [OpenBSD process termination issues](https://github.com/bugy/script-server/wiki/OpenBSD-process-termination-issues).
