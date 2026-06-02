@@ -177,6 +177,11 @@ export default {
 
     parameters: {
       immediate: true,
+      // deep: parameters are added/removed/reordered in place (splice), so the
+      // array reference doesn't change. A Vue 3 non-deep watcher wouldn't fire on
+      // those mutations, leaving newly added parameters without a :key
+      // (paramKeys entry) → duplicate-key rendering issues.
+      deep: true,
       handler(parameters) {
         for (const parameter of parameters) {
           this.setParameterKey(parameter);

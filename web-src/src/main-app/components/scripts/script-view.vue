@@ -401,6 +401,10 @@ export default {
     },
 
     inlineImages: {
+      // deep: the store adds inline images in place (state.inlineImages[path] = url),
+      // so the object reference doesn't change. Like logChunks, a Vue 3 non-deep
+      // watcher would never fire on this mutation and images would never render.
+      deep: true,
       handler(newValue, oldValue) {
         const logPanel = this.$refs.logPanel;
 
