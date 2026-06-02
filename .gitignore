@@ -66,6 +66,7 @@ target/
 .ipynb_checkpoints
 
 conf/runners
+conf/scripts
 conf/theme
 conf/conf.json
 conf/.htpasswd

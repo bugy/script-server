@@ -122,6 +122,23 @@ class ServerTest(TestCase):
         self.assertEqual(start_response.status_code, 200)
         self.assertEqual(start_response.content, b'3')
 
+    def test_xsrf_cookie_not_httponly(self):
+        # In token mode (the default) the browser JS must read the _xsrf cookie
+        # and echo it back in the X-XSRFToken header, so the cookie must NOT be
+        # HttpOnly. (The other XSRF tests use `requests`, which ignores HttpOnly,
+        # so they can't catch a regression here — this asserts the raw attribute.)
+        self.start_server(12345, '127.0.0.1')
+
+        response = self._user_session.get('http://127.0.0.1:12345/scripts')
+
+        xsrf_cookie = next((c for c in response.cookies if c.name == '_xsrf'), None)
+        self.assertIsNotNone(xsrf_cookie, 'server should set an _xsrf cookie in token mode')
+
+        rest_attrs = {k.lower() for k in xsrf_cookie._rest.keys()}
+        self.assertNotIn('httponly', rest_attrs,
+                         'the _xsrf cookie must not be HttpOnly, otherwise token-mode '
+                         'XSRF breaks (JS cannot read the token to send X-XSRFToken)')
+
     def test_xsrf_protection_when_token_failed(self):
         self.start_server(12345, '127.0.0.1')
 
