@@ -116,12 +116,28 @@ class BaseRequestHandler(tornado.web.RequestHandler):
     def check_xsrf_cookie(self):
         xsrf_protection = self.application.server_config.xsrf_protection
         if xsrf_protection == XSRF_PROTECTION_TOKEN:
-            return super().check_xsrf_cookie()
+            try:
+                return super().check_xsrf_cookie()
+            except tornado.web.HTTPError:
+                # Tornado's default reason is just "Forbidden", which is opaque in
+                # the UI. Surface an actionable reason instead (this becomes the
+                # response body via write_error). The usual cause is the browser not
+                # sending the token: the _xsrf cookie must be readable by JS (not
+                # HttpOnly) and, over plain HTTP, security.cookie_secure must be
+                # false so the cookie is stored at all.
+                raise tornado.web.HTTPError(
+                    403,
+                    "XSRF token missing/invalid. The browser must read the _xsrf cookie "
+                    "and send it as X-XSRFToken; over HTTP set security.cookie_secure=false.",
+                    reason='XSRF token missing or invalid')
 
         elif xsrf_protection == XSRF_PROTECTION_HEADER:
             requested_with = self.request.headers.get('X-Requested-With')
             if not requested_with:
-                raise tornado.web.HTTPError(403, 'X-Requested-With header is missing for XSRF protection')
+                raise tornado.web.HTTPError(
+                    403,
+                    'X-Requested-With header is missing for XSRF protection',
+                    reason='X-Requested-With header required')
             return
 
     def write_error(self, status_code, **kwargs):

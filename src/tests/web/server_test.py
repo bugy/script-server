@@ -153,6 +153,8 @@ class ServerTest(TestCase):
             cookies=response.cookies
         )
         self.assertEqual(start_response.status_code, 403)
+        # The response should carry an actionable reason, not a bare "Forbidden".
+        self.assertIn('XSRF', start_response.text)
 
     def test_xsrf_protection_when_header(self):
         self.start_server(12345, '127.0.0.1', xsrf_protection=XSRF_PROTECTION_HEADER)

@@ -274,6 +274,31 @@ All the features listed above and some other minor features can be configured in
 It is allowed not to create this file — default values will be used in that case.
 See [server config page](https://github.com/bugy/script-server/wiki/Server-configuration) for details.
 
+#### Running over plain HTTP (e.g. local dev)
+
+Cookies (including the XSRF token) are sent with the `Secure` flag by default, so
+they are **not stored by the browser over plain HTTP**. Combined with the default
+`token` XSRF protection — which requires the browser to read the `_xsrf` cookie and
+echo it back — this makes every `POST` (e.g. *starting an execution*) fail with
+`403` and an *"XSRF token missing or invalid"* message.
+
+When serving over HTTP (not HTTPS), set `cookie_secure` to `false` in `conf/conf.json`:
+
+```json
+{
+  "security": {
+    "cookie_secure": false
+  }
+}
+```
+
+Alternatively, switch XSRF protection to header mode (`"xsrf_protection": "header"`),
+which validates the `X-Requested-With` header instead of a cookie token and so does
+not depend on cookies at all. Keep the secure defaults for any HTTPS deployment.
+
+> Tip: if you previously ran with the secure defaults, clear the stale `_xsrf` cookie
+> for the site (or use a fresh browser profile) after changing these settings.
+
 ### Admin panel
 Admin panel is accessible at admin.html (e.g. http://localhost:5000/admin.html)
 
