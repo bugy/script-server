@@ -49,7 +49,7 @@ describe('Test ScriptConfig', function () {
     }
 
     function getGroupText(groupItem) {
-        let groupTextItem = $(groupItem).find('> .script-group > span').get(0);
+        const groupTextItem = groupItem.querySelector(':scope > .script-group > span');
         return getText(groupTextItem);
     }
 
@@ -66,10 +66,13 @@ describe('Test ScriptConfig', function () {
     }
 
     function findGroupItem(groupName) {
-        let foundGroups = $(listComponent.vm.$el)
-            .find('.script-list-group')
-            .has('.script-group > span:contains("' + groupName + '")')
-            .toArray()
+        // Native equivalent of jQuery `.find('.script-list-group').has('.script-group > span:contains(name)')`:
+        // pick the .script-list-group whose own group label matches `groupName`.
+        const foundGroups = [...listComponent.vm.$el.querySelectorAll('.script-list-group')]
+            .filter(group => {
+                const span = group.querySelector('.script-group > span');
+                return span && span.textContent.includes(groupName);
+            });
 
         expect(foundGroups).toBeArrayOfSize(1)
         return foundGroups[0];
@@ -78,7 +81,7 @@ describe('Test ScriptConfig', function () {
     function assertGroupItems(groupName, expectedTexts) {
         let foundGroup = findGroupItem(groupName);
 
-        let innerItems = $(foundGroup).find('.collection-item:not(.script-group)').toArray();
+        const innerItems = [...foundGroup.querySelectorAll('.collection-item:not(.script-group)')];
         let actualTexts = innerItems.map(item => getText(item));
         expect(actualTexts).toEqual(expectedTexts)
     }
@@ -88,7 +91,7 @@ describe('Test ScriptConfig', function () {
             assertGroupItems(expectedOpenGroup, expectedItems);
         }
 
-        let groupItems = $(listComponent.vm.$el).find('.script-list-group').toArray();
+        const groupItems = [...listComponent.vm.$el.querySelectorAll('.script-list-group')];
         for (const groupItem of groupItems) {
             let itemName = getGroupText(groupItem);
             if (itemName === expectedOpenGroup) {
@@ -100,8 +103,8 @@ describe('Test ScriptConfig', function () {
     }
 
     async function clickOnGroup(groupName) {
-        let dropdownItem = $(findGroupItem(groupName)).find('.script-group');
-        triggerSingleClick(dropdownItem.get(0));
+        const dropdownItem = findGroupItem(groupName).querySelector('.script-group');
+        triggerSingleClick(dropdownItem);
 
         await vueTicks();
     }

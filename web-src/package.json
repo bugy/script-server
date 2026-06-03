@@ -26,7 +26,6 @@
     "@vue/test-utils": "^2.4.6",
     "axios-mock-adapter": "^1.21.2",
     "jest-extended": "^4.0.2",
-    "jquery": "^3.6.1",
     "jsdom": "^24.0.0",
     "mock-socket": "^9.1.5",
     "sass": "^1.55.0",

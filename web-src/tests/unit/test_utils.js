@@ -90,7 +90,7 @@ export function focus(element) {
 }
 
 export function setChipListValue(chipListComponent, value) {
-    const chipList = M.Chips.getInstance($(chipListComponent.$el).find('.chips').get(0));
+    const chipList = M.Chips.getInstance(chipListComponent.$el.querySelector('.chips'));
     while (chipList.chipsData.length > 0) {
         chipList.deleteChip(0);
     }

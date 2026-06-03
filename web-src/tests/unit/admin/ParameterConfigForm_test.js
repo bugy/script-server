@@ -134,7 +134,7 @@ const findFieldInputElement = (form, expectedName) => {
         elementType = 'input';
     }
 
-    return $(found.wrapper.element).find(elementType).get(0);
+    return found.wrapper.element.querySelector(elementType);
 };
 
 

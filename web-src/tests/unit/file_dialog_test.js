@@ -40,15 +40,15 @@ describe('Test FileDialog', function () {
     });
 
     function getFileElements(fileDialog) {
-        return $(fileDialog.element).find('li').toArray();
+        return [...fileDialog.element.querySelectorAll('li')];
     }
 
     function getFileElementName(element) {
-        return $(element).find('span').text();
+        return element.querySelector('span')?.textContent ?? '';
     }
 
     function getFileElementType(element) {
-        return $(element).find('i').text();
+        return element.querySelector('i')?.textContent ?? '';
     }
 
     function getDisplayedFileNames(fileDialog) {
@@ -70,7 +70,7 @@ describe('Test FileDialog', function () {
     }
 
     function getBreadcrumbElements(fileDialog) {
-        return $(fileDialog.element).find('a.breadcrumb').toArray();
+        return [...fileDialog.element.querySelectorAll('a.breadcrumb')];
     }
 
     function findBreadcrumbElement(path, fileDialog) {

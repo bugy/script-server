@@ -261,9 +261,10 @@ export default {
             }
           });
 
-      cash(this.$refs.selectField)
+      const dropdownItems = this.$refs.selectField
           .closest('.select-wrapper')
-          .find('.dropdown-content li').each((item) => {
+          .querySelectorAll('.dropdown-content li');
+      for (const item of dropdownItems) {
         const text = item.getElementsByTagName('span')[0].innerText;
         if (text) {
           item.title = text;
@@ -272,7 +273,7 @@ export default {
         if (hasClass(item, 'disabled')) {
           item.removeAttribute('tabIndex');
         }
-      });
+      }
 
       this.updateComboboxValue();
     },
@@ -345,10 +346,9 @@ export default {
         return;
       }
 
-      const inputField = cash(this.$refs.selectField)
+      const inputField = this.$refs.selectField
           .closest('.select-wrapper')
-          .find('input')
-          .get(0);
+          .querySelector('input');
 
       // setCustomValidity doesn't work since input is readonly
       if (this.error) {

@@ -2,13 +2,11 @@
  * Vitest global setup — replaces the Karma/Mocha tests/unit/index.js entry.
  *
  * - Extends `expect` with jest-dom and jest-extended matchers
- * - Makes jQuery available as window.$ (required by materialize-css init code)
- * - Registers @vue/test-utils auto-destroy after each test
+ * - Registers @vue/test-utils auto-unmount after each test
  */
 import {expect, afterEach} from 'vitest'
 import * as domMatchers from '@testing-library/jest-dom/matchers'
 import jestExtended from 'jest-extended'
-import $ from 'jquery'
 import {config, enableAutoUnmount} from '@vue/test-utils'
 import vueDirectives from '@/common/vueDirectives'
 import {forEachKeyValue} from '@/common/utils/common'
@@ -21,10 +19,6 @@ import '@/common/materializecss/imports/input-fields'
 
 expect.extend(domMatchers)
 expect.extend(jestExtended)
-
-// Make jQuery globally available (materialize-css and some components rely on it)
-globalThis.$ = $
-globalThis.jQuery = $
 
 // jsdom has no layout engine, so HTMLElement.offsetParent is always null. Some
 // materialize-css components (e.g. Dropdown positioning) call

@@ -60,10 +60,8 @@ describe('Test ScriptParamList', function () {
     }
 
     function getButton(item, buttonName) {
-        let icon = $(item.element)
-            .find('a i')
-            .filter((index, elem) => elem.innerHTML.trim() === buttonName)
-            .get(0)
+        const icon = [...item.element.querySelectorAll('a i')]
+            .find(elem => elem.innerHTML.trim() === buttonName);
 
         return icon.parentNode;
     }
@@ -100,7 +98,7 @@ describe('Test ScriptParamList', function () {
         });
 
         it('Test show add param button', async function () {
-            const button = $(list.element).find('li.add-param-item').get(0);
+            const button = list.element.querySelector('li.add-param-item');
             expect(button).not.toBeNil()
         });
 
@@ -271,39 +269,44 @@ describe('Test ScriptParamList', function () {
             assertOpen('param 3');
         });
 
+        const clearToasts = () => {
+            document.body.querySelectorAll('div.toast').forEach(t => t.remove());
+        };
+        const getToasts = () => [...document.body.querySelectorAll('div.toast')];
+
         it('Test open toast on delete', async function () {
-            $(document.body).find('div.toast').remove();
+            clearToasts();
 
             await clickParamAction('param 2', 'delete');
 
-            const toasts = $(document.body).find('div.toast');
+            const toasts = getToasts();
 
             expect(toasts.length).toBe(1)
-            expect(toasts.find('span').text()).toBe('Deleted param 2')
-            expect(toasts.find('button').text()).toBe('Undo');
+            expect(toasts[0].querySelector('span').textContent).toBe('Deleted param 2')
+            expect(toasts[0].querySelector('button').textContent).toBe('Undo');
         });
 
         it('Test open multiple toasts on delete', async function () {
-            $(document.body).find('div.toast').remove();
+            clearToasts();
 
             await clickParamAction('param 2', 'delete');
             await clickParamAction('param 1', 'delete');
             await clickParamAction('param 3', 'delete');
 
-            const toasts = $(document.body).find('div.toast');
+            const toasts = getToasts();
 
             expect(toasts.length).toBe(3)
-            expect($(toasts.get(0)).find('span').text()).toBe('Deleted param 2')
-            expect($(toasts.get(1)).find('span').text()).toBe('Deleted param 1')
-            expect($(toasts.get(2)).find('span').text()).toBe('Deleted param 3')
+            expect(toasts[0].querySelector('span').textContent).toBe('Deleted param 2')
+            expect(toasts[1].querySelector('span').textContent).toBe('Deleted param 1')
+            expect(toasts[2].querySelector('span').textContent).toBe('Deleted param 3')
         });
 
         it('Test undo button on toast', async function () {
-            $(document.body).find('div.toast').remove();
+            clearToasts();
 
             await clickParamAction('param 2', 'delete');
 
-            const undoButton = $(document.body).find('div.toast button').get(0);
+            const undoButton = document.body.querySelector('div.toast button');
             triggerSingleClick(undoButton);
 
             await vueTicks();
@@ -315,13 +318,13 @@ describe('Test ScriptParamList', function () {
         });
 
         it('Test undo button on toast after everything deleted', async function () {
-            $(document.body).find('div.toast').remove();
+            clearToasts();
 
             await clickParamAction('param 2', 'delete');
             await clickParamAction('param 1', 'delete');
             await clickParamAction('param 3', 'delete');
 
-            const undoButton = $(document.body).find('div.toast button').get(0);
+            const undoButton = document.body.querySelector('div.toast button');
             triggerSingleClick(undoButton);
 
             await vueTicks();
@@ -345,7 +348,7 @@ describe('Test ScriptParamList', function () {
 
     describe('Test add parameter', function () {
         const clickAddButton = () => {
-            const addParamButton = $(list.element).find('li.add-param-item').get(0);
+            const addParamButton = list.element.querySelector('li.add-param-item');
             triggerSingleClick(addParamButton);
         };
 

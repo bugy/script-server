@@ -55,7 +55,7 @@ describe('Test history details', function () {
             }
 
             function assertLog(expectedLog) {
-                const actualLog = $(executionDetails.vm.$el).find('code').text();
+                const actualLog = executionDetails.vm.$el.querySelector('code')?.textContent ?? '';
                 expect(actualLog).toEqual(expectedLog)
             }
 
