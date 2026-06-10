@@ -32,6 +32,22 @@ if (!globalThis.ResizeObserver) {
     }
 }
 
+// jsdom has no VisualViewport; Vuetify's VOverlay connected location strategy
+// (used by v-menu/v-combobox dropdowns) subscribes to its resize/scroll events.
+if (!globalThis.visualViewport) {
+    const viewport = new EventTarget()
+    Object.assign(viewport, {
+        width: 1280,
+        height: 800,
+        offsetLeft: 0,
+        offsetTop: 0,
+        pageLeft: 0,
+        pageTop: 0,
+        scale: 1
+    })
+    globalThis.visualViewport = viewport
+}
+
 // Vuetify components (migration in progress) need the plugin on every mount.
 config.global.plugins = [vuetify]
 
@@ -43,6 +59,12 @@ config.global.plugins = [vuetify]
 Object.defineProperty(globalThis.HTMLElement.prototype, 'offsetParent', {
     configurable: true,
     get() {
+        // Real browsers return null for <body>/<html>; keeping that here is
+        // essential — code walking the offsetParent chain (e.g. Vuetify's
+        // isFixedPosition) would otherwise bounce between body and html forever.
+        if (this === document.body || this === document.documentElement) {
+            return null
+        }
         return this.parentElement || document.body
     }
 })
