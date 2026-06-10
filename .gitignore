@@ -84,3 +84,9 @@ web-src/geckodriver.log
 venv/
 /venv2/
 e2e_venv/
+
+# e2e (Playwright)
+.e2e_venv/
+web-src/tests/e2e/.run/
+web-src/playwright-report/
+web-src/test-results/
