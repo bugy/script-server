@@ -14,8 +14,27 @@ const materializeComponentPlugin = {
     }
 }
 
+// Vite plugin: materialize-css/js/anime.min.js embeds a Closure-compiler ES6
+// runtime that resolves its global via `$jscomp.getGlobal(this)`. Vite 5
+// (rollup CJS wrapping) passed a truthy `exports` object there, which was
+// harmless. Vite 8 (Rolldown) rewrites top-level `this` to `undefined`, so
+// `$jscomp.global` ended up undefined and the app crashed at boot with
+// "Cannot use 'in' operator to search for 'Array' in undefined".
+// Point the runtime at `window` explicitly.
+const materializeAnimeGlobalPlugin = {
+    name: 'materialize-anime-global-fix',
+    transform(code, id) {
+        if (id.includes('materialize-css/js/anime.min.js')) {
+            return {
+                code: code.replace('$jscomp.getGlobal(this)', '$jscomp.getGlobal(window)'),
+                map: null
+            }
+        }
+    }
+}
+
 export default defineConfig({
-    plugins: [vue(), materializeComponentPlugin],
+    plugins: [vue(), materializeComponentPlugin, materializeAnimeGlobalPlugin],
 
     // Relative public path (assets referenced as ./...), so the build can be
     // served from any sub-path.

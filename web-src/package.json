@@ -21,6 +21,7 @@
     "vuex": "^4.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^6.4.0",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/test-utils": "^2.4.6",
@@ -38,7 +39,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
-    "test:unit-ci": "vitest run"
+    "test:unit-ci": "vitest run",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e-ui": "playwright test --ui"
   },
   "browserslist": [
     "> 1%",
