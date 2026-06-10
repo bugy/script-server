@@ -16,9 +16,24 @@ import {forEachKeyValue} from '@/common/utils/common'
 // / `M.validate_field` (from materialize forms) without importing it themselves.
 // Loading input-fields here pulls in `global` + `forms` so that global exists in tests.
 import '@/common/materializecss/imports/input-fields'
+import vuetify from '@/common/vuetifyPlugin'
 
 expect.extend(domMatchers)
 expect.extend(jestExtended)
+
+// jsdom has no ResizeObserver; some Vuetify components observe element sizes.
+if (!globalThis.ResizeObserver) {
+    globalThis.ResizeObserver = class {
+        observe() {}
+
+        unobserve() {}
+
+        disconnect() {}
+    }
+}
+
+// Vuetify components (migration in progress) need the plugin on every mount.
+config.global.plugins = [vuetify]
 
 // jsdom has no layout engine, so HTMLElement.offsetParent is always null. Some
 // materialize-css components (e.g. Dropdown positioning) call
