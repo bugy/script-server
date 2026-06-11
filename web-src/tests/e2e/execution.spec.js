@@ -7,7 +7,7 @@ import {expect, test} from '@playwright/test'
 
 async function openEchoScript(page) {
     await page.goto('/index.html#/' + encodeURIComponent('E2E Echo'))
-    await expect(page.locator('.script-parameters-panel .parameter')).toHaveCount(2)
+    await expect(page.locator('.script-parameters-panel .parameter')).toHaveCount(3)
 }
 
 function paramInput(page, label) {
