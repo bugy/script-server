@@ -113,15 +113,6 @@ footer.page-footer {
   flex: 1 1 0;
 }
 
-.script-config :deep(footer.page-footer .preloader-wrapper) {
-  width: 30px;
-  height: 30px;
-}
-
-.script-config :deep(footer.page-footer .spinner-layer) {
-  border: var(--font-on-primary-color-dark-main);
-}
-
 .script-config :deep(footer.page-footer .btn-flat i) {
   font-size: 24px;
 }
