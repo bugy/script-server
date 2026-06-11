@@ -178,7 +178,6 @@ export default {
         this.open = true
         this.focusOnModeSwitch()
       })
-      M.updateTextFields()
     },
     closeDialog() {
       const modal = M.Modal.getInstance(this.$refs.modal)

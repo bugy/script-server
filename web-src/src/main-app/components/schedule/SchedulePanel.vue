@@ -100,6 +100,9 @@
 </template>
 
 <script>
+// input-fields provides M.updateTextFields; it used to be pulled in globally
+// by the Textfield component before its Vuetify migration.
+import '@/common/materializecss/imports/input-fields'
 import '@/common/materializecss/imports/datepicker'
 import DatePicker from "@/common/components/inputs/DatePicker";
 import TimePicker from "@/common/components/inputs/TimePicker";

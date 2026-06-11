@@ -12,6 +12,9 @@
 </template>
 
 <script>
+// input-fields provides M.updateTextFields / M.validate_field; it used to be
+// pulled in globally by the Textfield component before its Vuetify migration.
+import '@/common/materializecss/imports/input-fields'
 import {isEmptyString, isNull, uuidv4} from "@/common/utils/common";
 
 export default {
