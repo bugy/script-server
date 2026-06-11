@@ -29,21 +29,23 @@
 import {scriptPathField} from '@/admin/components/scripts-config/script-fields'
 import Combobox from '@/common/components/combobox'
 import TextField from '@/common/components/textfield'
-import CodeEditorDialog, {
+import ScriptEditDialog, {
   EDITOR_MODE,
   PATH_MODE,
   UPLOAD_MODE
 } from '@/admin/components/scripts-config/script-edit/ScriptEditDialog'
-import CodeEditor from '@/admin/components/scripts-config/script-edit/CodeEditor'
 import {isNull} from '@/common/utils/common'
 import {mapState} from 'vuex'
 
-const ScriptEditDialog = () => import('@/admin/components/scripts-config/script-edit/ScriptEditDialog')
-
+// Vue 3 fix: the dialog used the Vue 2 async-component syntax
+// (`() => import(...)`), which Vue 3 renders as "[object Promise]" instead
+// of mounting the component. The module was already statically imported on
+// this page for its mode constants, so lazy-loading bought nothing — use
+// the static component directly.
 export default {
   name: 'ScriptPathField',
   emits: ['change'],
-  components: {ScriptEditDialog, Combobox, TextField, CodeEditorDialog, CodeEditor},
+  components: {ScriptEditDialog, Combobox, TextField},
   props: {
     originalPath: String,
     newConfig: Boolean,

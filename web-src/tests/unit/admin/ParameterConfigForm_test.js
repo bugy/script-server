@@ -48,6 +48,14 @@ export async function setValueByUser(form, parameterName, value) {
         return;
     }
 
+    if (found.type === Combobox) {
+        // Vuetify migration: no native <select> anymore; go through the
+        // component's update handler (same emit path as a menu click)
+        found.wrapper.vm.onUserInput(value);
+        await vueTicks();
+        return;
+    }
+
     const inputField = findFieldInputElement(form, parameterName);
 
     setInputValue(inputField, value, true);
@@ -128,9 +136,8 @@ const findFieldInputElement = (form, expectedName) => {
     let elementType;
     if (found.type === TextArea) {
         elementType = 'textarea';
-    } else if (found.type === Combobox) {
-        elementType = 'select';
     } else {
+        // Combobox included: the Vuetify v-select renders an <input>
         elementType = 'input';
     }
 

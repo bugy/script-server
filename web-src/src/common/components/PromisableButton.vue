@@ -1,28 +1,24 @@
 <template>
-  <a :disabled="!enabled" class="save-button waves-effect btn-flat promisable-button"
-     @click="onClick">
+  <v-btn
+      :disabled="!enabled"
+      :loading="inProgress"
+      class="save-button promisable-button"
+      color="primary"
+      variant="text"
+      @click="onClick">
 
-    <i v-if="iconText && !error && !inProgress" class="material-icons">{{ iconText }}</i>
-    <i v-if="error" :title="error" class="material-icons">warning</i>
-    <div v-if="inProgress" :style="preloaderStyle" class="preloader-wrapper small active">
-      <div class="spinner-layer">
-        <div class="circle-clipper left">
-          <div class="circle"></div>
-        </div>
-        <div class="gap-patch">
-          <div class="circle"></div>
-        </div>
-        <div class="circle-clipper right">
-          <div class="circle"></div>
-        </div>
-      </div>
-    </div>
+    <i v-if="iconText && !error" class="material-icons button-icon">{{ iconText }}</i>
+    <i v-if="error" :title="error" class="material-icons button-icon">warning</i>
     {{ title }}
-  </a>
+  </v-btn>
 </template>
 
 <script>
-import '@/common/materializecss/imports/spinner'
+// Vuetify migration: v-btn with the built-in :loading spinner replaces the
+// materialize flat button + embedded preloader markup. The promise handling
+// (click -> inProgress -> error with userMessage) is untouched. The
+// preloaderStyle prop is accepted for compatibility but unused: the v-btn
+// spinner sizes itself to the button.
 import {isEmptyString} from '@/common/utils/common';
 
 export default {
@@ -79,14 +75,7 @@ export default {
 </script>
 
 <style scoped>
-a.promisable-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.preloader-wrapper,
-i {
+.button-icon {
   margin-right: 1rem;
 }
 </style>

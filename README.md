@@ -4,6 +4,44 @@
 
 ## What's new in this fork
 
+### 2026-06-10 — UI migration to Vuetify 4 (in progress)
+
+The frontend is being migrated from the unmaintained materialize-css to
+[Vuetify 4](https://vuetifyjs.com/), to keep the UI stack secure and maintainable
+long-term. The migration is incremental: Vuetify and materialize components coexist
+until every component is ported.
+
+Done so far:
+
+- **Foundation**: shared Vuetify instance (`src/common/vuetifyPlugin.js`) registered in
+  the main and admin apps, with a `scriptServer` theme mirroring the existing palette and
+  the `md` iconset reusing the Material Icons font already shipped (no new icon dependency).
+- **Migrated components**: `checkbox` (`v-checkbox`), `textfield` (`v-text-field`, or
+  `v-combobox` for `editable_list` autocompletion), `TextArea` (`v-textarea` with
+  auto-grow), `RadioGroup` (`v-radio-group`), `Combobox` (`v-select`, or
+  `v-autocomplete` with type-to-filter when the list has more than 10 options —
+  replacing the materialize in-dropdown search), `ChipsList` (`v-combobox` with
+  chips, keeping the CSV typing behaviours), `PromisableButton` (`v-btn` with
+  the built-in loading spinner; the standalone `CircleSpinner` component is gone),
+  `DatePicker` (`v-date-input`: text field + calendar menu), `TimePicker`
+  (`v-text-field` with the HH:MM validation kept) and `server_file_field`
+  (`v-text-field` + `v-dialog`; the file browser itself never depended on
+  materialize JS). External APIs and the validation engine are unchanged.
+- The migration also surfaced and fixed three latent Vue 3 bugs: the script-edit dialog
+  was rendered as the literal text `[object Promise]` (Vue 2 async-component syntax),
+  `RadioGroup` still used the Vue 2 v-model contract (switching edit modes
+  never reached the dialog), and the schedule panel collected field errors through
+  the removed `$children` API, so its Schedule button was never disabled on error.
+- One deliberate behaviour change: reopening an autocomplete with a value already set
+  shows **all** options (Vuetify standard) instead of filtering on the current value;
+  filtering while typing is unchanged.
+- Test setup gained jsdom stubs required by Vuetify overlays (`visualViewport`,
+  browser-accurate `offsetParent` for `<body>`/`<html>`).
+
+All form components are now on Vuetify. Remaining: ~4 views still on materialize
+(script list sidebar, schedule panel layout, admin dialogs/tabs, login…), then
+materialize removal and Vuetify treeshaking via `vite-plugin-vuetify`.
+
 ### 2026-05-28 — Frontend migrated to Vue 3 + Vite + Vitest
 
 The web frontend was upgraded from Vue 2 (Vue CLI + Webpack + Karma) to a modern toolchain:

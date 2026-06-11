@@ -24,11 +24,12 @@ test.describe('Main app', () => {
         await expect(scriptLink).toBeVisible()
         await scriptLink.click()
 
-        // parameter panel renders both fixture parameters
+        // parameter panel renders the three fixture parameters
         const params = page.locator('.script-parameters-panel .parameter')
-        await expect(params).toHaveCount(2)
+        await expect(params).toHaveCount(3)
         await expect(page.locator('.script-parameters-panel')).toContainText('Mode')
         await expect(page.locator('.script-parameters-panel')).toContainText('Message')
+        await expect(page.locator('.script-parameters-panel')).toContainText('ConfFile')
 
         // execute button present
         await expect(page.locator('.button-execute')).toBeVisible()
@@ -40,7 +41,7 @@ test.describe('Main app', () => {
         await page.goto('/index.html#/' + encodeURIComponent('E2E Echo'))
 
         const params = page.locator('.script-parameters-panel .parameter')
-        await expect(params).toHaveCount(2)
+        await expect(params).toHaveCount(3)
         await expect(page.locator('.script-parameters-panel')).toContainText('Message')
     })
 })

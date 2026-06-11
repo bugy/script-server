@@ -103,7 +103,10 @@ export default defineConfig({
                 // instead of esbuild pre-bundling it. Required so the
                 // `materialize-component-export` plugin runs in tests, exposing the
                 // `Component` base class that materialize's components extend.
-                inline: [/materialize-css/]
+                // vuetify: its library code imports .css files directly, which
+                // Node's ESM loader can't handle — inlining routes them through
+                // Vite's pipeline instead ("Unknown file extension .css" otherwise).
+                inline: [/materialize-css/, /vuetify/]
             }
         }
     }

@@ -90,13 +90,9 @@ export function focus(element) {
 }
 
 export function setChipListValue(chipListComponent, value) {
-    const chipList = M.Chips.getInstance(chipListComponent.$el.querySelector('.chips'));
-    while (chipList.chipsData.length > 0) {
-        chipList.deleteChip(0);
-    }
-    for (const valueElement of value) {
-        chipList.addChip({'tag': valueElement});
-    }
+    // Vuetify migration: no M.Chips instance anymore; emit through the
+    // component's v-model, same as a chip add/remove from the UI.
+    chipListComponent.$emit('update:modelValue', [...value]);
 }
 
 // Vue 3 / VTU v2 replacement for the old `new ComponentClass().$mount()` helper.

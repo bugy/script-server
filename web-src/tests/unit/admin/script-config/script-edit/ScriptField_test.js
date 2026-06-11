@@ -91,7 +91,7 @@ describe('Test ScriptField', function () {
     describe('Test simple edit', function () {
 
         it('Test initial path', function () {
-            expect(scriptField.get('.input-field input').element.value).toBe('');
+            expect(scriptField.get('.textfield input').element.value).toBe('');
             expect(scriptField.get('.open-dialog-button').element).toBeVisible()
         });
 
@@ -104,9 +104,9 @@ describe('Test ScriptField', function () {
         });
 
         it('Test change path by user', async function () {
-            await scriptField.get('.input-field input').setValue('/new/path.py')
+            await scriptField.get('.textfield input').setValue('/new/path.py')
 
-            expect(scriptField.get('.input-field input').element.value).toBe('/new/path.py');
+            expect(scriptField.get('.textfield input').element.value).toBe('/new/path.py');
             expect(changes).toEqual([{path: '/new/path.py', mode: 'new_path'}])
         });
     });
@@ -152,7 +152,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Save')
 
             expect(changes).toEqual([{'mode': 'new_path', 'path': '/some/new/path'}])
-            expect(scriptField.get('.input-field input').element.value).toBe('/some/new/path')
+            expect(scriptField.get('.textfield input').element.value).toBe('/some/new/path')
         })
 
         it('Test set code mode and save', async function () {
@@ -164,7 +164,7 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/{name}.py',
                 code: '#!/usr/bin/env python\n'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/{name}.py')
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/{name}.py')
         })
 
         it('Test set code mode, edit and save', async function () {
@@ -183,7 +183,7 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/{name}.r',
                 code: 'abcdef'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/{name}.r');
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/{name}.r');
         })
 
         it('Test set upload mode, edit and save', async function () {
@@ -200,7 +200,7 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/new_file.ps1',
                 uploadFile: new File([''], 'new_file.ps1')
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/new_file.ps1')
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/new_file.ps1')
         })
 
         it('Test set path on server and cancel', async function () {
@@ -210,7 +210,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('')
+            expect(scriptField.get('.textfield input').element.value).toBe('')
         })
 
         it('Test set code mode, edit and cancel', async function () {
@@ -223,7 +223,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('')
+            expect(scriptField.get('.textfield input').element.value).toBe('')
         })
 
         it('Test set upload mode, edit and cancel', async function () {
@@ -234,7 +234,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('')
+            expect(scriptField.get('.textfield input').element.value).toBe('')
         })
 
         it('Test edit config name for code mode', async function () {
@@ -255,7 +255,7 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/new_name.ps1',
                 code: '#!/usr/bin/env pwsh\n'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/new_name.ps1')
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/new_name.ps1')
         })
 
         it('Test edit config name for code mode after save', async function () {
@@ -279,7 +279,7 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/another_name.py',
                 code: '#!/usr/bin/env python\n'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/another_name.py')
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/another_name.py')
         })
 
         it('Test disable save for empty path', async function () {
@@ -372,7 +372,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Save')
 
             expect(changes).toEqual([{'mode': 'new_path', 'path': '/some/new/path'}])
-            expect(scriptField.get('.input-field input').element.value).toBe('/some/new/path')
+            expect(scriptField.get('.textfield input').element.value).toBe('/some/new/path')
         })
 
         it('Test set code mode and save', async function () {
@@ -384,7 +384,7 @@ describe('Test ScriptField', function () {
                 path: '/home/user/my_script.sh',
                 code: 'some code'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test set code mode, edit and save', async function () {
@@ -401,7 +401,7 @@ describe('Test ScriptField', function () {
                 path: '/home/user/my_script.sh',
                 code: 'abcdef'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh');
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh');
         })
 
         it('Test set upload mode, edit and save', async function () {
@@ -416,7 +416,7 @@ describe('Test ScriptField', function () {
                 path: '/home/user/my_script.sh',
                 uploadFile: new File([''], 'new_file.ps1')
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test set path on server and cancel', async function () {
@@ -426,7 +426,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test set code mode, edit and cancel', async function () {
@@ -439,7 +439,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test set upload mode, edit and cancel', async function () {
@@ -450,7 +450,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test edit config name for code mode', async function () {
@@ -471,7 +471,7 @@ describe('Test ScriptField', function () {
                 path: '/home/user/my_script.sh',
                 code: 'some code'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test edit config name for code mode after save', async function () {
@@ -491,7 +491,7 @@ describe('Test ScriptField', function () {
             await scriptField.setProps({configName: 'another_name'})
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test disable save for empty path', async function () {
@@ -747,14 +747,14 @@ describe('Test ScriptField', function () {
 
     function assertPathModeOpen(dialogWrapper, expectedPath) {
         expect(dialogWrapper.get('input[type=radio]:checked + span').text()).toBe(PATH_MODE)
-        expect(dialogWrapper.get('.input-field input').element.value).toBe(expectedPath)
+        expect(dialogWrapper.get('.textfield input').element.value).toBe(expectedPath)
 
         expect(dialogWrapper.get('.code-editor').element).not.toBeVisible()
         expect(dialogWrapper.get('.script-uploader').element).not.toBeVisible()
     }
 
     function assertCodeModeOpen(dialogWrapper, expectedPath, expectedCode, expectedLanguage) {
-        expect(dialogWrapper.get('.input-field input').element).not.toBeVisible()
+        expect(dialogWrapper.get('.textfield input').element).not.toBeVisible()
         expect(dialogWrapper.get('.code-editor').element).toBeVisible()
         expect(dialogWrapper.findComponent(Combobox).props('value')).toBe(expectedLanguage)
         expect(dialogWrapper.get('.script-uploader').element).not.toBeVisible()
@@ -766,7 +766,7 @@ describe('Test ScriptField', function () {
     }
 
     function assertUploadModeOpen(dialogWrapper, expectedPath) {
-        expect(dialogWrapper.get('.input-field input').element).not.toBeVisible()
+        expect(dialogWrapper.get('.textfield input').element).not.toBeVisible()
         expect(dialogWrapper.get('.code-editor').element).not.toBeVisible()
         expect(dialogWrapper.get('.script-uploader .textfield input').element.value).toBe(expectedPath)
         expect(dialogWrapper.get('.script-uploader').element).toBeVisible()

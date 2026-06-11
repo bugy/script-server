@@ -1,58 +1,40 @@
 <template>
-  <div :class="{loading: loading}" :data-error="error" :title="config.description"
-       class="input-field combobox">
-    <select
-        :id="config.name"
-        ref="selectField"
-        :disabled="disabled || (options.length === 0) || loading"
-        :multiple="config.multiselect"
-        :required="config.required"
-        class="validate">
-      <option v-if="showHeader"
-              v-trim-text
-              :selected="!anythingSelected"
-              class="select-header"
-              disabled
-              value="">
-        {{ config.multiselect ? 'Choose your options' : 'Choose your option' }}
-      </option>
-      <option v-for="option in options"
-              :key="option.value"
-              v-trim-text
-              :disabled="option.disabled"
-              :selected="option.selected"
-              :value="option.value">
-        {{ option.value }}
-      </option>
-    </select>
-
-    <label :for="config.name">{{ config.name }}</label>
-    <CircleSpinner v-if="loading" class="loading-spinner"/>
-
-    <ComboboxSearch v-if="searchEnabled" ref="comboboxSearch" :comboboxWrapper="comboboxWrapper"/>
-  </div>
+  <component
+      :is="searchEnabled ? 'v-autocomplete' : 'v-select'"
+      ref="field"
+      :class="{loading: loading}"
+      :data-error="error"
+      :disabled="disabled || (options.length === 0) || loading"
+      :error-messages="errorMessages"
+      :items="items"
+      :label="config.name"
+      :loading="loading"
+      :model-value="selectedValue"
+      :multiple="config.multiselect"
+      :persistent-placeholder="showHeader"
+      :placeholder="placeholder"
+      :required="config.required"
+      :title="config.description"
+      class="combobox"
+      @update:model-value="onUserInput"/>
 </template>
 
 <script>
-import '@/common/materializecss/imports/select';
-import {
-  addClass,
-  contains,
-  findNeighbour,
-  hasClass,
-  isEmptyArray,
-  isEmptyString,
-  isNull,
-  removeClass
-} from '@/common/utils/common';
-import ComboboxSearch from './ComboboxSearch';
-import {nextTick} from 'vue'
-import CircleSpinner from '@/common/components/CircleSpinner'
+// Vuetify migration: v-select (or v-autocomplete when the option list is
+// long enough to need filtering — replacing the materialize in-dropdown
+// ComboboxSearch) renders the dropdown; all the materialize FormSelect
+// plumbing (rebuildCombobox, manual DOM sync, onchange subscription) is
+// gone. The value/validation logic below (_fixValueByAllowedValues,
+// _validate, forceValue with disabled obsolete options) is untouched
+// business logic. External contract preserved: config/modelValue/disabled/
+// forceValue/showHeader props, update:modelValue + error emits, data-error.
+// The dropdownContainer prop is accepted but unused: Vuetify menus are
+// teleported overlays positioned by the framework.
+import {contains, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
 
 export default {
   name: 'Combobox',
   emits: ['update:modelValue', 'error'],
-  components: {CircleSpinner, ComboboxSearch},
   props: {
     'config': Object,
     'modelValue': [String, Array],
@@ -75,8 +57,7 @@ export default {
     return {
       options: [],
       anythingSelected: false,
-      error: '',
-      comboboxWrapper: null
+      error: ''
     }
   },
 
@@ -84,8 +65,35 @@ export default {
     searchEnabled() {
       return !this.disabled && (this.options.length > 10);
     },
+
     loading() {
       return this.config.loading
+    },
+
+    items() {
+      return this.options.map(option => ({
+        title: option.value,
+        value: option.value,
+        props: {disabled: !!option.disabled, title: option.value}
+      }));
+    },
+
+    selectedValue() {
+      if (this.config.multiselect) {
+        return this.asArray(this.modelValue);
+      }
+      return isEmptyString(this.modelValue) ? null : this.modelValue;
+    },
+
+    placeholder() {
+      if (!this.showHeader) {
+        return undefined;
+      }
+      return this.config.multiselect ? 'Choose your options' : 'Choose your option';
+    },
+
+    errorMessages() {
+      return isEmptyString(this.error) ? [] : [this.error];
     }
   },
 
@@ -110,53 +118,22 @@ export default {
           this._selectValue(newValue);
         }
       }
-    },
-
-    disabled() {
-      this.$nextTick(() => this.rebuildCombobox());
-    },
-
-    loading() {
-      this.$nextTick(() => this.rebuildCombobox());
-    },
-
-    showHeader() {
-      this.$nextTick(() => this.rebuildCombobox());
     }
   },
 
-  mounted: function () {
-    // for some reason subscription in template (i.e. @change="..." doesn't work for select input)
-    this.$refs.selectField.onchange = () => {
-      let value;
+  methods: {
+    onUserInput(value) {
       if (this.config.multiselect) {
-        value = Array.from(this.$refs.selectField.selectedOptions)
-            .filter(o => !o.disabled)
-            .map(o => o.value)
-      } else {
-        value = this.$refs.selectField.value;
+        // materialize parity: changing the selection drops forced obsolete
+        // values (they were emitted filtered out of the selectedOptions)
+        const disabledValues = this.options.filter(o => o.disabled).map(o => o.value);
+        value = this.asArray(value).filter(v => !contains(disabledValues, v));
+      } else if (isNull(value)) {
+        value = null;
       }
       this.emitValueChange(value);
-    };
+    },
 
-    this.rebuildCombobox();
-
-    this.$watch('error', function (errorValue) {
-      var inputField = findNeighbour(this.$refs.selectField, 'input');
-      if (!isNull(inputField)) {
-        inputField.setCustomValidity(errorValue);
-      }
-    }, {
-      immediate: true
-    })
-  },
-
-  beforeUnmount: function () {
-    const instance = M.FormSelect.getInstance(this.$refs.selectField);
-    instance.destroy();
-  },
-
-  methods: {
     emitValueChange(value) {
       this._validate(this.asArray(value));
       this.$emit('update:modelValue', value);
@@ -216,10 +193,6 @@ export default {
       }
 
       this._validate(selectedValues);
-
-      this.$nextTick(function () {
-        this.updateComboboxValue();
-      }.bind(this));
     },
 
     _validate(selectedValues) {
@@ -242,52 +215,9 @@ export default {
       this.$emit('error', this.error);
     },
 
-    rebuildCombobox() {
-      if (this.comboboxWrapper) {
-        this.comboboxWrapper.destroy()
-      }
-
-      this.comboboxWrapper = M.FormSelect.init(this.$refs.selectField,
-          {
-            dropdownOptions: {
-              constrainWidth: false,
-              container: this.dropdownContainer,
-              multiple: this.config.multiselect,
-              onCloseEnd: () => {
-                if (this.$refs.selectField) {
-                  this.setNewOptions(this.config.values)
-                }
-              }
-            }
-          });
-
-      const dropdownItems = this.$refs.selectField
-          .closest('.select-wrapper')
-          .querySelectorAll('.dropdown-content li');
-      for (const item of dropdownItems) {
-        const text = item.getElementsByTagName('span')[0].innerText;
-        if (text) {
-          item.title = text;
-        }
-
-        if (hasClass(item, 'disabled')) {
-          item.removeAttribute('tabIndex');
-        }
-      }
-
-      this.updateComboboxValue();
-    },
-
     setNewOptions(newOptionValues) {
       if (isNull(newOptionValues)) {
         this.options = []
-        return
-      }
-
-      if (this.config.multiselect
-          && this.comboboxWrapper
-          && this.comboboxWrapper.dropdown
-          && this.comboboxWrapper.dropdown.isOpen) {
         return
       }
 
@@ -299,17 +229,16 @@ export default {
         })
       }
 
-      let disabledOptions = []
       if ((this.forceValue) && !isEmptyString(this.modelValue) && !isEmptyArray(this.modelValue)) {
         const valueAsArray = this.asArray(this.modelValue)
+        const disabledOptions = []
         for (const valueElement of valueAsArray) {
           if (!newOptionValues.includes(valueElement)) {
-            const disabledOption = {
+            disabledOptions.push({
               value: valueElement,
               selected: false,
-              disabled: false
-            }
-            disabledOptions.push(disabledOption)
+              disabled: true
+            })
           }
         }
         newOptions.unshift(...disabledOptions)
@@ -319,47 +248,6 @@ export default {
 
       if (!this._fixValueByAllowedValues(this.config.values)) {
         this._selectValue(this.modelValue)
-      }
-
-      if (!isEmptyArray(disabledOptions)) {
-        // for Firefox we cannot select and disable simultaneously,
-        // so we have to select an element first, and then mark it as disabled in a next iteration
-        nextTick(() => {
-          for (let disabledOption of disabledOptions) {
-            const foundOption = this.options.find(o => o.value === disabledOption.value)
-            foundOption.disabled = true
-          }
-
-          nextTick(() => {
-            this.rebuildCombobox()
-          })
-        })
-      } else {
-        this.$nextTick(() => {
-          this.rebuildCombobox()
-        })
-      }
-    },
-
-    updateComboboxValue() {
-      if (isNull(this.$refs.selectField)) {
-        return;
-      }
-
-      const inputField = this.$refs.selectField
-          .closest('.select-wrapper')
-          .querySelector('input');
-
-      // setCustomValidity doesn't work since input is readonly
-      if (this.error) {
-        addClass(inputField, 'invalid');
-      } else {
-        removeClass(inputField, 'invalid');
-      }
-
-      if (!isNull(this.comboboxWrapper)) {
-        this.comboboxWrapper._setValueToInput();
-        this.comboboxWrapper._setSelectedStates();
       }
     },
 
@@ -378,37 +266,5 @@ export default {
 </script>
 
 <style scoped>
-.combobox :deep(.search-hidden) {
-  display: none;
-}
-
-.main-app-content .combobox :deep(.select-dropdown.dropdown-content .combobox-search-header) {
-  background-color: var(--background-color);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.combobox.loading :deep(svg) {
-  display: none;
-}
-
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-
-  position: absolute;
-  right: 2px;
-  top: 2px;
-}
-
-.loading-spinner :deep(.spinner-layer) {
-  border-color: var(--font-color-disabled);
-}
-
-.loading-spinner :deep(.circle) {
-  border-width: 2px;
-}
-
 
 </style>

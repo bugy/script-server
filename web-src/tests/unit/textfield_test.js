@@ -367,22 +367,30 @@ describe('Test TextField', function () {
             await vueTicks()
         });
 
+        // Vuetify migration: the dropdown is a v-combobox menu rendered in a
+        // teleported v-overlay (document.body), not a <ul> inside the
+        // component, so options are queried from the document.
+
         async function clickOnInputField() {
+            await autocompleteComponent.find('input').trigger('mousedown')
             await autocompleteComponent.find('input').trigger('click')
             await timeout(150)
         }
 
+        function getOptionElements() {
+            return [...document.querySelectorAll('.v-overlay .v-list-item')]
+        }
+
         function getOptionTexts() {
-            const listElements = autocompleteComponent.findAll('ul li')
-            return mapArrayWrapper(listElements, wrapper => wrapper.text())
+            return getOptionElements().map(el => el.textContent.trim())
         }
 
         it('Test open dropdown on click', async function () {
             await clickOnInputField()
 
-            expect(autocompleteComponent.find('input').classes()).toContain('autocomplete')
+            expect(autocompleteComponent.find('.v-combobox').exists()).toBeTrue()
 
-            expect(autocompleteComponent.find('ul').element).toBeVisible()
+            expect(document.querySelector('.v-overlay .v-list')).toBeVisible()
 
             const options = getOptionTexts()
             expect(options).toEqual(['Value A', 'Value B', 'Value C'])
@@ -415,8 +423,12 @@ describe('Test TextField', function () {
 
             await clickOnInputField()
 
+            // Behaviour change vs materialize: v-combobox only filters while
+            // the user is typing. Opening the menu with a pre-set value shows
+            // all options, so an existing choice can be replaced without
+            // clearing the field first.
             const options = getOptionTexts()
-            expect(options).toEqual(['Value B'])
+            expect(options).toEqual(['Value A', 'Value B', 'Value C'])
 
             expect(autocompleteComponent.vm.modelValue).toBe('B')
         });
@@ -424,13 +436,9 @@ describe('Test TextField', function () {
         it('Test select option from dropdown', async function () {
             await clickOnInputField()
 
-            await autocompleteComponent.findAll('ul li').at(1).trigger('click')
+            getOptionElements()[1].click()
             await timeout(300)
 
-            // Note: under jsdom the dropdown's close animation (anime.js
-            // complete callback) doesn't fire, so we can't assert it becomes
-            // hidden the way the Karma/browser run did. We still verify the
-            // option click propagates the selected value through v-model.
             expect(autocompleteComponent.vm.modelValue).toBe('Value B')
         });
 

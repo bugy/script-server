@@ -9,13 +9,27 @@
       "name": "Mode",
       "param": "--mode",
       "type": "list",
-      "values": ["alpha", "beta", "gamma"],
+      "values": [
+        "alpha",
+        "beta",
+        "gamma"
+      ],
       "default": "alpha"
     },
     {
       "name": "Message",
       "param": "--message",
       "required": true
+    },
+    {
+      "name": "ConfFile",
+      "param": "--file",
+      "type": "server_file",
+      "file_dir": ".",
+      "file_recursive": true
     }
-  ]
+  ],
+  "scheduling": {
+    "enabled": true
+  }
 }

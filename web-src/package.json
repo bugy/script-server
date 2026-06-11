@@ -18,6 +18,7 @@
     "typeface-roboto": "^1.1.13",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0",
+    "vuetify": "^4.1.1",
     "vuex": "^4.1.0"
   },
   "devDependencies": {

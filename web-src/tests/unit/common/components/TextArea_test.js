@@ -37,7 +37,10 @@ describe('Test TextArea', function () {
 
         it('Test initial configs', function () {
             expect(textarea.find('label').text()).toEqual('Textarea parameter')
-            expect(textarea.element.title).toEqual('this field is used for nothing')
+            // Vuetify forwards non class/style/id/data-* attrs to the inner
+            // textarea, so the description tooltip lives there now (same as
+            // the migrated Textfield).
+            expect(textarea.find('textarea').element.title).toEqual('this field is used for nothing')
             verifyElementValue('Hello world')
         });
 
