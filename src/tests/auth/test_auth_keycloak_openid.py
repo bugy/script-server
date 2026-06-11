@@ -119,7 +119,8 @@ class OauthServerMock:
             'refresh_expires_in': refresh_expiration_duration
         })
 
-        self.cleanup_old_tokens(self.access_token_expiration_times, token_prefix)
+        # Real Keycloak rotates refresh tokens, but old access tokens are stateless JWTs
+        # and stay valid until their expiration, even after a refresh
         self.cleanup_old_tokens(self.refresh_token_expiration_times, token_prefix)
 
         self.access_token_expiration_times[access_token] = time.time() + access_expiration_duration
@@ -193,13 +194,56 @@ class KeycloakOauthTestCase(AsyncTestCase):
         valid_1 = await self.authenticator.validate_user(username, mock_request_handler(previous_request=request_1))
         self.assertTrue(valid_1)
 
-        for i in range(1, 20):
-            await gen.sleep(0.1)
+        await self.wait_for_groups('bugy', ['g3'])
 
-            if self.authenticator.get_groups('bugy') == ['g3']:
+    @gen_test
+    async def test_success_validate_when_refresh_races_with_validation(self):
+        # Regression test for a flaky failure of test_success_validate_after_refresh:
+        # the scheduler-driven token refresh fires on the IOLoop right before validate_user,
+        # so the userinfo request is sent with an access token from before the refresh
+        username, request_1 = await self.authenticate('qwerty123')
+
+        self.oauth_server.set_groups('bugy', ['g3'])
+
+        await gen.sleep(auth_info_ttl + 0.5)
+
+        token_manager = self.authenticator._token_manager
+        current_refresh_token = token_manager._refresh_tokens[username]
+        self.io_loop.add_callback(token_manager._refresh_token, username, current_refresh_token)
+
+        valid_1 = await self.authenticator.validate_user(username, mock_request_handler(previous_request=request_1))
+        self.assertTrue(valid_1)
+
+        await self.wait_for_groups('bugy', ['g3'])
+
+    @gen_test
+    async def test_success_validate_when_concurrent_refreshes(self):
+        # Two refreshes in flight with the same refresh token: without per-user
+        # serialization, the second one gets 401 (token rotated) and logs the user out
+        username, request_1 = await self.authenticate('qwerty123')
+
+        self.oauth_server.set_groups('bugy', ['g3'])
+
+        await gen.sleep(auth_info_ttl + 0.5)
+
+        token_manager = self.authenticator._token_manager
+        current_refresh_token = token_manager._refresh_tokens[username]
+        self.io_loop.add_callback(token_manager._refresh_token, username, current_refresh_token)
+        self.io_loop.add_callback(token_manager._refresh_token, username, current_refresh_token)
+
+        valid_1 = await self.authenticator.validate_user(username, mock_request_handler(previous_request=request_1))
+        self.assertTrue(valid_1)
+
+        await self.wait_for_groups('bugy', ['g3'])
+
+    async def wait_for_groups(self, username, expected_groups):
+        for i in range(1, 20):
+            if self.authenticator.get_groups(username) == expected_groups:
                 break
 
-        self.assertEqual(['g3'], self.authenticator.get_groups('bugy'))
+            await gen.sleep(0.1)
+
+        self.assertEqual(expected_groups, self.authenticator.get_groups(username))
 
     @gen_test
     async def test_failed_validate_after_deactivate(self):

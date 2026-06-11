@@ -1,5 +1,7 @@
+import asyncio
 import datetime
 import logging
+from collections import defaultdict
 from typing import Dict, Optional
 
 import tornado.ioloop
@@ -15,6 +17,7 @@ class OAuthTokenManager:
     def __init__(self, enabled, fetch_token_callback) -> None:
         self._refresh_tokens = {}  # type: Dict[str, str]
         self._pending_access_tokens = {}  # type: Dict[str, OAuthTokenResponse]
+        self._refresh_locks = defaultdict(asyncio.Lock)  # type: Dict[str, asyncio.Lock]
         self._scheduler = None
 
         self._enabled = enabled
@@ -126,25 +129,28 @@ class OAuthTokenManager:
             (self._refresh_token, username, refresh_token))
 
     async def _refresh_token(self, username, refresh_token, force=False):
-        if not force:
-            if (username not in self._refresh_tokens) or (self._refresh_tokens[username] != refresh_token):
+        # serialize refreshes per user: a concurrent refresh with the same (rotated)
+        # refresh token would get a 401 from the provider and log the user out
+        async with self._refresh_locks[username]:
+            if not force:
+                if (username not in self._refresh_tokens) or (self._refresh_tokens[username] != refresh_token):
+                    return
+
+            token_response = await self._fetch_token_callback(refresh_token, username)
+
+            if token_response is None:
                 return
 
-        token_response = await self._fetch_token_callback(refresh_token, username)
+            LOGGER.info(f'Refreshed token for {username}')
 
-        if token_response is None:
-            return
+            self._refresh_tokens[username] = token_response.refresh_token
+            self._pending_access_tokens[username] = token_response
 
-        LOGGER.info(f'Refreshed token for {username}')
-
-        self._refresh_tokens[username] = token_response.refresh_token
-        self._pending_access_tokens[username] = token_response
-
-        if token_response.should_refresh():
-            self._schedule_token_refresh(
-                username,
-                token_response.refresh_token,
-                token_response.resolve_next_refresh_datetime())
+            if token_response.should_refresh():
+                self._schedule_token_refresh(
+                    username,
+                    token_response.refresh_token,
+                    token_response.resolve_next_refresh_datetime())
 
     @staticmethod
     def _restore_token_response_from_cookies(request_handler) -> Optional[OAuthTokenResponse]:
