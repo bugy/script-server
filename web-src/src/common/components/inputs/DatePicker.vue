@@ -1,18 +1,21 @@
 <template>
-  <div :class="{ headless: !showHeaderInModal}" class="input-field date-picker">
-    <input :id="id"
-           ref="datePicker"
-           :placeholder="label"
-           class="validate datepicker"
-           type="text">
-    <label :for="id">{{ label || '' }}</label>
-  </div>
+  <v-date-input
+      :first-day-of-week="1"
+      :label="label"
+      :min="minDate"
+      :model-value="modelValue"
+      class="date-picker"
+      prepend-icon=""
+      @update:model-value="onDateChanged"/>
 </template>
 
 <script>
-import {getElementsByTagNameRecursive, isNull, uuidv4} from "@/common/utils/common";
-import '@/common/materializecss/imports/datepicker'
-
+// Vuetify migration: v-date-input (text field + calendar menu) replaces the
+// materialize M.Datepicker modal. Same constraints as before: dates start
+// today (minDate), weeks start on Monday, and the value is only emitted when
+// the picked date actually changed. The showHeaderInModal prop is kept for
+// compatibility: the v-date-input calendar has no modal header at all
+// (hide-header defaults to true), which matches the old headless rendering.
 export default {
   name: "DatePicker",
   emits: ['update:modelValue'],
@@ -30,55 +33,21 @@ export default {
   },
   data() {
     return {
-      id: null
+      minDate: new Date()
     }
   },
-  mounted: function () {
-    this.id = 'datepicker_' + uuidv4();
-
-    const datepicker = M.Datepicker.init(this.$refs.datePicker, {
-      defaultTime: 'now',
-      autoClose: true,
-      defaultDate: this.modelValue,
-      setDefaultDate: true,
-      minDate: new Date(),
-      firstDay: 1,
-      yearRange: 5,
-      onSelect: newDate => {
-        if (newDate.getTime() === this.modelValue.getTime()) {
-          return;
-        }
-
-        this.$nextTick(() => this.$emit('update:modelValue', newDate));
-      },
-      onDraw: () => {
-        const svgs = getElementsByTagNameRecursive(datepicker.$el[0].parentNode, 'svg');
-        svgs.forEach(svg => svg.style.fill = 'var(--font-color-main)')
+  methods: {
+    onDateChanged(newDate) {
+      if (newDate && this.modelValue && (newDate.getTime() === this.modelValue.getTime())) {
+        return;
       }
-    });
-  },
-  beforeUnmount: function () {
-    const instance = M.Datepicker.getInstance(this.$refs.datePicker);
-    instance.destroy();
-  },
-  watch: {
-    'modelValue': {
-      immediate: true,
-      handler(newValue) {
-        if (isNull(this.$refs.datePicker)) {
-          return;
-        }
 
-        const instance = M.Datepicker.getInstance(this.$refs.datePicker);
-        instance.setDate(newValue);
-      }
+      this.$emit('update:modelValue', newDate);
     }
   }
 }
 </script>
 
 <style scoped>
-.date-picker.headless :deep(.datepicker-date-display) {
-  display: none;
-}
+
 </style>

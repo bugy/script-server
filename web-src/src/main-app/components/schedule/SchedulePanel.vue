@@ -22,13 +22,13 @@
       </div>
       <div v-if="oneTimeSchedule" class="one-time-schedule-panel">
         <DatePicker v-model="startDate" :show-header-in-modal="!mobileView" class="inline" label="Date"/>
-        <TimePicker v-model="startTime" class="inline" label="Time" @error="checkErrors"/>
+        <TimePicker v-model="startTime" class="inline" label="Time" @error="onFieldError('startTime', $event)"/>
       </div>
       <div v-else class="repeat-schedule-panel">
         <div>
           <span class="schedule-repeat_col-1">Every</span>
           <Textfield v-model="repeatPeriod" :config="repeatPeriodField"
-                     class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors"/>
+                     class="inline repeat-period-field schedule-repeat_col-2" @error="onFieldError('repeatPeriod', $event)"/>
           <Combobox v-model="repeatTimeUnit" :config="repeatTimeUnitField"
                     :show-header="false" class="inline repeat-time-unit-field schedule-repeat_col-3"/>
         </div>
@@ -38,7 +38,7 @@
                       :show-header-in-modal="!mobileView"
                       class="inline repeat-start-date schedule-repeat_col-2" label="Date"/>
           <TimePicker v-model="startTime" class="inline repeat-start-time schedule-repeat_col-3"
-                      label="Time" @error="checkErrors"/>
+                      label="Time" @error="onFieldError('startTime', $event)"/>
         </div>
 
         <div>
@@ -67,11 +67,11 @@
           <div v-if="endOption === 'endDatetime'">
             <span class="schedule-repeat_col-1">Ending</span>
             <DatePicker v-model="endDate" :show-header-in-modal="!mobileView" class="inline repeat-start-date schedule-repeat_col-2" label="Date" />
-            <TimePicker v-model="endTime" class="inline repeat-start-time schedule-repeat_col-3" label="Time" @error="checkErrors" />
+            <TimePicker v-model="endTime" class="inline repeat-start-time schedule-repeat_col-3" label="Time" @error="onFieldError('endTime', $event)" />
           </div>
           <div v-if="endOption === 'maxExecuteCount'">
             <span class="schedule-repeat_col-1">Count</span>
-            <Textfield v-model="maxExecuteCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors" />
+            <Textfield v-model="maxExecuteCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="onFieldError('maxExecuteCount', $event)" />
           </div>
 
         <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
@@ -103,7 +103,6 @@
 // input-fields provides M.updateTextFields; it used to be pulled in globally
 // by the Textfield component before its Vuetify migration.
 import '@/common/materializecss/imports/input-fields'
-import '@/common/materializecss/imports/datepicker'
 import DatePicker from "@/common/components/inputs/DatePicker";
 import TimePicker from "@/common/components/inputs/TimePicker";
 import Textfield from "@/common/components/textfield";
@@ -156,7 +155,8 @@ export default {
 
       repeatPeriodField,
       repeatTimeUnitField,
-      errors: []
+      errors: [],
+      fieldErrors: {}
     }
   },
   mounted: function () {
@@ -213,15 +213,31 @@ export default {
       this.$emit('close');
     },
 
+    onFieldError(fieldKey, error) {
+      this.fieldErrors[fieldKey] = error;
+      this.checkErrors();
+    },
+
     checkErrors() {
       clearArray(this.errors);
 
-      for (const child of this.$children) {
-        if ((child.$options._componentTag === TimePicker.name)
-            || (child.$options._componentTag === Textfield.name)) {
-          if (!isEmptyString(child.error)) {
-            this.errors.push(child.error);
-          }
+      // Vue 3 fix: $children is gone; field errors arrive through the @error
+      // events and are kept in fieldErrors. Only the fields rendered in the
+      // current mode count (same as the old walk over mounted children).
+      const activeKeys = ['startTime'];
+      if (!this.oneTimeSchedule) {
+        activeKeys.push('repeatPeriod');
+        if (this.endOption === 'endDatetime') {
+          activeKeys.push('endTime');
+        }
+        if (this.endOption === 'maxExecuteCount') {
+          activeKeys.push('maxExecuteCount');
+        }
+      }
+
+      for (const key of activeKeys) {
+        if (!isEmptyString(this.fieldErrors[key])) {
+          this.errors.push(this.fieldErrors[key]);
         }
       }
 
@@ -252,6 +268,10 @@ export default {
     },
 
     oneTimeSchedule() {
+      this.$nextTick(this.checkErrors);
+    },
+
+    endOption() {
       this.$nextTick(this.checkErrors);
     }
   }

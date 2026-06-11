@@ -21,21 +21,23 @@ Done so far:
   auto-grow), `RadioGroup` (`v-radio-group`), `Combobox` (`v-select`, or
   `v-autocomplete` with type-to-filter when the list has more than 10 options —
   replacing the materialize in-dropdown search), `ChipsList` (`v-combobox` with
-  chips, keeping the CSV typing behaviours) and `PromisableButton` (`v-btn` with
-  the built-in loading spinner; the standalone `CircleSpinner` component is gone).
-  External APIs and the validation engine are unchanged.
+  chips, keeping the CSV typing behaviours), `PromisableButton` (`v-btn` with
+  the built-in loading spinner; the standalone `CircleSpinner` component is gone),
+  `DatePicker` (`v-date-input`: text field + calendar menu) and `TimePicker`
+  (`v-text-field` with the HH:MM validation kept). External APIs and the
+  validation engine are unchanged.
 - The migration also surfaced and fixed two latent Vue 3 bugs: the script-edit dialog
-  was rendered as the literal text `[object Promise]` (Vue 2 async-component syntax)
-  and `RadioGroup` still used the Vue 2 v-model contract, so switching edit modes
-  never reached the dialog.
+  was rendered as the literal text `[object Promise]` (Vue 2 async-component syntax),
+  `RadioGroup` still used the Vue 2 v-model contract (switching edit modes
+  never reached the dialog), and the schedule panel collected field errors through
+  the removed `$children` API, so its Schedule button was never disabled on error.
 - One deliberate behaviour change: reopening an autocomplete with a value already set
   shows **all** options (Vuetify standard) instead of filtering on the current value;
   filtering while typing is unchanged.
 - Test setup gained jsdom stubs required by Vuetify overlays (`visualViewport`,
   browser-accurate `offsetParent` for `<body>`/`<html>`).
 
-Remaining: ~7 components/views still on materialize (server file field,
-date/time pickers, file dialog, admin dialogs/tabs, login…), then materialize removal and Vuetify
+Remaining: ~5 components/views still on materialize (server file field, file dialog, admin dialogs/tabs, login…), then materialize removal and Vuetify
 treeshaking via `vite-plugin-vuetify`.
 
 ### 2026-05-28 — Frontend migrated to Vue 3 + Vite + Vitest

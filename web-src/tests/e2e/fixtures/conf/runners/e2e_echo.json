@@ -9,7 +9,11 @@
       "name": "Mode",
       "param": "--mode",
       "type": "list",
-      "values": ["alpha", "beta", "gamma"],
+      "values": [
+        "alpha",
+        "beta",
+        "gamma"
+      ],
       "default": "alpha"
     },
     {
@@ -17,5 +21,8 @@
       "param": "--message",
       "required": true
     }
-  ]
+  ],
+  "scheduling": {
+    "enabled": true
+  }
 }
