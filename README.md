@@ -38,7 +38,7 @@ Done so far:
 - Test setup gained jsdom stubs required by Vuetify overlays (`visualViewport`,
   browser-accurate `offsetParent` for `<body>`/`<html>`).
 
-Remaining: ~4 views still on materialize (, admin dialogs/tabs, login…), then materialize removal and Vuetify
+Remaining: ~4 views still on materialize (script list sidebar, schedule panel layout, admin dialogs/tabs, login…), then materialize removal and Vuetify
 treeshaking via `vite-plugin-vuetify`.
 
 ### 2026-05-28 — Frontend migrated to Vue 3 + Vite + Vitest
