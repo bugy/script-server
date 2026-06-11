@@ -16,16 +16,16 @@ Done so far:
 - **Foundation**: shared Vuetify instance (`src/common/vuetifyPlugin.js`) registered in
   the main and admin apps, with a `scriptServer` theme mirroring the existing palette and
   the `md` iconset reusing the Material Icons font already shipped (no new icon dependency).
-- **Migrated components**: `checkbox` (`v-checkbox`) and `textfield` (`v-text-field`, or
-  `v-combobox` for `editable_list` autocompletion). External APIs and the validation
-  engine are unchanged.
+- **Migrated components**: `checkbox` (`v-checkbox`), `textfield` (`v-text-field`, or
+  `v-combobox` for `editable_list` autocompletion) and `TextArea` (`v-textarea` with
+  auto-grow). External APIs and the validation engine are unchanged.
 - One deliberate behaviour change: reopening an autocomplete with a value already set
   shows **all** options (Vuetify standard) instead of filtering on the current value;
   filtering while typing is unchanged.
 - Test setup gained jsdom stubs required by Vuetify overlays (`visualViewport`,
   browser-accurate `offsetParent` for `<body>`/`<html>`).
 
-Remaining: ~12 components/views still on materialize (combobox, textarea, radio group,
+Remaining: ~11 components/views still on materialize (combobox, radio group,
 chips, date picker, admin dialogs/tabs, login…), then materialize removal and Vuetify
 treeshaking via `vite-plugin-vuetify`.
 
