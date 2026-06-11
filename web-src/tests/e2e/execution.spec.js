@@ -51,15 +51,14 @@ test.describe('Script execution', () => {
     })
 
     test('changes a combobox value before executing', async ({page}) => {
-        // Exercises the materialize FormSelect dropdown in a real browser —
-        // behaviour parity baseline for the upcoming Vuetify migration.
+        // Exercises the Vuetify v-select dropdown in a real browser.
         await openEchoScript(page)
 
         const modeParam = page.locator('.script-parameters-panel .parameter')
             .filter({has: page.locator('label', {hasText: 'Mode'})})
-        await modeParam.locator('input.select-dropdown').click()
+        await modeParam.locator('.v-field').click()
 
-        await page.locator('.dropdown-content li', {hasText: 'beta'}).click()
+        await page.locator('.v-overlay .v-list-item', {hasText: 'beta'}).click()
 
         await paramInput(page, 'Message').fill('combo-test')
         await page.locator('.button-execute').click()

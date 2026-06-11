@@ -18,7 +18,9 @@ Done so far:
   the `md` iconset reusing the Material Icons font already shipped (no new icon dependency).
 - **Migrated components**: `checkbox` (`v-checkbox`), `textfield` (`v-text-field`, or
   `v-combobox` for `editable_list` autocompletion), `TextArea` (`v-textarea` with
-  auto-grow) and `RadioGroup` (`v-radio-group`). External APIs and the validation
+  auto-grow), `RadioGroup` (`v-radio-group`) and `Combobox` (`v-select`, or
+  `v-autocomplete` with type-to-filter when the list has more than 10 options —
+  replacing the materialize in-dropdown search). External APIs and the validation
   engine are unchanged.
 - The migration also surfaced and fixed two latent Vue 3 bugs: the script-edit dialog
   was rendered as the literal text `[object Promise]` (Vue 2 async-component syntax)
@@ -30,7 +32,7 @@ Done so far:
 - Test setup gained jsdom stubs required by Vuetify overlays (`visualViewport`,
   browser-accurate `offsetParent` for `<body>`/`<html>`).
 
-Remaining: ~10 components/views still on materialize (combobox,
+Remaining: ~9 components/views still on materialize (
 chips, date picker, admin dialogs/tabs, login…), then materialize removal and Vuetify
 treeshaking via `vite-plugin-vuetify`.
 

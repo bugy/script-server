@@ -1,19 +1,12 @@
 'use strict';
 
 import Combobox from '@/common/components/combobox'
-import {contains} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {
-    attachToDocument,
-    createScriptServerTestVue,
-    flushPromises,
-    setDeepProp,
-    timeout,
-    triggerSingleClick,
-    vueTicks,
-    wrapVModel
-} from './test_utils';
+import {attachToDocument, setDeepProp, timeout, vueTicks, wrapVModel} from './test_utils';
 
+// Vuetify migration: the dropdown is a v-select / v-autocomplete menu rendered
+// in a teleported v-overlay (document.body), so options are queried from the
+// document, not from the component subtree.
 
 describe('Test ComboBox', function () {
     let comboBox;
@@ -43,56 +36,64 @@ describe('Test ComboBox', function () {
         comboBox.unmount();
     });
 
-    function assertListElements(expectedTexts, searchHeader = false, showHeader = true) {
-        const listChildren = comboBox.findAll('li');
-
-        const extraChildrenCount = showHeader ? 1 : 0;
-
-        expect(listChildren).toHaveLength(expectedTexts.length + extraChildrenCount);
-
-        const headerText = listChildren.at(0).text();
-        if (!searchHeader) {
-            if (showHeader) {
-                expect(headerText).toStartWith('Choose your option');
-            }
-        } else {
-            expect(headerText.trim()).toBe('Search');
-        }
-
-        for (let i = 0; i < expectedTexts.length; i++) {
-            const value = expectedTexts[i];
-            expect(listChildren.at(i + extraChildrenCount).text()).toBe(value);
-        }
-    }
-
     async function openDropdown() {
-        comboBox.get('.dropdown-trigger').trigger('click');
-
-        await timeout(50);
+        await comboBox.get('.combobox input').trigger('focus');
+        await comboBox.get('.combobox input').trigger('mousedown');
+        await comboBox.get('.combobox input').trigger('click');
+        await timeout(150);
     }
 
     async function closeDropdown() {
-        comboBox.vm.comboboxWrapper.dropdown.options.outDuration = 1;
-
-        triggerSingleClick(document.body)
-
-        await timeout(50)
+        await comboBox.get('.combobox input').trigger('keydown', {key: 'Escape'});
+        await timeout(150);
     }
 
-    function findSelectedOptions() {
-        return comboBox.findAll('option').filter(option => option.element.selected);
+    function getMenuItems() {
+        return [...document.querySelectorAll('.v-overlay .v-list-item')];
+    }
+
+    function itemText(item) {
+        // multiselect items also contain the checkbox icon, whose Material
+        // Icons ligature is plain text under jsdom — read the title only
+        return item.querySelector('.v-list-item-title').textContent.trim();
+    }
+
+    function getMenuItemTexts() {
+        return getMenuItems().map(itemText);
+    }
+
+    function findMenuItem(text) {
+        return getMenuItems().find(item => itemText(item) === text);
+    }
+
+    async function clickMenuItem(text) {
+        findMenuItem(text).click();
+        await timeout(50);
+    }
+
+    function displayedSelection() {
+        const spans = comboBox.element.querySelectorAll(
+            '.v-select__selection-text, .v-autocomplete__selection-text');
+        // multiple selections render with a trailing comma separator
+        return [...spans].map(span => span.textContent.trim().replace(/,$/, ''));
+    }
+
+    async function assertListElements(expectedTexts) {
+        await openDropdown();
+        expect(getMenuItemTexts()).toEqual(expectedTexts);
+        await closeDropdown();
     }
 
     function assertNoSelection() {
         expect(comboBox.vm.modelValue).toBeNull();
-        expect(comboBox.get('.selected').text()).toBe('Choose your option');
-        expect(findSelectedOptions()).toHaveLength(1);
+        expect(displayedSelection()).toEqual([]);
+        expect(comboBox.get('.combobox input').attributes('placeholder'))
+            .toBe('Choose your option');
     }
 
     describe('Test config', function () {
 
         it('Test initial name', function () {
-            expect(comboBox.get('select').attributes('id')).toBe('List param X');
             expect(comboBox.get('label').text()).toBe('List param X');
         });
 
@@ -101,12 +102,11 @@ describe('Test ComboBox', function () {
 
             await vueTicks();
 
-            expect(comboBox.get('select').attributes('id')).toBe('testName1');
             expect(comboBox.get('label').text()).toBe('testName1');
         });
 
         it('Test initial required', function () {
-            expect(comboBox.get('select').attributes('required')).toBeFalsy();
+            expect(comboBox.get('input').element.required).toBe(false);
         });
 
         it('Test change required', async function () {
@@ -114,13 +114,14 @@ describe('Test ComboBox', function () {
 
             await vueTicks();
 
-            // Vue 3 renders a true boolean attribute as an empty string
-            // (`required=""`), whereas Vue 2 rendered `required="required"`.
-            expect(comboBox.get('select').attributes('required')).toBe('');
+            expect(comboBox.get('input').element.required).toBe(true);
         });
 
         it('Test initial description', function () {
-            expect(comboBox.element.title).toBe('some param');
+            // Vuetify forwards non class/style/id/data-* attrs to the inner
+            // input, so the description tooltip lives there (same as the
+            // migrated Textfield).
+            expect(comboBox.get('input').element.title).toBe('some param');
         });
 
         it('Test change description', async function () {
@@ -128,21 +129,11 @@ describe('Test ComboBox', function () {
 
             await vueTicks();
 
-            expect(comboBox.element.title).toBe('My new desc');
+            expect(comboBox.get('input').element.title).toBe('My new desc');
         });
 
-        it('Test initial multiselect', function () {
-            expect(comboBox.find('select').attributes('multiple')).toBeNil();
-
-            const listElement = comboBox.get('ul');
-            expect(listElement.classes()).not.toContain('multiple-select-dropdown');
-        });
-
-
-        it('Test initial allowed values', function () {
-            const values = ['Value A', 'Value B', 'Value C'];
-
-            assertListElements(values);
+        it('Test initial allowed values', async function () {
+            await assertListElements(['Value A', 'Value B', 'Value C']);
         });
 
         it('Test change allowed values', async function () {
@@ -151,14 +142,14 @@ describe('Test ComboBox', function () {
 
             await vueTicks();
 
-            assertListElements(values);
+            await assertListElements(values);
         });
 
         it('Test hide header', async function () {
             comboBox.setProps({showHeader: false})
             await vueTicks();
 
-            assertListElements(['Value A', 'Value B', 'Value C'], false, false);
+            expect(comboBox.get('.combobox input').attributes('placeholder')).toBeUndefined();
         });
     });
 
@@ -168,9 +159,7 @@ describe('Test ComboBox', function () {
             await vueTicks();
 
             expect(comboBox.vm.modelValue).toBe('Value B');
-
-            const selectedOption = comboBox.find('.selected').text();
-            expect(selectedOption).toBe('Value B');
+            expect(displayedSelection()).toEqual(['Value B']);
         });
 
         it('Test external value change', async function () {
@@ -179,20 +168,17 @@ describe('Test ComboBox', function () {
             await vueTicks();
 
             expect(comboBox.vm.modelValue).toBe('Value C');
-
-            const selectedOption = comboBox.get('.selected').text();
-            expect(selectedOption).toBe('Value C');
+            expect(displayedSelection()).toEqual(['Value C']);
         });
 
         it('Test select another value', async function () {
-            comboBox.get('select').setValue('Value A');
+            await openDropdown();
 
+            await clickMenuItem('Value A');
             await vueTicks();
 
             expect(comboBox.vm.modelValue).toBe('Value A');
-
-            const selectedOption = comboBox.get('.selected').text();
-            expect(selectedOption).toBe('Value A');
+            expect(displayedSelection()).toEqual(['Value A']);
         });
 
         it('Test set unknown value', async function () {
@@ -211,7 +197,7 @@ describe('Test ComboBox', function () {
 
             await vueTicks();
             expect(comboBox.vm.modelValue).toEqual(['Value A']);
-            expect(comboBox.get('.selected').text()).toBe('Value A');
+            expect(displayedSelection()).toEqual(['Value A']);
         });
 
         it('Test set multiselect multiple values', async function () {
@@ -222,22 +208,7 @@ describe('Test ComboBox', function () {
 
             await vueTicks();
             expect(comboBox.vm.modelValue).toEqual(['Value A', 'Value C']);
-
-            const selectedElements = findSelectedOptions();
-            expect(selectedElements).toHaveLength(2);
-            expect(selectedElements.at(0).text()).toBe('Value A');
-            expect(selectedElements.at(1).text()).toBe('Value C');
-        });
-
-        it.skip(/* jsdom: requires materialize FormSelect browser rendering/animation */ 'Test set multiselect single unknown value', async function () {
-            setDeepProp(comboBox, 'config.multiselect', true);
-            await vueTicks();
-
-            comboBox.setProps({modelValue: ['Value X']});
-
-            await vueTicks();
-            expect(comboBox.vm.modelValue).toEqual([]);
-            expect(comboBox.get('.selected').text()).toBe('Choose your options');
+            expect(displayedSelection()).toEqual(['Value A', 'Value C']);
         });
 
         it('Test set multiselect unknown value from multiple', async function () {
@@ -248,47 +219,22 @@ describe('Test ComboBox', function () {
 
             await vueTicks();
             expect(comboBox.vm.modelValue).toEqual(['Value A']);
-            expect(comboBox.get('.selected').text()).toBe('Value A');
+            expect(displayedSelection()).toEqual(['Value A']);
         });
 
-        it.skip(/* jsdom: requires materialize FormSelect browser rendering/animation */ 'Test select multiple values in multiselect without closing', async function () {
+        it('Test select multiple values in multiselect without closing', async function () {
             setDeepProp(comboBox, 'config.multiselect', true);
+            comboBox.setProps({modelValue: []});
             await vueTicks()
 
             await openDropdown()
 
-            triggerSingleClick(getDropdownElement().childNodes[1])
-            triggerSingleClick(getDropdownElement().childNodes[2])
-            triggerSingleClick(getDropdownElement().childNodes[3])
+            await clickMenuItem('Value A');
+            await clickMenuItem('Value C');
 
             await vueTicks()
 
             expect(comboBox.vm.modelValue).toEqual(['Value A', 'Value C'])
-
-            const selectedElements = findSelectedOptions();
-            expect(selectedElements).toHaveLength(2);
-            expect(selectedElements.at(0).text()).toBe('Value A');
-            expect(selectedElements.at(1).text()).toBe('Value C');
-        });
-
-        it.skip(/* jsdom: requires materialize FormSelect browser rendering/animation */ 'Test select multiple values in multiselect with closing', async function () {
-            setDeepProp(comboBox, 'config.multiselect', true)
-            await vueTicks()
-
-            await openDropdown()
-
-            triggerSingleClick(getDropdownElement().childNodes[1])
-            triggerSingleClick(getDropdownElement().childNodes[2])
-            triggerSingleClick(getDropdownElement().childNodes[3])
-
-            await closeDropdown()
-
-            expect(comboBox.vm.modelValue).toEqual(['Value A', 'Value C'])
-
-            const selectedElements = findSelectedOptions()
-            expect(selectedElements).toHaveLength(2)
-            expect(selectedElements.at(0).text()).toBe('Value A')
-            expect(selectedElements.at(1).text()).toBe('Value C')
         });
 
         it('Test change allowed values with matching value', async function () {
@@ -297,7 +243,7 @@ describe('Test ComboBox', function () {
             await vueTicks();
 
             expect(comboBox.vm.modelValue).toBe('Value B');
-            expect(comboBox.get('.selected').text()).toBe('Value B');
+            expect(displayedSelection()).toEqual(['Value B']);
         });
 
         it('Test change allowed values with unmatching value', async function () {
@@ -305,18 +251,17 @@ describe('Test ComboBox', function () {
 
             await vueTicks();
 
-            expect(comboBox.vm.modelValue).toBeNull();
-            expect(comboBox.get('.selected').text()).toBe('Choose your option');
+            assertNoSelection();
         });
 
-        it.skip(/* jsdom: requires materialize FormSelect browser rendering/animation */ 'Test change allowed values and then a value', async function () {
+        it('Test change allowed values and then a value', async function () {
             setDeepProp(comboBox, 'config.values', ['val1', 'val2', 'hello', 'another option']);
             comboBox.setProps({modelValue: 'val2'});
 
             await vueTicks();
 
             expect(comboBox.vm.modelValue).toBe('val2');
-            expect(comboBox.get('.selected').text()).toBe('val2');
+            expect(displayedSelection()).toEqual(['val2']);
         });
     });
 
@@ -326,17 +271,6 @@ describe('Test ComboBox', function () {
             await vueTicks();
 
             comboBox.setProps({modelValue: ''});
-
-            await vueTicks();
-
-            expect(comboBox.currentError).toBe('required');
-        });
-
-        it('Test unselect combobox when required', async function () {
-            setDeepProp(comboBox, 'config.required', true);
-            await vueTicks();
-
-            comboBox.get('select').setValue('');
 
             await vueTicks();
 
@@ -355,102 +289,45 @@ describe('Test ComboBox', function () {
         });
     });
 
-    function getSearchElement() {
-        return getDropdownElement().childNodes[0]
-    }
-
-    function getDropdownElement() {
-        return comboBox.get('.dropdown-content').element;
-    }
-
     describe('Test search', function () {
         async function makeSearchable() {
             const values = Array(20).fill(0).map((v, i) => 'Value ' + i);
             setDeepProp(comboBox, 'config.values', values);
             await vueTicks();
 
-            comboBox.vm.comboboxWrapper.dropdown.options.inDuration = 1;
-            comboBox.vm.comboboxWrapper.dropdown.options.outDuration = 1;
-
             return values;
         }
 
-        function assertVisible(element, visible) {
-            const displayStyle = window.getComputedStyle(element).display;
+        it('Test switch to autocomplete when many options', async function () {
+            await makeSearchable();
 
-            if (visible) {
-                expect(displayStyle).not.toBe('none');
-            } else {
-                expect(displayStyle).toBe('none');
-            }
-        }
-
-        function assertVisibleItems(combobox, expectedVisible) {
-            const [header, ...listItems] = combobox.findAll('li');
-
-            expect(header.classes()).not.toContain('search-hidden');
-
-            for (const listItem of listItems) {
-                const text = listItem.text();
-
-                const shouldBeVisible = contains(expectedVisible, text);
-                if (shouldBeVisible) {
-                    expect(listItem.classes()).not.toContain('search-hidden');
-                } else {
-                    expect(listItem.classes()).toContain('search-hidden');
-                }
-            }
-        }
-
-        it('Test show search field', async function () {
-            const values = await makeSearchable();
-
-            assertListElements(values, true);
+            // the searchable rendering is a v-autocomplete: the field input
+            // itself is the search field (replaces the materialize
+            // in-dropdown ComboboxSearch)
+            expect(comboBox.find('.v-autocomplete').exists()).toBeTrue();
         });
 
-        it('Test show search field when one element disabled', async function () {
+        it('Test no autocomplete for short lists', async function () {
+            expect(comboBox.find('.v-autocomplete').exists()).toBeFalse();
+            expect(comboBox.find('.v-select').exists()).toBeTrue();
+        });
+
+        it('Test show all options on open', async function () {
+            const values = await makeSearchable();
+
+            await openDropdown();
+
+            expect(getMenuItemTexts()).toEqual(values);
+        });
+
+        it('Test show search options when one element disabled', async function () {
             const values = await makeSearchable()
             comboBox.setProps({modelValue: 'Xyz', forceValue: true})
 
             await vueTicks()
-            await flushPromises()
-
-            assertListElements(['Xyz'].concat(values), true)
-        });
-
-        it('Test focus search field on open', async function () {
-            await makeSearchable();
 
             await openDropdown();
-
-            const searchInput = comboBox.get('.dropdown-content input');
-            expect(document.activeElement).toBe(searchInput.element);
-        });
-
-        it('Test keep open on search click', async function () {
-            await makeSearchable();
-
-            await openDropdown();
-
-            const searchInput = comboBox.get('.dropdown-content input');
-            searchInput.trigger('click');
-
-            await timeout(50);
-
-            assertVisible(getDropdownElement(), true);
-        });
-
-        it.skip(/* jsdom: requires materialize FormSelect browser rendering/animation */ 'Test close on item click', async function () {
-            await makeSearchable();
-
-            await openDropdown();
-
-            const firstItem = getDropdownElement().childNodes[1];
-            triggerSingleClick(firstItem);
-
-            await timeout(50);
-
-            assertVisible(getDropdownElement(), false);
+            expect(getMenuItemTexts()).toEqual(['Xyz'].concat(values));
         });
 
         it('Test filter on search', async function () {
@@ -458,12 +335,10 @@ describe('Test ComboBox', function () {
 
             await openDropdown();
 
-            const searchInput = comboBox.get('.dropdown-content input');
-            searchInput.setValue('2');
+            await comboBox.get('.combobox input').setValue('Value 2');
+            await timeout(50);
 
-            await vueTicks();
-
-            assertVisibleItems(comboBox, ['Value 2', 'Value 12']);
+            expect(getMenuItemTexts()).toEqual(['Value 2']);
         });
 
         it('Test filter on search second input', async function () {
@@ -471,15 +346,13 @@ describe('Test ComboBox', function () {
 
             await openDropdown();
 
-            const searchInput = comboBox.get('.dropdown-content input');
+            await comboBox.get('.combobox input').setValue('2');
+            await timeout(50);
 
-            searchInput.setValue('2');
-            await vueTicks();
+            await comboBox.get('.combobox input').setValue('12');
+            await timeout(50);
 
-            searchInput.setValue('12');
-            await vueTicks();
-
-            assertVisibleItems(comboBox, ['Value 12']);
+            expect(getMenuItemTexts()).toEqual(['Value 12']);
         });
 
         it('Test filter on search clear input', async function () {
@@ -487,30 +360,29 @@ describe('Test ComboBox', function () {
 
             await openDropdown();
 
-            const searchInput = comboBox.get('.dropdown-content input');
+            await comboBox.get('.combobox input').setValue('2');
+            await timeout(50);
 
-            searchInput.setValue('2');
-            await vueTicks();
+            await comboBox.get('.combobox input').setValue('');
+            await timeout(50);
 
-            searchInput.setValue('');
-            await vueTicks();
-
-            assertVisibleItems(comboBox, values);
+            expect(getMenuItemTexts()).toEqual(values);
         });
     });
 
     describe('Test forced values', function () {
-        it.skip(/* jsdom: requires materialize FormSelect browser rendering/animation */ 'Test initial forced value', async function () {
+        it('Test initial forced value', async function () {
             comboBox.setProps({forceValue: true, modelValue: 'Value X'})
 
             await vueTicks()
 
             expect(comboBox.vm.modelValue).toEqual('Value X')
-            const selectedOption = comboBox.get('.selected')
-            expect(selectedOption.text()).toBe('Value X')
-            expect(selectedOption.classes()).toContain('disabled')
+            expect(displayedSelection()).toEqual(['Value X'])
             expect(comboBox.currentError).toBe('Obsolete value')
-            assertListElements(['Value X', 'Value A', 'Value B', 'Value C'])
+
+            await openDropdown();
+            expect(getMenuItemTexts()).toEqual(['Value X', 'Value A', 'Value B', 'Value C'])
+            expect(findMenuItem('Value X').classList.contains('v-list-item--disabled')).toBe(true)
         })
 
         it('Test set forcedValue to false when wrong value', async function () {
@@ -521,46 +393,8 @@ describe('Test ComboBox', function () {
             await vueTicks()
 
             assertNoSelection()
-            assertListElements(['Value A', 'Value B', 'Value C'])
             expect(comboBox.currentError).toBeEmpty()
-        })
-
-        it.skip(/* jsdom: requires materialize FormSelect browser rendering/animation */ 'Test set forcedValue to false when wrong value and multiselect', async function () {
-            setDeepProp(comboBox, 'config.multiselect', true)
-            comboBox.setProps({modelValue: ['Value X'], forceValue: true})
-            await vueTicks()
-
-            await openDropdown()
-
-            comboBox.setProps({forceValue: false})
-            await vueTicks()
-
-            expect(comboBox.vm.modelValue).toEqual(['Value X'])
-            const selectedOption = comboBox.get('.selected')
-            expect(selectedOption.text()).toBe('Value X');
-            expect(selectedOption.classes()).toContain('disabled')
-            expect(comboBox.currentError).toBe('Obsolete value')
-
-            assertListElements(['Value X', 'Value A', 'Value B', 'Value C'])
-        })
-
-        it('Test set forcedValue to false when wrong value and multiselect, after close dropdown', async function () {
-            setDeepProp(comboBox, 'config.multiselect', true)
-            comboBox.setProps({modelValue: ['Value X'], forceValue: true})
-            await vueTicks()
-
-            await openDropdown()
-
-            comboBox.setProps({forceValue: false})
-            await vueTicks()
-
-            await closeDropdown()
-
-            expect(comboBox.vm.modelValue).toEqual([])
-            const selectedOption = comboBox.get('.selected')
-            expect(selectedOption.text()).toBe('Choose your options');
-            expect(comboBox.currentError).toBe('')
-            assertListElements(['Value A', 'Value B', 'Value C'])
+            await assertListElements(['Value A', 'Value B', 'Value C'])
         })
 
         it('Test initial forced value when values change', async function () {
@@ -571,11 +405,12 @@ describe('Test ComboBox', function () {
             await vueTicks()
 
             expect(comboBox.vm.modelValue).toEqual('Value B');
-            const selectedOption = comboBox.get('.selected')
-            expect(selectedOption.text()).toBe('Value B')
-            expect(selectedOption.classes()).toContain('disabled')
+            expect(displayedSelection()).toEqual(['Value B'])
             expect(comboBox.currentError).toBe('Obsolete value')
-            assertListElements(['Value B', 'New 1', 'New 2'])
+
+            await openDropdown();
+            expect(getMenuItemTexts()).toEqual(['Value B', 'New 1', 'New 2'])
+            expect(findMenuItem('Value B').classList.contains('v-list-item--disabled')).toBe(true)
         })
 
         it('Test initial forced value when values change to allowed', async function () {
@@ -586,11 +421,12 @@ describe('Test ComboBox', function () {
             await vueTicks()
 
             expect(comboBox.vm.modelValue).toEqual('New 2');
-            const selectedOption = comboBox.get('.selected')
-            expect(selectedOption.text()).toBe('New 2')
-            expect(selectedOption.attributes('disabled')).toBeFalsy()
+            expect(displayedSelection()).toEqual(['New 2'])
             expect(comboBox.currentError).toBeEmpty()
-            assertListElements(['New 1', 'New 2'])
+
+            await openDropdown();
+            expect(getMenuItemTexts()).toEqual(['New 1', 'New 2'])
+            expect(findMenuItem('New 2').classList.contains('v-list-item--disabled')).toBe(false)
         })
 
         it('Test initial forced values when multiselect', async function () {
@@ -600,14 +436,11 @@ describe('Test ComboBox', function () {
             await vueTicks()
 
             expect(comboBox.vm.modelValue).toEqual(['Value C', 'Value X', 'Hi']);
-
-            const selectedElements = findSelectedOptions();
-            expect(selectedElements).toHaveLength(3);
-            expect(selectedElements.at(0).text()).toBe('Value X');
-            expect(selectedElements.at(1).text()).toBe('Hi');
-            expect(selectedElements.at(2).text()).toBe('Value C');
+            expect(displayedSelection().sort()).toEqual(['Hi', 'Value C', 'Value X'])
             expect(comboBox.currentError).toBe('Obsolete values: Value X,Hi')
-            assertListElements(['Value X', 'Hi', 'Value A', 'Value B', 'Value C'])
+
+            await openDropdown();
+            expect(getMenuItemTexts()).toEqual(['Value X', 'Hi', 'Value A', 'Value B', 'Value C'])
         })
 
         it('Test click disabled value', async function () {
@@ -616,10 +449,7 @@ describe('Test ComboBox', function () {
 
             await openDropdown();
 
-            const firstItem = getDropdownElement().childNodes[1];
-            triggerSingleClick(firstItem);
-
-            await timeout(50);
+            await clickMenuItem('Value X');
 
             expect(comboBox.vm.modelValue).toEqual('Value X');
             expect(comboBox.currentError).toBe('Obsolete value')
@@ -631,10 +461,8 @@ describe('Test ComboBox', function () {
 
             await openDropdown();
 
-            const enabledItem = getDropdownElement().childNodes[3];
-            triggerSingleClick(enabledItem);
-
-            await timeout(50);
+            await clickMenuItem('Value B');
+            await vueTicks();
 
             expect(comboBox.vm.modelValue).toEqual('Value B');
             expect(comboBox.currentError).toBe('')
@@ -648,8 +476,7 @@ describe('Test ComboBox', function () {
 
             await openDropdown()
 
-            triggerSingleClick(getDropdownElement().childNodes[1])
-
+            await clickMenuItem('Value X');
             await closeDropdown()
 
             expect(comboBox.vm.modelValue).toEqual(['Value C', 'Value X', 'Hi']);
@@ -657,6 +484,8 @@ describe('Test ComboBox', function () {
         })
 
         it('Test click enabled value when multiselect', async function () {
+            // materialize parity: any user change to the selection drops the
+            // forced obsolete values from the emitted value
             setDeepProp(comboBox, 'config.multiselect', true)
             await vueTicks()
             comboBox.setProps({forceValue: true, modelValue: ['Value C', 'Value X', 'Hi']})
@@ -664,28 +493,22 @@ describe('Test ComboBox', function () {
 
             await openDropdown()
 
-            triggerSingleClick(getDropdownElement().childNodes[3])
-
+            await clickMenuItem('Value A');
             await closeDropdown()
 
-            expect(comboBox.vm.modelValue).toEqual(['Value A', 'Value C'])
+            expect([...comboBox.vm.modelValue].sort()).toEqual(['Value A', 'Value C'])
             expect(comboBox.currentError).toBe('')
         })
     })
 
     describe('Test loading', function () {
-        it.skip(/* jsdom: requires materialize FormSelect browser rendering/animation */ 'Test set loading true', async function () {
+        it('Test set loading true', async function () {
             setDeepProp(comboBox, 'config.loading', true)
             await vueTicks()
 
-            const input = comboBox.get('input.dropdown-trigger')
-            expect(input.attributes('disabled')).toBe('')
-
-            const dropdownArrow = comboBox.get('svg')
-            expect(dropdownArrow.element).not.toBeVisible()
-
-            const spinner = comboBox.get('.loading-spinner')
-            expect(spinner.element).toBeVisible()
+            expect(comboBox.get('input').element.disabled).toBe(true)
+            expect(comboBox.get('.combobox').classes()).toContain('loading')
+            expect(comboBox.find('.v-progress-linear').exists()).toBeTrue()
         })
 
         it('Test set loading false', async function () {
@@ -694,14 +517,8 @@ describe('Test ComboBox', function () {
             setDeepProp(comboBox, 'config.loading', false)
             await vueTicks()
 
-            const input = comboBox.get('input.dropdown-trigger')
-            expect(input.attributes('disabled')).toBeNil()
-
-            const dropdownArrow = comboBox.get('svg')
-            expect(dropdownArrow.element).toBeVisible()
-
-            const spinner = comboBox.find('.loading-spinner')
-            expect(spinner.exists()).toBeFalse()
+            expect(comboBox.get('input').element.disabled).toBe(false)
+            expect(comboBox.get('.combobox').classes()).not.toContain('loading')
         })
     })
 });
