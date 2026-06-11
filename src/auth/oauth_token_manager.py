@@ -113,7 +113,7 @@ class OAuthTokenManager:
 
     def _schedule_token_refresh(self, username, refresh_token, next_refresh_datetime):
         if not self._scheduler:
-            self.scheduler = Scheduler()
+            self._scheduler = Scheduler()
 
         token_expires_in = next_refresh_datetime - datetime.datetime.now()
         if token_expires_in < datetime.timedelta(seconds=30):
@@ -123,7 +123,7 @@ class OAuthTokenManager:
         else:
             next_refresh_datetime_adjusted = next_refresh_datetime - datetime.timedelta(minutes=1)
 
-        self.scheduler.schedule(
+        self._scheduler.schedule(
             next_refresh_datetime_adjusted,
             tornado.ioloop.IOLoop.current().add_callback,
             (self._refresh_token, username, refresh_token))
