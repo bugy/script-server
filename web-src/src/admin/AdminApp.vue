@@ -2,17 +2,17 @@
   <div class="admin-page">
     <div class="page-title primary-color-dark">
       <div class="main-header">
-        <a class="btn-flat left home-button" href="index.html">
-          <i class="material-icons">home</i>
-        </a>
-        <ul ref="tabs" class="tabs tabs-fixed-width">
-          <li class="tab">
-            <router-link to="/logs">Logs</router-link>
-          </li>
-          <li class="tab">
-            <router-link to="/scripts">Scripts</router-link>
-          </li>
-        </ul>
+        <v-btn
+          icon="home"
+          variant="text"
+          color="white"
+          href="index.html"
+          class="home-button"
+        />
+        <v-tabs color="white" class="admin-tabs">
+          <v-tab to="/logs">Logs</v-tab>
+          <v-tab to="/scripts">Scripts</v-tab>
+        </v-tabs>
       </div>
       <div v-if="subheader" class="subheader">{{ subheader }}</div>
     </div>
@@ -29,8 +29,6 @@ export default {
   components: {File_upload},
 
   mounted() {
-    M.Tabs.init(this.$refs.tabs, {});
-
     this.init()
   },
 
@@ -75,17 +73,22 @@ export default {
 
 .main-header {
   display: flex;
+  align-items: center;
 }
 
-.tabs.tabs-fixed-width {
+.admin-tabs {
   max-width: 30em;
-  background: none;
 }
 
-.tabs.tabs-fixed-width .tab a {
+:deep(.admin-tabs .v-tab) {
   font-size: 1em;
   font-weight: 500;
   letter-spacing: 1px;
+}
+
+.home-button {
+  flex-shrink: 0;
+  margin: 0 4px;
 }
 
 .subheader {
@@ -103,16 +106,5 @@ export default {
 .page-content {
   flex: 1 1 0;
   overflow-y: auto;
-}
-
-.home-button {
-  height: 100%;
-  padding-left: 20px;
-  padding-right: 20px;
-}
-
-.home-button i {
-  font-size: 1.8em;
-  line-height: 1.8em;
 }
 </style>

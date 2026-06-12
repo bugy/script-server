@@ -7,13 +7,13 @@
                  class="path-textfield"
                  @update:modelValue="onPathInput"/>
 
-      <a v-if="canEditCode"
-         v-trim-text
-         class="btn-icon-flat waves-effect waves-circle btn-large open-dialog-button"
-         title="Script editor"
-         @click="openScriptDialog()">
-        <i class="material-icons">{{ actionIcon }}</i>
-      </a>
+      <v-btn v-if="canEditCode"
+             :icon="actionIcon"
+             variant="text"
+             size="large"
+             class="open-dialog-button"
+             title="Script editor"
+             @click="openScriptDialog()"/>
     </div>
 
     <ScriptEditDialog v-if="dialogInitialized" ref="dialog"

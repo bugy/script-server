@@ -1,25 +1,20 @@
 <template>
-  <li class="param-list-item">
-    <div class="collapsible-header param-header primary-color-light">
-      <i :class="{'red-text': errorText}" :title="errorText" class="material-icons">
+  <v-expansion-panel :value="panelValue" class="param-list-item">
+    <v-expansion-panel-title hide-actions class="param-header">
+      <v-icon :color="errorText ? 'error' : undefined" :title="errorText" size="small">
         {{ errorText ? 'warning' : 'unfold_more' }}
-      </i>
-      <span :class="{'red-text': errorText}">{{ param.name }}</span>
-      <div style="flex: 1 1 0"></div>
-      <a class="btn-flat waves-circle" @click.stop="$emit('delete')">
-        <i class="material-icons">delete</i>
-      </a>
-      <a class="btn-flat waves-circle" @click.stop="$emit('moveUp')">
-        <i class="material-icons">arrow_upward</i>
-      </a>
-      <a class="btn-flat waves-circle" @click.stop="$emit('moveDown')">
-        <i class="material-icons">arrow_downward</i>
-      </a>
+      </v-icon>
+      <span :class="{'text-error': errorText}" class="ml-2">{{ param.name }}</span>
+    </v-expansion-panel-title>
+    <div class="param-actions">
+      <v-btn icon="delete" variant="text" density="compact" @click="$emit('delete')"/>
+      <v-btn icon="arrow_upward" variant="text" density="compact" @click="$emit('moveUp')"/>
+      <v-btn icon="arrow_downward" variant="text" density="compact" @click="$emit('moveDown')"/>
     </div>
-    <div class="collapsible-body">
+    <v-expansion-panel-text>
       <ParameterConfigForm :modelValue="param" @error="handleError($event)"/>
-    </div>
-  </li>
+    </v-expansion-panel-text>
+  </v-expansion-panel>
 </template>
 
 <script>
@@ -33,8 +28,13 @@ export default {
   props: {
     param: {
       type: Object
+    },
+    panelValue: {
+      type: String
     }
   },
+
+  emits: ['delete', 'moveUp', 'moveDown'],
 
   data() {
     return {
@@ -73,18 +73,17 @@ export default {
 </script>
 
 <style scoped>
-.collapsible-header.param-header {
-  padding-top: 8px;
-  padding-bottom: 8px;
+.param-list-item {
+  position: relative;
+}
+
+.param-actions {
+  position: absolute;
+  right: 8px;
+  top: 0;
+  height: 48px;
+  display: flex;
   align-items: center;
+  z-index: 1;
 }
-
-.btn-flat {
-  padding: 0;
-}
-
-.btn-flat i {
-  margin-right: 0;
-}
-
 </style>

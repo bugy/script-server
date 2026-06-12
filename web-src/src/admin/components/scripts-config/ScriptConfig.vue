@@ -100,11 +100,9 @@ footer.page-footer {
   display: flex;
 }
 
-.script-config :deep(footer.page-footer a.btn-flat) {
+.script-config :deep(footer.page-footer .v-btn) {
   height: 48px;
-  line-height: 48px;
-  width: 136px;
-  text-align: center;
+  min-width: 136px;
   font-size: 16px;
 }
 
@@ -113,7 +111,7 @@ footer.page-footer {
   flex: 1 1 0;
 }
 
-.script-config :deep(footer.page-footer .btn-flat i) {
+.script-config :deep(footer.page-footer .v-btn .v-icon) {
   font-size: 24px;
 }
 

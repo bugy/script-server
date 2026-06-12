@@ -46,15 +46,11 @@ describe('Test ScriptField', function () {
     beforeAll(function () {
         M.Dropdown.defaults.inDuration = 1
         M.Dropdown.defaults.outDuration = 1
-        M.Modal.defaults.inDuration = 1
-        M.Modal.defaults.outDuration = 1
     })
 
     afterAll(function () {
         M.Dropdown.defaults.inDuration = 150
         M.Dropdown.defaults.outDuration = 250
-        M.Modal.defaults.inDuration = 250
-        M.Modal.defaults.outDuration = 250
     })
 
     beforeEach(async function () {

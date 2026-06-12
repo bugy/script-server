@@ -22,7 +22,6 @@ import ace from 'ace-builds/src-noconflict/ace'
 import 'ace-builds/src-noconflict/theme-monokai'
 import Checkbox from '@/common/components/checkbox'
 import tinycolor from 'tinycolor2'
-import '@/common/materializecss/imports/cards';
 import Combobox from '@/common/components/combobox'
 import Textfield from '@/common/components/textfield'
 import {forEachKeyValue, isEmptyString, isNull} from '@/common/utils/common'

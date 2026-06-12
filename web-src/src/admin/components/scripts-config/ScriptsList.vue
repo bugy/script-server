@@ -2,22 +2,23 @@
   <div class="container scripts-list">
     <PageProgress v-if="loading"/>
     <div v-else>
-      <router-link :to="newScriptPath" append class="waves-effect waves-light btn add-script-btn">
-        <i class="material-icons left">add</i>
+      <v-btn
+        :to="newScriptPath"
+        color="primary"
+        prepend-icon="add"
+        class="add-script-btn"
+      >
         Add
-      </router-link>
-      <div class="collection">
-
-        <template v-for="script in scripts" :key="script.name">
-          <router-link :class="{'parsing-failed': script.parsingFailed}"
-                       :to="script.path"
-                       append
-                       class="collection-item">
-            {{ script.name }}
-          </router-link>
-        </template>
-
-      </div>
+      </v-btn>
+      <v-list>
+        <v-list-item
+          v-for="script in scripts"
+          :key="script.name"
+          :to="script.parsingFailed ? undefined : script.path"
+          :title="script.parsingFailed ? script.name + ' (failed to parse config file)' : script.name"
+          :class="{'parsing-failed': script.parsingFailed}"
+        />
+      </v-list>
     </div>
   </div>
 </template>
@@ -75,13 +76,11 @@ export default {
   margin-bottom: 1em;
 }
 
-.scripts-list .collection-item.parsing-failed {
+.parsing-failed :deep(.v-list-item-title) {
   color: var(--error-color);
+}
+
+.parsing-failed {
   pointer-events: none;
 }
-
-.scripts-list .collection-item.parsing-failed::after {
-  content: '(failed to parse config file)';
-}
-
 </style>

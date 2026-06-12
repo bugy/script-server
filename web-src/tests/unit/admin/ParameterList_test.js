@@ -3,8 +3,7 @@
 import ParamListItem from '@/admin/components/scripts-config/ParamListItem';
 import ScriptParamList from '@/admin/components/scripts-config/ScriptParamList';
 import ParameterConfigForm from '@/admin/components/scripts-config/ParameterConfigForm';
-import {hasClass} from '@/common/utils/common';
-import {createScriptServerTestVue, createVue, timeout, triggerSingleClick, vueTicks} from '../test_utils';
+import {createVue, timeout, triggerSingleClick, vueTicks} from '../test_utils';
 import {setValueByUser} from './ParameterConfigForm_test';
 
 
@@ -45,45 +44,45 @@ describe('Test ScriptParamList', function () {
     }
 
     function clickOnParam(paramName) {
-        let paramItem = findParamItem(paramName);
-        expect(paramItem).not.toBeNil()
-
-        const index = list.findAllComponents(ParamListItem).findIndex(item => item.element === paramItem.element);
-        M.Collapsible.getInstance(list.element).open(index);
+        const found = list.findAllComponents(ParamListItem)
+            .find(item => item.props('param')?.name === paramName);
+        expect(found).not.toBeNil();
+        list.vm.openedPanel = found.props('panelValue');
     }
 
     function assertOpen(paramName) {
-        let paramItem = findParamItem(paramName);
-        expect(paramItem).not.toBeNil()
+        const found = list.findAllComponents(ParamListItem)
+            .find(item => item.props('param')?.name === paramName);
+        expect(found).not.toBeNil();
+        expect(list.vm.openedPanel).toBe(found.props('panelValue'));
+    }
 
-        expect(hasClass(paramItem.element, 'active')).toBeTrue()
+    function assertClosed(paramName) {
+        const found = list.findAllComponents(ParamListItem)
+            .find(item => item.props('param')?.name === paramName);
+        expect(found).not.toBeNil();
+        expect(list.vm.openedPanel).not.toBe(found.props('panelValue'));
     }
 
     function getButton(item, buttonName) {
-        const icon = [...item.element.querySelectorAll('a i')]
-            .find(elem => elem.innerHTML.trim() === buttonName);
-
-        return icon.parentNode;
+        const icon = [...item.element.querySelectorAll('i')]
+            .find(e => e.textContent.trim() === buttonName);
+        return icon?.closest('button');
     }
 
     async function clickParamAction(paramName, action) {
         const item = findParamItem(paramName);
-        
+
         const button = getButton(item, action);
         triggerSingleClick(button);
 
         await vueTicks();
     }
 
-    function assertClosed(paramName) {
-        let paramItem = findParamItem(paramName);
-        expect(paramItem).not.toBeNil()
-
-        expect(hasClass(paramItem.element, 'active')).toBeFalse()
-    }
-
     async function setValue(paramName, fieldName, value) {
-        let paramItem = findParamItem(paramName);
+        await vueTicks();  // wait for panel content to render after clickOnParam
+
+        const paramItem = findParamItem(paramName);
         expect(paramItem).not.toBeNil()
 
         const paramForm = paramItem.findComponent(ParameterConfigForm);
@@ -98,7 +97,7 @@ describe('Test ScriptParamList', function () {
         });
 
         it('Test show add param button', async function () {
-            const button = list.element.querySelector('li.add-param-item');
+            const button = list.element.querySelector('.add-param-item');
             expect(button).not.toBeNil()
         });
 
@@ -269,46 +268,29 @@ describe('Test ScriptParamList', function () {
             assertOpen('param 3');
         });
 
-        const clearToasts = () => {
-            document.body.querySelectorAll('div.toast').forEach(t => t.remove());
-        };
-        const getToasts = () => [...document.body.querySelectorAll('div.toast')];
-
-        it('Test open toast on delete', async function () {
-            clearToasts();
-
+        it('Test open snackbar on delete', async function () {
             await clickParamAction('param 2', 'delete');
 
-            const toasts = getToasts();
-
-            expect(toasts.length).toBe(1)
-            expect(toasts[0].querySelector('span').textContent).toBe('Deleted param 2')
-            expect(toasts[0].querySelector('button').textContent).toBe('Undo');
+            expect(list.vm.snackbarVisible).toBeTrue();
+            expect(list.vm.snackbarMessage).toBe('Deleted param 2');
         });
 
-        it('Test open multiple toasts on delete', async function () {
-            clearToasts();
-
+        it('Test queue multiple deletes', async function () {
             await clickParamAction('param 2', 'delete');
             await clickParamAction('param 1', 'delete');
             await clickParamAction('param 3', 'delete');
 
-            const toasts = getToasts();
-
-            expect(toasts.length).toBe(3)
-            expect(toasts[0].querySelector('span').textContent).toBe('Deleted param 2')
-            expect(toasts[1].querySelector('span').textContent).toBe('Deleted param 1')
-            expect(toasts[2].querySelector('span').textContent).toBe('Deleted param 3')
+            expect(list.vm.snackbarVisible).toBeTrue();
+            expect(list.vm.undoQueue.length).toBe(3);
+            expect(list.vm.undoQueue[0].param.name).toBe('param 2');
+            expect(list.vm.undoQueue[1].param.name).toBe('param 1');
+            expect(list.vm.undoQueue[2].param.name).toBe('param 3');
         });
 
-        it('Test undo button on toast', async function () {
-            clearToasts();
-
+        it('Test undo delete', async function () {
             await clickParamAction('param 2', 'delete');
 
-            const undoButton = document.body.querySelector('div.toast button');
-            triggerSingleClick(undoButton);
-
+            list.vm.undoDelete();
             await vueTicks();
 
             expect(findParamItem('param 2')).not.toBeNil()
@@ -317,16 +299,12 @@ describe('Test ScriptParamList', function () {
             expect(list.vm.parameters[2].name).toBe('param 3')
         });
 
-        it('Test undo button on toast after everything deleted', async function () {
-            clearToasts();
-
+        it('Test undo first delete after multiple deletes', async function () {
             await clickParamAction('param 2', 'delete');
             await clickParamAction('param 1', 'delete');
             await clickParamAction('param 3', 'delete');
 
-            const undoButton = document.body.querySelector('div.toast button');
-            triggerSingleClick(undoButton);
-
+            list.vm.undoDelete();
             await vueTicks();
 
             expect(findParamItem('param 2')).not.toBeNil()
@@ -348,7 +326,7 @@ describe('Test ScriptParamList', function () {
 
     describe('Test add parameter', function () {
         const clickAddButton = () => {
-            const addParamButton = list.element.querySelector('li.add-param-item');
+            const addParamButton = list.element.querySelector('.add-param-item');
             triggerSingleClick(addParamButton);
         };
 
@@ -360,7 +338,7 @@ describe('Test ScriptParamList', function () {
             expect(list.vm.parameters.length).toBe(4)
             expect(list.vm.parameters[3].name).toBe(undefined)
 
-            list.openingNewParam = false;
+            list.vm.openingNewParam = false;
             await timeout(100);
         });
 
@@ -376,7 +354,7 @@ describe('Test ScriptParamList', function () {
             expect(list.vm.parameters[4].name).toBe(undefined)
             expect(list.vm.parameters[5].name).toBe(undefined)
 
-            list.openingNewParam = false;
+            list.vm.openingNewParam = false;
             await timeout(100);
         });
     });
