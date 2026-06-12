@@ -1,4 +1,6 @@
-import '@/common/style_imports'
+import 'material-design-icons/iconfont/material-icons.css';
+import 'typeface-roboto';
+import '@/assets/css/shared.css';
 import {forEachKeyValue} from '@/common/utils/common';
 import {createApp} from 'vue'
 import MainApp from './MainApp.vue';

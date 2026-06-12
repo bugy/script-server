@@ -13,7 +13,6 @@
     "lodash": "^4.18.1",
     "marked": "^4.1.0",
     "material-design-icons": "^3.0.1",
-    "materialize-css": "git+https://github.com/bugy/materialize.git#90803fb",
     "tinycolor2": "^1.4.2",
     "typeface-roboto": "^1.1.13",
     "vue": "^3.4.0",

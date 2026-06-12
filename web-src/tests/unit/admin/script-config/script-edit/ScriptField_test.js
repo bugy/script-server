@@ -8,7 +8,6 @@ import {
     timeout,
     vueTicks
 } from '../../../test_utils'
-import 'materialize-css/js/dropdown'
 import {createStore as createVuexStore} from 'vuex';
 import Combobox from '@/common/components/combobox'
 import {clearArray, isEmptyArray} from '@/common/utils/common'
@@ -42,16 +41,6 @@ describe('Test ScriptField', function () {
     let store
     let changes = []
     let axiosMock
-
-    beforeAll(function () {
-        M.Dropdown.defaults.inDuration = 1
-        M.Dropdown.defaults.outDuration = 1
-    })
-
-    afterAll(function () {
-        M.Dropdown.defaults.inDuration = 150
-        M.Dropdown.defaults.outDuration = 250
-    })
 
     beforeEach(async function () {
         store = createVuexStore({

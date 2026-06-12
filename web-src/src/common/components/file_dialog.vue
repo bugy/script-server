@@ -40,13 +40,11 @@
       <div v-else class="red-text load-error-field">{{ error }}</div>
     </div>
     <div class="file-dialog-footer">
-      <a class="waves-effect btn-flat"
-         @click="onClose">Cancel</a>
-      <a class="waves-effect btn-flat"
-         @click="triggerFileChosen(null)">Clear</a>
-      <a :disabled="(selectedFile === null) || (!isChoosable(selectedFile))"
-         class="waves-effect btn-flat"
-         @click="triggerFileChosen(selectedFile)">Select</a>
+      <v-btn variant="text" @click="onClose">Cancel</v-btn>
+      <v-btn variant="text" @click="triggerFileChosen(null)">Clear</v-btn>
+      <v-btn variant="text"
+             :disabled="(selectedFile === null) || (!isChoosable(selectedFile))"
+             @click="triggerFileChosen(selectedFile)">Select</v-btn>
     </div>
   </div>
 </template>
@@ -378,8 +376,14 @@ nav {
 
 .file-dialog-footer {
   flex: none;
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
   border-top: 1px solid var(--separator-color);
+  padding: 4px;
+}
+
+.file-dialog-content:focus .collection-item.active {
+  background-color: var(--focus-color);
 }
 
 .file-dialog-content .collection {

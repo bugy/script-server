@@ -4,21 +4,18 @@
     <p v-show="scriptDescription" class="script-description" v-html="formattedDescription"/>
     <ScriptParametersView ref="parametersView"/>
     <div class="actions-panel">
-      <button :disabled="!enableExecuteButton || scheduleMode"
-              class="button-execute btn"
-              v-bind:class="{ disabled: !enableExecuteButton }"
-              @click="executeScript">
+      <v-btn color="primary"
+             :disabled="!enableExecuteButton || scheduleMode"
+             class="button-execute"
+             @click="executeScript">
         Execute
-      </button>
-      <button :disabled="!enableStopButton"
-              class="button-stop btn"
-              v-bind:class="{
-                    disabled: !enableStopButton,
-                    'red lighten-1': !killEnabled,
-                    'red darken-3': killEnabled}"
-              @click="stopScript">
+      </v-btn>
+      <v-btn :disabled="!enableStopButton"
+             :color="killEnabled ? 'red-darken-3' : 'red-lighten-1'"
+             class="button-stop"
+             @click="stopScript">
         {{ stopButtonLabel }}
-      </button>
+      </v-btn>
       <div v-if="schedulable" class="button-gap"></div>
       <ScheduleButton v-if="schedulable" :disabled="!enableScheduleButton" @click="openSchedule"/>
     </div>
@@ -34,21 +31,25 @@
     </div>
     <div v-if="downloadableFiles && (downloadableFiles.length > 0) && !scheduleMode" v-show="!hideExecutionControls"
          class="files-download-panel">
-      <a v-for="file in downloadableFiles"
-         :download="file.filename"
-         :href="file.url"
-         class="waves-effect btn-flat"
-         target="_blank">
+      <v-btn v-for="file in downloadableFiles"
+             :key="file.filename"
+             :href="file.url"
+             :download="file.filename"
+             variant="text"
+             color="primary"
+             append-icon="file_download"
+             target="_blank">
         {{ file.filename }}
-        <i class="material-icons right">file_download</i>
-      </a>
+      </v-btn>
     </div>
-    <div v-if="inputPromptText" v-show="!hideExecutionControls" class="script-input-panel input-field">
-      <label :for="'inputField-' + id" class="script-input-label">{{ inputPromptText }}</label>
-      <input :id="'inputField-' + id" ref="inputField"
-             class="script-input-field"
-             type="text"
-             v-on:keyup="inputKeyUpHandler">
+    <div v-if="inputPromptText" v-show="!hideExecutionControls" class="script-input-panel">
+      <v-text-field ref="inputField"
+                    v-model="userInput"
+                    :label="inputPromptText"
+                    density="compact"
+                    variant="underlined"
+                    hide-details
+                    @keyup.enter="onInputEnter"/>
     </div>
     <ScriptViewScheduleHolder v-if="!hideExecutionControls"
                               ref="scheduleHolder"
@@ -79,7 +80,8 @@ export default {
       nextLogIndex: 0,
       lastInlineImages: {},
       scheduleMode: false,
-      scriptConfigComponentsHeight: 0
+      scriptConfigComponentsHeight: 0,
+      userInput: ''
     }
   },
 
@@ -257,14 +259,9 @@ export default {
   },
 
   methods: {
-    inputKeyUpHandler: function (event) {
-      if (event.key === 'Enter') {
-        const inputField = this.$refs.inputField;
-
-        this.sendUserInput(inputField.value);
-
-        inputField.value = '';
-      }
+    onInputEnter: function () {
+      this.sendUserInput(this.userInput);
+      this.userInput = '';
     },
 
     validatePreExecution: function () {
@@ -340,8 +337,8 @@ export default {
       }
 
       var fieldUpdater = function () {
-        this.$refs.inputField.value = '';
-        if (!isNull(value)) {
+        this.userInput = '';
+        if (!isNull(value) && this.$refs.inputField) {
           this.$refs.inputField.focus();
         }
       }.bind(this);
@@ -501,7 +498,6 @@ export default {
 .button-stop {
   margin-left: 16px;
   flex: 1 1 104px;
-  color: var(--font-on-primary-color-main)
 }
 
 .schedule-button {
@@ -512,23 +508,6 @@ export default {
 .script-input-panel {
   margin-top: 20px;
   margin-bottom: 0;
-}
-
-.script-input-panel input[type=text] {
-  margin: 0;
-  width: 100%;
-  height: 1.5em;
-  font-size: 1rem;
-}
-
-.script-input-panel > label {
-  transform: translateY(-30%);
-  margin-left: 2px;
-}
-
-.script-input-panel.input-field > label.active {
-  color: var(--primary-color);
-  transform: translateY(-70%) scale(0.8);
 }
 
 .validation-panel {
@@ -555,19 +534,9 @@ export default {
   margin-top: 12px;
 }
 
-.files-download-panel a {
-  color: var(--primary-color);
-  padding-left: 16px;
-  padding-right: 16px;
+.files-download-panel :deep(.v-btn) {
   margin-right: 8px;
   text-transform: none;
-}
-
-.files-download-panel a > i {
-  margin-left: 8px;
-  vertical-align: middle;
-  font-size: 1.5em;
-  line-height: 2em;
 }
 
 .script-view :deep(.log-panel) {

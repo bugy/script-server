@@ -1,8 +1,6 @@
 import '@/assets/css/index.css';
-import '@/common/materializecss/imports/cards';
-import '@/common/materializecss/imports/input-fields';
-import '@/common/style_imports';
-import '@/common/style_imports.js';
+import '@/assets/css/shared.css';
+import 'typeface-roboto';
 import {axiosInstance} from '@/common/utils/axios_utils'
 import {
     addClass,
@@ -69,8 +67,6 @@ function onLoad() {
 function setupCredentials(loginContainer) {
     var credentialsTemplate = createTemplateElement('login-credentials-template');
     loginContainer.appendChild(credentialsTemplate);
-
-    M.updateTextFields();
 
     const form = loginContainer.getElementsByClassName('login-form')[0];
     form.action = loginUrl;

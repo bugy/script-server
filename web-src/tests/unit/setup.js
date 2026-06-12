@@ -10,12 +10,6 @@ import jestExtended from 'jest-extended'
 import {config, enableAutoUnmount} from '@vue/test-utils'
 import vueDirectives from '@/common/vueDirectives'
 import {forEachKeyValue} from '@/common/utils/common'
-// Populate the global materialize `M` (and the `Component` base class) the same
-// way the running app does. In the app, importing any materialize piece sets up
-// the shared global `M`; components such as TimePicker reference `M.updateTextFields`
-// / `M.validate_field` (from materialize forms) without importing it themselves.
-// Loading input-fields here pulls in `global` + `forms` so that global exists in tests.
-import '@/common/materializecss/imports/input-fields'
 import vuetify from '@/common/vuetifyPlugin'
 
 expect.extend(domMatchers)
@@ -51,11 +45,8 @@ if (!globalThis.visualViewport) {
 // Vuetify components (migration in progress) need the plugin on every mount.
 config.global.plugins = [vuetify]
 
-// jsdom has no layout engine, so HTMLElement.offsetParent is always null. Some
-// materialize-css components (e.g. Dropdown positioning) call
-// `el.offsetParent.getBoundingClientRect()` and would crash. Provide a sane
-// fallback so those components can run under jsdom. (Karma used a real browser.)
-// Note: jsdom already defines offsetParent (returning null); override it forcibly.
+// jsdom has no layout engine; override offsetParent so code walking the chain
+// (e.g. Vuetify's isFixedPosition) doesn't crash under jsdom.
 Object.defineProperty(globalThis.HTMLElement.prototype, 'offsetParent', {
     configurable: true,
     get() {
@@ -69,9 +60,7 @@ Object.defineProperty(globalThis.HTMLElement.prototype, 'offsetParent', {
     }
 })
 
-// jsdom doesn't implement scrollIntoView at all (no layout engine). Several
-// components and materialize helpers call it; stub it as a no-op so they don't
-// throw under jsdom (an unhandled throw from a timer/interval can fail the run).
+// jsdom doesn't implement scrollIntoView; stub it so Vuetify components don't throw.
 if (!globalThis.Element.prototype.scrollIntoView) {
     globalThis.Element.prototype.scrollIntoView = function () {}
 }

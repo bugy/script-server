@@ -1,5 +1,6 @@
-import '@/common/materializecss/imports/tabs'
-import '@/common/style_imports';
+import 'material-design-icons/iconfont/material-icons.css';
+import 'typeface-roboto';
+import '@/assets/css/shared.css';
 import {createApp} from 'vue';
 import AdminApp from './AdminApp';
 import router from './router/router';
