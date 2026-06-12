@@ -1,59 +1,47 @@
 'use strict';
 import ScriptView from '@/main-app/components/scripts/script-view';
 import {mount} from '@vue/test-utils';
-import {createStore as createVuexStore} from 'vuex';
+import {createPinia, setActivePinia} from 'pinia';
+import {useScriptConfigStore} from '@/main-app/stores/scriptConfig';
+import {useExecutionsStore} from '@/main-app/stores/executions';
+import {useScriptsStore} from '@/main-app/stores/scripts';
 import {attachToDocument, createScriptServerTestVue} from '../../../test_utils'
+
 describe('Test ScriptView', function () {
     let scriptView;
-    let store;
+    let pinia;
 
     beforeEach(async function () {
-        store = createVuexStore({
-            modules: {
-                scripts: {
-                    namespaced: true,
-                    state: {
-                        selectedScript: 'abc'
-                    }
-                },
-                scriptConfig: {
-                    namespaced: true,
-                    state: {
-                        scriptConfig: {
-                            description: ''
-                        },
-                        loading: false
-                    }
-                },
-                executions: {
-                    namespaced: true,
-                    state: {
-                        currentExecutor: null,
-                        executors: {}
-                    },
-                    actions: {
-                        selectExecutor({state}, executor) {
-                            state.currentExecutor = executor;
-                        }
-                    }
-                }
-            }
+        pinia = createPinia();
+        setActivePinia(pinia);
+
+        const scriptConfigStore = useScriptConfigStore();
+        scriptConfigStore.scriptConfig = {description: ''};
+        scriptConfigStore.loading = false;
+
+        useScriptsStore().selectedScript = 'abc';
+
+        // Stub selectExecutor to prevent side-effects
+        const executionsStore = useExecutionsStore();
+        vi.spyOn(executionsStore, 'selectExecutor').mockImplementation((executor) => {
+            executionsStore.currentExecutor = executor;
         });
 
         scriptView = mount(ScriptView, {
             attachTo: attachToDocument(),
-            global: {plugins: [store]},
+            global: {plugins: [pinia]},
         });
         await scriptView.vm.$nextTick();
     });
 
     afterEach(function () {
         scriptView.unmount();
+        vi.restoreAllMocks();
     });
 
     describe('Test log content', function () {
         it('test init with logs', async function () {
-            store.state.executions.currentExecutor = {
+            useExecutionsStore().currentExecutor = {
                 state: {
                     id: 1,
                     scriptName: 'my script',
@@ -65,7 +53,7 @@ describe('Test ScriptView', function () {
 
             const newScriptView = mount(ScriptView, {
                 attachTo: attachToDocument(),
-                global: {plugins: [store]},
+                global: {plugins: [pinia]},
             });
             await newScriptView.vm.$nextTick();
 

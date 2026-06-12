@@ -9,8 +9,8 @@
 </template>
 
 <script>
-import {mapState} from 'vuex';
 import SchedulePanel from '@/main-app/components/schedule/SchedulePanel';
+import {useScriptConfigStore} from '@/main-app/stores/scriptConfig'
 
 export default {
   name: 'ScriptViewScheduleHolder',
@@ -45,9 +45,9 @@ export default {
   },
 
   computed: {
-    ...mapState('scriptConfig', {
-      scriptConfig: 'scriptConfig'
-    }),
+    scriptConfig() {
+      return useScriptConfigStore().scriptConfig
+    }
   },
 
   methods: {

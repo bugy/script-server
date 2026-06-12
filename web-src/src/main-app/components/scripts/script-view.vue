@@ -67,9 +67,12 @@ import ScriptLoadingText from '@/main-app/components/scripts/ScriptLoadingText';
 import ScriptViewScheduleHolder from '@/main-app/components/scripts/ScriptViewScheduleHolder';
 import DOMPurify from 'dompurify';
 import {marked} from 'marked';
-import {mapActions, mapState} from 'vuex'
-import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
+import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '@/main-app/stores/scriptExecutor';
 import ScriptParametersView from './script-parameters-view'
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useScriptConfigStore} from '@/main-app/stores/scriptConfig'
+import {useScriptSetupStore} from '@/main-app/stores/scriptSetup'
+import {useExecutionsStore} from '@/main-app/stores/executions'
 
 export default {
   data: function () {
@@ -102,21 +105,33 @@ export default {
   },
 
   computed: {
-    ...mapState('scriptConfig', {
-      scriptDescription: state => state.scriptConfig ? state.scriptConfig.description : '',
-      loading: 'loading',
-      scriptConfig: 'scriptConfig',
-      outputFormat: state => state.scriptConfig ? state.scriptConfig.outputFormat : undefined,
-      preloadOutput: state => state.preloadScript?.['output'],
-      preloadOutputFormat: state => state.preloadScript?.['format']
-    }),
-    ...mapState('scriptSetup', {
-      parameterErrors: 'errors'
-    }),
-    ...mapState('executions', {
-      currentExecutor: 'currentExecutor'
-    }),
-    ...mapState('scripts', ['selectedScript']),
+    scriptDescription() {
+      return useScriptConfigStore().scriptConfig?.description ?? ''
+    },
+    loading() {
+      return useScriptConfigStore().loading
+    },
+    scriptConfig() {
+      return useScriptConfigStore().scriptConfig
+    },
+    outputFormat() {
+      return useScriptConfigStore().scriptConfig?.outputFormat
+    },
+    preloadOutput() {
+      return useScriptConfigStore().preloadScript?.['output']
+    },
+    preloadOutputFormat() {
+      return useScriptConfigStore().preloadScript?.['format']
+    },
+    parameterErrors() {
+      return useScriptSetupStore().errors
+    },
+    currentExecutor() {
+      return useExecutionsStore().currentExecutor
+    },
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    },
 
     hasErrors: function () {
       return !isNull(this.shownErrors) && (this.shownErrors.length > 0);
@@ -295,28 +310,22 @@ export default {
       this.scheduleMode = true;
     },
 
-    ...mapActions('executions', {
-      startExecution: 'startExecution'
-    }),
+    startExecution() {
+      useExecutionsStore().startExecution()
+    },
 
     stopScript() {
-      if (isNull(this.currentExecutor)) {
-        return;
-      }
-
+      if (isNull(this.currentExecutor)) return
       if (this.killEnabled) {
-        this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/killExecution');
+        this.currentExecutor.killExecution()
       } else {
-        this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/stopExecution');
+        this.currentExecutor.stopExecution()
       }
     },
 
     sendUserInput(value) {
-      if (isNull(this.currentExecutor)) {
-        return;
-      }
-
-      this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/sendUserInput', value);
+      if (isNull(this.currentExecutor)) return
+      this.currentExecutor.sendUserInput(value)
     },
 
     setLog: function (text) {
@@ -447,7 +456,7 @@ export default {
     status: {
       handler(newStatus) {
         if (newStatus === STATUS_FINISHED) {
-          this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/cleanup');
+          this.currentExecutor.cleanup()
         }
       }
     }

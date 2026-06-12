@@ -21,29 +21,33 @@
 </template>
 
 <script>
-import {mapActions, mapState} from 'vuex';
 import File_upload from '@/common/components/file_upload'
+import {useAdminUiStore} from '@/admin/stores/ui'
+import {useAuthStore} from '@/common/stores/auth'
 
 export default {
   name: 'AdminApp',
   components: {File_upload},
 
   mounted() {
-    this.init()
+    useAuthStore().init()
   },
 
   computed: {
-    ...mapState(['subheader'])
+    subheader() {
+      return useAdminUiStore().subheader
+    }
   },
 
   methods: {
-    ...mapActions(['setSubheader']),
-    ...mapActions('auth', ['init'])
+    setSubheader(val) {
+      useAdminUiStore().setSubheader(val)
+    }
   },
 
   watch: {
     $route() {
-      this.setSubheader(null);
+      useAdminUiStore().setSubheader(null)
     }
   }
 }

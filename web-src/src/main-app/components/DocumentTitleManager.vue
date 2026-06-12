@@ -4,20 +4,24 @@
 
 <script>
 import {isNull} from '@/common/utils/common';
-import {mapState} from 'vuex';
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useServerConfigStore} from '@/main-app/stores/serverConfig'
 
 const defaultTitle = document.title;
 
 export default {
   name: 'DocumentTitleManager',
   computed: {
-    ...mapState('scripts', {
-      selectedScript: 'selectedScript'
-    }),
-    ...mapState('serverConfig', {
-      serverName: state => state.serverName || defaultTitle,
-      enableScriptTitles: state => isNull(state.enableScriptTitles) || state.enableScriptTitles
-    })
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    },
+    serverName() {
+      return useServerConfigStore().serverName || defaultTitle
+    },
+    enableScriptTitles() {
+      const val = useServerConfigStore().enableScriptTitles
+      return isNull(val) || val
+    }
   },
 
   methods: {

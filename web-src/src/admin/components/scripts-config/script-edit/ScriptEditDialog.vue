@@ -36,7 +36,7 @@
       </v-card-text>
       <v-card-actions :class="{borderless: inEditorMode}" class="justify-space-between px-4 py-2">
         <span v-if="hasIgnoredChanges" class="ignored-changes-warning">
-          <i class="material-icons">error_outline</i>
+          <v-icon>error_outline</v-icon>
           Changes in non-active tabs will be ignored
         </span>
         <span v-else/>

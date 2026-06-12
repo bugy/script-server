@@ -37,9 +37,9 @@
 </template>
 
 <script>
-import {mapState} from 'vuex';
 import ClearIcon from '@/assets/clear.png'
 import SearchIcon from '@/assets/search.png'
+import {useHistoryStore} from '@/common/stores/history'
 
 export default {
   name: 'executions-log-table',
@@ -85,7 +85,9 @@ export default {
   },
 
   computed: {
-    ...mapState('history', ['loading']),
+    loading() {
+      return useHistoryStore().loading
+    },
 
     isClearSearchButton() {
       return this.searchText !== '';

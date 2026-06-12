@@ -12,7 +12,7 @@
           <div class="path-breadcrumbs">
             <a class="breadcrumb"
                href="#"
-               @click.prevent="openPath([])"><i class="material-icons">home</i></a>
+               @click.prevent="openPath([])"><v-icon>home</v-icon></a>
             <a v-if="path.length > 3" class="breadcrumb" href="#"
                @click.prevent="navigateUp(2)">...</a>
             <template v-for="(item, index) in path" :key="index">
@@ -33,7 +33,7 @@
             class="collection-item"
             @click="selectFile(file)"
             v-on:dblclick="onFileAction(file)">
-          <i class="material-icons">{{ getIcon(file) }}</i>
+          <v-icon>{{ getIcon(file) }}</v-icon>
           <span>{{ file.name }}</span>
         </li>
       </ul>

@@ -27,9 +27,8 @@
 </template>
 
 <script>
-import {NEW_SCRIPT} from '@/admin/store/script-config-module';
+import {NEW_SCRIPT, useAdminScriptConfigStore} from '@/admin/stores/scriptConfig';
 import PromisableButton from '@/common/components/PromisableButton';
-import {mapActions, mapState} from 'vuex';
 import ParameterConfigForm from './ParameterConfigForm';
 import ScriptConfigForm from './ScriptConfigForm';
 import ScriptParamList from './ScriptParamList';
@@ -43,17 +42,24 @@ export default {
     }
   },
 
-  methods: {
-    ...mapActions('scriptConfig', ['init', 'save', 'deleteScript'])
+  computed: {
+    scriptConfig() {
+      return useAdminScriptConfigStore().scriptConfig
+    },
+    loadingError() {
+      return useAdminScriptConfigStore().error
+    },
+    NEW_SCRIPT() {
+      return NEW_SCRIPT
+    }
   },
 
-  computed: {
-    ...mapState('scriptConfig', {
-      scriptConfig: 'scriptConfig',
-      loadingError: 'error'
-    }),
-    NEW_SCRIPT() {
-      return NEW_SCRIPT;
+  methods: {
+    save() {
+      return useAdminScriptConfigStore().save()
+    },
+    deleteScript() {
+      return useAdminScriptConfigStore().deleteScript()
     }
   },
 
@@ -61,7 +67,7 @@ export default {
     scriptName: {
       immediate: true,
       handler(scriptName) {
-        this.init(scriptName);
+        useAdminScriptConfigStore().init(scriptName)
       }
     }
   }

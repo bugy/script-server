@@ -8,7 +8,8 @@ import {
     timeout,
     vueTicks
 } from '../../../test_utils'
-import {createStore as createVuexStore} from 'vuex';
+import {createPinia, setActivePinia} from 'pinia';
+import {useAuthStore} from '@/common/stores/auth';
 import Combobox from '@/common/components/combobox'
 import {clearArray, isEmptyArray} from '@/common/utils/common'
 import ace from 'ace-builds/src-noconflict/ace'
@@ -38,23 +39,16 @@ const PATH_MODE = 'Path on server'
 
 describe('Test ScriptField', function () {
     let scriptField
-    let store
+    let pinia
     let changes = []
     let axiosMock
 
     beforeEach(async function () {
-        store = createVuexStore({
-            modules: {
-                auth: {
-                    namespaced: true,
-                    state: {
-                        canEditCode: true
-                    }
-                }
-            }
-        })
+        pinia = createPinia();
+        setActivePinia(pinia);
+        useAuthStore().canEditCode = true;
 
-        scriptField = createScriptField(store, changes, {
+        scriptField = createScriptField(pinia, changes, {
                 originalPath: '',
                 newConfig: true,
                 configName: ''
@@ -81,7 +75,7 @@ describe('Test ScriptField', function () {
         });
 
         it('Test no button when no access', async function () {
-            store.state.auth.canEditCode = false
+            useAuthStore().canEditCode = false
 
             await vueTicks()
 
@@ -321,7 +315,7 @@ describe('Test ScriptField', function () {
 
             scriptField.unmount()
 
-            scriptField = createScriptField(store, changes, {
+            scriptField = createScriptField(pinia, changes, {
                     originalPath: '/home/user/my_script.sh',
                     newConfig: false,
                     configName: 'Existing'
@@ -533,7 +527,7 @@ describe('Test ScriptField', function () {
         })
 
         async function init() {
-            scriptField = createScriptField(store, changes, {
+            scriptField = createScriptField(pinia, changes, {
                     originalPath: '/home/user/my_script.sh',
                     newConfig: false,
                     configName: 'Existing'
@@ -711,10 +705,10 @@ describe('Test ScriptField', function () {
         expect(dialogWrapper.get('.code-editor .textfield input').element.value).toBe(path)
     }
 
-    function createScriptField(store, changes, props) {
+    function createScriptField(pinia, changes, props) {
         // Vue 3 removed vm.$on; register the 'change' listener via an onChange prop.
         const scriptField = mount(ScriptField, {
-            global: {plugins: [store]},
+            global: {plugins: [pinia]},
             attachTo: attachToDocument(),
             props: {
                 ...props,

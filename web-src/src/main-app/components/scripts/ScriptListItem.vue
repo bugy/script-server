@@ -24,7 +24,8 @@
 
 <script>
 import {forEachKeyValue} from '@/common/utils/common';
-import {mapState} from 'vuex';
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useExecutionsStore} from '@/main-app/stores/executions'
 import {scriptNameToHash} from '../../utils/model_helper';
 
 export default {
@@ -44,7 +45,9 @@ export default {
         parsingFailed: this.script.parsing_failed
       }
     },
-    ...mapState('scripts', ['selectedScript'])
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    }
   },
   methods: {
     getState(scriptName) {
@@ -53,7 +56,7 @@ export default {
       }
 
       let state = 'idle';
-      forEachKeyValue(this.$store.state.executions.executors, function (id, executor) {
+      forEachKeyValue(useExecutionsStore().executors, function (id, executor) {
         if (executor.state.scriptName !== scriptName) {
           return;
         }

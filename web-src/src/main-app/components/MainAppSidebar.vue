@@ -14,9 +14,7 @@
       <SearchPanel v-model="searchText"/>
 
       <div class="header-link">
-        <a v-if="adminUser" class="primary-color-text" href="admin.html">
-          <i class="material-icons">settings</i>
-        </a>
+        <v-btn v-if="adminUser" icon="settings" variant="text" color="primary" density="compact" href="admin.html" />
         <a v-else href="https://github.com/knep/script-server" target="_blank">
           <svg aria-hidden="true" class="svg-icon github-icon" height="20px" viewBox="0 0 16 16" width="20px">
             <path
@@ -45,9 +43,12 @@
 </template>
 
 <script>
-import {mapActions, mapState} from 'vuex';
 import ScriptsList from './scripts/ScriptsList'
 import SearchPanel from './SearchPanel';
+import {useServerConfigStore} from '@/main-app/stores/serverConfig'
+import {useAuthStore} from '@/common/stores/auth'
+import {useExecutionsStore} from '@/main-app/stores/executions'
+import {logError} from '@/common/utils/common'
 
 export default {
   name: 'MainAppSidebar',
@@ -63,19 +64,31 @@ export default {
   },
 
   computed: {
-    ...mapState('serverConfig', {
-      versionString: state => state.version ? 'v' + state.version : null,
-      serverName: 'serverName'
-    }),
-    ...mapState('auth', {
-      adminUser: 'admin',
-      username: 'username',
-      authEnabled: 'enabled'
-    })
+    versionString() {
+      const v = useServerConfigStore().version
+      return v ? 'v' + v : null
+    },
+    serverName() {
+      return useServerConfigStore().serverName
+    },
+    adminUser() {
+      return useAuthStore().admin
+    },
+    username() {
+      return useAuthStore().username
+    },
+    authEnabled() {
+      return useAuthStore().enabled
+    }
   },
 
   methods: {
-    ...mapActions(['logout'])
+    logout() {
+      useExecutionsStore().stopAll()
+          .then(() => useAuthStore().logout())
+          .then(() => location.reload())
+          .catch(e => e && logError(e))
+    }
   }
 }
 </script>

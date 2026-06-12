@@ -4,6 +4,27 @@
 
 ## What's new in this fork
 
+### 2026-06-12 — State management migrated from Vuex to Pinia
+
+The frontend store layer has been fully migrated from Vuex 4 to [Pinia](https://pinia.vuejs.org/)
+(the official Vue 3 store). Vuex has been removed from the dependency tree.
+
+**What changed:**
+
+- All Vuex modules (`src/*/store/`) replaced by Pinia stores (`src/*/stores/`).
+- `defineStore` with Options API style (state / getters / actions) — no `context.commit`,
+  no `dispatch`, just `this.field` and direct action calls.
+- Dynamic Vuex modules (the per-execution `scriptExecutor` module) replaced by a
+  `createExecutor()` factory that returns a `reactive()` object.
+- Circular-import workarounds using runtime `require()` inside action bodies replaced by
+  straightforward top-level ES module imports (no actual circular imports existed).
+- All 14 unit test files updated: `createVuexStore` → `createPinia` + `setActivePinia`,
+  store mutations replaced by direct property assignment on the Pinia store instance,
+  `vi.spyOn` used to stub actions with side-effects.
+- `execution-details` date assertion made locale-independent.
+- `ExecutionInstanceTabs` tests updated for Vuetify 4 DOM structure (buttons instead of
+  list items, `v-tab--selected` instead of `active`).
+
 ### 2026-06-12 — UI migration to Vuetify 4 — complete
 
 The frontend has been fully migrated from the unmaintained materialize-css to

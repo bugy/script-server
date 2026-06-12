@@ -7,8 +7,8 @@
       variant="text"
       @click="onClick">
 
-    <i v-if="iconText && !error" class="material-icons button-icon">{{ iconText }}</i>
-    <i v-if="error" :title="error" class="material-icons button-icon">warning</i>
+    <v-icon v-if="iconText && !error" class="button-icon">{{ iconText }}</v-icon>
+    <v-icon v-if="error" :title="error" class="button-icon">warning</v-icon>
     {{ title }}
   </v-btn>
 </template>

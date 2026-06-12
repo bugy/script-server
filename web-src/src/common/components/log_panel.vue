@@ -7,10 +7,10 @@
              'shadow-top-bottom': !atTop && !atBottom}">
     </div>
     <a class="copy-text-button btn-icon-flat waves-effect waves-circle" @click="copyLogToClipboard">
-      <i class="material-icons">content_copy</i>
+      <v-icon>content_copy</v-icon>
     </a>
     <a class="download-text-button btn-icon-flat waves-effect waves-circle" @click="downloadLog">
-      <i class="material-icons">file_download</i>
+      <v-icon>file_download</v-icon>
     </a>
   </div>
 </template>

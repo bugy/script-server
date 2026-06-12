@@ -1,27 +1,24 @@
 'use strict';
-import scripts from '@/admin/store/scripts-module'
+import {useAdminScriptsStore} from '@/admin/stores/scripts';
 import {axiosInstance} from '@/common/utils/axios_utils';
 import MockAdapter from 'axios-mock-adapter';
-import {createStore as createVuexStore} from 'vuex';
+import {createPinia, setActivePinia} from 'pinia';
 import {createScriptServerTestVue} from '../test_utils'
+
 let axiosMock;
 const flushPromises = () => new Promise(resolve => setTimeout(resolve));
 
 
 function mockGetScripts(scripts) {
-    axiosMock.onGet('scripts')
-        .reply(200, {scripts});
+    axiosMock.onGet('scripts').reply(200, {scripts});
 }
 
 describe('Test admin script module', function () {
     let store;
 
     beforeEach(async function () {
-        store = createVuexStore({
-            modules: {
-                scripts: scripts
-            }
-        });
+        setActivePinia(createPinia());
+        store = useAdminScriptsStore();
 
         axiosMock = new MockAdapter(axiosInstance)
     });
@@ -35,12 +32,12 @@ describe('Test admin script module', function () {
         it('test load single script', async function () {
             mockGetScripts([{'name': 'script1'}]);
 
-            await store.dispatch('scripts/init');
+            await store.init();
             await flushPromises();
 
-            expect(store.state.scripts.scripts).toEqual(
+            expect(store.scripts).toEqual(
                 [{'name': 'script1', 'parsingFailed': undefined}])
-            expect(store.state.scripts.loading).toBeFalse()
+            expect(store.loading).toBeFalse()
         });
 
         it('test load multiple unsorted scripts', async function () {
@@ -49,15 +46,15 @@ describe('Test admin script module', function () {
                 {'name': 'xyz', 'parsing_failed': false},
                 {'name': 'abc', 'parsing_failed': true}]);
 
-            await store.dispatch('scripts/init');
+            await store.init();
             await flushPromises();
 
-            expect(store.state.scripts.scripts).toEqual([
+            expect(store.scripts).toEqual([
                 {'name': 'abc', 'parsingFailed': true},
                 {'name': 'def', 'parsingFailed': undefined},
                 {'name': 'xyz', 'parsingFailed': false}
             ])
-            expect(store.state.scripts.loading).toBeFalse()
+            expect(store.loading).toBeFalse()
         });
         }
     )

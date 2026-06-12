@@ -25,14 +25,16 @@
 
 <script>
 import PageProgress from '@/common/components/PageProgress';
-import {mapActions, mapState} from 'vuex';
-import {NEW_SCRIPT} from '../../store/script-config-module';
+import {NEW_SCRIPT} from '@/admin/stores/scriptConfig';
+import {useAdminScriptsStore} from '@/admin/stores/scripts';
 
 export default {
   name: 'ScriptsList',
 
-  mounted: function () {
-    this.init();
+  components: {PageProgress},
+
+  mounted() {
+    useAdminScriptsStore().init()
   },
 
   data() {
@@ -42,26 +44,19 @@ export default {
   },
 
   computed: {
-    ...mapState('scripts', {
-      scripts: state => {
-        return state.scripts
-            ? state.scripts.map(s => ({
-              name: s.name,
-              path: encodeURIComponent(s.name),
-              parsingFailed: s.parsingFailed
-            }))
-            : []
-      },
-      loading: 'loading'
-    })
-  },
-
-  components: {
-    PageProgress
-  },
-
-  methods: {
-    ...mapActions('scripts', ['init'])
+    scripts() {
+      const raw = useAdminScriptsStore().scripts
+      return raw
+          ? raw.map(s => ({
+            name: s.name,
+            path: encodeURIComponent(s.name),
+            parsingFailed: s.parsingFailed
+          }))
+          : []
+    },
+    loading() {
+      return useAdminScriptsStore().loading
+    }
   }
 }
 </script>

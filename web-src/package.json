@@ -13,12 +13,12 @@
     "lodash": "^4.18.1",
     "marked": "^4.1.0",
     "material-design-icons": "^3.0.1",
+    "pinia": "^3.0.4",
     "tinycolor2": "^1.4.2",
     "typeface-roboto": "^1.1.13",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0",
-    "vuetify": "^4.1.1",
-    "vuex": "^4.1.0"
+    "vuetify": "^4.1.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

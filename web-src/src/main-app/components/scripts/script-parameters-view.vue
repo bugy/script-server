@@ -31,8 +31,9 @@ import TextArea from '@/common/components/TextArea'
 import Textfield from '@/common/components/textfield'
 import {isNull} from '@/common/utils/common';
 import ParameterSeparator from '@/main-app/components/scripts/ParameterSeparator.vue';
-import {mapActions, mapState} from 'vuex'
 import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
+import {useScriptConfigStore} from '@/main-app/stores/scriptConfig'
+import {useScriptSetupStore} from '@/main-app/stores/scriptSetup'
 
 export default {
   name: 'script-parameters-view',
@@ -45,13 +46,15 @@ export default {
   },
 
   computed: {
-    ...mapState('scriptConfig', {
-      parameters: 'parameters'
-    }),
-    ...mapState('scriptSetup', {
-      parameterValues: 'parameterValues',
-      forcedValueParameters: 'forcedValueParameters'
-    })
+    parameters() {
+      return useScriptConfigStore().parameters
+    },
+    parameterValues() {
+      return useScriptSetupStore().parameterValues
+    },
+    forcedValueParameters() {
+      return useScriptSetupStore().forcedValueParameters
+    }
   },
 
   mounted() {
@@ -67,10 +70,12 @@ export default {
   },
 
   methods: {
-    ...mapActions('scriptSetup', {
-      setParameterValueInStore: 'setParameterValue',
-      setParameterErrorInStore: 'setParameterError'
-    }),
+    setParameterValueInStore({parameterName, value}) {
+      useScriptSetupStore().setParameterValue({parameterName, value})
+    },
+    setParameterErrorInStore({parameterName, errorMessage}) {
+      useScriptSetupStore().setParameterError({parameterName, errorMessage})
+    },
     getComponentType(parameter) {
       if (parameter.withoutValue) {
         return Checkbox;

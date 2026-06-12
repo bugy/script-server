@@ -18,7 +18,7 @@
     </v-expansion-panels>
 
     <div class="add-param-item" @click.stop="addParam">
-      <i class="material-icons">add</i>Add
+      <v-icon>add</v-icon>Add
     </div>
 
     <v-snackbar v-model="snackbarVisible" :timeout="8000">

@@ -3,11 +3,14 @@
     <h2 v-show="selectedScript" class="header">{{ selectedScript }}</h2>
     <ExecutionInstanceTabs/>
     <div class="spacer"></div>
-    <button class="button-history btn btn-flat"
-            @click="openParameterHistory"
-            title="Parameter History">
-      <i class="material-icons">history</i>
-    </button>
+    <v-btn
+      icon="history"
+      variant="text"
+      density="compact"
+      class="button-history"
+      title="Parameter History"
+      @click="openParameterHistory"
+    />
     <ParameterHistoryModal ref="parameterHistoryModal" :scriptName="selectedScript" @use-parameters="handleUseParameters"/>
   </div>
 </template>
@@ -15,17 +18,17 @@
 <script>
 import ExecutionInstanceTabs from '@/main-app/components/scripts/ExecutionInstanceTabs';
 import ParameterHistoryModal from '@/main-app/components/scripts/ParameterHistoryModal';
-import {mapState} from 'vuex';
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useScriptSetupStore} from '@/main-app/stores/scriptSetup'
 
 export default {
   name: 'ScriptHeader',
 
   components: {ExecutionInstanceTabs, ParameterHistoryModal},
   computed: {
-    ...mapState('scripts', {
-      selectedScript: 'selectedScript'
-    }),
-    ...mapState('executions', ['currentExecutor', 'executors'])
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    }
   },
   methods: {
     openParameterHistory() {
@@ -33,9 +36,8 @@ export default {
     },
 
     handleUseParameters(values) {
-      // Set all parameter values using the scriptSetup store
       for (const [parameterName, value] of Object.entries(values)) {
-        this.$store.dispatch('scriptSetup/setParameterValue', { parameterName, value });
+        useScriptSetupStore().setParameterValue({parameterName, value})
       }
     }
   }
@@ -69,15 +71,6 @@ export default {
 
 .button-history {
   margin-right: 16px;
-  width: 40px;
-  height: 40px;
-  line-height: 40px;
-  padding: 0;
-  min-width: 40px;
   color: var(--font-color-medium);
-}
-
-.button-history i {
-  font-size: 24px;
 }
 </style>

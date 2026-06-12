@@ -1,22 +1,14 @@
-import scriptExecutor from '@/main-app/store/scriptExecutor';
+import {createExecutor} from '@/main-app/stores/scriptExecutor';
 
 import {axiosInstance} from '@/common/utils/axios_utils';
 import MockAdapter from 'axios-mock-adapter';
 import {Server, WebSocket} from 'mock-socket';
 import * as sinon from 'sinon';
-import {createStore as createVuexStore} from 'vuex';
 import {createScriptServerTestVue, timeout} from './test_utils'
 
 let axiosMock;
 
 window.WebSocket = WebSocket;
-function createStore() {
-    return createVuexStore({
-        modules: {
-            scriptExecutor: scriptExecutor(123, 'my script', {})
-        }
-    });
-}
 
 function mockStopEndpoint(id) {
     const spy = sinon.spy(function () {
@@ -41,6 +33,7 @@ function mockExecutionStatus(id, status) {
 describe('Test scriptExecutor module', function () {
     let currentSocket = null;
     let websocketServer = null;
+    let executor;
 
     beforeEach(function () {
         axiosMock = new MockAdapter(axiosInstance)
@@ -52,6 +45,8 @@ describe('Test scriptExecutor module', function () {
         websocketServer.on('connection', socket => {
             currentSocket = socket;
         });
+
+        executor = createExecutor(123, 'my script', {});
     });
     afterEach(function () {
         axiosMock.restore()
@@ -66,85 +61,76 @@ describe('Test scriptExecutor module', function () {
     }
 
     describe('Test basic features', function () {
-        let store;
 
         beforeEach(async function () {
-            store = createStore();
-
-            await store.dispatch('scriptExecutor/reconnect');
+            await executor.reconnect();
         });
 
         it('Test stop script', async function () {
             const spy = mockStopEndpoint(123);
 
-            await store.dispatch('scriptExecutor/stopExecution');
+            await executor.stopExecution();
 
             expect(spy.calledOnce).toBeTrue()
-            expect(store.state.scriptExecutor.status).toBe('executing')
+            expect(executor.state.status).toBe('executing')
         });
 
         it('Test error status', async function () {
-            await store.dispatch('scriptExecutor/setErrorStatus');
+            executor.setErrorStatus();
 
-            expect(store.state.scriptExecutor.status).toBe('error')
+            expect(executor.state.status).toBe('error')
         });
     });
 
     describe('Test socket disconnect', function () {
-        let store;
 
         beforeEach(async function () {
-            store = createStore();
-
-            await store.dispatch('scriptExecutor/reconnect');
+            await executor.reconnect();
         });
 
         it('Test socket closed on finish', async function () {
             await mockSocketClose(1000, 'xyz');
 
-            expect(store.state.scriptExecutor.status).toBe('finished')
+            expect(executor.state.status).toBe('finished')
         });
 
         it('Test socket closed on disconnect when finished', async function () {
             await mockSocketClose(1006, 'finished');
 
-            expect(store.state.scriptExecutor.status).toBe('finished')
+            expect(executor.state.status).toBe('finished')
         });
 
         it('Test socket closed on disconnect when executing', async function () {
             await mockSocketClose(1006, 'executing');
 
-            expect(store.state.scriptExecutor.status).toBe('disconnected')
+            expect(executor.state.status).toBe('disconnected')
         });
 
         it('Test socket closed on disconnect when get status error', async function () {
             await mockSocketClose(1006, new Error('test message'));
 
-            expect(store.state.scriptExecutor.status).toBe('error')
+            expect(executor.state.status).toBe('error')
         });
     });
 
     describe('Test kill enabling', function () {
-        let store;
 
         beforeEach(async function () {
-            store = createStore();
-
             mockStopEndpoint(123);
-            await store.dispatch('scriptExecutor/reconnect');
+            await executor.reconnect();
         });
 
         it('Test kill fields default', async function () {
-            expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-            expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-            expect(store.state.scriptExecutor.killTimeoutSec).toBeNil()
+            expect(executor.state.killEnabled).toBeFalse()
+            expect(executor.state.killEnabled).toBeFalse()
+            expect(executor.state.killTimeoutSec).toBeNil()
         });
 
         it('Test kill fields immediately after stop', async function () {
-            await store.dispatch('scriptExecutor/stopExecution');
+            await executor.stopExecution();
 
-            expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-            expect(store.state.scriptExecutor.killTimeoutSec).toBe(5)
+            expect(executor.state.killEnabled).toBeFalse()
+            expect(executor.state.killTimeoutSec).toBe(5)
         });
 
         // The kill countdown uses setInterval(..., oneSecDelay) with oneSecDelay = 1000.
@@ -153,11 +139,11 @@ describe('Test scriptExecutor module', function () {
         it('Test kill fields after short timeout', async function () {
             vi.useFakeTimers();
             try {
-                await store.dispatch('scriptExecutor/stopExecution');
+                await executor.stopExecution();
                 await vi.advanceTimersByTimeAsync(1000); // one tick
 
-                expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-                expect(store.state.scriptExecutor.killTimeoutSec).toBe(4)
+                expect(executor.state.killEnabled).toBeFalse()
+                expect(executor.state.killTimeoutSec).toBe(4)
             } finally {
                 vi.useRealTimers();
             }
@@ -166,46 +152,46 @@ describe('Test scriptExecutor module', function () {
         it('Test kill fields after long timeout', async function () {
             vi.useFakeTimers();
             try {
-                await store.dispatch('scriptExecutor/stopExecution');
+                await executor.stopExecution();
                 await vi.advanceTimersByTimeAsync(5000); // five ticks -> countdown reaches 0
 
-                expect(store.state.scriptExecutor.killEnabled).toBeTrue()
-                expect(store.state.scriptExecutor.killTimeoutSec).toBeNil()
+                expect(executor.state.killEnabled).toBeTrue()
+                expect(executor.state.killTimeoutSec).toBeNil()
             } finally {
                 vi.useRealTimers();
             }
         });
 
         it('Test kill fields after error', async function () {
-            await store.dispatch('scriptExecutor/stopExecution');
-            await store.dispatch('scriptExecutor/setErrorStatus');
+            await executor.stopExecution();
+            executor.setErrorStatus();
 
-            expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-            expect(store.state.scriptExecutor.killTimeoutSec).toBeNil()
+            expect(executor.state.killEnabled).toBeFalse()
+            expect(executor.state.killTimeoutSec).toBeNil()
         });
 
         it('Test kill fields after socket closed on finish', async function () {
-            await store.dispatch('scriptExecutor/stopExecution');
+            await executor.stopExecution();
             await mockSocketClose(1000, 'finished');
 
-            expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-            expect(store.state.scriptExecutor.killTimeoutSec).toBeNil()
+            expect(executor.state.killEnabled).toBeFalse()
+            expect(executor.state.killTimeoutSec).toBeNil()
         });
 
         it('Test kill fields after socket closed on disconnect and executing', async function () {
-            await store.dispatch('scriptExecutor/stopExecution');
+            await executor.stopExecution();
             await mockSocketClose(1006, 'executing');
 
-            expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-            expect(store.state.scriptExecutor.killTimeoutSec).toBeNil()
+            expect(executor.state.killEnabled).toBeFalse()
+            expect(executor.state.killTimeoutSec).toBeNil()
         });
 
         it('Test kill fields after socket closed on disconnect and finished', async function () {
-            await store.dispatch('scriptExecutor/stopExecution');
+            await executor.stopExecution();
             await mockSocketClose(1006, 'finished');
 
-            expect(store.state.scriptExecutor.killEnabled).toBeFalse()
-            expect(store.state.scriptExecutor.killTimeoutSec).toBeNil()
+            expect(executor.state.killEnabled).toBeFalse()
+            expect(executor.state.killTimeoutSec).toBeNil()
         });
     });
 });

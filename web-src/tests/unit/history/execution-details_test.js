@@ -1,12 +1,13 @@
 'use strict';
 import ExecutionDetails from '@/common/components/history/execution-details'
 import ReadOnlyField from '@/common/components/readonly-field';
-import historyModule from '@/common/store/executions-module';
+import {useHistoryStore} from '@/common/stores/history';
 import {axiosInstance} from '@/common/utils/axios_utils';
 import {mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
-import {createStore as createVuexStore} from 'vuex';
+import {createPinia, setActivePinia} from 'pinia';
 import {attachToDocument, createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
+
 let axiosMock;
 
 
@@ -19,18 +20,15 @@ function mockGetExecution(id, startTime, user, script, status, exitCode, command
 
 describe('Test history details', function () {
     let executionDetails;
-    let store;
+    let pinia;
 
     beforeEach(async function () {
-        store = createVuexStore({
-            modules: {
-                history: historyModule()
-            }
-        });
+        pinia = createPinia();
+        setActivePinia(pinia);
 
         executionDetails = mount(ExecutionDetails, {
             attachTo: attachToDocument(),
-            global: {plugins: [store]},
+            global: {plugins: [pinia]},
         });
 
         axiosMock = new MockAdapter(axiosInstance)
@@ -85,7 +83,8 @@ describe('Test history details', function () {
 
                 assertField('Script name', 'My script');
                 assertField('User', 'User X');
-                assertField('Start time', '12/25/2019 12:30:01 PM');
+                const d = new Date('2019-12-25T12:30:01');
+                assertField('Start time', d.toLocaleDateString() + ' ' + d.toLocaleTimeString());
                 assertField('Status', 'Finished (-15)');
                 assertField('Command', 'my_script.sh -a -b 2');
                 assertLog('some long log text');

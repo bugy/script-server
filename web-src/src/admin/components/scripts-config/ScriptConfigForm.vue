@@ -66,7 +66,7 @@
 <script>
 import ScriptPathField from '@/admin/components/scripts-config/script-edit/ScriptField'
 import {allowAllAdminsField} from '@/admin/components/scripts-config/script-fields';
-import {NEW_SCRIPT} from '@/admin/store/script-config-module'
+import {NEW_SCRIPT} from '@/admin/stores/scriptConfig'
 import CheckBox from '@/common/components/checkbox';
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox'

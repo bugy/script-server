@@ -13,7 +13,7 @@
 
 <script>
 import {isBlankString, isEmptyArray, isEmptyString, isNull, removeElement} from '@/common/utils/common';
-import {mapState} from 'vuex';
+import {useScriptsStore} from '@/main-app/stores/scripts'
 import ScriptListGroup from './ScriptListGroup';
 import ScriptListItem from './ScriptListItem';
 
@@ -34,7 +34,12 @@ export default {
   },
 
   computed: {
-    ...mapState('scripts', ['scripts', 'selectedScript']),
+    scripts() {
+      return useScriptsStore().scripts
+    },
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    },
 
     items() {
       let groups = this.scripts.filter(script => !isBlankString(script.group))

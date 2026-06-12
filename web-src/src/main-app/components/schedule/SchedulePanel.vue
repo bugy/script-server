@@ -76,8 +76,8 @@ import Combobox from "@/common/components/combobox";
 import {repeatPeriodField, repeatTimeUnitField} from "@/main-app/components/schedule/schedulePanelFields";
 import ToggleDayButton from "@/main-app/components/schedule/ToggleDayButton";
 import PromisableButton from "@/common/components/PromisableButton";
-import {mapActions} from "vuex";
 import {clearArray, isEmptyArray, isEmptyString} from "@/common/utils/common";
+import {useScriptScheduleStore} from '@/main-app/stores/scriptSchedule'
 
 export default {
   name: 'SchedulePanel',
@@ -153,11 +153,9 @@ export default {
   },
 
   methods: {
-    ...mapActions('scriptSchedule', ['schedule']),
-
     runScheduleAction() {
       const scheduleSetup = this.buildScheduleSetup();
-      return this.schedule({scheduleSetup})
+      return useScriptScheduleStore().schedule({scheduleSetup})
           .then(({data: response}) => {
             this.$emit('scheduled', response['id']);
             this.close();

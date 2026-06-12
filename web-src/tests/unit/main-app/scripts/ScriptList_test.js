@@ -3,31 +3,25 @@
 import ScriptsList from '@/main-app/components/scripts/ScriptsList';
 import router from '@/main-app/router/router';
 import {mount} from '@vue/test-utils';
-import {createStore as createVuexStore} from 'vuex';
+import {createPinia, setActivePinia} from 'pinia';
+import {useScriptsStore} from '@/main-app/stores/scripts';
 import {attachToDocument, triggerSingleClick, vueTicks} from '../../test_utils';
 
 describe('Test ScriptConfig', function () {
-    let store;
+    let pinia;
+    let scriptsStore;
     let listComponent;
 
     beforeEach(async function () {
-        store = createVuexStore({
-            modules: {
-                scripts: {
-                    namespaced: true,
-                    state: {
-                        scripts: [],
-                        selectedScript: null
-                    }
-                },
-                executions: {
-                    executors: {}
-                }
-            }
-        });
+        pinia = createPinia();
+        setActivePinia(pinia);
+
+        scriptsStore = useScriptsStore();
+        scriptsStore.scripts = [];
+        scriptsStore.selectedScript = null;
 
         listComponent = mount(ScriptsList, {
-            global: {plugins: [store, router]},
+            global: {plugins: [pinia, router]},
             attachTo: attachToDocument()
         });
 
@@ -109,7 +103,7 @@ describe('Test ScriptConfig', function () {
 
     describe('Test show list', function () {
         it('Test show single item', async function () {
-            store.state.scripts.scripts = [{'name': 'abc'}];
+            scriptsStore.scripts = [{'name': 'abc'}];
 
             await vueTicks();
 
@@ -119,7 +113,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show multiple items', async function () {
-            store.state.scripts.scripts = [{'name': 'abc'}, {'name': 'xyz'}, {'name': 'def'}];
+            scriptsStore.scripts = [{'name': 'abc'}, {'name': 'xyz'}, {'name': 'def'}];
 
             await vueTicks();
 
@@ -129,7 +123,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show single item in group', async function () {
-            store.state.scripts.scripts = [{'name': 'abc', 'group': 'g1'}];
+            scriptsStore.scripts = [{'name': 'abc', 'group': 'g1'}];
 
             await vueTicks();
 
@@ -139,7 +133,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show multiple items in different groups', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'xyz', 'group': 'g2'},
                 {'name': 'def', 'group': 'g1'}];
@@ -152,7 +146,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show multiple items in different groups when empty', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': null},
                 {'name': 'xyz', 'group': ''},
                 {'name': 'def', 'group': ' \n'}];
@@ -165,7 +159,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show multiple items in same groups', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'ghi', 'group': 'g1'},
                 {'name': 'xyz', 'group': 'g2'},
@@ -180,7 +174,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show items and groups mixed', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'ghi'},
                 {'name': 'xyz', 'group': 'g2'},
@@ -197,7 +191,7 @@ describe('Test ScriptConfig', function () {
 
     describe('Test open groups', function () {
         it('Test nothing open by default', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'xyz', 'group': 'g2'},
                 {'name': 'def', 'group': 'g1'}];
@@ -208,11 +202,11 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test open by default when selected', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'xyz', 'group': 'g2'},
                 {'name': 'def', 'group': 'g1'}];
-            store.state.scripts.selectedScript = 'abc';
+            scriptsStore.selectedScript = 'abc';
 
             await vueTicks();
 
@@ -220,7 +214,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test open on click', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'def', 'group': 'g2'},
                 {'name': 'xyz', 'group': 'g2'}];
@@ -232,7 +226,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test open another group on click', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'def', 'group': 'g2'},
                 {'name': 'xyz', 'group': 'g2'}];
@@ -245,7 +239,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test close group on second click', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'def', 'group': 'g2'},
                 {'name': 'xyz', 'group': 'g2'}];

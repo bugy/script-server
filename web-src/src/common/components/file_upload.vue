@@ -1,7 +1,7 @@
 <template>
   <div :data-error="error" :title="config.description" class="input-field file-upload-field">
     <a ref="uploadButton" class="btn-icon-flat btn-small waves-effect waves-circle">
-      <i class="material-icons">file_upload</i>
+      <v-icon>file_upload</v-icon>
     </a>
     <input :id="config.name"
            ref="fileField"

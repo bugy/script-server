@@ -35,7 +35,7 @@ import ScriptEditDialog, {
   UPLOAD_MODE
 } from '@/admin/components/scripts-config/script-edit/ScriptEditDialog'
 import {isNull} from '@/common/utils/common'
-import {mapState} from 'vuex'
+import {useAuthStore} from '@/common/stores/auth'
 
 // Vue 3 fix: the dialog used the Vue 2 async-component syntax
 // (`() => import(...)`), which Vue 3 renders as "[object Promise]" instead
@@ -68,9 +68,9 @@ export default {
     inPathMode() {
       return isNull(this.scriptValue.mode) || (this.scriptValue.mode === PATH_MODE);
     },
-    ...mapState('auth', {
-      canEditCode: 'canEditCode'
-    }),
+    canEditCode() {
+      return useAuthStore().canEditCode
+    },
   },
   methods: {
     openScriptDialog() {
