@@ -28,17 +28,18 @@
 
     <ScriptsList :search-text="searchText"/>
 
-    <router-link
-        class="waves-effect btn-flat bottom-panel primary-color-text history-button"
-        to='/history'>
-      History
-    </router-link>
+    <router-link class="bottom-panel history-button" to="/history">History</router-link>
 
     <div v-if="authEnabled" class="logout-panel bottom-panel">
       <span>{{ username }}</span>
-      <a class="btn-icon-flat waves-effect logout-button waves-circle" @click="logout">
-        <i class="material-icons primary-color-text">power_settings_new</i>
-      </a>
+      <v-btn
+        icon="power_settings_new"
+        variant="text"
+        color="primary"
+        density="compact"
+        class="logout-button"
+        @click="logout"
+      />
     </div>
   </div>
 </template>
@@ -149,6 +150,13 @@ export default {
 .history-button {
   line-height: 3em;
   text-align: center;
+  color: var(--primary-color);
+  text-decoration: none;
+  display: block;
+}
+
+.history-button:hover {
+  background-color: var(--hover-color);
 }
 
 .bottom-panel {

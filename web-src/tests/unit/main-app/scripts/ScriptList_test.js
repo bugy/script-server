@@ -1,12 +1,11 @@
 'use strict';
 
-import {hasClass, isBlankString} from '@/common/utils/common';
 import ScriptsList from '@/main-app/components/scripts/ScriptsList';
 import router from '@/main-app/router/router';
 import {mount} from '@vue/test-utils';
-import VueRouter from 'vue-router';
 import {createStore as createVuexStore} from 'vuex';
-import {attachToDocument, createScriptServerTestVue, triggerSingleClick, vueTicks} from '../../test_utils';
+import {attachToDocument, triggerSingleClick, vueTicks} from '../../test_utils';
+
 describe('Test ScriptConfig', function () {
     let store;
     let listComponent;
@@ -41,71 +40,70 @@ describe('Test ScriptConfig', function () {
         listComponent.unmount();
     });
 
-    function getText(item) {
-        return Array.from(item.childNodes)
-            .filter(child => child.nodeType === 3)
-            .map(child => child.nodeValue.trim())
-            .reduce((left, right) => left + right);
+    function getGroupTitle(groupEl) {
+        const titleEl = groupEl.querySelector('.v-list-group__header .v-list-item-title');
+        return titleEl ? titleEl.textContent.trim() : '';
     }
 
-    function getGroupText(groupItem) {
-        const groupTextItem = groupItem.querySelector(':scope > .script-group > span');
-        return getText(groupTextItem);
+    function getItemTitle(itemEl) {
+        const titleEl = itemEl.querySelector('.v-list-item-title');
+        return titleEl ? titleEl.textContent.trim() : '';
     }
 
     function getTopLevelItems() {
-        return Array.from(listComponent.vm.$el.childNodes)
-            .filter(child => hasClass(child, 'collection-item') || hasClass(child, 'script-list-group'))
+        return Array.from(listComponent.vm.$el.children)
+            .filter(child => child.classList.contains('v-list-item') || child.classList.contains('v-list-group'))
             .map(child => {
-                if (hasClass(child, 'script-list-group')) {
-                    return getGroupText(child);
+                if (child.classList.contains('v-list-group')) {
+                    return getGroupTitle(child);
                 }
-
-                return getText(child);
+                return getItemTitle(child);
             });
     }
 
-    function findGroupItem(groupName) {
-        // Native equivalent of jQuery `.find('.script-list-group').has('.script-group > span:contains(name)')`:
-        // pick the .script-list-group whose own group label matches `groupName`.
-        const foundGroups = [...listComponent.vm.$el.querySelectorAll('.script-list-group')]
-            .filter(group => {
-                const span = group.querySelector('.script-group > span');
-                return span && span.textContent.includes(groupName);
-            });
+    function findGroupElement(groupName) {
+        const groups = [...listComponent.vm.$el.querySelectorAll('.v-list-group')]
+            .filter(g => getGroupTitle(g) === groupName);
+        expect(groups).toBeArrayOfSize(1);
+        return groups[0];
+    }
 
-        expect(foundGroups).toBeArrayOfSize(1)
-        return foundGroups[0];
+    function isGroupOpen(groupEl) {
+        return groupEl.classList.contains('v-list-group--open');
     }
 
     function assertGroupItems(groupName, expectedTexts) {
-        let foundGroup = findGroupItem(groupName);
-
-        const innerItems = [...foundGroup.querySelectorAll('.collection-item:not(.script-group)')];
-        let actualTexts = innerItems.map(item => getText(item));
-        expect(actualTexts).toEqual(expectedTexts)
+        const groupEl = findGroupElement(groupName);
+        const itemsContainer = groupEl.querySelector('.v-list-group__items');
+        if (!expectedTexts.length) {
+            expect(itemsContainer).toBeFalsy();
+            return;
+        }
+        expect(itemsContainer).toBeTruthy();
+        const items = [...itemsContainer.querySelectorAll('.v-list-item')];
+        const texts = items.map(item => getItemTitle(item));
+        expect(texts).toEqual(expectedTexts);
     }
 
     function assertOpenGroup(expectedOpenGroup, expectedItems) {
-        if (!isBlankString(expectedOpenGroup)) {
-            assertGroupItems(expectedOpenGroup, expectedItems);
-        }
-
-        const groupItems = [...listComponent.vm.$el.querySelectorAll('.script-list-group')];
-        for (const groupItem of groupItems) {
-            let itemName = getGroupText(groupItem);
-            if (itemName === expectedOpenGroup) {
-                continue;
+        const groupEls = [...listComponent.vm.$el.querySelectorAll('.v-list-group')];
+        for (const groupEl of groupEls) {
+            const name = getGroupTitle(groupEl);
+            if (name === expectedOpenGroup) {
+                expect(isGroupOpen(groupEl)).toBe(true);
+                if (expectedItems) {
+                    assertGroupItems(name, expectedItems);
+                }
+            } else {
+                expect(isGroupOpen(groupEl)).toBe(false);
             }
-
-            assertGroupItems(itemName, []);
         }
     }
 
     async function clickOnGroup(groupName) {
-        const dropdownItem = findGroupItem(groupName).querySelector('.script-group');
-        triggerSingleClick(dropdownItem);
-
+        const groupEl = findGroupElement(groupName);
+        const header = groupEl.querySelector('.v-list-group__header');
+        triggerSingleClick(header);
         await vueTicks();
     }
 
