@@ -10,14 +10,14 @@ test.describe('Admin app', () => {
 
         await expect(page.locator('.admin-page')).toBeVisible()
         await expect(page).toHaveURL(/#\/logs$/)
-        await expect(page.locator('.tab', {hasText: 'Logs'})).toBeVisible()
-        await expect(page.locator('.tab', {hasText: 'Scripts'})).toBeVisible()
+        await expect(page.locator('.v-tab', {hasText: 'Logs'})).toBeVisible()
+        await expect(page.locator('.v-tab', {hasText: 'Scripts'})).toBeVisible()
     })
 
     test('scripts tab lists configured scripts with an Add button', async ({page}) => {
         await page.goto('/admin.html#/scripts')
 
         await expect(page.locator('.add-script-btn')).toBeVisible()
-        await expect(page.locator('.collection-item', {hasText: 'E2E Echo'})).toBeVisible()
+        await expect(page.locator('.v-list-item', {hasText: 'E2E Echo'})).toBeVisible()
     })
 })
