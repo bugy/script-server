@@ -24,6 +24,7 @@ import {forEachKeyValue, isBlankString, isNull} from '@/common/utils/common';
 
 export default {
   name: 'ParameterValuesUiMapping',
+  emits: ['update:modelValue'],
   components: {Textfield},
   props: {
     modelValue: {

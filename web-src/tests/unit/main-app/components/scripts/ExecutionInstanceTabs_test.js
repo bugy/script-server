@@ -240,52 +240,5 @@ describe('Test ExecutionInstanceTabs', function () {
         });
     });
 
-    // Vuetify 4 handles the active-tab indicator internally via v-tab__slider.
-    // There is no separate .tab-indicator element, and jsdom has no layout engine
-    // (offsetLeft/offsetWidth always 0), so these tests are skipped.
-    describe.skip('Test indicator position', function () {
-
-        function assertIndicatorAtTab(indicator, firstTab) {
-            expect(indicator.offsetLeft).toBe(firstTab.offsetLeft);
-            expect(indicator.offsetWidth).toBe(firstTab.offsetWidth);
-        }
-
-        it('test indicator when first executor', async function () {
-            await addExecutor(101, 'abc');
-            await addExecutor(102, 'abc');
-            await addExecutor(103, 'abc');
-            await selectExecutor(101);
-
-            const indicator = executionTabs.get('.tab-indicator');
-            const firstTab = findExecutorTabs().at(0);
-
-            assertIndicatorAtTab(indicator, firstTab);
-        });
-
-        it('test indicator when last executor', async function () {
-            await addExecutor(101, 'abc');
-            await addExecutor(102, 'abc');
-            await addExecutor(103, 'abc');
-            await selectExecutor(103);
-
-            const indicator = executionTabs.get('.tab-indicator');
-            const lastTab = findExecutorTabs().at(2);
-
-            assertIndicatorAtTab(indicator, lastTab);
-        });
-
-        it('test indicator position after changing executors', async function () {
-            await addExecutor(101, 'abc');
-            await addExecutor(102, 'abc');
-            await addExecutor(103, 'abc');
-            await selectExecutor(103);
-            await removeExecutor(102);
-
-            const indicator = executionTabs.get('.tab-indicator');
-            const lastTab = findExecutorTabs().at(1);
-
-            assertIndicatorAtTab(indicator, lastTab);
-        });
-    });
-
 });
+

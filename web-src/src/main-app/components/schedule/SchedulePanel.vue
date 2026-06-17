@@ -81,6 +81,7 @@ import {useScriptScheduleStore} from '@/main-app/stores/scriptSchedule'
 
 export default {
   name: 'SchedulePanel',
+  emits: ['scheduled', 'close'],
   components: {PromisableButton, ToggleDayButton, Combobox, Textfield, TimePicker, DatePicker},
   props: {
     mobileView: {

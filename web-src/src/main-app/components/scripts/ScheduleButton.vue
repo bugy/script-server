@@ -13,6 +13,7 @@
 <script>
 export default {
   name: 'ScheduleButton',
+  emits: ['click'],
   props: {
     disabled: {
       type: Boolean,

@@ -16,6 +16,7 @@ import File_upload from '@/common/components/file_upload'
 
 export default {
   name: 'ScriptUploader',
+  emits: ['error', 'update:modelValue'],
   components: {File_upload, Textfield},
   props: {
     path: {

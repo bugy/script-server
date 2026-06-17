@@ -55,6 +55,7 @@ const allowedLanguages = {
 
 export default {
   name: 'CodeEditor',
+  emits: ['pathChanged', 'update:modelValue', 'languageChange'],
   components: {Textfield, Combobox, Checkbox},
   props: {
     path: String,

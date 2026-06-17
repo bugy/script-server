@@ -14,6 +14,7 @@ import {useScriptConfigStore} from '@/main-app/stores/scriptConfig'
 
 export default {
   name: 'ScriptViewScheduleHolder',
+  emits: ['close'],
 
   components: {
     SchedulePanel

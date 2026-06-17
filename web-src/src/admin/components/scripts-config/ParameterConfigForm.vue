@@ -190,6 +190,7 @@ function updateValue(value, configField, newValue) {
 
 export default {
   name: 'ParameterConfigForm',
+  emits: ['error'],
   components: {ParameterValuesUiMapping, ParameterSeparator, ChipsList, TextArea, Checkbox, Combobox, Textfield},
   props: {
     modelValue: {

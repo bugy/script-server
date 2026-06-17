@@ -85,6 +85,7 @@ const defaultScriptsFolder = './conf/scripts/'
 
 export default {
   name: 'ScriptEditDialog',
+  emits: ['change'],
   props: {
     newConfig: Boolean,
     originalPath: String,

@@ -68,6 +68,7 @@ import { loadParameterHistory, removeParameterHistoryEntry, toggleFavoriteEntry 
 
 export default {
   name: 'ParameterHistoryModal',
+  emits: ['use-parameters', 'close'],
   props: {
     scriptName: { type: String, required: true }
   },
