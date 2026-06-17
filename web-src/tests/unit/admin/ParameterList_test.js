@@ -2,8 +2,8 @@
 
 import ParamListItem from '@/admin/components/scripts-config/ParamListItem';
 import ScriptParamList from '@/admin/components/scripts-config/ScriptParamList';
-import {hasClass} from '@/common/utils/common';
-import {createScriptServerTestVue, createVue, timeout, triggerSingleClick, vueTicks} from '../test_utils';
+import ParameterConfigForm from '@/admin/components/scripts-config/ParameterConfigForm';
+import {createVue, timeout, triggerSingleClick, vueTicks} from '../test_utils';
 import {setValueByUser} from './ParameterConfigForm_test';
 
 
@@ -28,79 +28,64 @@ describe('Test ScriptParamList', function () {
                         'name': 'param 3'
                     }]
             },
-            null,
-            createScriptServerTestVue());
-        await list.$nextTick();
+        );
+        await list.vm.$nextTick();
     });
 
     afterEach(async function () {
         await vueTicks();
 
-        list.$el.parentNode.removeChild(list.$el);
-        list.$destroy();
+        list.unmount();
     });
 
     function findParamItem(paramName) {
-        let foundChild = null;
-        for (const child of list.$children) {
-            if (!child.$options || (child.$options._componentTag !== ParamListItem.name)) {
-                continue;
-            }
-
-            const currentParamName = child.$props.param.name;
-            if (currentParamName === paramName) {
-                foundChild = child;
-                break;
-            }
-        }
-        return foundChild;
+        return list.findAllComponents(ParamListItem)
+            .find(item => item.props('param')?.name === paramName) || null;
     }
 
     function clickOnParam(paramName) {
-        let paramItem = findParamItem(paramName);
-        expect(paramItem).not.toBeNil()
-
-        const index = list.$children.indexOf(paramItem);
-        M.Collapsible.getInstance(list.$el).open(index);
+        const found = list.findAllComponents(ParamListItem)
+            .find(item => item.props('param')?.name === paramName);
+        expect(found).not.toBeNil();
+        list.vm.openedPanel = found.props('panelValue');
     }
 
     function assertOpen(paramName) {
-        let paramItem = findParamItem(paramName);
-        expect(paramItem).not.toBeNil()
+        const found = list.findAllComponents(ParamListItem)
+            .find(item => item.props('param')?.name === paramName);
+        expect(found).not.toBeNil();
+        expect(list.vm.openedPanel).toBe(found.props('panelValue'));
+    }
 
-        expect(hasClass(paramItem.$el, 'active')).toBeTrue()
+    function assertClosed(paramName) {
+        const found = list.findAllComponents(ParamListItem)
+            .find(item => item.props('param')?.name === paramName);
+        expect(found).not.toBeNil();
+        expect(list.vm.openedPanel).not.toBe(found.props('panelValue'));
     }
 
     function getButton(item, buttonName) {
-        let icon = $(item.$el)
-            .find('a i')
-            .filter((index, elem) => elem.innerHTML.trim() === buttonName)
-            .get(0)
-
-        return icon.parentNode;
+        const icon = [...item.element.querySelectorAll('i')]
+            .find(e => e.textContent.trim() === buttonName);
+        return icon?.closest('button');
     }
 
     async function clickParamAction(paramName, action) {
         const item = findParamItem(paramName);
-        
+
         const button = getButton(item, action);
         triggerSingleClick(button);
 
         await vueTicks();
     }
 
-    function assertClosed(paramName) {
-        let paramItem = findParamItem(paramName);
-        expect(paramItem).not.toBeNil()
-
-        expect(hasClass(paramItem.$el, 'active')).toBeFalse()
-    }
-
     async function setValue(paramName, fieldName, value) {
-        let paramItem = findParamItem(paramName);
+        await vueTicks();  // wait for panel content to render after clickOnParam
+
+        const paramItem = findParamItem(paramName);
         expect(paramItem).not.toBeNil()
 
-        const paramForm = paramItem.$children[0];
+        const paramForm = paramItem.findComponent(ParameterConfigForm);
         await setValueByUser(paramForm, fieldName, value)
     }
 
@@ -112,7 +97,7 @@ describe('Test ScriptParamList', function () {
         });
 
         it('Test show add param button', async function () {
-            const button = $(list.$el).find('li.add-param-item').get(0);
+            const button = list.element.querySelector('.add-param-item');
             expect(button).not.toBeNil()
         });
 
@@ -131,7 +116,7 @@ describe('Test ScriptParamList', function () {
         });
 
         it('Test parameter title after prop change', async function () {
-            list.$props.parameters[1].name = 'new name';
+            list.vm.parameters[1].name = 'new name';
 
             expect(findParamItem('new name')).not.toBeNil()
         });
@@ -141,61 +126,61 @@ describe('Test ScriptParamList', function () {
         it('Test move 2nd parameter up', async function () {
             await clickParamAction('param 2', 'arrow_upward');
 
-            expect(list.$props.parameters[0].name).toBe('param 2')
+            expect(list.vm.parameters[0].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter up twice', async function () {
             await clickParamAction('param 2', 'arrow_upward');
             await clickParamAction('param 2', 'arrow_upward');
 
-            expect(list.$props.parameters[0].name).toBe('param 2')
+            expect(list.vm.parameters[0].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter up and then first', async function () {
             await clickParamAction('param 2', 'arrow_upward');
             await clickParamAction('param 1', 'arrow_upward');
 
-            expect(list.$props.parameters[0].name).toBe('param 1')
-            expect(list.$props.parameters[1].name).toBe('param 2')
+            expect(list.vm.parameters[0].name).toBe('param 1')
+            expect(list.vm.parameters[1].name).toBe('param 2')
         });
 
         it('Test move 3rd parameter up twice', async function () {
             await clickParamAction('param 3', 'arrow_upward');
             await clickParamAction('param 3', 'arrow_upward');
 
-            expect(list.$props.parameters[0].name).toBe('param 3')
-            expect(list.$props.parameters[1].name).toBe('param 1')
-            expect(list.$props.parameters[2].name).toBe('param 2')
+            expect(list.vm.parameters[0].name).toBe('param 3')
+            expect(list.vm.parameters[1].name).toBe('param 1')
+            expect(list.vm.parameters[2].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter down', async function () {
             await clickParamAction('param 2', 'arrow_downward');
 
-            expect(list.$props.parameters[2].name).toBe('param 2')
+            expect(list.vm.parameters[2].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter down twice', async function () {
             await clickParamAction('param 2', 'arrow_downward');
             await clickParamAction('param 2', 'arrow_downward');
 
-            expect(list.$props.parameters[2].name).toBe('param 2')
+            expect(list.vm.parameters[2].name).toBe('param 2')
         });
 
         it('Test move 2nd parameter down and then last', async function () {
             await clickParamAction('param 2', 'arrow_downward');
             await clickParamAction('param 3', 'arrow_downward');
 
-            expect(list.$props.parameters[1].name).toBe('param 2')
-            expect(list.$props.parameters[2].name).toBe('param 3')
+            expect(list.vm.parameters[1].name).toBe('param 2')
+            expect(list.vm.parameters[2].name).toBe('param 3')
         });
 
         it('Test move first parameter down twice', async function () {
             await clickParamAction('param 1', 'arrow_downward');
             await clickParamAction('param 1', 'arrow_downward');
 
-            expect(list.$props.parameters[0].name).toBe('param 2')
-            expect(list.$props.parameters[1].name).toBe('param 3')
-            expect(list.$props.parameters[2].name).toBe('param 1')
+            expect(list.vm.parameters[0].name).toBe('param 2')
+            expect(list.vm.parameters[1].name).toBe('param 3')
+            expect(list.vm.parameters[2].name).toBe('param 1')
         });
 
         it('Test move open parameter up', async function () {
@@ -283,63 +268,47 @@ describe('Test ScriptParamList', function () {
             assertOpen('param 3');
         });
 
-        it('Test open toast on delete', async function () {
-            $(list.$el.parentNode).find('div.toast').remove();
-
+        it('Test open snackbar on delete', async function () {
             await clickParamAction('param 2', 'delete');
 
-            const toasts = $(list.$el.parentNode).find('div.toast');
-
-            expect(toasts.length).toBe(1)
-            expect(toasts.find('span').text()).toBe('Deleted param 2')
-            expect(toasts.find('button').text()).toBe('Undo');
+            expect(list.vm.snackbarVisible).toBeTrue();
+            expect(list.vm.snackbarMessage).toBe('Deleted param 2');
         });
 
-        it('Test open multiple toasts on delete', async function () {
-            $(list.$el.parentNode).find('div.toast').remove();
-
+        it('Test queue multiple deletes', async function () {
             await clickParamAction('param 2', 'delete');
             await clickParamAction('param 1', 'delete');
             await clickParamAction('param 3', 'delete');
 
-            const toasts = $(list.$el.parentNode).find('div.toast');
-
-            expect(toasts.length).toBe(3)
-            expect($(toasts.get(0)).find('span').text()).toBe('Deleted param 2')
-            expect($(toasts.get(1)).find('span').text()).toBe('Deleted param 1')
-            expect($(toasts.get(2)).find('span').text()).toBe('Deleted param 3')
+            expect(list.vm.snackbarVisible).toBeTrue();
+            expect(list.vm.undoQueue.length).toBe(3);
+            expect(list.vm.undoQueue[0].param.name).toBe('param 2');
+            expect(list.vm.undoQueue[1].param.name).toBe('param 1');
+            expect(list.vm.undoQueue[2].param.name).toBe('param 3');
         });
 
-        it('Test undo button on toast', async function () {
-            $(list.$el.parentNode).find('div.toast').remove();
-
+        it('Test undo delete', async function () {
             await clickParamAction('param 2', 'delete');
 
-            const undoButton = $(list.$el.parentNode).find('div.toast button').get(0);
-            triggerSingleClick(undoButton);
-
+            list.vm.undoDelete();
             await vueTicks();
 
             expect(findParamItem('param 2')).not.toBeNil()
-            expect(list.$props.parameters[0].name).toBe('param 1')
-            expect(list.$props.parameters[1].name).toBe('param 2')
-            expect(list.$props.parameters[2].name).toBe('param 3')
+            expect(list.vm.parameters[0].name).toBe('param 1')
+            expect(list.vm.parameters[1].name).toBe('param 2')
+            expect(list.vm.parameters[2].name).toBe('param 3')
         });
 
-        it('Test undo button on toast after everything deleted', async function () {
-            $(list.$el.parentNode).find('div.toast').remove();
-
+        it('Test undo first delete after multiple deletes', async function () {
             await clickParamAction('param 2', 'delete');
             await clickParamAction('param 1', 'delete');
             await clickParamAction('param 3', 'delete');
 
-            const undoButton = $(list.$el.parentNode).find('div.toast button').get(0);
-            triggerSingleClick(undoButton);
-
+            list.vm.undoDelete();
             await vueTicks();
 
             expect(findParamItem('param 2')).not.toBeNil()
-            expect(list.$props.parameters[0].name).toBe('param 2')
+            expect(list.vm.parameters[0].name).toBe('param 2')
         });
     });
 
@@ -351,13 +320,13 @@ describe('Test ScriptParamList', function () {
 
             await setValue('param 1', 'type', 'int');
             assertOpen('param 1');
-            expect(list.$props.parameters[0].type).toBe('int')
+            expect(list.vm.parameters[0].type).toBe('int')
         });
     });
 
     describe('Test add parameter', function () {
         const clickAddButton = () => {
-            const addParamButton = $(list.$el).find('li.add-param-item').get(0);
+            const addParamButton = list.element.querySelector('.add-param-item');
             triggerSingleClick(addParamButton);
         };
 
@@ -366,10 +335,10 @@ describe('Test ScriptParamList', function () {
 
             await vueTicks();
 
-            expect(list.$props.parameters.length).toBe(4)
-            expect(list.$props.parameters[3].name).toBe(undefined)
+            expect(list.vm.parameters.length).toBe(4)
+            expect(list.vm.parameters[3].name).toBe(undefined)
 
-            list.openingNewParam = false;
+            list.vm.openingNewParam = false;
             await timeout(100);
         });
 
@@ -380,12 +349,12 @@ describe('Test ScriptParamList', function () {
 
             await vueTicks();
 
-            expect(list.$props.parameters.length).toBe(6)
-            expect(list.$props.parameters[3].name).toBe(undefined)
-            expect(list.$props.parameters[4].name).toBe(undefined)
-            expect(list.$props.parameters[5].name).toBe(undefined)
+            expect(list.vm.parameters.length).toBe(6)
+            expect(list.vm.parameters[3].name).toBe(undefined)
+            expect(list.vm.parameters[4].name).toBe(undefined)
+            expect(list.vm.parameters[5].name).toBe(undefined)
 
-            list.openingNewParam = false;
+            list.vm.openingNewParam = false;
             await timeout(100);
         });
     });

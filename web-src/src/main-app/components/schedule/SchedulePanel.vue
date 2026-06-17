@@ -1,34 +1,21 @@
 <template>
-  <div class="schedule-panel card">
-    <div class="card-content">
-      <span class="card-title primary-color-text">Schedule execution</span>
-      <div class="schedule-type-panel">
-        <p class="schedule-type-field">
-          <label>
-            <input :checked="oneTimeSchedule" class="with-gap" name="schedule-type"
-                   type="radio"
-                   @click="oneTimeSchedule = true"/>
-            <span>One time</span>
-          </label>
-        </p>
-        <p class="schedule-type-field">
-          <label>
-            <input :checked="!oneTimeSchedule" class="with-gap" name="schedule-type"
-                   type="radio"
-                   @click="oneTimeSchedule = false"/>
-            <span>Repeat</span>
-          </label>
-        </p>
-      </div>
+  <v-card class="schedule-panel">
+    <v-card-title class="text-primary py-3">Schedule execution</v-card-title>
+    <v-card-text class="pb-0 flex-grow-1 overflow-y-auto">
+      <v-radio-group v-model="scheduleType" inline density="compact" class="schedule-type-panel">
+        <v-radio label="One time" value="one-time"/>
+        <v-radio label="Repeat" value="repeat"/>
+      </v-radio-group>
+
       <div v-if="oneTimeSchedule" class="one-time-schedule-panel">
         <DatePicker v-model="startDate" :show-header-in-modal="!mobileView" class="inline" label="Date"/>
-        <TimePicker v-model="startTime" class="inline" label="Time" @error="checkErrors"/>
+        <TimePicker v-model="startTime" class="inline" label="Time" @error="onFieldError('startTime', $event)"/>
       </div>
       <div v-else class="repeat-schedule-panel">
         <div>
           <span class="schedule-repeat_col-1">Every</span>
           <Textfield v-model="repeatPeriod" :config="repeatPeriodField"
-                     class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors"/>
+                     class="inline repeat-period-field schedule-repeat_col-2" @error="onFieldError('repeatPeriod', $event)"/>
           <Combobox v-model="repeatTimeUnit" :config="repeatTimeUnitField"
                     :show-header="false" class="inline repeat-time-unit-field schedule-repeat_col-3"/>
         </div>
@@ -38,83 +25,63 @@
                       :show-header-in-modal="!mobileView"
                       class="inline repeat-start-date schedule-repeat_col-2" label="Date"/>
           <TimePicker v-model="startTime" class="inline repeat-start-time schedule-repeat_col-3"
-                      label="Time" @error="checkErrors"/>
+                      label="Time" @error="onFieldError('startTime', $event)"/>
         </div>
 
         <div>
           <span class="schedule-repeat_col-1">End:</span>
-          <div class="schedule-type-panel">
-            <p class="schedule-type-field">
-              <label>
-                <input :checked="endOption === 'never'" class="with-gap" name="end-type" type="radio" @click="endOption = 'never'" />
-                <span>Never</span>
-              </label>
-            </p>
-            <p class="schedule-type-field">
-              <label>
-                <input :checked="endOption === 'maxExecuteCount'" class="with-gap" name="end-type" type="radio" @click="endOption = 'maxExecuteCount'" />
-                <span>Count</span>
-              </label>
-            </p>
-            <p class="schedule-type-field">
-              <label>
-                <input :checked="endOption === 'endDatetime'" class="with-gap" name="end-type" type="radio" @click="endOption = 'endDatetime'" />
-                <span>Date</span>
-              </label>
-            </p>
-          </div>
+          <v-radio-group v-model="endOption" inline density="compact" class="schedule-type-panel">
+            <v-radio label="Never" value="never"/>
+            <v-radio label="Count" value="maxExecuteCount"/>
+            <v-radio label="Date" value="endDatetime"/>
+          </v-radio-group>
           <br>
           <div v-if="endOption === 'endDatetime'">
             <span class="schedule-repeat_col-1">Ending</span>
-            <DatePicker v-model="endDate" :show-header-in-modal="!mobileView" class="inline repeat-start-date schedule-repeat_col-2" label="Date" />
-            <TimePicker v-model="endTime" class="inline repeat-start-time schedule-repeat_col-3" label="Time" @error="checkErrors" />
+            <DatePicker v-model="endDate" :show-header-in-modal="!mobileView" class="inline repeat-start-date schedule-repeat_col-2" label="Date"/>
+            <TimePicker v-model="endTime" class="inline repeat-start-time schedule-repeat_col-3" label="Time" @error="onFieldError('endTime', $event)"/>
           </div>
           <div v-if="endOption === 'maxExecuteCount'">
             <span class="schedule-repeat_col-1">Count</span>
-            <Textfield v-model="maxExecuteCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="checkErrors" />
+            <Textfield v-model="maxExecuteCount" :config="repeatPeriodField" class="inline repeat-period-field schedule-repeat_col-2" @error="onFieldError('maxExecuteCount', $event)"/>
           </div>
 
-        <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
-          <div :class="{ error: weekdaysError }" class="repeat-weekday-panel">
-            <ToggleDayButton v-for="day in weekDays"
-                             :key="day.day"
-                             v-model="day.active"
-                             :text="day.day.charAt(0)"
-                             :title="day.day"/>
+          <div v-if="repeatTimeUnit === 'weeks'" class="repeat-weeks-panel">
+            <div :class="{ error: weekdaysError }" class="repeat-weekday-panel">
+              <ToggleDayButton v-for="day in weekDays"
+                               :key="day.day"
+                               v-model="day.active"
+                               :text="day.day.charAt(0)"
+                               :title="day.day"/>
+            </div>
+            <div v-if="weekdaysError" class="weekdays-error">{{ weekdaysError }}</div>
           </div>
-          <div v-if="weekdaysError" class="weekdays-error">{{ weekdaysError }}</div>
         </div>
       </div>
-    </div>
-    <div class="schedule-panel-buttons card-action">
-      <a class="waves-effect btn-flat" @click="close">
-        Cancel
-      </a>
+    </v-card-text>
+    <v-card-actions class="schedule-panel-buttons justify-end pa-2">
+      <v-btn variant="text" @click="close">Cancel</v-btn>
       <PromisableButton :click="runScheduleAction"
                         :enabled="errors.length === 0"
-                        :preloaderStyle="{ width: '20px', height: '20px' }"
                         title="Schedule"/>
-    </div>
-    </div>
-  </div>
+    </v-card-actions>
+  </v-card>
 </template>
 
 <script>
-import '@/common/materializecss/imports/datepicker'
 import DatePicker from "@/common/components/inputs/DatePicker";
 import TimePicker from "@/common/components/inputs/TimePicker";
 import Textfield from "@/common/components/textfield";
 import Combobox from "@/common/components/combobox";
-import '@/common/materializecss/imports/cards';
 import {repeatPeriodField, repeatTimeUnitField} from "@/main-app/components/schedule/schedulePanelFields";
 import ToggleDayButton from "@/main-app/components/schedule/ToggleDayButton";
 import PromisableButton from "@/common/components/PromisableButton";
-import {mapActions} from "vuex";
-import '@/common/materializecss/imports/toast'
 import {clearArray, isEmptyArray, isEmptyString} from "@/common/utils/common";
+import {useScriptScheduleStore} from '@/main-app/stores/scriptSchedule'
 
 export default {
   name: 'SchedulePanel',
+  emits: ['scheduled', 'close'],
   components: {PromisableButton, ToggleDayButton, Combobox, Textfield, TimePicker, DatePicker},
   props: {
     mobileView: {
@@ -153,23 +120,45 @@ export default {
 
       repeatPeriodField,
       repeatTimeUnitField,
-      errors: []
+      errors: [],
+      fieldErrors: {}
     }
   },
-  mounted: function () {
-    this.id = this._uid;
 
-    M.updateTextFields();
+  computed: {
+    scheduleType: {
+      get() {
+        return this.oneTimeSchedule ? 'one-time' : 'repeat';
+      },
+      set(val) {
+        this.oneTimeSchedule = val === 'one-time';
+      }
+    },
+
+    weekdaysError() {
+      if (this.oneTimeSchedule || this.repeatTimeUnit !== 'weeks') {
+        return null;
+      }
+
+      const activeWeekDays = this.weekDays.filter(day => day.active);
+      if (isEmptyArray(activeWeekDays)) {
+        return 'required';
+      }
+
+      return null;
+    }
+  },
+
+  mounted: function () {
+    this.id = this.$.uid;
   },
 
   methods: {
-    ...mapActions('scriptSchedule', ['schedule']),
-
     runScheduleAction() {
       const scheduleSetup = this.buildScheduleSetup();
-      return this.schedule({scheduleSetup})
+      return useScriptScheduleStore().schedule({scheduleSetup})
           .then(({data: response}) => {
-            M.toast({html: 'Scheduled #' + response['id']});
+            this.$emit('scheduled', response['id']);
             this.close();
           });
     },
@@ -210,36 +199,34 @@ export default {
       this.$emit('close');
     },
 
+    onFieldError(fieldKey, error) {
+      this.fieldErrors[fieldKey] = error;
+      this.checkErrors();
+    },
+
     checkErrors() {
       clearArray(this.errors);
 
-      for (const child of this.$children) {
-        if ((child.$options._componentTag === TimePicker.name)
-            || (child.$options._componentTag === Textfield.name)) {
-          if (!isEmptyString(child.error)) {
-            this.errors.push(child.error);
-          }
+      const activeKeys = ['startTime'];
+      if (!this.oneTimeSchedule) {
+        activeKeys.push('repeatPeriod');
+        if (this.endOption === 'endDatetime') {
+          activeKeys.push('endTime');
+        }
+        if (this.endOption === 'maxExecuteCount') {
+          activeKeys.push('maxExecuteCount');
+        }
+      }
+
+      for (const key of activeKeys) {
+        if (!isEmptyString(this.fieldErrors[key])) {
+          this.errors.push(this.fieldErrors[key]);
         }
       }
 
       if (!isEmptyString(this.weekdaysError)) {
         this.errors.push(this.weekdaysError);
       }
-    }
-  },
-
-  computed: {
-    weekdaysError() {
-      if (this.oneTimeSchedule || this.repeatTimeUnit !== 'weeks') {
-        return null;
-      }
-
-      const activeWeekDays = this.weekDays.filter(day => day.active);
-      if (isEmptyArray(activeWeekDays)) {
-        return 'required';
-      }
-
-      return null;
     }
   },
 
@@ -250,14 +237,16 @@ export default {
 
     oneTimeSchedule() {
       this.$nextTick(this.checkErrors);
+    },
+
+    endOption() {
+      this.$nextTick(this.checkErrors);
     }
   }
-
 }
 </script>
 
 <style scoped>
-
 .schedule-panel {
   font-size: 16px;
   max-width: 320px;
@@ -265,16 +254,10 @@ export default {
   height: 480px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
-.schedule-panel .card-title {
+:deep(.v-card-title) {
   font-size: 20px;
-}
-
-.schedule-panel .card-content {
-  padding-top: 12px;
-  padding-bottom: 12px;
 }
 
 .schedule-panel .input-field.inline {
@@ -290,21 +273,17 @@ export default {
   white-space: nowrap;
 }
 
-.schedule-panel .schedule-type-field {
-  display: inline;
-  margin-right: 32px;
+.schedule-type-panel {
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 
-.schedule-panel .schedule-type-field:last-child {
-  margin-right: 0;
+:deep(.schedule-type-panel .v-radio) {
+  margin-right: 24px;
 }
 
-.schedule-panel .with-gap + span {
+:deep(.schedule-type-panel .v-label) {
   font-size: 16px;
-}
-
-.schedule-panel .with-gap:checked + span {
-  color: var(--font-color-main);
 }
 
 .toggle-day-button {
@@ -316,29 +295,16 @@ export default {
   margin-right: 0;
 }
 
-.schedule-panel input[type="radio"]:not(:checked) + span:before {
-  border: 2px solid var(--font-color-medium);
-}
-
-.schedule-type-panel {
-  margin-top: 16px;
-  margin-bottom: 0;
-  margin-left: -3px;
-}
-
 .one-time-schedule-panel {
   margin-top: 24px;
 }
 
 .one-time-schedule-panel .date-picker {
-  width: 50%
+  width: 50%;
 }
 
 .one-time-schedule-panel .time-picker {
-  width: calc(45% - 32px)
-}
-
-.one-time-schedule-panel .time-picker {
+  width: calc(45% - 32px);
   margin-left: 32px;
 }
 
@@ -348,11 +314,6 @@ export default {
 
 .repeat-schedule-panel span {
   display: inline-block;
-}
-
-.repeat-schedule-panel .schedule-repeat_col-12 {
-  width: 65%;
-  margin: 0 5% 0 0;
 }
 
 .repeat-schedule-panel .schedule-repeat_col-1 {
@@ -369,16 +330,6 @@ export default {
 .repeat-schedule-panel .schedule-repeat_col-3 {
   width: 30%;
   margin: 0;
-}
-
-.schedule-panel-buttons.card-action {
-  display: flex;
-  justify-content: flex-end;
-  padding: 8px;
-}
-
-.schedule-panel .schedule-panel-buttons.card-action a.btn-flat {
-  margin-right: 8px;
 }
 
 .schedule-panel .repeat-weekday-panel {

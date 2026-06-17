@@ -105,6 +105,14 @@
       <Textfield v-model="max_length" :config="maxLengthField" class="col s4"
                  @error="handleError(maxLengthField, $event)"/>
     </div>
+    <div v-if="selectedType === 'date'" class="row">
+      <Textfield v-model="dateFormat" :config="dateFormatField" class="col s6"
+                 @error="handleError(dateFormatField, $event)"/>
+    </div>
+    <div v-if="selectedType === 'time'" class="row">
+      <Textfield v-model="timeFormat" :config="timeFormatField" class="col s6"
+                 @error="handleError(timeFormatField, $event)"/>
+    </div>
 
     <div v-if="selectedType !== 'multiline_text'" class="row">
       <Textfield v-model="uiWidthWeight"
@@ -142,12 +150,12 @@ import Textfield from '@/common/components/textfield';
 import {forEachKeyValue, isBlankString, isEmptyArray, isEmptyObject, isEmptyString} from '@/common/utils/common';
 import ParameterSeparator from '@/main-app/components/scripts/ParameterSeparator.vue';
 import get from 'lodash/get';
-import Vue from 'vue';
 import {
   allowedValuesFromScriptField,
   allowedValuesScriptField,
   allowedValuesScriptShellEnabledField,
   constantField,
+  dateFormatField,
   defaultValueField,
   descriptionField,
   envVarField,
@@ -169,6 +177,7 @@ import {
   secureField,
   separatorField,
   stdinExpectedTextField,
+  timeFormatField,
   typeField,
   uiSeparatorTitleField,
   uiSeparatorTypeField,
@@ -176,17 +185,15 @@ import {
 } from './parameter-fields';
 
 function updateValue(value, configField, newValue) {
-  if (!value.hasOwnProperty(configField)) {
-    Object.assign(value, {[configField]: newValue});
-  }
-  Vue.set(value, configField, newValue);
+  value[configField] = newValue;
 }
 
 export default {
   name: 'ParameterConfigForm',
+  emits: ['error'],
   components: {ParameterValuesUiMapping, ParameterSeparator, ChipsList, TextArea, Checkbox, Combobox, Textfield},
   props: {
-    value: {
+    modelValue: {
       type: Object,
       default: null
     }
@@ -213,11 +220,13 @@ export default {
       recursive: 'file_recursive',
       fileType: 'file_type',
       stdinExpectedText: 'stdin_expected_text',
-      valuesUiMapping: 'values_ui_mapping'
+      valuesUiMapping: 'values_ui_mapping',
+      dateFormat: 'date_format',
+      timeFormat: 'time_format'
     };
 
     forEachKeyValue(simpleFields, (vmField, configField) => {
-      this.$watch(vmField, (newValue) => updateValue(this.value, configField, newValue));
+      this.$watch(vmField, (newValue) => updateValue(this.modelValue, configField, newValue));
     });
   },
 
@@ -256,7 +265,11 @@ export default {
       uiWidthWeight: null,
       uiSeparatorType: null,
       uiSeparatorTitle: null,
+      dateFormat: null,
+      timeFormat: null,
       nameField,
+      dateFormatField,
+      timeFormatField,
       paramField: Object.assign({}, paramField),
       passAsField,
       stdinExpectedTextField,
@@ -289,7 +302,7 @@ export default {
   },
 
   watch: {
-    value: {
+    modelValue: {
       immediate: true,
       handler(config) {
         if (config) {
@@ -318,6 +331,8 @@ export default {
           this.stdinExpectedText = get(config, 'stdin_expected_text')
           this.passAs = get(config, 'pass_as', 'argument + env_variable')
           this.valuesUiMapping = get(config, 'values_ui_mapping', {})
+          this.dateFormat = get(config, 'date_format', '')
+          this.timeFormat = get(config, 'time_format', '')
 
           this.uiWidthWeight = config['ui']?.['width_weight']
           this.uiSeparatorType = config['ui']?.['separator_before']?.['type']
@@ -356,33 +371,33 @@ export default {
     noValue: {
       immediate: true,
       handler(noValue) {
-        Vue.set(this.paramField, 'required', noValue);
+        this.paramField.required = noValue;
       }
     },
     constant: {
       immediate: true,
       handler(constant) {
-        Vue.set(this.defaultValueField, 'required', constant);
-        Vue.set(this.defaultValueField, 'name', constant ? 'Constant value' : defaultValueField.name);
+        this.defaultValueField.required = constant;
+        this.defaultValueField.name = constant ? 'Constant value' : defaultValueField.name;
       }
     },
     min: {
       handler(min) {
-        Vue.set(this.maxField, 'min', min);
+        this.maxField.min = min;
       }
     },
     fileExtensions(fileExtensions) {
       if (isEmptyArray(fileExtensions)) {
-        this.$delete(this.value, 'file_extensions');
+        delete this.modelValue['file_extensions'];
       } else {
-        updateValue(this.value, 'file_extensions', fileExtensions);
+        updateValue(this.modelValue, 'file_extensions', fileExtensions);
       }
     },
     excludedFiles(excludedFiles) {
       if (isEmptyArray(excludedFiles)) {
-        this.$delete(this.value, 'excluded_files');
+        delete this.modelValue['excluded_files'];
       } else {
-        updateValue(this.value, 'excluded_files', excludedFiles);
+        updateValue(this.modelValue, 'excluded_files', excludedFiles);
       }
     },
     allowedValuesFromScript() {
@@ -405,15 +420,15 @@ export default {
     },
     defaultValue() {
       if (this.selectedType === 'multiselect') {
-        updateValue(this.value, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
+        updateValue(this.modelValue, 'default', this.defaultValue.split(',').filter(s => !isEmptyString(s)));
       } else if (this.isRecursiveFile()) {
         let path = this.defaultValue.split('/').filter(s => !isEmptyString(s));
         if (this.defaultValue.startsWith('/')) {
           path = ['/', ...path];
         }
-        updateValue(this.value, 'default', path);
+        updateValue(this.modelValue, 'default', path);
       } else {
-        updateValue(this.value, 'default', this.defaultValue);
+        updateValue(this.modelValue, 'default', this.defaultValue);
       }
     },
     uiWidthWeight() {
@@ -427,9 +442,9 @@ export default {
     },
     passAs() {
       if (this.passAs === 'argument + env_variable') {
-        this.$delete(this.value, 'pass_as');
+        delete this.modelValue['pass_as'];
       } else {
-        updateValue(this.value, 'pass_as', this.passAs);
+        updateValue(this.modelValue, 'pass_as', this.passAs);
       }
     }
   },
@@ -450,19 +465,19 @@ export default {
 
   methods: {
     updateRegexConfig() {
-      updateValue(this.value, 'regex', {
+      updateValue(this.modelValue, 'regex', {
         pattern: this.regexConfigPattern,
         description: this.regexConfigDescription
       });
     },
     updateAllowedValues() {
       if (this.allowedValuesFromScript) {
-        updateValue(this.value, 'values', {
+        updateValue(this.modelValue, 'values', {
           script: this.allowedValuesScript,
           shell: this.allowedValuesScriptShellEnabled
         });
       } else {
-        updateValue(this.value, 'values', this.allowedValues);
+        updateValue(this.modelValue, 'values', this.allowedValues);
       }
     },
     isRecursiveFile() {
@@ -493,9 +508,9 @@ export default {
       }
 
       if (!isEmptyObject(newUiConfig)) {
-        updateValue(this.value, 'ui', newUiConfig);
+        updateValue(this.modelValue, 'ui', newUiConfig);
       } else {
-        this.$delete(this.value, 'ui');
+        delete this.modelValue['ui'];
       }
     },
     handleError(fieldConfig, error) {
@@ -512,11 +527,11 @@ export default {
 </script>
 
 <style scoped>
-.parameter-config-form >>> .col.checkbox {
+.parameter-config-form :deep(.col.checkbox) {
   margin-top: 2.1em;
 }
 
-.parameter-config-form >>> .row {
+.parameter-config-form :deep(.row) {
   margin-bottom: 0;
 }
 </style>

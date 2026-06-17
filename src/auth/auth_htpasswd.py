@@ -1,3 +1,5 @@
+import ctypes
+import ctypes.util
 import logging
 import os
 
@@ -9,6 +11,19 @@ from utils.process_utils import ExecutionException, ProcessInvoker
 from utils.string_utils import is_blank
 
 LOGGER = logging.getLogger('script_server.HtpasswdAuthenticator')
+
+def _crypt_des(password: str, salt: str):
+    """DES-crypt via ctypes, replacing the stdlib crypt module removed in Python 3.13."""
+    lib_name = ctypes.util.find_library('crypt') or ctypes.util.find_library('c')
+    if not lib_name:
+        return None
+    try:
+        lib = ctypes.CDLL(lib_name)
+        lib.crypt.restype = ctypes.c_char_p
+        result = lib.crypt(password.encode(), salt.encode())
+        return result.decode() if result else None
+    except (OSError, AttributeError):
+        return None
 
 
 def _select_verifier(htpasswd_path, process_invoker: ProcessInvoker):
@@ -124,8 +139,11 @@ class _BuiltItVerifier:
             return hashed_password == expected
 
         elif not os_utils.is_win():
-            import crypt
-            hashed_password = crypt.crypt(password, existing_password[:2])
+            hashed_password = _crypt_des(password, existing_password[:2])
+            if hashed_password is None:
+                raise InvalidServerConfigException(
+                    'htpasswd contains DES-crypt passwords but the system crypt library is unavailable. '
+                    'Please regenerate passwords using bcrypt (htpasswd -B) or SHA-1 (htpasswd -s).')
             return hashed_password == existing_password
 
         else:

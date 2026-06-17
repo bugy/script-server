@@ -1,9 +1,11 @@
 'use strict'
 
 import {mount} from '@vue/test-utils'
-import {attachToDocument, focus, getNodeText, mapArrayWrapper, vueTicks, wrapVModel} from '../../test_utils'
+import {attachToDocument, vueTicks, wrapVModel} from '../../test_utils'
 import ChipsList from '@/common/components/ChipsList'
 
+// Vuetify migration: chips are v-chip elements inside the v-combobox field;
+// the text input is the combobox's own input (search model).
 
 describe('Test ChipList', function () {
     let chipList
@@ -11,11 +13,10 @@ describe('Test ChipList', function () {
     beforeEach(async function () {
         chipList = mount(ChipsList, {
             attachTo: attachToDocument(),
-            propsData: {
-                value: ['abc', 'def'],
+            props: {
+                modelValue: ['abc', 'def'],
             }
         })
-        chipList.vm.$parent.$forceUpdate()
         wrapVModel(chipList)
 
         await vueTicks()
@@ -23,13 +24,19 @@ describe('Test ChipList', function () {
 
     afterEach(async function () {
         await vueTicks()
-        chipList.destroy()
+        chipList.unmount()
     })
 
     describe('Test setting value', function () {
 
         it('Test initial value', function () {
             verifyChips(['abc', 'def'])
+        })
+
+        it('Test external value change', async function () {
+            await chipList.setProps({modelValue: ['xyz']})
+
+            verifyChips(['xyz'])
         })
     })
 
@@ -38,6 +45,7 @@ describe('Test ChipList', function () {
         async function setInput(inputValue) {
             const input = getInput()
             input.element.focus()
+            await input.trigger('focus')
             await input.setValue(inputValue)
             await vueTicks()
         }
@@ -76,27 +84,42 @@ describe('Test ChipList', function () {
 
         it('Test write input value without comma with focus loss', async function () {
             await setInput('xyz')
-            focus(chipList.find('.chip').element)
+            await getInput().trigger('blur')
             await vueTicks()
 
             verifyChips(['abc', 'def', 'xyz'])
             verifyInputValue('')
-            expect(getInput().element).not.toHaveFocus()
         })
 
         it('Test write input value with escaped comma with focus loss', async function () {
             await setInput('xyz\\,hello')
-            focus(chipList.find('.chip').element)
+            await getInput().trigger('blur')
             await vueTicks()
 
             verifyChips(['abc', 'def', 'xyz,hello'])
             verifyInputValue('')
-            expect(getInput().element).not.toHaveFocus()
         })
     })
 
+    describe('Test chip removal', function () {
+
+        it('Test remove chip via close button', async function () {
+            chipList.get('.v-chip .v-chip__close').trigger('click')
+            await vueTicks()
+
+            verifyChips(['def'])
+        })
+    })
+
+    function chipText(chipElement) {
+        // exclude the close button (its md icon ligature is plain text in jsdom)
+        const copy = chipElement.cloneNode(true)
+        copy.querySelectorAll('.v-chip__close').forEach(el => el.remove())
+        return copy.textContent.trim()
+    }
+
     function verifyChips(expectedValue) {
-        const chips = mapArrayWrapper(chipList.findAll('.chip'), wrapper => getNodeText(wrapper.element))
+        const chips = chipList.findAll('.v-chip').map(wrapper => chipText(wrapper.element))
         expect(chips).toEqual(expectedValue)
     }
 
@@ -106,7 +129,7 @@ describe('Test ChipList', function () {
     }
 
     function getInput() {
-        return chipList.get('.chips input')
+        return chipList.get('.chips-list input')
     }
 
 })

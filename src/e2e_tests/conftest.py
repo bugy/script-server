@@ -1,8 +1,7 @@
-import json
-import time
-
 import allure
+import json
 import pytest
+import time
 from selenium.webdriver import Chrome, Firefox, Ie
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -50,15 +49,15 @@ def scripts():
 def browser(config_browser, config_headless_mode, request):
     if config_browser == 'chrome':
         options = ChromeOptions()
-        options.headless = config_headless_mode
+        if config_headless_mode:
+            options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        # mobile_emulation = {"deviceName": "Nexus 5"}
-        # options.add_experimental_option("mobileEmulation", mobile_emulation)
         driver = Chrome(options=options)
     elif config_browser == 'firefox':
         options = FirefoxOptions()
-        options.headless = config_headless_mode
+        if config_headless_mode:
+            options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         driver = Firefox(options=options)

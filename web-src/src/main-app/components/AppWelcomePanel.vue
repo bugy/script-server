@@ -13,7 +13,7 @@
 <script>
 import ConsoleImage from '@/assets/console.png'
 import CookieImage from '@/assets/cookie.png'
-import {mapActions} from 'vuex';
+import {usePageStore} from '@/main-app/stores/page'
 
 const defaultImageSrc = ConsoleImage;
 const cookieImageSrc = CookieImage;
@@ -26,10 +26,6 @@ export default {
     }
   },
 
-  methods: {
-    ...mapActions('page', ['setLoading'])
-  },
-
   mounted: function () {
     const welcomeCookiePanel = this.$refs.welcomeCookieText;
     welcomeCookiePanel.addEventListener('mouseover', () => {
@@ -40,7 +36,7 @@ export default {
       this.imageSrc = defaultImageSrc;
     });
 
-    this.setLoading(false);
+    usePageStore().setLoading(false);
   }
 
 }

@@ -1,19 +1,32 @@
 <template>
-  <div class="chips-list">
-    <label>{{ title }}</label>
-    <div ref="chips" class="chips" @blur="onFocusLost"></div>
-  </div>
+  <v-combobox
+      ref="field"
+      :label="title"
+      :model-value="modelValue"
+      :search="searchText"
+      chips
+      class="chips-list"
+      closable-chips
+      hide-no-data
+      multiple
+      @update:model-value="onChipsChanged"
+      @update:search="onTextInput"/>
 </template>
 
 <script>
-import '@/common/materializecss/imports/chips';
-import {isNull} from '@/common/utils/common';
+// Vuetify migration: v-combobox (multiple + chips + closable-chips) replaces
+// M.Chips. Typing Enter adds a chip, the chip's cross removes it — both come
+// with the component. The CSV behaviours below are untouched business logic:
+// typing an unescaped comma commits the finished segments as chips (keeping
+// the trailing fragment in the input), losing focus commits whatever is
+// typed, and `\,` escapes a comma inside a value.
 import clone from 'lodash/clone';
 
 export default {
   name: 'ChipsList',
+  emits: ['update:modelValue', 'error'],
   props: {
-    value: {
+    modelValue: {
       type: Array,
       default: () => []
     },
@@ -23,94 +36,62 @@ export default {
     }
   },
 
-  mounted: function () {
-    this.initChips([]);
-
-    const instance = M.Chips.getInstance(this.$refs.chips);
-    instance.$input[0].addEventListener('blur', this.onFocusLost);
-    instance.$input[0].addEventListener('input', this.onTextInput);
-  },
-
-  beforeDestroy: function () {
-    const instance = M.Chips.getInstance(this.$refs.chips);
-    if (instance) {
-      instance.$input[0].removeEventListener('blur', this.onFocusLost);
-      instance.$input[0].removeEventListener('input', this.onTextInput);
-    }
-  },
-
-  watch: {
-    value: {
-      immediate: true,
-      handler(newValue) {
-        if (!isNull(this.$refs.chips)) {
-          this.updateChips();
-        } else {
-          this.$nextTick(() => {
-            this.updateChips();
-          });
-        }
-      }
+  data() {
+    return {
+      searchText: ''
     }
   },
 
   methods: {
-    initChips(data) {
-      M.Chips.init(this.$refs.chips, {
-        data,
-        onChipAdd: this.updateValue,
-        onChipDelete: this.updateValue
+    nativeInput() {
+      return this.$refs.field?.$el?.querySelector('input') ?? null;
+    },
+
+    // The search prop may keep the same value across a commit (e.g. '' before
+    // typing and '' after committing), in which case Vue won't rewrite the
+    // user-typed text in the DOM input — sync it explicitly.
+    _syncNativeInput() {
+      this.$nextTick(() => {
+        const input = this.nativeInput();
+        if (input && (input.value !== this.searchText)) {
+          input.value = this.searchText;
+        }
       });
     },
 
-    updateValue() {
-      const instance = M.Chips.getInstance(this.$refs.chips);
-      this.$emit('input', instance.chipsData.map(d => d.tag));
+    onChipsChanged(newChips) {
+      // Chips committed by the combobox itself (Enter key, or focus loss —
+      // VCombobox commits the pending text on blur) carry the raw typed
+      // text: trim it and unescape `\,`. Pre-existing chips are kept as-is,
+      // a legitimate value may contain a comma.
+      const normalized = newChips.map(chip => {
+        if (this.modelValue.includes(chip)) {
+          return chip;
+        }
+        return chip.trim().replace(/\\,/g, ',');
+      });
+      this.$emit('update:modelValue', normalized);
     },
 
-    updateChips() {
-      this.initChips(this.value.map(v => ({tag: v})));
-    },
+    onTextInput(text) {
+      this.searchText = text ?? '';
 
-    onFocusLost() {
-      const rawValues = this._getRawCsvValuesFromText()
-      if (!rawValues) {
-        return
-      }
-      const instance = M.Chips.getInstance(this.$refs.chips);
-
-      instance.$input[0].value = ''
-      const newValues = this._parseRawCsvValues(rawValues)
-      this._addValues(newValues)
-    },
-
-    onTextInput() {
-      const rawValues = this._getRawCsvValuesFromText()
+      const rawValues = this._getRawCsvValues(this.searchText)
       if (!rawValues || rawValues.length < 2) {
         return
       }
 
-      const instance = M.Chips.getInstance(this.$refs.chips);
-
       const lastElement = rawValues.pop()
-      instance.$input[0].value = ''
 
       const newValues = this._parseRawCsvValues(rawValues)
       this._addValues(newValues)
 
-      this.$nextTick(() => {
-        instance.$input[0].focus()
-        instance.$input[0].value = lastElement
-      })
+      this.searchText = lastElement
+      this._syncNativeInput()
     },
 
-    _getRawCsvValuesFromText() {
-      const instance = M.Chips.getInstance(this.$refs.chips);
-      if (!instance) {
-        return
-      }
-
-      const inputValue = instance.$input[0].value?.trim()
+    _getRawCsvValues(inputValue) {
+      inputValue = inputValue?.trim()
       if (!inputValue) {
         return
       }
@@ -126,39 +107,17 @@ export default {
     },
 
     _addValues(newValues) {
-      if (newValues.size < 1) {
+      if (newValues.length < 1) {
         return
       }
 
-      const mergedValues = clone(this.value).concat(newValues)
-      this.$emit('input', mergedValues);
+      const mergedValues = clone(this.modelValue).concat(newValues)
+      this.$emit('update:modelValue', mergedValues);
     }
   }
 }
 </script>
 
 <style scoped>
-.chips-list {
-  padding-left: 0.75em;
-  padding-right: 0.75em;
-  position: relative;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
-.chips-list .chips.input-field {
-  min-height: 3rem;
-  margin-top: 0;
-  margin-bottom: 8px;
-}
-
-.chips-list label {
-  position: absolute;
-  top: -13px;
-}
-
-.chips-list >>> .chip {
-  margin-bottom: 3px;
-}
 
 </style>

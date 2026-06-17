@@ -24,9 +24,10 @@ import {forEachKeyValue, isBlankString, isNull} from '@/common/utils/common';
 
 export default {
   name: 'ParameterValuesUiMapping',
+  emits: ['update:modelValue'],
   components: {Textfield},
   props: {
-    value: {
+    modelValue: {
       type: Object,
       default: () => {
       }
@@ -41,7 +42,7 @@ export default {
 
   },
   watch: {
-    value: {
+    modelValue: {
       immediate: true,
       handler(config) {
         forEachKeyValue(config, (key, value) => {
@@ -98,7 +99,7 @@ export default {
           this.mappings.push({'script_value': '', 'ui_value': ''})
         }
 
-        this.$emit('input', newValue);
+        this.$emit('update:modelValue', newValue);
       }
     }
   }

@@ -1,0 +1,6 @@
+{
+  "port": 5099,
+  "security": {
+    "cookie_secure": false
+  }
+}

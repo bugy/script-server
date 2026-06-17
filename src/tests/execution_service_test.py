@@ -10,7 +10,6 @@ from execution import executor
 from execution.execution_service import ExecutionService
 from execution.executor import create_process_wrapper
 from model.model_helper import AccessProhibitedException
-from model.script_config import ConfigModel
 from tests import test_utils
 from tests.test_utils import mock_object, create_audit_names, _MockProcessWrapper, _IdGeneratorMock
 from utils import audit_utils
@@ -441,10 +440,12 @@ def _start_with_config(execution_service, config, parameter_values=None, user_id
 
 
 def _create_script_config(parameter_configs):
-    config = ConfigModel(
-        {'name': 'script_x',
-         'script_path': 'ls',
-         'parameters': parameter_configs},
-        'script_x.json', 'user1', 'localhost',
-        test_utils.process_invoker)
-    return config
+    return test_utils.create_config_model(
+        'script_x',
+        config={'name': 'script_x',
+                'script_path': 'ls',
+                'parameters': parameter_configs},
+        username='user1',
+        audit_name='localhost',
+
+    )

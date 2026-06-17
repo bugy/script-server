@@ -4,33 +4,30 @@
 
 <script>
 import ExecutionsLogPage from '@/common/components/history/executions-log-page';
-import {mapActions, mapState} from 'vuex';
+import {useHistoryStore} from '@/common/stores/history';
+import {useAdminUiStore} from '@/admin/stores/ui';
 
 export default {
   name: 'AdminExecutionsLogPage',
   components: {ExecutionsLogPage},
 
   computed: {
-    ...mapState('history', ['selectedExecution'])
-  },
-
-  methods: {
-    ...mapActions(['setSubheader'])
+    selectedExecution() {
+      return useHistoryStore().selectedExecution
+    }
   },
 
   watch: {
     selectedExecution: {
       immediate: true,
       handler(execution) {
-        if (execution) {
-          this.setSubheader('#' + execution.id + ' - ' + execution.user + '@' + execution.script);
-        } else {
-          this.setSubheader(null);
-        }
+        const subheader = execution
+            ? '#' + execution.id + ' - ' + execution.user + '@' + execution.script
+            : null
+        useAdminUiStore().setSubheader(subheader)
       }
     }
   }
-
 }
 </script>
 

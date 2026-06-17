@@ -1,256 +1,135 @@
 <template>
-  <div v-if="hasExecutors" class="execution-instance-tabs">
-    <ul ref="tabs" class="execution-tabs">
-      <li v-for="executor in scriptExecutors" :ref="'executor' + executor.state.id" class="tab executor-tab">
-        <a v-trim-text
-           :class="{active: (executor === currentExecutor),
-                    finished: (executor.state.status === 'finished'),
-                    error: (executor.state.status === 'error') || (executor.state.status === 'disconnected') }"
-           class="btn-flat"
-           @click="selectExecutor(executor)">
-          <i class="material-icons">{{ getExecutorIcon(executor) }}</i>
-          {{ executor.state.id }}
-        </a>
-      </li>
-      <li v-if="scriptExecutors && hasMoreSpace" ref="newExecutorTab" class="tab">
-        <a :class="{active: !currentExecutor}"
-           class="btn-flat add-execution-tab-button"
-           title="Add another script instance"
-           @click="addNew">
-          <i class=" material-icons">add</i>
-        </a>
-      </li>
-    </ul>
-    <div ref="tabIndicator" :class="{inactive:loading}" class="tab-indicator"></div>
-  </div>
+  <v-tabs
+    v-if="hasExecutors"
+    :model-value="currentExecutor"
+    :color="loading ? 'grey-lighten-1' : 'primary'"
+    class="execution-instance-tabs"
+    density="compact"
+    @update:model-value="selectExecutor"
+  >
+    <v-tab
+      v-for="executor in scriptExecutors"
+      :key="executor.state.id"
+      :value="executor"
+      :class="{
+        'status-finished': executor.state.status === 'finished',
+        'status-error': (executor.state.status === 'error') || (executor.state.status === 'disconnected')
+      }"
+    >
+      <v-icon class="tab-icon">{{ getExecutorIcon(executor) }}</v-icon>
+      {{ executor.state.id }}
+    </v-tab>
+    <v-tab
+      :value="null"
+      class="add-execution-tab"
+      title="Add another script instance"
+      @click="resetScript"
+    >
+      <v-icon>add</v-icon>
+    </v-tab>
+  </v-tabs>
 </template>
 
 <script>
-import {forEachKeyValue, isEmptyArray, isNull} from '@/common/utils/common';
-import {mapActions, mapState} from 'vuex';
+import {forEachKeyValue, isEmptyArray} from '@/common/utils/common';
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useScriptConfigStore} from '@/main-app/stores/scriptConfig'
+import {useExecutionsStore} from '@/main-app/stores/executions'
+import {useScriptSetupStore} from '@/main-app/stores/scriptSetup'
 
 export default {
   name: 'ExecutionInstanceTabs',
-  data() {
-    return {
-      hasMoreSpace: {
-        type: Boolean,
-        default: false
-      }
-    }
-  },
   computed: {
-    ...mapState('scripts', {
-      selectedScript: 'selectedScript'
-    }),
-    ...mapState('scriptConfig', {
-      loading: 'loading'
-    }),
-    ...mapState('executions', ['currentExecutor', 'executors']),
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    },
+    loading() {
+      return useScriptConfigStore().loading
+    },
+    currentExecutor() {
+      return useExecutionsStore().currentExecutor
+    },
+    executors() {
+      return useExecutionsStore().executors
+    },
 
     scriptExecutors() {
       const result = [];
-
       forEachKeyValue(this.executors, (_, executor) => {
         if (executor.state.scriptName === this.selectedScript) {
           result.push(executor);
         }
       });
-
       return result;
     },
 
     hasExecutors() {
-      return !isEmptyArray(this.scriptExecutors)
+      return !isEmptyArray(this.scriptExecutors);
     }
   },
-  mounted() {
-    this.updateTabIndicator();
-
-    window.addEventListener('resize', this.onResize);
-    this.calcAvailableSpace();
-  },
   methods: {
-    ...mapActions('executions', ['selectExecutor']),
-    ...mapActions(['resetScript']),
-    addNew() {
-      this.selectExecutor(null);
-      this.resetScript();
+    selectExecutor(executor) {
+      useExecutionsStore().selectExecutor(executor)
     },
-    onResize() {
-      this.updateTabIndicator();
-      this.calcAvailableSpace();
-    },
-    updateTabIndicator() {
-      if (!this.$refs.tabs) {
-        return;
-      }
-
-      let tabElement = null;
-
-      if (isNull(this.currentExecutor)) {
-        if (isNull(this.$refs.newExecutorTab)) {
-          this.$refs.tabIndicator.style.width = 0;
-          return;
-        }
-
-        tabElement = this.$refs.newExecutorTab;
-
-      } else {
-        const ref = 'executor' + this.currentExecutor.state.id;
-        tabElement = this.$refs[ref];
-        if (Array.isArray(tabElement)) {
-          tabElement = tabElement[0];
-        }
-      }
-
-      if (!tabElement) {
-        this.$refs.tabIndicator.style.width = 0;
-      } else {
-        const tabButton = tabElement.getElementsByClassName('btn-flat')[0];
-        this.$refs.tabIndicator.style.width = tabButton.offsetWidth + 'px';
-        this.$refs.tabIndicator.style.left = tabButton.offsetLeft + 'px';
-      }
-    },
-
-    calcAvailableSpace() {
-      if (!this.$refs.tabs) {
-        return;
-      }
-      const childrenWidth = Array.from(this.$refs.tabs.childNodes)
-          .map(c => c.offsetWidth)
-          .reduce((previousValue, currentValue) => currentValue + previousValue, 0);
-
-      this.hasMoreSpace = (this.$el.offsetWidth - childrenWidth) > 100;
+    resetScript() {
+      const selectedScript = useScriptsStore().selectedScript
+      useScriptSetupStore().reset()
+      useScriptConfigStore().reloadScript(selectedScript)
     },
 
     getExecutorIcon(executor) {
-      const status = executor.state.status
-      if (status === 'finished') {
-        return 'check'
-      } else if ((status === 'error') || (status === 'disconnected')) {
-        return 'error_outline'
-      } else {
-        return 'lens'
-      }
+      const status = executor.state.status;
+      if (status === 'finished') return 'check';
+      if ((status === 'error') || (status === 'disconnected')) return 'error_outline';
+      return 'lens';
     }
-  },
-  watch: {
-    currentExecutor: {
-      immediate: true,
-      handler() {
-        this.$nextTick(this.updateTabIndicator);
-      }
-    },
-    loading: {
-      handler() {
-        this.$nextTick(this.updateTabIndicator);
-      }
-    },
-    scriptExecutors() {
-      this.$nextTick(this.updateTabIndicator);
-      this.$nextTick(this.calcAvailableSpace);
-    }
-  },
-  beforeDestroy: function () {
-    window.removeEventListener('resize', this.onResize);
   }
 }
-
-
 </script>
 
 <style scoped>
-.execution-instance-tabs {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-}
-
-.execution-instance-tabs .execution-tabs {
-  display: flex;
-  align-items: center;
-  margin-top: 0;
-  margin-bottom: 0;
-  height: 100%;
-}
-
-.execution-instance-tabs .tab {
-  padding: 0;
-  height: 100%;
-}
-
-.execution-instance-tabs .tab .btn-flat {
-  height: 100%;
-
-  display: flex;
-  align-items: center;
-}
-
-.execution-instance-tabs .executor-tab > a {
+:deep(.v-tab) {
   color: var(--font-color-disabled);
-
   font-size: 22px;
   font-weight: 300;
-  line-height: 21px;
   text-transform: none;
-  vertical-align: bottom;
-
-  padding: 0 20px 0;
-  height: 100%;
+  padding: 0 20px;
 }
 
-.execution-instance-tabs .executor-tab > a > i {
+:deep(.v-tab--selected) {
+  color: var(--font-color-main);
+}
+
+:deep(.v-tab .tab-icon) {
   font-size: 14px;
   margin-right: 12px;
 }
 
-.execution-instance-tabs .executor-tab > a.finished > i {
+:deep(.v-tab.status-finished .tab-icon) {
   font-size: 22px;
   margin-right: 6px;
   margin-left: -2px;
 }
 
-.execution-instance-tabs .executor-tab > a.error > i {
+:deep(.v-tab.status-error .tab-icon) {
   font-size: 16px;
   margin-right: 10px;
 }
 
-.execution-instance-tabs .tab > a.active {
-  color: var(--font-color-main);
-}
-
-.execution-instance-tabs .tab > a.active > i {
+:deep(.v-tab--selected .tab-icon) {
   color: var(--primary-color);
 }
 
-.execution-instance-tabs .tab-indicator {
-  position: absolute;
-  bottom: -1px;
-  height: 4px;
-  width: 88px;
-  background-color: var(--primary-color);
-  transition: left 0.3s;
+:deep(.add-execution-tab) {
+  padding: 0 12px;
 }
 
-.execution-instance-tabs .tab-indicator.inactive {
-  background-color: var(--focus-color);
-}
-
-.add-execution-tab-button {
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-.add-execution-tab-button i {
+:deep(.add-execution-tab .v-icon) {
   font-size: 24px;
   color: var(--font-color-medium);
 }
 
-.execution-instance-tabs a.add-execution-tab-button.active i {
+:deep(.v-tab--selected.add-execution-tab .v-icon) {
   color: var(--font-color-main);
 }
-
-
 </style>

@@ -1,15 +1,12 @@
 'use strict';
 import ExecutionDetails from '@/common/components/history/execution-details'
-import historyModule from '@/common/store/executions-module';
+import ReadOnlyField from '@/common/components/readonly-field';
+import {useHistoryStore} from '@/common/stores/history';
 import {axiosInstance} from '@/common/utils/axios_utils';
 import {mount} from '@vue/test-utils';
 import MockAdapter from 'axios-mock-adapter';
-import Vuex from 'vuex';
+import {createPinia, setActivePinia} from 'pinia';
 import {attachToDocument, createScriptServerTestVue, flushPromises, vueTicks} from '../test_utils';
-
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
 
 let axiosMock;
 
@@ -23,19 +20,15 @@ function mockGetExecution(id, startTime, user, script, status, exitCode, command
 
 describe('Test history details', function () {
     let executionDetails;
-    let store;
+    let pinia;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
-            modules: {
-                history: historyModule()
-            }
-        });
+        pinia = createPinia();
+        setActivePinia(pinia);
 
         executionDetails = mount(ExecutionDetails, {
             attachTo: attachToDocument(),
-            store,
-            localVue
+            global: {plugins: [pinia]},
         });
 
         axiosMock = new MockAdapter(axiosInstance)
@@ -44,23 +37,23 @@ describe('Test history details', function () {
     });
 
     afterEach(function () {
-        executionDetails.destroy();
+        executionDetails.unmount();
         axiosMock.restore()
     });
 
     describe('Test visualisation', function () {
 
             function assertField(fieldName, expectedValue) {
-                const foundChild = executionDetails.vm.$children.find(child =>
-                    (child.$options._componentTag === 'readonly-field')
-                    && (child.$props.title === fieldName));
+                // Vue 3 removed `vm.$children`; use VTU v2 findAllComponents instead.
+                const foundChild = executionDetails.findAllComponents(ReadOnlyField)
+                    .find(child => child.props('title') === fieldName);
 
                 expect(foundChild).not.toBeNil()
-                expect(foundChild.$props.value).toEqual(expectedValue)
+                expect(foundChild.props('value')).toEqual(expectedValue)
             }
 
             function assertLog(expectedLog) {
-                const actualLog = $(executionDetails.vm.$el).find('code').text();
+                const actualLog = executionDetails.vm.$el.querySelector('code')?.textContent ?? '';
                 expect(actualLog).toEqual(expectedLog)
             }
 
@@ -90,7 +83,8 @@ describe('Test history details', function () {
 
                 assertField('Script name', 'My script');
                 assertField('User', 'User X');
-                assertField('Start time', '12/25/2019 12:30:01 PM');
+                const d = new Date('2019-12-25T12:30:01');
+                assertField('Start time', d.toLocaleDateString() + ' ' + d.toLocaleTimeString());
                 assertField('Status', 'Finished (-15)');
                 assertField('Command', 'my_script.sh -a -b 2');
                 assertLog('some long log text');

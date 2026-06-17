@@ -2,29 +2,34 @@ import {mount} from '@vue/test-utils'
 import 'material-design-icons/iconfont/material-icons.css';
 import {
     attachToDocument,
-    awaitInvisible,
-    awaitVisible,
     createScriptServerTestVue,
     timeout,
     vueTicks
 } from '../../../test_utils'
-import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
-import 'materialize-css/js/dropdown'
-import Vuex from 'vuex'
+import {createPinia, setActivePinia} from 'pinia';
+import {useAuthStore} from '@/common/stores/auth';
 import Combobox from '@/common/components/combobox'
+import Textfield from '@/common/components/textfield'
 import {clearArray, isEmptyArray} from '@/common/utils/common'
 import ace from 'ace-builds/src-noconflict/ace'
-import {__RewireAPI__ as FileUploadRewire} from '@/common/components/file_upload'
-import ScriptEditDialog from '@/admin/components/scripts-config/script-edit/ScriptEditDialog'
 import MockAdapter from 'axios-mock-adapter'
 import {axiosInstance} from '@/common/utils/axios_utils'
 
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
+// Vue 3 / Vitest replacement for babel-plugin-rewire: file_upload imports
+// `getFileInputValue` from common utils to read the chosen <input type=file>.
+// Mock just that export with a reconfigurable vi.fn (other utils preserved).
+const {getFileInputValueMock} = vi.hoisted(() => ({getFileInputValueMock: vi.fn()}));
+vi.mock('@/common/utils/common', async (importActual) => ({
+    ...(await importActual()),
+    getFileInputValue: getFileInputValueMock
+}));
+
+import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
+import ScriptEditDialog from '@/admin/components/scripts-config/script-edit/ScriptEditDialog'
 
 function rewireFileUpload(filename) {
     const file = new File([''], filename)
-    FileUploadRewire.__Rewire__('getFileInputValue', () => file);
+    getFileInputValueMock.mockImplementation(() => file);
 }
 
 const UPLOAD_MODE = 'Upload script'
@@ -33,37 +38,16 @@ const PATH_MODE = 'Path on server'
 
 describe('Test ScriptField', function () {
     let scriptField
-    let store
+    let pinia
     let changes = []
     let axiosMock
 
-    before(function () {
-        M.Dropdown.defaults.inDuration = 1
-        M.Dropdown.defaults.outDuration = 1
-        M.Modal.defaults.inDuration = 1
-        M.Modal.defaults.outDuration = 1
-    })
-
-    after(function () {
-        M.Dropdown.defaults.inDuration = 150
-        M.Dropdown.defaults.outDuration = 250
-        M.Modal.defaults.inDuration = 250
-        M.Modal.defaults.outDuration = 250
-    })
-
     beforeEach(async function () {
-        store = new Vuex.Store({
-            modules: {
-                auth: {
-                    namespaced: true,
-                    state: {
-                        canEditCode: true
-                    }
-                }
-            }
-        })
+        pinia = createPinia();
+        setActivePinia(pinia);
+        useAuthStore().canEditCode = true;
 
-        scriptField = createScriptField(store, localVue, changes, {
+        scriptField = createScriptField(pinia, changes, {
                 originalPath: '',
                 newConfig: true,
                 configName: ''
@@ -75,10 +59,10 @@ describe('Test ScriptField', function () {
 
     afterEach(async function () {
         await vueTicks();
-        scriptField.destroy();
+        scriptField.unmount();
 
         clearArray(changes)
-        __rewire_reset_all__()
+        getFileInputValueMock.mockReset()
 
         axiosMock.restore()
     });
@@ -86,12 +70,12 @@ describe('Test ScriptField', function () {
     describe('Test simple edit', function () {
 
         it('Test initial path', function () {
-            expect(scriptField.get('.input-field input').element.value).toBe('');
+            expect(scriptField.get('.textfield input').element.value).toBe('');
             expect(scriptField.get('.open-dialog-button').element).toBeVisible()
         });
 
         it('Test no button when no access', async function () {
-            store.state.auth.canEditCode = false
+            useAuthStore().canEditCode = false
 
             await vueTicks()
 
@@ -99,13 +83,17 @@ describe('Test ScriptField', function () {
         });
 
         it('Test change path by user', async function () {
-            await scriptField.get('.input-field input').setValue('/new/path.py')
+            await scriptField.get('.textfield input').setValue('/new/path.py')
 
-            expect(scriptField.get('.input-field input').element.value).toBe('/new/path.py');
+            expect(scriptField.get('.textfield input').element.value).toBe('/new/path.py');
             expect(changes).toEqual([{path: '/new/path.py', mode: 'new_path'}])
         });
     });
 
+    // ScriptEditDialog now uses v-dialog (Vuetify) which teleports its overlay to
+    // document.body. DOM queries on dialog content use document.body.querySelector()
+    // rather than VTU's find() (which only searches within a component's own element).
+    // findComponent() still works for component-instance lookups across teleport.
     describe('Test open dialog for new', function () {
         let dialogWrapper
 
@@ -136,15 +124,15 @@ describe('Test ScriptField', function () {
             await selectUploadMode(dialogWrapper)
             await selectPathMode(dialogWrapper)
 
-            dialogWrapper.get('.textfield input').setValue('/some/new/path')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('/some/new/path')
             await vueTicks()
 
-            expect(dialogWrapper.find('.ignored-changes-warning').exists()).toBeFalse()
+            expect(getDialogEl().querySelector('.ignored-changes-warning')).toBeNull()
 
             await clickButton(dialogWrapper, 'Save')
 
             expect(changes).toEqual([{'mode': 'new_path', 'path': '/some/new/path'}])
-            expect(scriptField.get('.input-field input').element.value).toBe('/some/new/path')
+            expect(scriptField.get('.textfield input').element.value).toBe('/some/new/path')
         })
 
         it('Test set code mode and save', async function () {
@@ -156,7 +144,7 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/{name}.py',
                 code: '#!/usr/bin/env python\n'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/{name}.py')
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/{name}.py')
         })
 
         it('Test set code mode, edit and save', async function () {
@@ -164,9 +152,10 @@ describe('Test ScriptField', function () {
 
             await setCodeValue(dialogWrapper, 'abcdef')
 
-            await dialogWrapper.findComponent(Combobox).get('select').setValue('R')
+            dialogWrapper.findComponent(Combobox).vm.onUserInput('R')
+            await vueTicks(3)
 
-            expect(dialogWrapper.find('.ignored-changes-warning').exists()).toBeFalse()
+            expect(getDialogEl().querySelector('.ignored-changes-warning')).toBeNull()
 
             await clickButton(dialogWrapper, 'Save')
 
@@ -175,7 +164,7 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/{name}.r',
                 code: 'abcdef'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/{name}.r');
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/{name}.r');
         })
 
         it('Test set upload mode, edit and save', async function () {
@@ -183,7 +172,7 @@ describe('Test ScriptField', function () {
 
             await setUploadFile(dialogWrapper, 'new_file.ps1')
 
-            expect(dialogWrapper.find('.ignored-changes-warning').exists()).toBeFalse()
+            expect(getDialogEl().querySelector('.ignored-changes-warning')).toBeNull()
 
             await clickButton(dialogWrapper, 'Save')
 
@@ -192,17 +181,17 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/new_file.ps1',
                 uploadFile: new File([''], 'new_file.ps1')
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/new_file.ps1')
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/new_file.ps1')
         })
 
         it('Test set path on server and cancel', async function () {
-            dialogWrapper.get('.textfield input').setValue('/some/new/path')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('/some/new/path')
             await vueTicks()
 
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('')
+            expect(scriptField.get('.textfield input').element.value).toBe('')
         })
 
         it('Test set code mode, edit and cancel', async function () {
@@ -210,12 +199,13 @@ describe('Test ScriptField', function () {
 
             await setCodeValue(dialogWrapper, 'abcdef')
 
-            await dialogWrapper.findComponent(Combobox).find('select').setValue('bash')
+            dialogWrapper.findComponent(Combobox).vm.onUserInput('bash')
+            await vueTicks(3)
 
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('')
+            expect(scriptField.get('.textfield input').element.value).toBe('')
         })
 
         it('Test set upload mode, edit and cancel', async function () {
@@ -226,7 +216,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('')
+            expect(scriptField.get('.textfield input').element.value).toBe('')
         })
 
         it('Test edit config name for code mode', async function () {
@@ -236,7 +226,8 @@ describe('Test ScriptField', function () {
 
             verifyCodePath(dialogWrapper, './conf/scripts/new_name.py')
 
-            await dialogWrapper.findComponent(Combobox).get('select').setValue('powershell')
+            dialogWrapper.findComponent(Combobox).vm.onUserInput('powershell')
+            await vueTicks(3)
 
             verifyCodePath(dialogWrapper, './conf/scripts/new_name.ps1')
 
@@ -247,7 +238,7 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/new_name.ps1',
                 code: '#!/usr/bin/env pwsh\n'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/new_name.ps1')
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/new_name.ps1')
         })
 
         it('Test edit config name for code mode after save', async function () {
@@ -271,31 +262,31 @@ describe('Test ScriptField', function () {
                 path: './conf/scripts/another_name.py',
                 code: '#!/usr/bin/env python\n'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('./conf/scripts/another_name.py')
+            expect(scriptField.get('.textfield input').element.value).toBe('./conf/scripts/another_name.py')
         })
 
         it('Test disable save for empty path', async function () {
-            await dialogWrapper.get('.textfield input').setValue('')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('')
 
-            expect(getDialogButton(dialogWrapper, 'Save').attributes('disabled')).toBe('disabled')
+            expect(getDialogButton(dialogWrapper, 'Save')).toBeDisabled()
         })
 
         it('Test disable save for empty upload', async function () {
             await selectUploadMode(dialogWrapper)
 
-            expect(getDialogButton(dialogWrapper, 'Save').attributes('disabled')).toBe('disabled')
+            expect(getDialogButton(dialogWrapper, 'Save')).toBeDisabled()
         })
 
         it('Test enable save for empty code', async function () {
-            await dialogWrapper.get('.textfield input').setValue('')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('')
 
             await selectCodeMode(dialogWrapper)
 
-            expect(getDialogButton(dialogWrapper, 'Save').attributes('disabled')).toBeNil()
+            expect(getDialogButton(dialogWrapper, 'Save')).not.toBeDisabled()
         })
 
         it('Test non-active modifications in server path', async function () {
-            await dialogWrapper.get('.textfield input').setValue('abc')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('abc')
 
             await verifyWarningsOnlyWhenInactive(dialogWrapper, PATH_MODE)
         })
@@ -323,9 +314,9 @@ describe('Test ScriptField', function () {
         beforeEach(async function () {
             mockCodeLoad('Existing', 'some code')
 
-            scriptField.destroy()
+            scriptField.unmount()
 
-            scriptField = createScriptField(store, localVue, changes, {
+            scriptField = createScriptField(pinia, changes, {
                     originalPath: '/home/user/my_script.sh',
                     newConfig: false,
                     configName: 'Existing'
@@ -355,13 +346,13 @@ describe('Test ScriptField', function () {
             await selectUploadMode(dialogWrapper)
             await selectPathMode(dialogWrapper)
 
-            dialogWrapper.get('.textfield input').setValue('/some/new/path')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('/some/new/path')
             await vueTicks()
 
             await clickButton(dialogWrapper, 'Save')
 
             expect(changes).toEqual([{'mode': 'new_path', 'path': '/some/new/path'}])
-            expect(scriptField.get('.input-field input').element.value).toBe('/some/new/path')
+            expect(scriptField.get('.textfield input').element.value).toBe('/some/new/path')
         })
 
         it('Test set code mode and save', async function () {
@@ -373,7 +364,7 @@ describe('Test ScriptField', function () {
                 path: '/home/user/my_script.sh',
                 code: 'some code'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test set code mode, edit and save', async function () {
@@ -381,7 +372,8 @@ describe('Test ScriptField', function () {
 
             await setCodeValue(dialogWrapper, 'abcdef')
 
-            await dialogWrapper.findComponent(Combobox).get('select').setValue('R')
+            dialogWrapper.findComponent(Combobox).vm.onUserInput('R')
+            await vueTicks(3)
 
             await clickButton(dialogWrapper, 'Save')
 
@@ -390,7 +382,7 @@ describe('Test ScriptField', function () {
                 path: '/home/user/my_script.sh',
                 code: 'abcdef'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh');
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh');
         })
 
         it('Test set upload mode, edit and save', async function () {
@@ -405,17 +397,17 @@ describe('Test ScriptField', function () {
                 path: '/home/user/my_script.sh',
                 uploadFile: new File([''], 'new_file.ps1')
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test set path on server and cancel', async function () {
-            dialogWrapper.get('.textfield input').setValue('/some/new/path')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('/some/new/path')
             await vueTicks()
 
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test set code mode, edit and cancel', async function () {
@@ -423,12 +415,13 @@ describe('Test ScriptField', function () {
 
             await setCodeValue(dialogWrapper, 'abcdef')
 
-            await dialogWrapper.findComponent(Combobox).find('select').setValue('bash')
+            dialogWrapper.findComponent(Combobox).vm.onUserInput('bash')
+            await vueTicks(3)
 
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test set upload mode, edit and cancel', async function () {
@@ -439,7 +432,7 @@ describe('Test ScriptField', function () {
             await clickButton(dialogWrapper, 'Cancel')
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test edit config name for code mode', async function () {
@@ -449,7 +442,8 @@ describe('Test ScriptField', function () {
 
             verifyCodePath(dialogWrapper, '/home/user/my_script.sh')
 
-            await dialogWrapper.findComponent(Combobox).get('select').setValue('powershell')
+            dialogWrapper.findComponent(Combobox).vm.onUserInput('powershell')
+            await vueTicks(3)
 
             verifyCodePath(dialogWrapper, '/home/user/my_script.sh')
 
@@ -460,7 +454,7 @@ describe('Test ScriptField', function () {
                 path: '/home/user/my_script.sh',
                 code: 'some code'
             }])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test edit config name for code mode after save', async function () {
@@ -480,31 +474,31 @@ describe('Test ScriptField', function () {
             await scriptField.setProps({configName: 'another_name'})
 
             expect(changes).toEqual([])
-            expect(scriptField.get('.input-field input').element.value).toBe('/home/user/my_script.sh')
+            expect(scriptField.get('.textfield input').element.value).toBe('/home/user/my_script.sh')
         })
 
         it('Test disable save for empty path', async function () {
-            await dialogWrapper.get('.textfield input').setValue('')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('')
 
-            expect(getDialogButton(dialogWrapper, 'Save').attributes('disabled')).toBe('disabled')
+            expect(getDialogButton(dialogWrapper, 'Save')).toBeDisabled()
         })
 
         it('Test disable save for empty upload', async function () {
             await selectUploadMode(dialogWrapper)
 
-            expect(getDialogButton(dialogWrapper, 'Save').attributes('disabled')).toBe('disabled')
+            expect(getDialogButton(dialogWrapper, 'Save')).toBeDisabled()
         })
 
         it('Test enable save for empty code', async function () {
-            await dialogWrapper.get('.textfield input').setValue('')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('')
 
             await selectCodeMode(dialogWrapper)
 
-            expect(getDialogButton(dialogWrapper, 'Save').attributes('disabled')).toBeNil()
+            expect(getDialogButton(dialogWrapper, 'Save')).not.toBeDisabled()
         })
 
         it('Test non-active modifications in server path', async function () {
-            await dialogWrapper.get('.textfield input').setValue('abc')
+            await dialogWrapper.findComponent(Textfield).find('input').setValue('abc')
 
             await verifyWarningsOnlyWhenInactive(dialogWrapper, PATH_MODE)
         })
@@ -530,11 +524,11 @@ describe('Test ScriptField', function () {
         let dialogWrapper
 
         beforeEach(async function () {
-            scriptField.destroy()
+            scriptField.unmount()
         })
 
         async function init() {
-            scriptField = createScriptField(store, localVue, changes, {
+            scriptField = createScriptField(pinia, changes, {
                     originalPath: '/home/user/my_script.sh',
                     newConfig: false,
                     configName: 'Existing'
@@ -582,60 +576,74 @@ describe('Test ScriptField', function () {
 
         async function verifyCodeEditError(message) {
             await selectCodeMode(dialogWrapper)
+            const overlay = getDialogEl()
 
-            expect(dialogWrapper.get('.code-editor div.error').element).toBeVisible()
-            expect(dialogWrapper.get('.code-editor div.error').text()).toBe(message)
+            const errorEl = overlay.querySelector('.code-editor .info-text.error')
+            expect(errorEl).toBeVisible()
+            expect(errorEl.textContent.trim()).toBe(message)
 
-            expect(dialogWrapper.get('.editor').element).not.toBeVisible()
+            expect(overlay.querySelector('.editor')).not.toBeVisible()
 
-            expect(getDialogButton(dialogWrapper, 'Save').attributes('disabled')).toBe('disabled')
+            expect(getDialogButton(dialogWrapper, 'Save')).toBeDisabled()
         }
 
         async function verifyUploadNoError() {
             await selectUploadMode(dialogWrapper)
+            const overlay = getDialogEl()
 
-            expect(dialogWrapper.find('.script-uploader div.error').exists()).toBeFalse()
+            expect(overlay.querySelector('.script-uploader .info-text.error')).toBeNull()
 
-            expect(dialogWrapper.get('.file-upload-field').element).toBeVisible()
+            expect(overlay.querySelector('.file-upload-field')).toBeVisible()
         }
 
         async function verifyUploadError(message) {
             await selectUploadMode(dialogWrapper)
+            const overlay = getDialogEl()
 
-            expect(dialogWrapper.get('.script-uploader div.error').element).toBeVisible()
-            expect(dialogWrapper.get('.script-uploader div.error').text()).toBe(message)
+            const errorEl = overlay.querySelector('.script-uploader .info-text.error')
+            expect(errorEl).toBeVisible()
+            expect(errorEl.textContent.trim()).toBe(message)
 
-            expect(dialogWrapper.find('.file-upload-field').exists()).toBeFalse()
+            expect(overlay.querySelector('.file-upload-field')).toBeNull()
         }
     })
 
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
     async function openDialog() {
         scriptField.get('.open-dialog-button').trigger('click')
+        await vueTicks(10)
 
-        await timeout(5)
+        // ScriptEditDialog uses v-dialog (Vuetify) which teleports to document.body.
+        // The :class on v-dialog lands on .v-overlay__content.
+        const overlay = document.body.querySelector('.script-edit-dialog')
+        expect(overlay).not.toBeNull()
+        return scriptField.findComponent(ScriptEditDialog)
+    }
 
-        const dialogWrapper = scriptField.findComponent(ScriptEditDialog)
-
-        await awaitVisible(dialogWrapper.element, 1000)
-
-        return dialogWrapper
+    // Returns the live DOM element of the teleported dialog content.
+    function getDialogEl() {
+        return document.body.querySelector('.script-edit-dialog')
     }
 
     async function selectMode(dialogWrapper, modeText) {
-        for (let radio of dialogWrapper.findAll('.radio-group label').wrappers) {
-            if (radio.get('span').text() === modeText) {
-                radio.get('input').trigger('click')
-                await timeout(5)
+        const overlay = getDialogEl()
+        for (const radio of overlay.querySelectorAll('.radio-group .v-radio')) {
+            const span = radio.querySelector('label span')
+            if (span && span.textContent.trim() === modeText) {
+                radio.querySelector('input[type=radio]').click()
+                await timeout(50)
                 return
             }
         }
-
         throw Error('Failed to find radio button for ' + modeText)
     }
 
+    // Returns the raw <button> DOM element (not a VTU wrapper).
     function getDialogButton(dialogWrapper, buttonText) {
-        for (let button of dialogWrapper.findAll('.card-action .btn-flat').wrappers) {
-            if (button.text() === buttonText) {
+        const overlay = getDialogEl()
+        for (const button of overlay.querySelectorAll('.v-card-actions button.v-btn')) {
+            if (button.textContent.trim() === buttonText) {
                 return button
             }
         }
@@ -643,19 +651,19 @@ describe('Test ScriptField', function () {
     }
 
     async function clickButton(dialogWrapper, buttonText) {
-        const button = getDialogButton(dialogWrapper, buttonText)
-        button.trigger('click')
-        await awaitInvisible(dialogWrapper.element, 500)
+        getDialogButton(dialogWrapper, buttonText).click()
+        await vueTicks(10)
     }
 
     function verifyRadioWarnings(dialogWrapper, expectedIndices) {
+        const overlay = getDialogEl()
         let iconIndices = []
         let i = 0
-        for (let radio of dialogWrapper.findAll('.radio-group p').wrappers) {
-            const icon = radio.find('i.material-icons')
-            if (icon.exists()) {
+        for (const radio of overlay.querySelectorAll('.radio-group .v-radio')) {
+            const icon = radio.querySelector('i.material-icons.option-icon')
+            if (icon) {
                 iconIndices.push(i)
-                expect(icon.text()).toBe('error_outline')
+                expect(icon.textContent.trim()).toBe('error_outline')
             }
             i++
         }
@@ -663,10 +671,10 @@ describe('Test ScriptField', function () {
         expect(iconIndices).toEqual(expectedIndices)
 
         if (isEmptyArray(expectedIndices)) {
-            expect(dialogWrapper.find('.ignored-changes-warning').exists()).toBeFalse()
+            expect(overlay.querySelector('.ignored-changes-warning')).toBeNull()
         } else {
-            expect(dialogWrapper.get('.ignored-changes-warning').text())
-                .toBe('error_outline Changes in non-active tabs will be ignored')
+            expect(overlay.querySelector('.ignored-changes-warning').textContent)
+                .toContain('Changes in non-active tabs will be ignored')
         }
     }
 
@@ -698,60 +706,71 @@ describe('Test ScriptField', function () {
     }
 
     async function setCodeValue(dialogWrapper, value) {
-        const editor = ace.edit(dialogWrapper.get('.editor').element)
+        const editor = ace.edit(getDialogEl().querySelector('.editor'))
         editor.setValue(value)
         await vueTicks()
     }
 
     async function setUploadFile(dialogWrapper, filename) {
         rewireFileUpload(filename)
-        await dialogWrapper.get('input[type=file]').trigger('change')
+        const fileInput = getDialogEl().querySelector('input[type=file]')
+        fileInput.dispatchEvent(new Event('change', {bubbles: true}))
+        await vueTicks(3)
     }
 
     function verifyCodePath(dialogWrapper, path) {
-        expect(dialogWrapper.get('.code-editor .textfield input').element.value).toBe(path)
+        expect(getDialogEl().querySelector('.code-editor .textfield input').value).toBe(path)
     }
 
-    function createScriptField(store, localVue, changes, props) {
+    function createScriptField(pinia, changes, props) {
+        // Vue 3 removed vm.$on; register the 'change' listener via an onChange prop.
         const scriptField = mount(ScriptField, {
-            store,
-            localVue,
+            global: {plugins: [pinia]},
             attachTo: attachToDocument(),
-            propsData: props
+            props: {
+                ...props,
+                onChange: (value) => changes.push(value)
+            }
         });
 
-        scriptField.vm.$on('change', function (value) {
-            changes.push(value)
-        })
+        // The component emits an initial 'change' during mount; the original test
+        // attached its listener via $on *after* mount, so discard anything captured
+        // up to this point to mirror that behaviour.
+        changes.length = 0
 
         return scriptField
     }
 
     function assertPathModeOpen(dialogWrapper, expectedPath) {
-        expect(dialogWrapper.get('input[type=radio]:checked + span').text()).toBe(PATH_MODE)
-        expect(dialogWrapper.get('.input-field input').element.value).toBe(expectedPath)
-
-        expect(dialogWrapper.get('.code-editor').element).not.toBeVisible()
-        expect(dialogWrapper.get('.script-uploader').element).not.toBeVisible()
+        const overlay = getDialogEl()
+        const activeRadio = overlay.querySelector('.radio-group .v-radio.active')
+        expect(activeRadio?.querySelector('label span')?.textContent?.trim()).toBe(PATH_MODE)
+        expect(overlay.querySelector('.textfield input').value).toBe(expectedPath)
+        expect(overlay.querySelector('.code-editor')).not.toBeVisible()
+        expect(overlay.querySelector('.script-uploader')).not.toBeVisible()
     }
 
     function assertCodeModeOpen(dialogWrapper, expectedPath, expectedCode, expectedLanguage) {
-        expect(dialogWrapper.get('.input-field input').element).not.toBeVisible()
-        expect(dialogWrapper.get('.code-editor').element).toBeVisible()
-        expect(dialogWrapper.findComponent(Combobox).props('value')).toBe(expectedLanguage)
-        expect(dialogWrapper.get('.script-uploader').element).not.toBeVisible()
-        expect(dialogWrapper.get('.editor').element).toBeVisible()
+        const overlay = getDialogEl()
+        // Path textfield is hidden; first .textfield is the path field (v-show=false in code mode)
+        expect(overlay.querySelector('.textfield')).not.toBeVisible()
+        expect(overlay.querySelector('.code-editor')).toBeVisible()
+        // findComponent traverses the VNode tree and works across teleport boundaries
+        expect(dialogWrapper.findComponent(Combobox).props('modelValue')).toBe(expectedLanguage)
+        expect(overlay.querySelector('.script-uploader')).not.toBeVisible()
+        expect(overlay.querySelector('.editor')).toBeVisible()
 
-        expect(dialogWrapper.get('.code-editor input').element.value).toBe(expectedPath)
-        const editor = ace.edit(dialogWrapper.get('.editor').element)
+        expect(overlay.querySelector('.code-editor .textfield input').value).toBe(expectedPath)
+        const editor = ace.edit(overlay.querySelector('.editor'))
         expect(editor.getValue()).toBe(expectedCode)
     }
 
     function assertUploadModeOpen(dialogWrapper, expectedPath) {
-        expect(dialogWrapper.get('.input-field input').element).not.toBeVisible()
-        expect(dialogWrapper.get('.code-editor').element).not.toBeVisible()
-        expect(dialogWrapper.get('.script-uploader .textfield input').element.value).toBe(expectedPath)
-        expect(dialogWrapper.get('.script-uploader').element).toBeVisible()
+        const overlay = getDialogEl()
+        expect(overlay.querySelector('.textfield')).not.toBeVisible()
+        expect(overlay.querySelector('.code-editor')).not.toBeVisible()
+        expect(overlay.querySelector('.script-uploader .textfield input').value).toBe(expectedPath)
+        expect(overlay.querySelector('.script-uploader')).toBeVisible()
     }
 
     function mockCodeLoad(configName, codeText, codeEditorError = null) {

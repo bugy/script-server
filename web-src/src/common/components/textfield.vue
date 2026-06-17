@@ -1,27 +1,48 @@
 <template>
-  <div :data-error="error" :title="config.description" class="input-field textfield">
-    <input :id="id"
-           ref="textField"
-           :autocomplete="autofillName"
-           :disabled="disabled"
-           :required="config.required"
-           :type="fieldType"
-           :value="value"
-           :class="{validate : !disabled, autocomplete: autocomplete}"
-           @input="inputFieldChanged"/>
-    <label :for="id" v-bind:class="{ active: labelActive }">{{ config.name }}</label>
-  </div>
+  <v-combobox
+      v-if="autocomplete"
+      ref="field"
+      :data-error="error"
+      :disabled="disabled"
+      :error-messages="errorMessages"
+      :hide-no-data="true"
+      :items="config.values"
+      :label="config.name"
+      :model-value="modelValue"
+      :required="config.required"
+      :title="config.description"
+      :type="fieldType"
+      class="textfield"
+      @update:model-value="onValueChanged"
+      @update:search="onValueChanged"/>
+  <v-text-field
+      v-else
+      ref="field"
+      :data-error="error"
+      :disabled="disabled"
+      :error-messages="errorMessages"
+      :label="config.name"
+      :model-value="modelValue"
+      :required="config.required"
+      :title="config.description"
+      :type="fieldType"
+      class="textfield"
+      @update:model-value="onValueChanged"/>
 </template>
 
 <script>
-import '@/common/materializecss/imports/autocomplete';
-import '@/common/materializecss/imports/input-fields';
+// Vuetify migration: only the rendering layer changed (v-text-field /
+// v-combobox for editable_list autocompletion, replacing the materialize
+// input + M.Autocomplete). The whole validation engine below is untouched
+// business logic. External contract preserved: modelValue/config/disabled
+// props, update:modelValue + error emits, data-error attribute, focus().
 import {isBlankString, isEmptyString, isFullRegexMatch, isNull} from '@/common/utils/common';
 
 export default {
   name: 'Textfield',
+  emits: ['update:modelValue', 'error'],
   props: {
-    'value': [String, Number],
+    'modelValue': [String, Number],
     'config': Object,
     disabled: {
       type: Boolean,
@@ -31,9 +52,7 @@ export default {
 
   data: function () {
     return {
-      error: '',
-      id: null,
-      autocompleteWrapper: null
+      error: ''
     }
   },
 
@@ -48,60 +67,33 @@ export default {
       return 'text';
     },
 
-    labelActive() {
-      if (!isEmptyString(this.value)) {
-        return true;
-      }
-
-      var textField = this.$refs.textField;
-      if (!isNull(textField) && (textField === document.activeElement)) {
-        return true;
-      }
-
-      return false;
-    },
-
     autocomplete() {
       return this.config.type === 'editable_list'
     },
 
-    autofillName() {
-      return this.config?.name?.replace(/\s+/, '-')
+    errorMessages() {
+      return isEmptyString(this.error) ? [] : [this.error];
     }
   },
 
   mounted: function () {
-    this.inputFieldChanged();
-    this.id = this._uid;
-
-    if (this.autocomplete) {
-      this.autocompleteWrapper = M.Autocomplete.init(this.$refs.textField, {minLength: 0})
-      this.updateAutocompleteData()
-
-      this.$refs.textField.addEventListener('change', () => this.inputFieldChanged())
-    }
-  },
-
-  beforeDestroy: function () {
-    if (this.autocompleteWrapper) {
-      this.autocompleteWrapper.destroy();
-    }
+    this.onValueChanged(this.nativeInput()?.value ?? this.modelValue ?? '');
   },
 
   watch: {
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
-        var textField = this.$refs.textField;
+        const input = this.nativeInput();
 
-        if (!isNull(textField) && (textField.value === newValue)) {
-          this._doValidation(this.value);
+        if (!isNull(input) && (input.value === newValue)) {
+          this._doValidation(this.modelValue);
         } else {
-          this.$nextTick(function () {
-            if (this.$refs.textField) {
-              this._doValidation(this.value);
+          this.$nextTick(() => {
+            if (this.nativeInput()) {
+              this._doValidation(this.modelValue);
             }
-          }.bind(this));
+          });
         }
       }
     },
@@ -117,24 +109,21 @@ export default {
       handler() {
         this.triggerRevalidationOnWatch();
       }
-    },
-    'config.values': {
-      immediate: true,
-      handler() {
-        if (this.autocompleteWrapper) {
-          this.updateAutocompleteData()
-        }
-      }
     }
   },
 
   methods: {
-    inputFieldChanged() {
-      var textField = this.$refs.textField;
-      var value = textField.value;
+    nativeInput() {
+      return this.$refs.field?.$el?.querySelector('input') ?? null;
+    },
+
+    onValueChanged(value) {
+      if (isNull(value)) {
+        value = '';
+      }
 
       this._doValidation(value);
-      this.$emit('input', value);
+      this.$emit('update:modelValue', value);
     },
 
     getValidationError(value, textField) {
@@ -144,7 +133,7 @@ export default {
 
       const empty = isBlankString(value);
 
-      if ((textField.validity.badInput)) {
+      if (textField && textField.validity.badInput) {
         return getInvalidTypeError(this.config.type);
       }
 
@@ -164,30 +153,21 @@ export default {
     },
 
     _doValidation(value) {
-      const textField = this.$refs.textField;
-      this.error = this.getValidationError(value, textField);
-      textField.setCustomValidity(this.error);
+      this.error = this.getValidationError(value, this.nativeInput());
 
       this.$emit('error', this.error);
     },
 
     triggerRevalidationOnWatch() {
       this.$nextTick(() => {
-        if (this.$refs.textField) {
-          this._doValidation(this.value);
-          M.validate_field(cash(this.$refs.textField));
+        if (this.nativeInput()) {
+          this._doValidation(this.modelValue);
         }
       });
     },
 
-    updateAutocompleteData() {
-      const data = Object.assign({}, ...this.config.values.map((x) => ({[x]: null})))
-      this.autocompleteWrapper.updateData(data)
-    },
-
     focus() {
-      this.$refs.textField.focus()
-      this.triggerRevalidationOnWatch()
+      this.$refs.field?.focus();
     }
   }
 }

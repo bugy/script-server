@@ -86,22 +86,22 @@ class TestFileMatching(unittest.TestCase):
         })
 
     def test_regex_only_0_matches(self):
-        files = file_download_feature.find_matching_files('#\d+#', 'some text without numbers')
+        files = file_download_feature.find_matching_files(r'#\d+#', 'some text without numbers')
 
         self.assertEqual(files, [])
 
     def test_regex_only_1_match(self):
-        files = file_download_feature.find_matching_files('#(\/[^\/]+)+#', 'the text is in /home/username/text.txt')
+        files = file_download_feature.find_matching_files(r'#(\/[^\/]+)+#', 'the text is in /home/username/text.txt')
 
         self.assertEqual(files, ['/home/username/text.txt'])
 
     def test_regex_only_3_matches(self):
-        files = file_download_feature.find_matching_files('#(\/([\w.\-]|(\\\ ))+)+#', 'found files: '
-                                                                                      '/home/username/text.txt, '
-                                                                                      '/tmp/data.dat, '
-                                                                                      '/opt/software/script\ server/read_me.md')
+        files = file_download_feature.find_matching_files(r'#(\/([\w.\-]|(\\\ ))+)+#', 'found files: '
+                                                                                        '/home/username/text.txt, '
+                                                                                        '/tmp/data.dat, '
+                                                                                        '/opt/software/script\\ server/read_me.md')
 
-        self.assertEqual(files, ['/home/username/text.txt', '/tmp/data.dat', '/opt/software/script\ server/read_me.md'])
+        self.assertEqual(files, ['/home/username/text.txt', '/tmp/data.dat', '/opt/software/script\\ server/read_me.md'])
 
     def test_regex_only_any_path_linux_3_matches(self):
         test_utils.set_linux()
@@ -109,9 +109,9 @@ class TestFileMatching(unittest.TestCase):
         files = file_download_feature.find_matching_files('##any_path#', 'found files: '
                                                                          '/home/username/text.txt, '
                                                                          '/tmp/data.dat, '
-                                                                         '/opt/software/script\ server/read_me.md')
+                                                                         '/opt/software/script\\ server/read_me.md')
 
-        self.assertEqual(files, ['/home/username/text.txt', '/tmp/data.dat', '/opt/software/script\ server/read_me.md'])
+        self.assertEqual(files, ['/home/username/text.txt', '/tmp/data.dat', '/opt/software/script\\ server/read_me.md'])
 
     def test_regex_only_any_path_win_3_matches(self):
         test_utils.set_win()
@@ -119,11 +119,11 @@ class TestFileMatching(unittest.TestCase):
         files = file_download_feature.find_matching_files('##any_path#', 'found files: '
                                                                          'C:\\Users\\username\\text.txt, '
                                                                          'D:\\windows\\System32, '
-                                                                         'C:\\Program\ Files\\script\ server\\read_me.md')
+                                                                         'C:\\Program\\ Files\\script\\ server\\read_me.md')
 
         self.assertEqual(files, ['C:\\Users\\username\\text.txt',
                                  'D:\\windows\\System32',
-                                 'C:\\Program\ Files\\script\ server\\read_me.md'])
+                                 'C:\\Program\\ Files\\script\\ server\\read_me.md'])
 
     def test_regex_only_search_user_home_win(self):
         test_utils.set_win()
@@ -134,21 +134,21 @@ class TestFileMatching(unittest.TestCase):
         self.assertEqual(files, ['~\\text.txt'])
 
     def test_1_regex_and_text_no_matches(self):
-        files = file_download_feature.find_matching_files('/home/username/#\d+#', 'username=some_name\n '
+        files = file_download_feature.find_matching_files(r'/home/username/#\d+#', 'username=some_name\n '
                                                                                   'folder=some_folder\n '
                                                                                   'time=now')
 
         self.assertEqual(files, [])
 
     def test_1_regex_and_text_1_match(self):
-        files = file_download_feature.find_matching_files('/home/username/#\d+#', 'username=some_name\n '
+        files = file_download_feature.find_matching_files(r'/home/username/#\d+#', 'username=some_name\n '
                                                                                   'folder=some_folder\n '
                                                                                   'time=153514')
 
         self.assertEqual(files, ['/home/username/153514'])
 
     def test_1_regex_and_text_3_matches(self):
-        files = file_download_feature.find_matching_files('/home/username/#\d+#', 'username=some_name\n '
+        files = file_download_feature.find_matching_files(r'/home/username/#\d+#', 'username=some_name\n '
                                                                                   'folder=some_folder\n '
                                                                                   'time=153514\n '
                                                                                   'age=18, size=256Mb')
@@ -156,7 +156,7 @@ class TestFileMatching(unittest.TestCase):
         self.assertEqual(files, ['/home/username/153514', '/home/username/18', '/home/username/256'])
 
     def test_1_regex_with_first_group_and_text_1_match(self):
-        files = file_download_feature.find_matching_files('/home/#1#username=(\w+)#/file.txt', 'username=some_name\n '
+        files = file_download_feature.find_matching_files(r'/home/#1#username=(\w+)#/file.txt', 'username=some_name\n '
                                                                                                'folder=some_folder\n '
                                                                                                'time=153514\n '
                                                                                                'age=18, size=256Mb')
@@ -164,7 +164,7 @@ class TestFileMatching(unittest.TestCase):
         self.assertEqual(files, ['/home/some_name/file.txt'])
 
     def test_1_regex_with_second_group_and_text_2_matches(self):
-        files = file_download_feature.find_matching_files('/home/username/#2#=(some_(\w+))#.txt',
+        files = file_download_feature.find_matching_files(r'/home/username/#2#=(some_(\w+))#.txt',
                                                           'username=some_name\n '
                                                           'folder=some_folder\n '
                                                           'time=153514\n '
@@ -173,7 +173,7 @@ class TestFileMatching(unittest.TestCase):
         self.assertEqual(files, ['/home/username/name.txt', '/home/username/folder.txt'])
 
     def test_2_regexes_1_match(self):
-        files = file_download_feature.find_matching_files('/home/#2#username=((\w+))#/#1#time=(\d+)#.txt',
+        files = file_download_feature.find_matching_files(r'/home/#2#username=((\w+))#/#1#time=(\d+)#.txt',
                                                           'username=some_name\n '
                                                           'folder=some_folder\n '
                                                           'time=153514\n '
@@ -184,7 +184,7 @@ class TestFileMatching(unittest.TestCase):
     def test_1_regex_and_asterisk(self):
         test_utils.create_file(os.path.join('some_folder', 'file.txt'))
 
-        files = file_download_feature.find_matching_files('*/#1#folder=(\w+)#/*.txt', 'username=some_name\n '
+        files = file_download_feature.find_matching_files(r'*/#1#folder=(\w+)#/*.txt', 'username=some_name\n '
                                                                                       'folder=some_folder\n '
                                                                                       'time=153514\n '
                                                                                       'age=18, size=256Mb')
@@ -507,7 +507,7 @@ class TestInlineImages(unittest.TestCase):
 
     def test_single_dynamic_image_when_unnormalized(self):
         test_utils.create_file('sub/test.png')
-        config = create_config_model('my_script', output_files=[inline_image('#([\.\w]+/)+\w+.png#')])
+        config = create_config_model('my_script', output_files=[inline_image(r'#([\.\w]+/)+\w+.png#')])
 
         execution_id = self.start_execution(config)
 
@@ -526,10 +526,10 @@ class TestInlineImages(unittest.TestCase):
         path5 = test_utils.create_file('some/long/path/me.jpg')
 
         config = create_config_model('my_script', output_files=[
-            inline_image(test_utils.temp_folder + os_utils.path_sep() + '#test\d+.png#'),
+            inline_image(test_utils.temp_folder + os_utils.path_sep() + r'#test\d+.png#'),
             inline_image(path2),
             inline_image(path3),
-            inline_image('##any_path/path/\w+#.jpg')
+            inline_image(r'##any_path/path/\w+#.jpg')
         ])
 
         execution_id = self.start_execution(config)

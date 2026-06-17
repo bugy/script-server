@@ -1,3 +1,6 @@
+# macOS
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -63,6 +66,7 @@ target/
 .ipynb_checkpoints
 
 conf/runners
+conf/scripts
 conf/theme
 conf/conf.json
 conf/.htpasswd
@@ -80,3 +84,9 @@ web-src/geckodriver.log
 venv/
 /venv2/
 e2e_venv/
+
+# e2e (Playwright)
+.e2e_venv/
+web-src/tests/e2e/.run/
+web-src/playwright-report/
+web-src/test-results/

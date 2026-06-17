@@ -50,7 +50,7 @@ class UserFileStorage:
             if os.path.exists(parent_folder):
                 for user_folder in os.listdir(parent_folder):
                     for timed_folder in os.listdir(os.path.join(parent_folder, user_folder)):
-                        if not re.match('\d+', timed_folder):
+                        if not re.match(r'\d+', timed_folder):
                             continue
 
                         millis = int(timed_folder)
@@ -64,11 +64,11 @@ class UserFileStorage:
                             shutil.rmtree(folder_path)
 
             timer = threading.Timer(period_sec, clean_results)
-            timer.setDaemon(True)
+            timer.daemon = True
             timer.start()
 
         timer = threading.Timer(period_sec, clean_results)
-        timer.setDaemon(True)
+        timer.daemon = True
         timer.start()
 
     def _stop_autoclean(self):

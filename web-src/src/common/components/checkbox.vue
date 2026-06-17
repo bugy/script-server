@@ -1,21 +1,24 @@
 <template>
-  <label :title="config.description" class="input-field checkbox">
-    <input :id="config.name"
-           ref="checkbox"
-           :checked="boolValue"
-           type="checkbox"
-           :disabled="disabled"
-           @input="emitValueChange"/>
-    <span>{{ config.name }}</span>
-  </label>
+  <v-checkbox
+      :disabled="disabled"
+      :indeterminate="indeterminate"
+      :label="config.name"
+      :model-value="boolValue"
+      :title="config.description"
+      class="checkbox"
+      @update:model-value="checkboxChanged"/>
 </template>
 
 <script>
+// Pilot component of the materialize -> Vuetify migration: same external API
+// as before (modelValue/config/disabled props, update:modelValue emit,
+// indeterminate state while modelValue is null, value normalisation on mount).
 import {isNull, toBoolean} from '@/common/utils/common';
 
 export default {
+  emits: ['update:modelValue', 'error'],
   props: {
-    'value': {
+    'modelValue': {
       type: [Boolean, String, Number]
     },
     'config': Object,
@@ -24,35 +27,43 @@ export default {
     }
   },
 
+  data() {
+    return {
+      indeterminate: isNull(this.modelValue)
+    }
+  },
+
   computed: {
     boolValue() {
-      return toBoolean(this.value);
+      return toBoolean(this.modelValue);
     }
   },
 
   mounted: function () {
-    this.$refs.checkbox.indeterminate = isNull(this.value)
-    this.emitValueChange();
+    if (!this.indeterminate) {
+      // normalise string/number values to a boolean, as the old component did
+      this.$emit('update:modelValue', this.boolValue);
+    }
   },
 
   methods: {
-    emitValueChange() {
-      if (this.$refs.checkbox.indeterminate) {
-        this.$emit('input', undefined);
-        return;
-      }
-
-      this.$emit('input', this.$refs.checkbox.checked);
+    checkboxChanged(checked) {
+      this.indeterminate = false;
+      this.$emit('update:modelValue', !!checked);
     }
   },
 
   watch: {
-    value: {
+    modelValue: {
       immediate: true,
       handler() {
+        if (!isNull(this.modelValue)) {
+          this.indeterminate = false;
+        }
+
         this.$nextTick(() => {
-          if (this.value !== this.boolValue) {
-            this.emitValueChange();
+          if (!isNull(this.modelValue) && (this.modelValue !== this.boolValue)) {
+            this.$emit('update:modelValue', this.boolValue);
           }
         });
       }

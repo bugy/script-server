@@ -2,9 +2,9 @@
   <div :class="{'light-theme': lightTheme}" class="code-editor">
     <div class="row">
       <Textfield :config="pathField" :disabled="!pathEditable"
-                 :value="path"
+                 :modelValue="path"
                  class="inline col s8"
-                 @input="$emit('pathChanged', $event)"/>
+                 @update:modelValue="$emit('pathChanged', $event)"/>
       <Combobox v-model="language" :config="languagesConfig" :dropdownContainer="dropdownContainer"
                 class="inline col l2 offset-l2 m3 offset-m1 s3 offset-s1"/>
     </div>
@@ -22,18 +22,27 @@ import ace from 'ace-builds/src-noconflict/ace'
 import 'ace-builds/src-noconflict/theme-monokai'
 import Checkbox from '@/common/components/checkbox'
 import tinycolor from 'tinycolor2'
-import '@/common/materializecss/imports/cards';
 import Combobox from '@/common/components/combobox'
 import Textfield from '@/common/components/textfield'
 import {forEachKeyValue, isEmptyString, isNull} from '@/common/utils/common'
 
-ace.config.setModuleUrl('ace/theme/monokai', require('file-loader!ace-builds/src-noconflict/theme-monokai'))
-ace.config.setModuleUrl('ace/mode/javascript', require('file-loader!ace-builds/src-noconflict/mode-javascript.js'))
-ace.config.setModuleUrl('ace/mode/python', require('file-loader!ace-builds/src-noconflict/mode-python.js'))
-ace.config.setModuleUrl('ace/mode/sh', require('file-loader!ace-builds/src-noconflict/mode-sh.js'))
-ace.config.setModuleUrl('ace/mode/powershell', require('file-loader!ace-builds/src-noconflict/mode-powershell.js'))
-ace.config.setModuleUrl('ace/mode/raku', require('file-loader!ace-builds/src-noconflict/mode-raku.js'))
-ace.config.setModuleUrl('ace/mode/r', require('file-loader!ace-builds/src-noconflict/mode-r.js'))
+// Vite: import asset URLs with the `?url` suffix instead of webpack's
+// `require('file-loader!...')`. ace loads these theme/mode files lazily by URL.
+import monokaiThemeUrl from 'ace-builds/src-noconflict/theme-monokai?url'
+import modeJavascriptUrl from 'ace-builds/src-noconflict/mode-javascript.js?url'
+import modePythonUrl from 'ace-builds/src-noconflict/mode-python.js?url'
+import modeShUrl from 'ace-builds/src-noconflict/mode-sh.js?url'
+import modePowershellUrl from 'ace-builds/src-noconflict/mode-powershell.js?url'
+import modeRakuUrl from 'ace-builds/src-noconflict/mode-raku.js?url'
+import modeRUrl from 'ace-builds/src-noconflict/mode-r.js?url'
+
+ace.config.setModuleUrl('ace/theme/monokai', monokaiThemeUrl)
+ace.config.setModuleUrl('ace/mode/javascript', modeJavascriptUrl)
+ace.config.setModuleUrl('ace/mode/python', modePythonUrl)
+ace.config.setModuleUrl('ace/mode/sh', modeShUrl)
+ace.config.setModuleUrl('ace/mode/powershell', modePowershellUrl)
+ace.config.setModuleUrl('ace/mode/raku', modeRakuUrl)
+ace.config.setModuleUrl('ace/mode/r', modeRUrl)
 
 
 const allowedLanguages = {
@@ -46,6 +55,7 @@ const allowedLanguages = {
 
 export default {
   name: 'CodeEditor',
+  emits: ['pathChanged', 'update:modelValue', 'languageChange'],
   components: {Textfield, Combobox, Checkbox},
   props: {
     path: String,
@@ -82,7 +92,7 @@ export default {
       fontSize: 13
     })
     editor.getSession().on('change', () => {
-      this.$emit('input', editor.getSession().getValue())
+      this.$emit('update:modelValue', editor.getSession().getValue())
     })
 
     const backgroundColor = getComputedStyle(this.$el).getPropertyValue('--background-color')
@@ -103,7 +113,7 @@ export default {
 
     this.selectSyntax()
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.editor.container.remove()
     this.editor.destroy()
   },
@@ -203,15 +213,15 @@ export default {
   padding-right: 0;
 }
 
->>> .input-field.col label {
+:deep(.input-field.col label) {
   left: 0
 }
 
->>> .input-field > label:not(.label-icon).active {
+:deep(.input-field > label:not(.label-icon).active) {
   transform: translateY(-12px) scale(0.8);
 }
 
->>> .input-field input {
+:deep(.input-field input) {
   height: 2.6rem;
 }
 

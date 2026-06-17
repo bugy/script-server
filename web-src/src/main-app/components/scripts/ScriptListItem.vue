@@ -1,35 +1,31 @@
 <template>
-  <router-link :to="'/' + descriptor.hash"
-               class="collection-item waves-effect script-list-item"
-               :class="{ active: descriptor.active, 'parsing-failed': descriptor.parsingFailed}"
-               :title="descriptor.parsingFailed ? 'Failed to parse config file' : ''">
-    {{ descriptor.name }}
-
-    <div :class="descriptor.state" class="menu-item-state">
-      <i class="material-icons check-icon">check</i>
-      <i class="material-icons failed-icon">priority_high</i>
-      <div class="preloader-wrapper active">
-        <div class="spinner-layer">
-          <div class="circle-clipper left">
-            <div class="circle"></div>
-          </div>
-          <div class="gap-patch">
-            <div class="circle"></div>
-          </div>
-          <div class="circle-clipper right">
-            <div class="circle"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </router-link>
-
+  <v-list-item
+    :to="'/' + descriptor.hash"
+    :title="descriptor.name"
+    :class="{ 'parsing-failed': descriptor.parsingFailed }"
+    class="script-list-item"
+  >
+    <v-tooltip v-if="descriptor.parsingFailed" activator="parent" location="right">
+      Failed to parse config file
+    </v-tooltip>
+    <template #append>
+      <v-progress-circular
+        v-if="descriptor.state === 'executing'"
+        :size="20"
+        :width="2"
+        color="primary"
+        indeterminate
+      />
+      <v-icon v-else-if="descriptor.state === 'finished'" color="primary" :size="20">check</v-icon>
+      <v-icon v-else-if="descriptor.state === 'cannot-parse'" color="error" :size="20">priority_high</v-icon>
+    </template>
+  </v-list-item>
 </template>
 
 <script>
-import '@/common/materializecss/imports/spinner'
 import {forEachKeyValue} from '@/common/utils/common';
-import {mapState} from 'vuex';
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useExecutionsStore} from '@/main-app/stores/executions'
 import {scriptNameToHash} from '../../utils/model_helper';
 
 export default {
@@ -45,29 +41,27 @@ export default {
       return {
         name: this.script.name,
         state: this.getState(this.script.name),
-        active: this.selectedScript === this.script.name,
         hash: this.toHash(this.script.name),
         parsingFailed: this.script.parsing_failed
       }
     },
-    ...mapState('scripts', ['selectedScript'])
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    }
   },
   methods: {
     getState(scriptName) {
-      let state = 'idle';
-
       if (this.script.parsing_failed) {
         return 'cannot-parse'
       }
 
-      forEachKeyValue(this.$store.state.executions.executors, function (id, executor) {
+      let state = 'idle';
+      forEachKeyValue(useExecutionsStore().executors, function (id, executor) {
         if (executor.state.scriptName !== scriptName) {
           return;
         }
-
         state = executor.state.status;
       });
-
       return state;
     },
     toHash: scriptNameToHash
@@ -76,61 +70,7 @@ export default {
 </script>
 
 <style scoped>
-.scripts-list .collection-item {
-  border: none;
-  padding-right: 32px;
-}
-
-.scripts-list .collection-item.parsing-failed {
+.script-list-item.parsing-failed :deep(.v-list-item-title) {
   color: var(--font-color-disabled);
-}
-
-.scripts-list .collection-item .menu-item-state {
-  width: 24px;
-  height: 24px;
-  position: absolute;
-  right: 16px;
-  top: calc(50% - 12px);
-  display: none;
-}
-
-.scripts-list .collection-item .menu-item-state > .check-icon {
-  color: var(--primary-color);
-  display: none;
-  font-size: 24px;
-}
-
-.scripts-list .collection-item .menu-item-state > .preloader-wrapper {
-  display: none;
-  width: 100%;
-  height: 100%;
-}
-
-.scripts-list .collection-item .menu-item-state.executing,
-.scripts-list .collection-item .menu-item-state.finished,
-.scripts-list .collection-item .menu-item-state.cannot-parse {
-  display: inline;
-}
-
-.scripts-list .collection-item .menu-item-state > .check-icon,
-.scripts-list .collection-item .menu-item-state > .preloader-wrapper,
-.scripts-list .collection-item .menu-item-state > .failed-icon {
-  display: none;
-}
-
-.scripts-list .collection-item .menu-item-state.executing > .preloader-wrapper {
-  display: block;
-}
-
-.scripts-list .collection-item .menu-item-state.finished > .check-icon {
-  display: block;
-}
-
-.scripts-list .collection-item .menu-item-state.cannot-parse > .failed-icon {
-  display: block;
-}
-
-.scripts-list .collection-item .preloader-wrapper .spinner-layer {
-  border-color: var(--primary-color);
 }
 </style>

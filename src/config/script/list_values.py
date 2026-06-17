@@ -54,7 +54,7 @@ class ScriptValuesProvider(ValuesProvider):
 class DependantScriptValuesProvider(ValuesProvider):
 
     def __init__(self, script, parameters_supplier, shell, process_invoker: ProcessInvoker) -> None:
-        pattern = re.compile('\${([^}]+)\}')
+        pattern = re.compile(r'\${([^}]+)\}')
 
         search_start = 0
         script_template = ''

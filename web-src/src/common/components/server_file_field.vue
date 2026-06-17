@@ -1,73 +1,78 @@
 <template>
-  <div :data-error="error" :title="config.description" class="input-field server-file-field">
-    <a ref="openFileButton" class="btn-icon-flat btn-small waves-effect waves-circle" @click="openDialog">
-      <i class="material-icons">folder_open</i>
-    </a>
-    <input :id="config.name"
-           ref="inputField"
-           :required="config.required"
-           :value="valueText"
-           class="validate"
-           readonly
-           @blur="focused = false"
-           @click="openDialog"
-           @focus="focused = true"
-           @keypress.enter.prevent="openDialog"
-           @keypress.space.prevent="openDialog"/>
-    <label :for="config.name"
-           v-bind:class="{ active: ((value && value.length > 0) || focused) }">{{ config.name }}</label>
-    <div ref="modal" class="modal">
-      <FileDialog ref="fileDialog" :fileType="this.config.fileType"
-                  :loadFiles="this.config.loadFiles"
-                  :onClose="dialogClosed"
+  <div :data-error="error" :title="config.description" class="server-file-field">
+    <v-text-field
+        ref="field"
+        :error-messages="errorMessages"
+        :label="config.name"
+        :model-value="valueText"
+        :required="config.required"
+        append-inner-icon="folder_open"
+        readonly
+        @click:append-inner="openDialog"
+        @mousedown="openDialog"
+        @keydown.enter.prevent="openDialog"
+        @keydown.space.prevent="openDialog"/>
+
+    <v-dialog v-model="dialogOpened" class="server-file-dialog" width="auto">
+      <FileDialog ref="fileDialog" :fileType="config.fileType"
+                  :loadFiles="config.loadFiles"
+                  :onClose="closeDialog"
                   :onFileSelect="selectFile"
                   :opened="dialogOpened"
                   class="file-dialog"/>
-    </div>
+    </v-dialog>
   </div>
 </template>
 
 <script>
-import '@/common/materializecss/imports/modal';
-import {addClass, arraysEqual, getTextWidth, isEmptyArray, isNull, removeClass} from '@/common/utils/common';
+// Vuetify migration: v-text-field (readonly, folder icon inside the field)
+// + v-dialog replace the materialize input + M.Modal. FileDialog itself is
+// untouched — it never depended on materialize JS. Validation (required)
+// and the open-on-click/Enter/Space behaviours are unchanged.
+import {arraysEqual, getTextWidth, isEmptyArray, isEmptyString, isNull} from '@/common/utils/common';
 import FileDialog from './file_dialog'
 
 export default {
   name: 'server_file_field',
 
+  emits: ['update:modelValue', 'error'],
   components: {
     FileDialog
   },
 
   props: {
-    'value': [Array],
+    'modelValue': [Array],
     'config': Object
   },
 
   data: function () {
     return {
       error: '',
-      focused: false,
       dialogOpened: false,
       isMounted: false
     }
   },
 
   computed: {
+    errorMessages() {
+      return isEmptyString(this.error) ? [] : [this.error];
+    },
+
     valueText() {
-      if (isEmptyArray(this.value)) {
+      if (isEmptyArray(this.modelValue)) {
         return '';
       }
 
-      const valueText = this.value.join('/');
-      if (!this.isMounted || !this.$refs.inputField) {
+      const valueText = this.modelValue.join('/');
+      const inputField = this.isMounted ? this.nativeInput() : null;
+      if (isNull(inputField)) {
         return valueText;
       }
 
-      const textWidth = getTextWidth(valueText, this.$refs.inputField);
-      const availableWidth = this.$refs.inputField.offsetWidth - this.$refs.openFileButton.offsetWidth;
+      const textWidth = getTextWidth(valueText, inputField);
+      const availableWidth = inputField.offsetWidth;
 
-      if (textWidth <= availableWidth) {
+      if (!availableWidth || (textWidth <= availableWidth)) {
         return valueText;
       }
 
@@ -77,7 +82,7 @@ export default {
       let cutValue;
       do {
         cutValue = '...' + valueText.substring(valueText.length - cutLength);
-        const valueWidth = getTextWidth(cutValue, this.$refs.inputField);
+        const valueWidth = getTextWidth(cutValue, inputField);
 
         if (valueWidth <= availableWidth) {
           break;
@@ -92,26 +97,23 @@ export default {
   },
 
   mounted: function () {
-    M.Modal.init(this.$refs.modal, {onCloseEnd: this.dialogClosed});
-
     this.isMounted = true;
 
-    this.validate(this.value)
-  },
-
-  beforeDestroy: function () {
-    const modal = M.Modal.getInstance(this.$refs.modal);
-    modal.destroy();
+    this.validate(this.modelValue)
   },
 
   methods: {
+    nativeInput() {
+      return this.$refs.field?.$el?.querySelector('input') ?? null;
+    },
+
     selectFile(path) {
       this.closeDialog();
 
       this.validate(path)
 
-      if (!arraysEqual(this.value, path)) {
-        this.$emit('input', path);
+      if (!arraysEqual(this.modelValue, path)) {
+        this.$emit('update:modelValue', path);
       }
     },
 
@@ -125,86 +127,41 @@ export default {
       return '';
     },
 
-    dialogClosed() {
-      this.closeDialog();
-    },
-
     closeDialog() {
-      const modal = M.Modal.getInstance(this.$refs.modal);
-      modal.close();
-
-      this.$refs.inputField.focus();
       this.dialogOpened = false;
+
+      this.$refs.field?.focus();
     },
 
-    openDialog(event) {
-      const modal = M.Modal.getInstance(this.$refs.modal);
-      modal.open();
+    openDialog() {
+      if (this.dialogOpened) {
+        return;
+      }
 
-      this.$refs.fileDialog.setChosenFile(this.value);
       this.dialogOpened = true;
-      this.$refs.fileDialog.focus();
+
+      this.$nextTick(() => {
+        this.$refs.fileDialog.setChosenFile(this.modelValue);
+        this.$refs.fileDialog.focus();
+      });
     },
 
     validate(path) {
       this.error = this.getValidationError(path);
 
-      const inputField = this.$refs.inputField;
-      if (!isNull(inputField)) {
-        // setCustomValidity doesn't work since input is readonly
-        if (this.error) {
-          addClass(inputField, 'invalid');
-        } else {
-          removeClass(inputField, 'invalid');
-        }
-      }
-
       this.$emit('error', this.error);
     }
   }
 }
+
 </script>
 
 <style scoped>
-.btn-icon-flat {
-  position: absolute;
-  top: -8px;
-  right: -4px;
-  z-index: 1;
+.server-file-field :deep(.v-field__input) {
+  cursor: pointer;
 }
 
-.btn-icon-flat > i {
-  font-size: 1.4rem;
+.server-file-dialog :deep(.file-dialog) {
+  background-color: var(--background-color, #fff);
 }
-
-.server-file-field .modal {
-  width: fit-content;
-  width: -moz-fit-content;
-  height: 70%;
-  min-height: 300px;
-}
-
-.server-file-field .file-dialog {
-  height: 100%;
-}
-
-.server-file-field input[readonly] {
-  user-select: none;
-  color: var(--font-color-main);
-  border-bottom: 1px solid var(--font-color-medium);
-}
-
-.server-file-field input[readonly] + label {
-  color: var(--font-color-medium);
-}
-
-.server-file-field input:focus {
-  border-bottom: 1px solid var(--primary-color);
-  box-shadow: 0 1px 0 0 var(--primary-color);
-}
-
-.server-file-field input:focus + label {
-  color: var(--primary-color);
-}
-
 </style>

@@ -7,7 +7,10 @@
              'shadow-top-bottom': !atTop && !atBottom}">
     </div>
     <a class="copy-text-button btn-icon-flat waves-effect waves-circle" @click="copyLogToClipboard">
-      <i class="material-icons">content_copy</i>
+      <v-icon>content_copy</v-icon>
+    </a>
+    <a class="download-text-button btn-icon-flat waves-effect waves-circle" @click="downloadLog">
+      <v-icon>file_download</v-icon>
     </a>
   </div>
 </template>
@@ -124,6 +127,19 @@ export default {
       copyToClipboard(this.output.element);
     },
 
+    downloadLog: function () {
+      const content = this.output.element.innerText || this.output.element.textContent || '';
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'log-output.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+
     renderOutputElement: function () {
       if (!this.output || !this.$el) {
         return
@@ -144,7 +160,7 @@ export default {
     }
   },
 
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     window.removeEventListener('resize', this.revalidateScroll);
     window.clearInterval(this.scrollUpdater);
   },
@@ -219,7 +235,7 @@ export default {
   box-shadow: 0 -7px 8px -4px rgba(0, 0, 0, 0.4) inset;
 }
 
-.log-panel >>> .log-content.terminal-output img {
+.log-panel :deep(.log-content.terminal-output img) {
   max-width: 100%
 }
 
@@ -233,8 +249,18 @@ export default {
   color: var(--font-color-disabled);
 }
 
+.log-panel .download-text-button {
+  position: absolute;
+  right: 50px;
+  bottom: 4px;
+}
+
+.log-panel .download-text-button i {
+  color: var(--font-color-disabled);
+}
+
 /*noinspection CssInvalidPropertyValue,CssOverwrittenProperties*/
-.log-panel >>> .log-content {
+.log-panel :deep(.log-content) {
   display: block;
   overflow-y: auto;
   height: 100%;

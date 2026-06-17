@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import shutil
+from datetime import datetime
 from typing import NamedTuple, Optional
 
 from auth.authorization import Authorizer
@@ -14,8 +15,6 @@ from utils import os_utils, file_utils, process_utils, custom_json, custom_yaml
 from utils.file_utils import to_filename
 from utils.process_utils import ProcessInvoker
 from utils.string_utils import is_blank, strip
-from datetime import datetime
-
 
 SCRIPT_EDIT_CODE_MODE = 'new_code'
 SCRIPT_EDIT_UPLOAD_MODE = 'upload_script'
@@ -56,12 +55,19 @@ def _create_archive_filename(filename):
 
 
 class ConfigService:
-    def __init__(self, authorizer, conf_folder, process_invoker: ProcessInvoker) -> None:
+    def __init__(
+            self,
+            authorizer,
+            conf_folder,
+            group_scripts_by_folder: bool,
+            process_invoker: ProcessInvoker) -> None:
+
         self._authorizer = authorizer  # type: Authorizer
         self._script_configs_folder = os.path.join(conf_folder, 'runners')
         self._scripts_folder = os.path.join(conf_folder, 'scripts')
         self._scripts_deleted_folder = os.path.join(conf_folder, 'deleted')
         self._process_invoker = process_invoker
+        self._group_scripts_by_folder = group_scripts_by_folder
 
         file_utils.prepare_folder(self._script_configs_folder)
         file_utils.prepare_folder(self._scripts_deleted_folder)
@@ -117,7 +123,7 @@ class ConfigService:
 
         with open(original_file_path, 'r') as f:
             original_config_json = json.load(f)
-            short_original_config = script_config.read_short(original_file_path, original_config_json)
+            short_original_config = self.read_short_config(original_config_json, original_file_path)
 
         name = config['name']
 
@@ -133,6 +139,12 @@ class ConfigService:
         LOGGER.info('Updating script config "' + name + '" in ' + original_file_path)
         self._save_config(config, original_file_path)
 
+    def read_short_config(self, config_json, file_path):
+        return script_config.read_short(
+            file_path,
+            config_json,
+            self._group_scripts_by_folder,
+            self._script_configs_folder)
 
     def delete_config(self, user, name):
         self._check_admin_access(user)
@@ -220,7 +232,7 @@ class ConfigService:
         def load_script(path, content) -> Optional[ShortConfig]:
             try:
                 config_object = self.load_config_file(path, content)
-                short_config = script_config.read_short(path, config_object)
+                short_config = self.read_short_config(config_object, path)
 
                 if short_config is None:
                     return None
@@ -257,7 +269,9 @@ class ConfigService:
             user,
             parameter_values,
             skip_invalid_parameters,
-            self._process_invoker)
+            self._process_invoker,
+            self._group_scripts_by_folder,
+            self._script_configs_folder)
 
     def _visit_script_configs(self, visitor):
         configs_dir = self._script_configs_folder
@@ -296,7 +310,7 @@ class ConfigService:
         def find_and_load(path: str, content):
             try:
                 config_object = self.load_config_file(path, content)
-                short_config = script_config.read_short(path, config_object)
+                short_config = self.read_short_config(config_object, path)
 
                 if short_config is None:
                     return None
@@ -331,7 +345,9 @@ class ConfigService:
             user,
             parameter_values,
             skip_invalid_parameters,
-            process_invoker):
+            process_invoker,
+            group_scripts_by_folder,
+            script_configs_folder):
 
         if isinstance(content_or_json_dict, str):
             json_object = custom_json.loads(content_or_json_dict)
@@ -342,6 +358,8 @@ class ConfigService:
             path,
             user.get_username(),
             user.get_audit_name(),
+            group_scripts_by_folder,
+            script_configs_folder,
             process_invoker,
             pty_enabled_default=os_utils.is_pty_supported())
 

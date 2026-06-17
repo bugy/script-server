@@ -29,6 +29,7 @@ class ServerConfig(object):
         self.allowed_users = None
         self.alerts_config = None
         self.logging_config = None
+        self.groups_config = ScriptGroupsConfig()  # type: ScriptGroupsConfig
         self.admin_config = None
         self.title = None
         self.enable_script_titles = None
@@ -42,6 +43,7 @@ class ServerConfig(object):
         self.user_header_name = None
         self.secret_storage_file = None
         self.xsrf_protection = None
+        self.cookie_secure = True
         # noinspection PyTypeChecker
         self.env_vars: EnvVariables = None
 
@@ -59,9 +61,10 @@ class ServerConfig(object):
 
 
 class LoggingConfig:
-    def __init__(self, filename_pattern=None, date_format=None) -> None:
+    def __init__(self, filename_pattern=None, date_format=None, enabled=True) -> None:
         self.filename_pattern = filename_pattern
         self.date_format = date_format
+        self.enabled = enabled
 
     @classmethod
     def from_json(cls, json_config):
@@ -71,6 +74,25 @@ class LoggingConfig:
             json_logging_config = json_config
             config.filename_pattern = json_logging_config.get('execution_file')
             config.date_format = json_logging_config.get('execution_date_format')
+            config.enabled = model_helper.read_bool_from_config('enabled', json_logging_config, default=True)
+
+        return config
+
+
+class ScriptGroupsConfig:
+
+    def __init__(self) -> None:
+        self.group_by_folders = True
+
+    @classmethod
+    def from_json(cls, json_config):
+        config = ScriptGroupsConfig()
+
+        if json_config:
+            config.group_by_folders = model_helper.read_bool_from_config(
+                'group_by_folders',
+                json_config,
+                default=config.group_by_folders)
 
         return config
 
@@ -180,10 +202,12 @@ def from_json(conf_path, temp_folder):
 
     security = model_helper.read_dict(json_object, 'security')
 
+    config.cookie_secure = model_helper.read_bool_from_config('cookie_secure', security, default=True)
     config.allowed_users = _prepare_allowed_users(allowed_users, admin_users, user_groups)
     config.alerts_config = json_object.get('alerts')
     config.callbacks_config = json_object.get('callbacks')
     config.logging_config = LoggingConfig.from_json(json_object.get('logging'))
+    config.groups_config = ScriptGroupsConfig.from_json(json_object.get('script_groups'))
     config.user_groups = user_groups
     config.admin_users = admin_users
     config.full_history_users = full_history_users
@@ -212,12 +236,18 @@ def create_authenticator(auth_object, temp_folder, process_invoker: ProcessInvok
     elif auth_type == 'google_oauth':
         from auth.auth_google_oauth import GoogleOauthAuthenticator
         authenticator = GoogleOauthAuthenticator(auth_object)
+    elif auth_type == 'azure_ad_oauth':
+        from auth.auth_azure_ad_oauth import AzureAdOAuthAuthenticator
+        authenticator = AzureAdOAuthAuthenticator(auth_object)
     elif auth_type == 'gitlab':
         from auth.auth_gitlab import GitlabOAuthAuthenticator
         authenticator = GitlabOAuthAuthenticator(auth_object)
     elif auth_type == 'keycloak_openid':
         from auth.auth_keycloak_openid import KeycloakOpenidAuthenticator
         authenticator = KeycloakOpenidAuthenticator(auth_object)
+    elif auth_type == 'authentik':
+        from auth.auth_authentik_openid import AuthentikOpenidAuthenticator
+        authenticator = AuthentikOpenidAuthenticator(auth_object)
     elif auth_type == 'htpasswd':
         from auth.auth_htpasswd import HtpasswdAuthenticator
         authenticator = HtpasswdAuthenticator(auth_object, process_invoker)

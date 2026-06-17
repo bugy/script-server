@@ -11,13 +11,15 @@
 
 <script>
 import {isNull} from '@/common/utils/common';
-import {mapState} from 'vuex';
+import {useHistoryStore} from '@/common/stores/history'
 
 export default {
   name: 'AppHistoryHeader',
 
   computed: {
-    ...mapState('history', ['selectedExecution']),
+    selectedExecution() {
+      return useHistoryStore().selectedExecution
+    },
 
     baseRoute: function () {
       return this.$route.matched[0].path;

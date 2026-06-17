@@ -1,0 +1,68 @@
+name: Docker
+
+on:
+  push:
+    branches: [ master, stable ]
+    tags:     [ 'v*' ]
+
+jobs:
+  build-and-push:
+    name: Build & push (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web-src/package-lock.json
+
+      - name: Build frontend
+        working-directory: web-src
+        run: npm ci && npm run build
+        # Outputs to ../web/ (see build.outDir in web-src/vite.config.js)
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            # master branch → :latest
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            # stable branch → :stable
+            type=raw,value=stable,enable=${{ github.ref == 'refs/heads/stable' }}
+            # git tag v1.2.3 → :1.2.3 and :1.2
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: tools/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

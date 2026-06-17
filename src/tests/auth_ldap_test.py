@@ -1,21 +1,40 @@
 import unittest
+from typing import Dict
 
 from ldap3 import Connection, SIMPLE, MOCK_SYNC, OFFLINE_AD_2012_R2, Server
 from ldap3.utils.dn import safe_dn
 
-from auth.auth_base import AuthRejectedError
+from auth.auth_base import AuthRejectedError, AuthFailureError
 from auth.auth_ldap import LdapAuthenticator
 from tests import test_utils
 from tests.test_utils import mock_request_handler
 
 
 class _LdapAuthenticatorMockWrapper:
-    def __init__(self, username_pattern, base_dn):
-        authenticator = LdapAuthenticator({
-            'url': 'unused',
-            'username_pattern': username_pattern,
-            'base_dn': base_dn},
-            test_utils.temp_folder)
+    def __init__(self,
+                 username_pattern=None,
+                 base_dn=None,
+                 search_user_by_attribute=None,
+                 admin_user=None,
+                 admin_password=None):
+        config = {'url': 'unused'}  # type: Dict[str, object]
+
+        if username_pattern or search_user_by_attribute:
+            user_resolver_config = {}
+            if username_pattern:
+                user_resolver_config['username_pattern'] = username_pattern
+            if search_user_by_attribute:
+                user_resolver_config['search_by_attribute'] = search_user_by_attribute
+            if admin_user:
+                user_resolver_config['admin_user'] = admin_user
+            if admin_password:
+                user_resolver_config['admin_password'] = admin_password
+            config['ldap_user_resolver'] = user_resolver_config
+
+        if base_dn:
+            config['base_dn'] = base_dn
+
+        authenticator = LdapAuthenticator(config, test_utils.temp_folder)
 
         def connect(username, password):
             server = Server('mock_server', get_info=OFFLINE_AD_2012_R2)
@@ -51,11 +70,12 @@ class _LdapAuthenticatorMockWrapper:
             connection.bind()
             return connection
 
-        authenticator._connect = connect
+        authenticator._ldap_connector.connect = connect
 
         self.base_dn = base_dn
         self._entries = {}
         self.authenticator = authenticator
+        self.add_user('Admin', 'admin_pass')
 
     def authenticate(self, username, password):
         return self.authenticator.authenticate(_mock_request_handler(username, password))
@@ -337,6 +357,157 @@ class TestAuthenticate(unittest.TestCase):
 
     def create_wrapper(self):
         return _LdapAuthenticatorMockWrapper('cn=$username,cn=Users,dc=buggy,dc=net', 'dc=buggy,dc=net')
+
+    def tearDown(self):
+        test_utils.cleanup()
+
+
+class TestLdapUserResolver(unittest.TestCase):
+
+    def test_authenticate_with_uid_resolver(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper(
+            base_dn='dc=ldap,dc=test',
+            search_user_by_attribute='uid',
+            admin_user='cn=admin,cn=users,dc=ldap,dc=test',
+            admin_password='admin_pass'
+        )
+
+        auth_wrapper.add_user('John Doe', 'user_pass', uid='johndoe')
+
+        user = auth_wrapper.authenticate('johndoe', 'user_pass')
+        self.assertEqual(user, 'johndoe')
+
+    def test_authenticate_with_different_attribute(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper(
+            base_dn='dc=ldap,dc=test',
+            search_user_by_attribute='sAMAccountName',
+            admin_user='cn=admin,cn=users,dc=ldap,dc=test',
+            admin_password='admin_pass'
+        )
+
+        auth_wrapper.add_user('Jane Smith', 'user_pass', sAMAccountName='jsmith')
+
+        user = auth_wrapper.authenticate('jsmith', 'user_pass')
+        self.assertEqual(user, 'jsmith')
+
+    def test_authenticate_fails_with_wrong_uid(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper(
+            base_dn='dc=ldap,dc=test',
+            search_user_by_attribute='uid',
+            admin_user='cn=admin,cn=users,dc=ldap,dc=test',
+            admin_password='admin_pass'
+        )
+
+        auth_wrapper.add_user('John Doe', 'user_pass', uid='johndoe')
+
+        self.assertRaisesRegex(
+            AuthRejectedError,
+            'Invalid credentials',
+            auth_wrapper.authenticate,
+            'nonexistent',
+            'user_pass'
+        )
+
+    def test_authenticate_fails_with_wrong_password(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper(
+            base_dn='dc=ldap,dc=test',
+            search_user_by_attribute='uid',
+            admin_user='cn=admin,cn=users,dc=ldap,dc=test',
+            admin_password='admin_pass'
+        )
+
+        auth_wrapper.add_user('John Doe', 'user_pass', uid='johndoe')
+
+        self.assertRaisesRegex(
+            AuthRejectedError,
+            'Invalid credentials',
+            auth_wrapper.authenticate,
+            'johndoe',
+            'wrong_pass'
+        )
+
+    def test_authenticate_fails_with_wrong_admin_password(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper(
+            base_dn='dc=ldap,dc=test',
+            search_user_by_attribute='uid',
+            admin_user='cn=admin,cn=users,dc=ldap,dc=test',
+            admin_password='wrong_pass'
+        )
+
+        auth_wrapper.add_user('John Doe', 'user_pass', uid='johndoe')
+
+        self.assertRaisesRegex(
+            AuthFailureError,
+            'Failed to bind with admin LDAP user: invalidCredentials',
+            auth_wrapper.authenticate,
+            'johndoe',
+            'user_pass'
+        )
+
+    def test_load_groups_with_uid_resolver(self):
+        auth_wrapper = _LdapAuthenticatorMockWrapper(
+            base_dn='dc=ldap,dc=test',
+            search_user_by_attribute='uid',
+            admin_user='cn=admin,cn=users,dc=ldap,dc=test',
+            admin_password='admin_pass'
+        )
+
+        auth_wrapper.add_user('John Doe', 'user_pass', uid='johndoe')
+        auth_wrapper.add_group('admin_group', ['John Doe'])
+
+        user = auth_wrapper.authenticate('johndoe', 'user_pass')
+        groups = auth_wrapper.get_groups('johndoe')
+        self.assertEqual(['admin_group'], groups)
+
+    def setUp(self):
+        test_utils.setup()
+
+    def tearDown(self):
+        test_utils.cleanup()
+
+
+class TestConfigValidation(unittest.TestCase):
+
+    def test_reject_both_username_pattern_and_search_by_attribute(self):
+        config = {
+            'url': 'ldap://localhost',
+            'ldap_user_resolver': {
+                'username_pattern': 'cn=$username,dc=test',
+                'search_by_attribute': 'uid',
+                'admin_user': 'admin',
+                'admin_password': 'pass'
+            }
+        }
+
+        with self.assertRaisesRegex(ValueError, 'Cannot specify both username_pattern and search_by_attribute'):
+            LdapAuthenticator(config, test_utils.temp_folder)
+
+    def test_reject_neither_username_pattern_nor_search_by_attribute(self):
+        config = {
+            'url': 'ldap://localhost',
+            'ldap_user_resolver': {
+                'admin_user': 'admin'
+            }
+        }
+
+        with self.assertRaisesRegex(ValueError, 'Either username_pattern or search_by_attribute must be specified'):
+            LdapAuthenticator(config, test_utils.temp_folder)
+
+    def test_reject_incomplete_search_by_attribute_config(self):
+        config = {
+            'url': 'ldap://localhost',
+            'ldap_user_resolver': {
+                'search_by_attribute': 'uid',
+                'admin_user': 'admin'
+                # Missing admin_password
+            }
+        }
+
+        with self.assertRaisesRegex(Exception, 'admin_password.*for ldap_user_resolver'):
+            LdapAuthenticator(config, test_utils.temp_folder)
+
+    def setUp(self):
+        test_utils.setup()
 
     def tearDown(self):
         test_utils.cleanup()

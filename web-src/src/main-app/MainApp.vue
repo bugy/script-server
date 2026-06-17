@@ -20,12 +20,16 @@
 import '@/assets/css/index.css';
 import AppLayout from '@/common/components/AppLayout';
 import {isEmptyString} from '@/common/utils/common';
-import {mapActions, mapState} from 'vuex';
 import AppWelcomePanel from './components/AppWelcomePanel';
 import DocumentTitleManager from './components/DocumentTitleManager';
 import FaviconManager from './components/FaviconManager';
 import MainAppSidebar from './components/MainAppSidebar';
 import MainAppContent from './components/scripts/MainAppContent';
+import {usePageStore} from '@/main-app/stores/page'
+import {useAuthStore} from '@/common/stores/auth'
+import {useServerConfigStore} from '@/main-app/stores/serverConfig'
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useExecutionsStore} from '@/main-app/stores/executions'
 
 export default {
   name: 'App',
@@ -37,21 +41,21 @@ export default {
     DocumentTitleManager,
     FaviconManager
   },
-  methods: {
-    ...mapActions({
-      init: 'init'
-    })
-  },
   computed: {
-    ...mapState('page', ['pageLoading'])
+    pageLoading() {
+      return usePageStore().pageLoading
+    }
   },
 
   created() {
-    this.init();
+    useAuthStore().init()
+    useServerConfigStore().init()
+    useScriptsStore().init()
+    useExecutionsStore().init()
   },
 
   mounted() {
-    const currentPath = this.$router.currentRoute.path;
+    const currentPath = this.$router.currentRoute.value.path;
     this.$refs.appLayout.setSidebarVisibility(isEmptyString(currentPath) || (currentPath === '/'));
 
     this.$router.afterEach((to) => {

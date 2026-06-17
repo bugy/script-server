@@ -1,0 +1,41 @@
+# Version control
+.git/
+.github/
+
+# Frontend source — pre-built assets are already committed to web/
+web-src/
+
+# Dev / build tooling
+tools/build.py
+tools/deploy_docker.sh
+tools/init.py
+tools/run_e2e_tests.sh
+tools/start_in_virtualenv.sh
+samples/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Tests (not needed at runtime)
+src/tests/
+src/e2e_tests/
+
+# Docs
+*.md
+LICENSE
+
+# macOS
+.DS_Store
+
+# IDE / local tooling
+.vscode/
+.idea/
+.claude/
+
+# Runtime directories (mounted as volumes)
+conf/runners/
+logs/

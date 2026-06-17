@@ -3,44 +3,32 @@
 import ScriptConfig from '@/admin/components/scripts-config/ScriptConfig';
 import ScriptConfigForm from '@/admin/components/scripts-config/ScriptConfigForm';
 import {mount} from '@vue/test-utils';
-import Vuex from 'vuex';
+import {createPinia, setActivePinia} from 'pinia';
+import {useAdminScriptConfigStore} from '@/admin/stores/scriptConfig';
 import {attachToDocument, createScriptServerTestVue, vueTicks} from '../test_utils';
 import {findField, setValueByUser} from './ParameterConfigForm_test';
 
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-
 describe('Test ScriptConfig', function () {
-    let store;
+    let pinia;
+    let adminScriptConfigStore;
     let configComponent;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
-            modules: {
-                scriptConfig: {
-                    namespaced: true,
-                    state: {
-                        scriptName: 'test_script',
-                        scriptConfig: {'name': 'test_script', 'script_path': 'ping'}
-                    },
-                    actions: {
-                        init({commit, state}, scriptName) {
+        pinia = createPinia();
+        setActivePinia(pinia);
 
-                        },
+        adminScriptConfigStore = useAdminScriptConfigStore();
+        adminScriptConfigStore.scriptName = 'test_script';
+        adminScriptConfigStore.scriptConfig = {'name': 'test_script', 'script_path': 'ping'};
 
-                        save({dispatch, state}) {
-
-                        }
-                    }
-                }
-            }
-        });
+        // Stub init and save to prevent API calls
+        vi.spyOn(adminScriptConfigStore, 'init').mockImplementation(() => {});
+        vi.spyOn(adminScriptConfigStore, 'save').mockImplementation(() => Promise.resolve());
 
         configComponent = mount(ScriptConfig, {
-            store,
-            localVue,
+            global: {plugins: [pinia]},
             attachTo: attachToDocument(),
-            propsData: {scriptName: 'script1'}
+            props: {scriptName: 'script1'}
         });
 
         await vueTicks();
@@ -48,23 +36,23 @@ describe('Test ScriptConfig', function () {
 
     afterEach(async function () {
         await vueTicks();
-
-        configComponent.destroy();
+        vi.restoreAllMocks();
+        configComponent.unmount();
     });
 
     const _findField = (expectedName, failOnMissing = true) => {
-        const form = configComponent.find(ScriptConfigForm);
-        return findField(form.vm, expectedName, failOnMissing);
+        const form = configComponent.findComponent(ScriptConfigForm);
+        return findField(form, expectedName, failOnMissing);
     };
 
     async function _setValueByUser(fieldName, value) {
         const form = configComponent.findComponent(ScriptConfigForm);
-        await setValueByUser(form.vm, fieldName, value);
+        await setValueByUser(form, fieldName, value);
     }
 
     describe('Test show config', function () {
         it('Test show simple values', async function () {
-            store.state.scriptConfig.scriptConfig = {
+            adminScriptConfigStore.scriptConfig = {
                 'name': 's1',
                 'group': 'important',
                 'description': 'some desc',
@@ -93,7 +81,7 @@ describe('Test ScriptConfig', function () {
             expectedAutoCleanup,
             expectedCleanupDisabled,
             expectedValue) {
-            store.state.scriptConfig.scriptConfig = config;
+            adminScriptConfigStore.scriptConfig = config;
 
             await vueTicks();
 
@@ -101,7 +89,7 @@ describe('Test ScriptConfig', function () {
             expect(_findField('Auto cleanup').value).toBe(expectedAutoCleanup)
             expect(_findField('Auto cleanup').disabled).toBe(expectedCleanupDisabled)
 
-            expect(store.state.scriptConfig.scriptConfig.scheduling).toEqual(expectedValue)
+            expect(adminScriptConfigStore.scriptConfig.scheduling).toEqual(expectedValue)
         }
 
         it('Test show scheduling when no config', async function () {
@@ -168,7 +156,7 @@ describe('Test ScriptConfig', function () {
         it('Test edit group', async function () {
             await _setValueByUser('Group', 'xyz');
 
-            expect(store.state.scriptConfig.scriptConfig.group).toBe('xyz')
+            expect(adminScriptConfigStore.scriptConfig.group).toBe('xyz')
         });
     });
 
@@ -176,7 +164,7 @@ describe('Test ScriptConfig', function () {
         it('Test simple edit', async function () {
             await configComponent.get('.path-textfield input').setValue('echo 123')
 
-            expect(store.state.scriptConfig.scriptConfig.script).toEqual({mode: 'new_path', path: 'echo 123'})
+            expect(adminScriptConfigStore.scriptConfig.script).toEqual({mode: 'new_path', path: 'echo 123'})
         });
     });
 
@@ -185,7 +173,7 @@ describe('Test ScriptConfig', function () {
             await _setValueByUser('Allow all', false);
             await _setValueByUser('Allowed users', ['user A', 'user B']);
 
-            expect(store.state.scriptConfig.scriptConfig.allowed_users).toEqual(['user A', 'user B'])
+            expect(adminScriptConfigStore.scriptConfig.allowed_users).toEqual(['user A', 'user B'])
         });
     });
 
@@ -194,13 +182,13 @@ describe('Test ScriptConfig', function () {
             await _setValueByUser('Any admin', false);
             await _setValueByUser('Admin users', ['user A', 'user B']);
 
-            expect(store.state.scriptConfig.scriptConfig.admin_users).toEqual(['user A', 'user B'])
+            expect(adminScriptConfigStore.scriptConfig.admin_users).toEqual(['user A', 'user B'])
         });
 
         it('Test set any admin = false without any user, manually', async function () {
             await _setValueByUser('Any admin', false);
 
-            expect(store.state.scriptConfig.scriptConfig.admin_users).toBeNil()
+            expect(adminScriptConfigStore.scriptConfig.admin_users).toBeNil()
         });
     });
 
@@ -208,13 +196,13 @@ describe('Test ScriptConfig', function () {
         it('Test edit output_format manually', async function () {
             await _setValueByUser('Output format', 'html');
 
-            expect(store.state.scriptConfig.scriptConfig.output_format).toEqual('html')
+            expect(adminScriptConfigStore.scriptConfig.output_format).toEqual('html')
         });
     });
 
     describe('Test show shared instances access', function () {
         it('Test show shared instances access unchecked', async function () {
-            store.state.scriptConfig.scriptConfig = {};
+            adminScriptConfigStore.scriptConfig = {};
 
             await vueTicks();
 
@@ -222,7 +210,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show shared instances access checked', async function () {
-            store.state.scriptConfig.scriptConfig = {
+            adminScriptConfigStore.scriptConfig = {
                 'access': {'shared_access': {'type': 'ALL_USERS'}}
             };
 
@@ -236,45 +224,45 @@ describe('Test ScriptConfig', function () {
         it('Test update global_instances manually unchecked', async function () {
             await _setValueByUser('Shared Script Instances', false);
 
-            expect(typeof store.state.scriptConfig.scriptConfig.access).toEqual('undefined');
+            expect(typeof adminScriptConfigStore.scriptConfig.access).toEqual('undefined');
         });
 
         it('Test update global_instances manually checked', async function () {
             await _setValueByUser('Shared Script Instances', true);
 
-            expect(store.state.scriptConfig.scriptConfig.access).toEqual({'shared_access': {'type': 'ALL_USERS'}});
+            expect(adminScriptConfigStore.scriptConfig.access).toEqual({'shared_access': {'type': 'ALL_USERS'}});
         });
     });
 
     describe('Test edit scheduling', function () {
         it('Test set enabled true', async function () {
-            store.state.scriptConfig.scriptConfig = {};
+            adminScriptConfigStore.scriptConfig = {};
 
             await vueTicks();
 
             await _setValueByUser('Enabled', true);
 
-            expect(store.state.scriptConfig.scriptConfig.scheduling).toEqual({'enabled': true});
+            expect(adminScriptConfigStore.scriptConfig.scheduling).toEqual({'enabled': true});
         });
 
         it('Test set enabled false', async function () {
-            store.state.scriptConfig.scriptConfig = {'scheduling': {'enabled': true, 'auto_cleanup': true}};
+            adminScriptConfigStore.scriptConfig = {'scheduling': {'enabled': true, 'auto_cleanup': true}};
 
             await vueTicks();
 
             await _setValueByUser('Enabled', false)
 
-            expect(store.state.scriptConfig.scriptConfig.scheduling).toBeNil()
+            expect(adminScriptConfigStore.scriptConfig.scheduling).toBeNil()
         });
 
         it('Test set auto cleanup enabled', async function () {
-            store.state.scriptConfig.scriptConfig = {'scheduling': {'enabled': true}}
+            adminScriptConfigStore.scriptConfig = {'scheduling': {'enabled': true}}
 
             await vueTicks()
 
             await _setValueByUser('Auto cleanup', true)
 
-            expect(store.state.scriptConfig.scriptConfig.scheduling).toEqual({'enabled': true, 'auto_cleanup': true})
+            expect(adminScriptConfigStore.scriptConfig.scheduling).toEqual({'enabled': true, 'auto_cleanup': true})
         });
     });
 

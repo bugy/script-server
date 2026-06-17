@@ -1,8 +1,8 @@
+import asyncio
 import json
 import os
 import threading
 import traceback
-from asyncio import set_event_loop_policy
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
@@ -122,6 +122,23 @@ class ServerTest(TestCase):
         self.assertEqual(start_response.status_code, 200)
         self.assertEqual(start_response.content, b'3')
 
+    def test_xsrf_cookie_not_httponly(self):
+        # In token mode (the default) the browser JS must read the _xsrf cookie
+        # and echo it back in the X-XSRFToken header, so the cookie must NOT be
+        # HttpOnly. (The other XSRF tests use `requests`, which ignores HttpOnly,
+        # so they can't catch a regression here — this asserts the raw attribute.)
+        self.start_server(12345, '127.0.0.1')
+
+        response = self._user_session.get('http://127.0.0.1:12345/scripts')
+
+        xsrf_cookie = next((c for c in response.cookies if c.name == '_xsrf'), None)
+        self.assertIsNotNone(xsrf_cookie, 'server should set an _xsrf cookie in token mode')
+
+        rest_attrs = {k.lower() for k in xsrf_cookie._rest.keys()}
+        self.assertNotIn('httponly', rest_attrs,
+                         'the _xsrf cookie must not be HttpOnly, otherwise token-mode '
+                         'XSRF breaks (JS cannot read the token to send X-XSRFToken)')
+
     def test_xsrf_protection_when_token_failed(self):
         self.start_server(12345, '127.0.0.1')
 
@@ -136,6 +153,8 @@ class ServerTest(TestCase):
             cookies=response.cookies
         )
         self.assertEqual(start_response.status_code, 403)
+        # The response should carry an actionable reason, not a bare "Forbidden".
+        self.assertIn('XSRF', start_response.text)
 
     def test_xsrf_protection_when_header(self):
         self.start_server(12345, '127.0.0.1', xsrf_protection=XSRF_PROTECTION_HEADER)
@@ -231,6 +250,64 @@ class ServerTest(TestCase):
         script_content = file_utils.read_file(script_path)
         self.assertEqual('abcdef', script_content)
 
+    # --- Security header tests ---
+
+    def test_security_headers_on_api_response(self):
+        self.start_server(12345, '127.0.0.1')
+        response = self._user_session.get('http://127.0.0.1:12345/scripts')
+        self.assertEqual(200, response.status_code)
+        self._assert_security_headers(response)
+
+    def test_security_headers_on_static_response(self):
+        self.start_server(12345, '127.0.0.1')
+        # Theme files are served by BaseStaticHandler and are accessible without
+        # authentication (they appear in the allowed_during_login list).
+        theme_dir = os.path.join(self.conf_folder, 'theme')
+        os.makedirs(theme_dir, exist_ok=True)
+        with open(os.path.join(theme_dir, 'style.css'), 'w') as f:
+            f.write('body { color: red; }')
+
+        response = requests.get('http://127.0.0.1:12345/theme/style.css')
+        self.assertEqual(200, response.status_code)
+        self._assert_security_headers(response)
+
+    def test_security_headers_on_websocket_response(self):
+        self.start_server(12345, '127.0.0.1')
+        # Plain HTTP GET to the WebSocket endpoint (no Upgrade headers) → Tornado returns 400.
+        # set_default_headers() is called before the handshake check, so security
+        # headers must be present in the error response.
+        response = requests.get('http://127.0.0.1:12345/executions/io/1')
+        self.assertEqual(400, response.status_code)
+        self._assert_security_headers(response)
+
+    def test_hsts_present_when_cookie_secure(self):
+        self.start_server(12345, '127.0.0.1', cookie_secure=True)
+        response = self._user_session.get('http://127.0.0.1:12345/scripts')
+        hsts = response.headers.get('Strict-Transport-Security', '')
+        self.assertIn('max-age=31536000', hsts, 'HSTS header missing when cookie_secure=True')
+
+    def test_hsts_absent_when_not_cookie_secure(self):
+        self.start_server(12345, '127.0.0.1', cookie_secure=False)
+        response = self._user_session.get('http://127.0.0.1:12345/scripts')
+        self.assertNotIn('Strict-Transport-Security', response.headers,
+                         'HSTS header must not be sent over plain HTTP')
+
+    def _assert_security_headers(self, response):
+        for header, expected in [
+            ('X-Frame-Options', 'DENY'),
+            ('X-Content-Type-Options', 'nosniff'),
+            ('Referrer-Policy', 'strict-origin-when-cross-origin'),
+            ('Permissions-Policy', 'camera=(), microphone=(), geolocation=()'),
+        ]:
+            self.assertEqual(expected, response.headers.get(header),
+                             'Wrong or missing header: ' + header)
+
+        csp = response.headers.get('Content-Security-Policy', '')
+        self.assertIn("default-src 'self'", csp, 'CSP missing default-src')
+        self.assertIn("frame-ancestors 'none'", csp, 'CSP missing frame-ancestors')
+
+    # --- end security header tests ---
+
     def test_on_fly_auth(self):
         self.start_server(12345, '127.0.0.1')
 
@@ -253,7 +330,7 @@ class ServerTest(TestCase):
         test_utils.write_script_config({'name': 's1'}, 's1', self.runners_folder)
 
         response = requests.get('http://127.0.0.1:12345/scripts', auth=HTTPBasicAuth('normal_user', 'wrong_pass'))
-        self.assertEquals(401, response.status_code)
+        self.assertEqual(401, response.status_code)
 
     @staticmethod
     def get_xsrf_token(session):
@@ -272,12 +349,13 @@ class ServerTest(TestCase):
         response = self._user_session.get('http://127.0.0.1:12345/conf')
         self.assertEqual(response.status_code, 200)
 
-    def start_server(self, port, address, *, xsrf_protection=XSRF_PROTECTION_TOKEN):
+    def start_server(self, port, address, *, xsrf_protection=XSRF_PROTECTION_TOKEN, cookie_secure=False):
         file_download_feature = FileDownloadFeature(UserFileStorage(b'some_secret'), test_utils.temp_folder)
         config = ServerConfig()
         config.port = port
         config.address = address
         config.xsrf_protection = xsrf_protection
+        config.cookie_secure = cookie_secure
         config.max_request_size_mb = 1
 
         authorizer = Authorizer(ANY_USER, ['admin_user'], [], ['admin_user'], EmptyGroupProvider())
@@ -295,7 +373,7 @@ class ServerTest(TestCase):
                     execution_service,
                     MagicMock(),
                     MagicMock(),
-                    ConfigService(authorizer, self.conf_folder, test_utils.process_invoker),
+                    ConfigService(authorizer, self.conf_folder, True, test_utils.process_invoker),
                     MagicMock(),
                     FileUploadFeature(UserFileStorage(cookie_secret), test_utils.temp_folder),
                     file_download_feature,
@@ -352,4 +430,4 @@ class ServerTest(TestCase):
 
         self.ioloop_thread.join(timeout=50)
         io_loop.close()
-        set_event_loop_policy(None)
+        asyncio.set_event_loop(None)

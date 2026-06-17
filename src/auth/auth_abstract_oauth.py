@@ -54,7 +54,7 @@ class _OauthUserInfo:
 
 def _start_timer(callback):
     timer = threading.Timer(30, callback)
-    timer.setDaemon(True)
+    timer.daemon = True
     timer.start()
     return timer
 

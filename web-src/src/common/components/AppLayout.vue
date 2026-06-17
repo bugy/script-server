@@ -6,13 +6,21 @@
     <div class="app-content">
       <div ref="contentHeader"
            :class="{borderless: !hasHeader, 'shadow-8dp': hasHeader}" class="content-header">
-        <a class="btn-flat app-menu-button" @click="setSidebarVisibility(true)">
-          <i class="material-icons">menu</i>
-        </a>
+        <v-btn
+          icon="menu"
+          variant="text"
+          density="compact"
+          class="app-menu-button"
+          @click="setSidebarVisibility(true)"
+        />
         <slot name="header"/>
-        <div v-if="loading" class="progress">
-          <div class="indeterminate"></div>
-        </div>
+        <v-progress-linear
+          v-if="loading"
+          indeterminate
+          color="primary"
+          :height="3"
+          class="content-progress"
+        />
       </div>
       <div ref="contentPanel" class="content-panel">
         <slot name="content"/>
@@ -134,23 +142,13 @@ function updatedStylesBasedOnContent(contentHeader, contentPanel, appLayout) {
 }
 
 .app-menu-button {
-  display: none;
+  display: none !important;
 
   float: left;
   position: relative;
   z-index: 1;
-  margin-top: 12px;
-  text-align: center;
-  color: var(--font-color-main);
-}
-
-.app-menu-button:hover {
-  background: none;
-}
-
-.app-menu-button > i {
-  font-size: 2rem;
-  line-height: 1;
+  margin-top: 6px;
+  margin-right: 4px;
 }
 
 .content-header {
@@ -169,11 +167,12 @@ function updatedStylesBasedOnContent(contentHeader, contentPanel, appLayout) {
   border-bottom: none;
 }
 
-.content-header .progress {
+.content-header .content-progress {
   margin: 0;
   bottom: -1px;
   position: absolute;
   left: 0;
+  right: 0;
 }
 
 .content-panel {
@@ -208,8 +207,8 @@ function updatedStylesBasedOnContent(contentHeader, contentPanel, appLayout) {
   }
 
   .app-menu-button {
-    display: block;
-    margin-right: 12px;
+    display: inline-flex !important;
+    margin-right: 4px;
   }
 }
 </style>

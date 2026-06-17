@@ -1,0 +1,90 @@
+<template>
+  <div :data-error="error" :title="config.description" class="input-field time-field">
+    <input :id="id"
+           ref="timeInput"
+           :disabled="disabled"
+           :required="config.required"
+           type="time"
+           :value="modelValue"
+           :class="{validate: !disabled}"
+           @change="inputChanged"/>
+    <label :for="id" :class="{active: !!modelValue}">{{ config.name }}</label>
+  </div>
+</template>
+
+<script>
+import {isNull} from '@/common/utils/common';
+
+export default {
+  name: 'TimeField',
+  emits: ['update:modelValue', 'error'],
+  props: {
+    modelValue: {
+      type: String,
+      default: null
+    },
+    config: {
+      type: Object
+    },
+    disabled: {
+      type: Boolean,
+      default: false
+    }
+  },
+
+  data() {
+    return {
+      error: '',
+      id: null
+    }
+  },
+
+  mounted() {
+    this.id = this.$.uid;
+    this.validate(this.modelValue);
+  },
+
+  watch: {
+    modelValue(newValue) {
+      this.validate(newValue);
+    }
+  },
+
+  methods: {
+    inputChanged() {
+      const value = this.$refs.timeInput.value || null;
+      this.validate(value);
+      this.$emit('update:modelValue', value);
+    },
+
+    validate(value) {
+      if (this.disabled) {
+        this.error = '';
+        this.$emit('error', '');
+        return;
+      }
+
+      if (isNull(value) || value === '') {
+        if (this.config.required) {
+          this.error = 'required';
+          this.$emit('error', this.error);
+        } else {
+          this.error = '';
+          this.$emit('error', '');
+        }
+        return;
+      }
+
+      this.error = '';
+      this.$emit('error', '');
+    }
+  }
+}
+</script>
+
+<style scoped>
+.time-field input[type=time] {
+  height: 1.5em;
+  line-height: 1.5em;
+}
+</style>
