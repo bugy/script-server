@@ -156,12 +156,7 @@ describe('Test ExecutionInstanceTabs', function () {
 
     describe('Test add tab button', function () {
 
-        // The "add instance" button only renders when `hasMoreSpace` is true,
-        // which is computed from $el.offsetWidth minus the tabs' widths. jsdom has
-        // no layout engine (all offsetWidth === 0), so the button never appears.
-        // These three tests verified that layout-driven behaviour and require a
-        // real browser (they passed under the old Karma + Chrome runner).
-        it.skip('test add button when single executor', async function () {
+        it('test add button when single executor', async function () {
             await addExecutor(123, 'abc')
             await selectExecutor(123);
 
@@ -171,7 +166,7 @@ describe('Test ExecutionInstanceTabs', function () {
             expect(tabs.at(1).classes()).not.toContain('v-tab--selected');
         });
 
-        it.skip('test add button when multiple executors', async function () {
+        it('test add button when multiple executors', async function () {
             await addExecutor(101, 'abc')
             await addExecutor(102, 'abc')
             await addExecutor(103, 'abc')
@@ -191,14 +186,14 @@ describe('Test ExecutionInstanceTabs', function () {
             expect(tabs).toHaveLength(0);
         });
 
-        it.skip('test add button when active', async function () {
+        it('test add button when active', async function () {
             await addExecutor(101, 'abc')
 
             executionsStore.currentExecutor = null;
 
             await vueTicks();
 
-            const addButton = executionTabs.get('.add-execution-tab-button');
+            const addButton = executionTabs.get('.add-execution-tab');
             expect(addButton.classes()).toContain('v-tab--selected');
         });
     });
@@ -228,13 +223,14 @@ describe('Test ExecutionInstanceTabs', function () {
             expect(executionsStore.currentExecutor.state.id).toBe(102);
         });
 
-        it.skip(/* jsdom: layout-dependent (offsetLeft/add-button rendering) */ 'test click add tab when another selected', async function () {
+        it('test click add tab when another selected', async function () {
             await addExecutor(101, 'abc')
             await addExecutor(102, 'abc')
             await selectExecutor(101)
 
-            const addButton = executionTabs.get('.add-execution-tab-button');
-            addButton.trigger('click');
+            const addButton = executionTabs.get('.add-execution-tab');
+            await addButton.trigger('click');
+            await vueTicks();
 
             expect(executionsStore.currentExecutor).toBeNil();
         });
