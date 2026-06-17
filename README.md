@@ -4,6 +4,20 @@
 
 ## What's new in this fork
 
+### 2026-06-17 — Code quality and Python 3.14 compatibility
+
+**Vue 3 `emits` declarations:** 9 components were missing the `emits` option, causing Vue 3 to treat event listeners as DOM fallthrough attributes. This produced silent misbehaviour in the script-edit dialog (radio buttons and text inputs fired the wrong handler) and the schedule panel. All affected components now declare their emitted events explicitly.
+
+**Dead frontend dependencies removed:** `brace` and `codemirror` were listed in `package.json` but never imported in the source — only `ace-builds` is used. Both packages have been removed.
+
+**Python dependency bounds tightened:** `tornado>=6.1` and `requests>=2.28` now use the compatible-release operator (`~=`), allowing minor/patch updates while blocking breaking major changes.
+
+**DES-crypt htpasswd support on Python 3.13+:** the stdlib `crypt` module was removed in Python 3.13. DES-crypt password verification in the built-in htpasswd verifier now calls the system `crypt(3)` C function directly via ctypes (available as `libcrypt` on Linux, `libc` on macOS), with no new dependency. The note in the Python 3.12/3.13 section below still applies for Windows deployments.
+
+**`asyncio.set_event_loop_policy` replaced:** this function is deprecated since Python 3.14 and scheduled for removal in Python 3.16. The Windows Tornado workaround in `server.py` now uses `asyncio.set_event_loop(asyncio.SelectorEventLoop())` instead, which has the same effect without touching the global event-loop policy.
+
+**6 unit tests un-skipped:** 4 tests in `ExecutionInstanceTabs` were skipped because the old materialize tab component required layout measurements (`offsetWidth`) that jsdom cannot simulate. After the Vuetify migration the add-tab button is always rendered, so no layout computation is needed and the tests pass as-is. 2 tests in `test_auth_htpasswd` were skipped on Python ≥ 3.13 — now fixed via the ctypes crypt call above.
+
 ### 2026-06-12 — State management migrated from Vuex to Pinia
 
 The frontend store layer has been fully migrated from Vuex 4 to [Pinia](https://pinia.vuejs.org/)
