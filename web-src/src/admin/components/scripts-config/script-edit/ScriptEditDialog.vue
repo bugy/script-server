@@ -1,7 +1,14 @@
 <template>
-  <div ref="modal" :class="{large:inEditorMode}" class="modal script-edit-dialog">
-    <div class="card">
-      <div class="card-content">
+  <v-dialog
+    v-model="dialogOpen"
+    :class="['script-edit-dialog', {large: inEditorMode}]"
+    @after-enter="$refs.codeEditor?.resize()"
+  >
+    <v-card
+      :style="{height: inEditorMode ? '80vh' : '300px', transition: 'height 0.3s'}"
+      class="d-flex flex-column"
+    >
+      <v-card-text class="flex-grow-1 d-flex flex-column pb-0">
         <RadioGroup v-model="editMode"
                     :horizontal="true"
                     :options="modeOptions"
@@ -10,7 +17,7 @@
         <Textfield v-show="inPathMode" ref="plainPathField"
                    v-model="plainPath"
                    :config="pathFieldConfig"
-                   @error="$set(modeErrors, 'new_path', $event)"/>
+                   @error="modeErrors['new_path'] = $event"/>
         <CodeEditor v-show="inEditorMode" ref="codeEditor"
                     :code-loaded="codeLoaded"
                     :loading-error="codeLoadingError || codeLoadingEditorError"
@@ -18,38 +25,31 @@
                     :original-code="originalCode"
                     :path="editorScriptPath"
                     :path-editable="false"
-                    @input="code = $event"
+                    @update:modelValue="code = $event"
                     @languageChange="editorLanguageConfig = $event"/>
         <ScriptUploader v-show="inUploadMode"
                         ref="scriptUploader"
                         v-model="uploadedScript"
                         :code-loading-error="codeLoadingError"
                         :path="targetUploadPath"
-                        @error="$set(modeErrors, 'upload_script', $event)"/>
-      </div>
-      <div :class="{borderless: inEditorMode}" class="card-action">
-        <span v-if="hasIgnoredChanges" class="ignored-changes-warning valign-wrapper">
-          <i class="material-icons">error_outline</i>
+                        @error="modeErrors['upload_script'] = $event"/>
+      </v-card-text>
+      <v-card-actions :class="{borderless: inEditorMode}" class="justify-space-between px-4 py-2">
+        <span v-if="hasIgnoredChanges" class="ignored-changes-warning">
+          <v-icon>error_outline</v-icon>
           Changes in non-active tabs will be ignored
         </span>
         <span v-else/>
-
         <span>
-        <a class="btn-flat" @click="closeDialog">
-          Cancel
-        </a>
-        <a :class="{disabled: saveDisabled}" :disabled="saveDisabled" class="btn-flat" @click="onSave">
-          Save
-        </a>
-          </span>
-      </div>
-    </div>
-
-  </div>
+          <v-btn variant="text" @click="closeDialog">Cancel</v-btn>
+          <v-btn variant="text" :disabled="saveDisabled" @click="onSave">Save</v-btn>
+        </span>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
-import '@/common/materializecss/imports/modal'
 import RadioGroup from '@/common/components/RadioGroup'
 import CodeEditor from '@/admin/components/scripts-config/script-edit/CodeEditor'
 import Textfield from '@/common/components/textfield'
@@ -85,6 +85,7 @@ const defaultScriptsFolder = './conf/scripts/'
 
 export default {
   name: 'ScriptEditDialog',
+  emits: ['change'],
   props: {
     newConfig: Boolean,
     originalPath: String,
@@ -101,7 +102,7 @@ export default {
             this.codeLoadingEditorError = data['code_edit_error']
 
             if (!isBlankString(this.codeLoadingEditorError)) {
-              this.$set(this.modeErrors, EDITOR_MODE, this.codeLoadingEditorError)
+              this.modeErrors[EDITOR_MODE] = this.codeLoadingEditorError
             }
           })
           .catch(error => {
@@ -112,7 +113,7 @@ export default {
               errorText = get(error, 'response.data')
             }
 
-            this.$set(this.modeErrors, EDITOR_MODE, errorText)
+            this.modeErrors[EDITOR_MODE] = errorText
             this.codeLoadingError = errorText
           });
     }
@@ -120,6 +121,7 @@ export default {
   data() {
     return {
       open: false,
+      dialogOpen: true,
       editMode: 'new_path',
       modeOptions: cloneDeep(defaultModeOptions),
       originalCode: '',
@@ -142,17 +144,10 @@ export default {
   },
   components: {ScriptUploader, Textfield, RadioGroup, CodeEditor},
   mounted() {
-    M.Modal.init(this.$refs.modal, {
-      onCloseStart: () => this.open = false
+    this.$nextTick(() => {
+      this.open = true
+      this.focusOnModeSwitch()
     })
-
-    this.openDialog()
-
-    this.$refs.modal.addEventListener('transitionend', () => this.$refs.codeEditor.resize())
-  },
-  beforeDestroy() {
-    const modal = M.Modal.getInstance(this.$refs.modal)
-    modal.destroy()
   },
   computed: {
     inEditorMode() {
@@ -171,18 +166,15 @@ export default {
   },
   methods: {
     openDialog() {
-      const modal = M.Modal.getInstance(this.$refs.modal)
-      modal.open()
-
+      this.dialogOpen = true
       this.$nextTick(() => {
         this.open = true
         this.focusOnModeSwitch()
       })
-      M.updateTextFields()
     },
     closeDialog() {
-      const modal = M.Modal.getInstance(this.$refs.modal)
-      modal.close()
+      this.dialogOpen = false
+      this.open = false
     },
     onSave() {
       this.emitNewValue()
@@ -289,6 +281,11 @@ export default {
 
       this.$nextTick(() => this.focusOnModeSwitch())
     },
+    inEditorMode(val) {
+      if (val) {
+        this.$nextTick(() => this.$refs.codeEditor?.resize())
+      }
+    },
     editorLanguageConfig: {
       immediate: true,
       handler() {
@@ -316,44 +313,6 @@ export default {
 </script>
 
 <style scoped>
-.modal {
-  max-height: 80%;
-  height: 300px;
-
-  width: 70%;
-  min-width: 780px;
-
-  transition: height 0.3s;
-}
-
-.modal.large {
-  height: 80%;
-}
-
-@media screen and (max-width: 800px) {
-  .modal {
-    width: calc(100vw - 16px);
-    min-width: 0;
-  }
-}
-
-.card .card-content {
-  padding-bottom: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.card .card-action {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-right: 0;
-  justify-content: space-between;
-}
-
-.card .card-action.borderless {
-  border-top: none;
-}
-
 .radio-group {
   flex: 0 0 auto;
   margin-bottom: 16px;
@@ -363,13 +322,36 @@ export default {
   flex: 1 1 auto;
 }
 
+:deep(.v-card-actions.borderless) {
+  border-top: none;
+}
+
 .ignored-changes-warning {
-  line-height: 36px;
-  color: var(--font-color-medium)
+  display: flex;
+  align-items: center;
+  color: var(--font-color-medium);
 }
 
 .ignored-changes-warning i {
   margin-right: 8px;
 }
+</style>
 
+<style>
+/* Non-scoped: targets Vuetify's teleported overlay */
+.script-edit-dialog .v-overlay__content {
+  width: 70%;
+  min-width: 780px;
+}
+
+.script-edit-dialog.large .v-overlay__content {
+  height: 80vh;
+}
+
+@media screen and (max-width: 800px) {
+  .script-edit-dialog .v-overlay__content {
+    width: calc(100vw - 16px);
+    min-width: 0;
+  }
+}
 </style>

@@ -1,15 +1,19 @@
 <template>
-  <div ref="scriptList" class="scripts-list collection">
-    <template v-for="item in items">
-      <ScriptListGroup v-if="item.isGroup" :key="item.name" :group="item" @group-clicked="groupClicked($event)"/>
-      <ScriptListItem v-else :key="item.name" :script="item"/>
+  <v-list
+    v-model:opened="openedGroups"
+    open-strategy="single"
+    class="scripts-list"
+  >
+    <template v-for="item in items" :key="item.name">
+      <ScriptListGroup v-if="item.isGroup" :group="item" />
+      <ScriptListItem v-else :script="item" />
     </template>
-  </div>
+  </v-list>
 </template>
 
 <script>
 import {isBlankString, isEmptyArray, isEmptyString, isNull, removeElement} from '@/common/utils/common';
-import {mapState} from 'vuex';
+import {useScriptsStore} from '@/main-app/stores/scripts'
 import ScriptListGroup from './ScriptListGroup';
 import ScriptListItem from './ScriptListItem';
 
@@ -23,20 +27,25 @@ export default {
     }
   },
 
-  data: function () {
+  data() {
     return {
-      activeGroup: null
+      openedGroups: []
     }
   },
 
   computed: {
-    ...mapState('scripts', ['scripts', 'selectedScript']),
+    scripts() {
+      return useScriptsStore().scripts
+    },
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    },
 
     items() {
       let groups = this.scripts.filter(script => !isBlankString(script.group))
           .map(script => script.group)
-          .filter((v, i, a) => a.indexOf(v) === i) // unique elements
-          .map(group => ({name: group, isGroup: true, scripts: [], isActive: this.activeGroup === group}));
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .map(group => ({name: group, isGroup: true, scripts: []}));
 
       let foundScripts = this.scripts
           .filter(script =>
@@ -59,15 +68,7 @@ export default {
       return result;
     }
   },
-  methods: {
-    groupClicked(groupName) {
-      if (isNull(groupName) || (this.activeGroup === groupName)) {
-        this.activeGroup = null;
-        return;
-      }
-      this.activeGroup = groupName;
-    }
-  },
+
   watch: {
     selectedScript: {
       immediate: true,
@@ -77,16 +78,13 @@ export default {
         }
 
         let foundScript = this.scripts.find(script => script.name === selectedScript);
-        if (isNull(foundScript) || isNull(foundScript.group)) {
+        if (isNull(foundScript) || isBlankString(foundScript.group)) {
           return;
         }
 
-        let group = this.items.find(item => item.isGroup && (item.name === foundScript.group));
-        if (isNull(group) || group.isActive) {
-          return;
+        if (!this.openedGroups.includes(foundScript.group)) {
+          this.openedGroups = [foundScript.group];
         }
-
-        this.activeGroup = group.name;
       }
     }
   }
@@ -97,10 +95,6 @@ export default {
 .scripts-list {
   overflow: auto;
   overflow-wrap: normal;
-  border: none;
-  margin: 0;
-
   flex-grow: 1;
 }
-
 </style>

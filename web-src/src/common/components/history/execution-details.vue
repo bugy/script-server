@@ -13,9 +13,9 @@
 
 <script>
 import {isNull} from '@/common/utils/common';
-import {mapActions, mapState} from 'vuex';
 import LogPanel from '../log_panel';
 import ReadOnlyField from '../readonly-field';
+import {useHistoryStore} from '@/common/stores/history'
 
 export default {
   name: 'execution-details',
@@ -42,8 +42,6 @@ export default {
   },
 
   methods: {
-    ...mapActions('history', ['selectExecution']),
-
     setLog(log) {
       if (!this.mounted) {
         return;
@@ -81,7 +79,9 @@ export default {
   },
 
   computed: {
-    ...mapState('history', ['selectedExecution'])
+    selectedExecution() {
+      return useHistoryStore().selectedExecution
+    }
   },
 
   mounted() {
@@ -90,13 +90,13 @@ export default {
   },
 
   watch: {
-    'executionId': {
+    executionId: {
       immediate: true,
       handler(executionId) {
-        this.selectExecution(executionId);
+        useHistoryStore().selectExecution(executionId)
       }
     },
-    'selectedExecution': {
+    selectedExecution: {
       immediate: true,
       handler(selectedExecution) {
         this.refreshData(selectedExecution);

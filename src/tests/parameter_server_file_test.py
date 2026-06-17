@@ -126,12 +126,12 @@ class PlainServerFileTest(unittest.TestCase):
         create_files(['abc', 'def'], file_dir)
         working_dir_path = os.path.join(test_utils.temp_folder, 'work', 'dir')
         config = _create_parameter_model(recursive=False, file_dir=file_dir, working_dir=working_dir_path)
-        self.assertRegex(validate_value(config, 'def'), '.+ but should be in \[\]')
+        self.assertRegex(validate_value(config, 'def'), r'.+ but should be in \[\]')
 
     def test_validate_failure_when_excluded_file(self):
         create_files(['abc', 'def'])
         config = _create_parameter_model(recursive=False, file_dir=test_utils.temp_folder, excluded_files=['abc'])
-        self.assertRegex(validate_value(config, 'abc'), '.+ but should be in \[\'def\'\]')
+        self.assertRegex(validate_value(config, 'abc'), r".+ but should be in \['def'\]")
 
     def setUp(self):
         test_utils.setup()

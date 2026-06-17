@@ -12,14 +12,15 @@
           <div class="path-breadcrumbs">
             <a class="breadcrumb"
                href="#"
-               @click.prevent="openPath([])"><i class="material-icons">home</i></a>
+               @click.prevent="openPath([])"><v-icon>home</v-icon></a>
             <a v-if="path.length > 3" class="breadcrumb" href="#"
                @click.prevent="navigateUp(2)">...</a>
-            <a v-for="(item, index) in path"
-               v-if="(path.length <= 3) || (index >= (path.length - 2))"
-               class="breadcrumb"
-               href="#"
-               @click.prevent="navigateUp(path.length - index - 1)">{{ item }}</a>
+            <template v-for="(item, index) in path" :key="index">
+              <a v-if="(path.length <= 3) || (index >= (path.length - 2))"
+                 class="breadcrumb"
+                 href="#"
+                 @click.prevent="navigateUp(path.length - index - 1)">{{ item }}</a>
+            </template>
           </div>
         </div>
       </nav>
@@ -32,20 +33,18 @@
             class="collection-item"
             @click="selectFile(file)"
             v-on:dblclick="onFileAction(file)">
-          <i class="material-icons">{{ getIcon(file) }}</i>
+          <v-icon>{{ getIcon(file) }}</v-icon>
           <span>{{ file.name }}</span>
         </li>
       </ul>
       <div v-else class="red-text load-error-field">{{ error }}</div>
     </div>
     <div class="file-dialog-footer">
-      <a class="waves-effect btn-flat"
-         @click="onClose">Cancel</a>
-      <a class="waves-effect btn-flat"
-         @click="triggerFileChosen(null)">Clear</a>
-      <a :disabled="(selectedFile === null) || (!isChoosable(selectedFile))"
-         class="waves-effect btn-flat"
-         @click="triggerFileChosen(selectedFile)">Select</a>
+      <v-btn variant="text" @click="onClose">Cancel</v-btn>
+      <v-btn variant="text" @click="triggerFileChosen(null)">Clear</v-btn>
+      <v-btn variant="text"
+             :disabled="(selectedFile === null) || (!isChoosable(selectedFile))"
+             @click="triggerFileChosen(selectedFile)">Select</v-btn>
     </div>
   </div>
 </template>
@@ -198,7 +197,9 @@ export default {
           children = [];
         }
 
-        if (this.path === path) {
+        // Vue 3 wraps reactive arrays in a Proxy, so `this.path === path` is never
+        // true after `this.path = path`. Compare by value to detect a stale load.
+        if (arraysEqual(this.path, path)) {
           children.sort(stringComparator('type').andThen(stringComparator('name')));
           this.files = children;
           this.loading = false;
@@ -212,7 +213,9 @@ export default {
         }
 
       } catch (e) {
-        if (this.path === path) {
+        // Vue 3 wraps reactive arrays in a Proxy, so `this.path === path` is never
+        // true after `this.path = path`. Compare by value to detect a stale load.
+        if (arraysEqual(this.path, path)) {
           this.error = 'Failed to load files';
           this.files = [];
           this.loading = false;
@@ -283,10 +286,9 @@ export default {
         return;
       }
 
-      const charCode = event.keyCode || event.which;
-      const char = String.fromCharCode(charCode);
+      const char = event.key;
 
-      if (!/\w/u.test(char)) {
+      if (!char || char.length !== 1 || !/\w/u.test(char)) {
         return;
       }
 
@@ -374,8 +376,14 @@ nav {
 
 .file-dialog-footer {
   flex: none;
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
   border-top: 1px solid var(--separator-color);
+  padding: 4px;
+}
+
+.file-dialog-content:focus .collection-item.active {
+  background-color: var(--focus-color);
 }
 
 .file-dialog-content .collection {

@@ -1,1 +1,15 @@
-tornado>=4
+# Python 3.9+ required (3.12+ recommended)
+
+# Core
+tornado~=6.1
+
+# HTTP notification destination (communications/destination_http.py)
+requests~=2.28
+
+# Optional: LDAP authentication backend
+# Uncomment or install separately: pip install 'ldap3~=2.9'
+# ldap3~=2.9
+
+# Optional: bcrypt password verification for htpasswd auth
+# Uncomment or install separately: pip install 'bcrypt~=4.0'
+# bcrypt~=4.0

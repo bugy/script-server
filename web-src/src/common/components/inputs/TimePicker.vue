@@ -1,26 +1,31 @@
 <template>
-  <div :data-error="error" class="time-picker input-field">
-    <input :id="id"
-           ref="timePicker"
-           :placeholder="label"
-           :required="required"
-           class="validate"
-           type="text"
-           @input="inputFieldChanged">
-    <label :for="id">{{ label || '' }}</label>
-  </div>
+  <v-text-field
+      ref="field"
+      :data-error="error"
+      :error-messages="errorMessages"
+      :label="label"
+      :model-value="text"
+      :required="required"
+      class="time-picker"
+      placeholder="HH:MM"
+      @update:model-value="inputFieldChanged"/>
 </template>
 
 <script>
-import {isEmptyString, isNull, uuidv4} from "@/common/utils/common";
+// Vuetify migration: v-text-field replaces the materialize input +
+// M.updateTextFields / M.validate_field label and validity plumbing. The
+// HH:MM validation is untouched business logic: an invalid value shows the
+// error and is NOT emitted (the model keeps the last valid time).
+import {isEmptyString} from "@/common/utils/common";
 
 export default {
   name: 'TimePicker',
+  emits: ['update:modelValue', 'error'],
   props: {
     label: {
       type: String
     },
-    value: {
+    modelValue: {
       type: String
     },
     required: {
@@ -30,33 +35,28 @@ export default {
   },
   data() {
     return {
-      id: null,
+      // What the field displays. Kept separate from modelValue so an invalid
+      // typed time stays visible (with its error) instead of snapping back
+      // to the last valid value.
+      text: this.modelValue ?? '',
       error: ''
     }
   },
-  mounted: function () {
-    this.id = 'timepicker_' + uuidv4();
-
-    this.$refs.timePicker.value = this.value;
-    M.updateTextFields();
+  computed: {
+    errorMessages() {
+      return isEmptyString(this.error) ? [] : [this.error];
+    }
   },
   watch: {
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
-        if (isNull(this.$refs.timePicker)) {
-          return;
-        }
-
-        this.$refs.timePicker.value = newValue;
-
-        this.doValidation(newValue);
+        this.text = newValue ?? '';
+        this.doValidation(this.text);
       }
     },
     'error': {
       handler(error) {
-        this.$refs.timePicker.setCustomValidity(error);
-        M.validate_field(cash(this.$refs.timePicker));
         this.$emit('error', error);
       }
     }
@@ -75,15 +75,13 @@ export default {
       }
     },
 
-    inputFieldChanged() {
-      const textField = this.$refs.timePicker;
-      const value = textField.value;
-
-      const trimmedValue = value.trim();
+    inputFieldChanged(value) {
+      this.text = value ?? '';
+      const trimmedValue = this.text.trim();
       this.doValidation(trimmedValue);
 
       if (isEmptyString(this.error)) {
-        this.$emit('input', trimmedValue);
+        this.$emit('update:modelValue', trimmedValue);
       }
     }
   },

@@ -2,26 +2,46 @@
   <div class="script-header main-content-header">
     <h2 v-show="selectedScript" class="header">{{ selectedScript }}</h2>
     <ExecutionInstanceTabs/>
+    <div class="spacer"></div>
+    <v-btn
+      icon="history"
+      variant="text"
+      density="compact"
+      class="button-history"
+      title="Parameter History"
+      @click="openParameterHistory"
+    />
+    <ParameterHistoryModal ref="parameterHistoryModal" :scriptName="selectedScript" @use-parameters="handleUseParameters"/>
   </div>
 </template>
 
 <script>
 import ExecutionInstanceTabs from '@/main-app/components/scripts/ExecutionInstanceTabs';
-import {mapState} from 'vuex';
+import ParameterHistoryModal from '@/main-app/components/scripts/ParameterHistoryModal';
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useScriptSetupStore} from '@/main-app/stores/scriptSetup'
 
 export default {
   name: 'ScriptHeader',
 
-  components: {ExecutionInstanceTabs},
+  components: {ExecutionInstanceTabs, ParameterHistoryModal},
   computed: {
-    ...mapState('scripts', {
-      selectedScript: 'selectedScript'
-    }),
-    ...mapState('executions', ['currentExecutor', 'executors'])
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    }
   },
-  methods: {}
-}
+  methods: {
+    openParameterHistory() {
+      this.$refs.parameterHistoryModal.open();
+    },
 
+    handleUseParameters(values) {
+      for (const [parameterName, value] of Object.entries(values)) {
+        useScriptSetupStore().setParameterValue({parameterName, value})
+      }
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -45,4 +65,12 @@ export default {
   min-width: 0;
 }
 
+.spacer {
+  flex: 1 1 0;
+}
+
+.button-history {
+  margin-right: 16px;
+  color: var(--font-color-medium);
+}
 </style>

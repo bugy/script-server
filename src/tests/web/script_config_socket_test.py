@@ -234,7 +234,7 @@ class ScriptConfigSocketTest(testing.AsyncTestCase):
         application.authorizer = Authorizer(ANY_USER, [], [], [], EmptyGroupProvider())
         application.identification = IpBasedIdentification(TrustedIpValidator(['127.0.0.1']), None)
         application.config_service = ConfigService(
-            application.authorizer, test_utils.temp_folder, test_utils.process_invoker)
+            application.authorizer, test_utils.temp_folder, True, test_utils.process_invoker)
 
         server = httpserver.HTTPServer(application)
         socket, self.port = testing.bind_unused_port()

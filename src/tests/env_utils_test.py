@@ -67,27 +67,27 @@ class TestIsMinVersion(unittest.TestCase):
 class TestEnvVariables(unittest.TestCase):
     def test_default(self):
         env_vars = EnvVariables(os.environ)
-        self.assertEqual(os.getlogin(), env_vars.build_env_vars()['USER'])
+        self.assertEqual(os.environ['USER'], env_vars.build_env_vars()['USER'])
 
     def test_extra_variables(self):
         env_vars = EnvVariables(os.environ)
         all_env_vars = env_vars.build_env_vars(extra_variables={'my_var': 'abcd'})
 
-        self.assertEqual(os.getlogin(), all_env_vars['USER'])
+        self.assertEqual(os.environ['USER'], all_env_vars['USER'])
         self.assertEqual('abcd', all_env_vars['my_var'])
 
     def test_default_extra_variables(self):
         env_vars = EnvVariables(os.environ, extra_variables={'my_var2': 'def'})
         all_env_vars = env_vars.build_env_vars()
 
-        self.assertEqual(os.getlogin(), all_env_vars['USER'])
+        self.assertEqual(os.environ['USER'], all_env_vars['USER'])
         self.assertEqual('def', all_env_vars['my_var2'])
 
     def test_extra_variables_when_collission(self):
         env_vars = EnvVariables(os.environ, extra_variables={'my_var': 'def'})
         all_env_vars = env_vars.build_env_vars(extra_variables={'my_var': 'abcd'})
 
-        self.assertEqual(os.getlogin(), all_env_vars['USER'])
+        self.assertEqual(os.environ['USER'], all_env_vars['USER'])
         self.assertEqual('abcd', all_env_vars['my_var'])
 
     def test_hidden_variables(self):

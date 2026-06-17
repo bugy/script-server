@@ -50,12 +50,17 @@ h6.header {
 
 #login-body {
     height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #login-panel {
     width: 300px;
-    margin: auto;
     background-color: var(--background-color-level-4dp);
+    border-radius: 2px;
+    box-shadow: var(--shadow-4dp);
+    overflow: hidden;
 }
 
 #login-panel .card-image {
@@ -63,36 +68,88 @@ h6.header {
     background: var(--login-header-background);
 }
 
-#login-panel .login-form .input-field {
-    margin-bottom: 0;
-    width: 96%;
-    margin-left: 2%;
+#login-content-container {
+    padding: 16px 24px 24px;
 }
 
-#login-panel .login-form input[type="text"],
-#login-panel .login-form input[type="password"] {
-    height: 2em;
-    margin-bottom: 1em;
+/* CSS-only floating label */
+#login-panel .login-form .input-group {
+    position: relative;
+    margin-bottom: 20px;
 }
 
-#login-panel .login-form .input-field label {
-    transform: translateY(4px);
+#login-panel .login-form .input-group input {
+    width: 100%;
+    height: 2.5em;
+    padding: 1em 0 0;
+    border: none;
+    border-bottom: 1px solid var(--outline-color);
+    background: transparent;
+    color: var(--font-color-main);
+    font-size: 1rem;
+    outline: none;
+    box-sizing: border-box;
 }
 
-#login-panel .login-form .input-field label.active {
+#login-panel .login-form .input-group label {
+    position: absolute;
+    left: 0;
+    top: 0.75em;
+    color: var(--font-color-medium);
+    font-size: 1rem;
+    pointer-events: none;
+    transition: transform 0.2s ease, color 0.2s ease;
+    transform-origin: left top;
+}
+
+#login-panel .login-form .input-group input:focus + label,
+#login-panel .login-form .input-group input:not(:placeholder-shown) + label {
     transform: translateY(-70%) scale(0.8);
 }
 
+#login-panel .login-form .input-group input:focus + label {
+    color: var(--primary-color);
+}
+
+#login-panel .login-form .input-group input:focus {
+    border-bottom: 2px solid var(--primary-color);
+}
+
+/* Login submit button */
 #credentials-login-button {
+    display: block;
     width: 100%;
-    margin-top: 7px;
+    margin-top: 12px;
+    padding: 0 16px;
+    height: 36px;
+    background-color: var(--primary-color);
+    color: var(--font-on-primary-color-main);
+    border: none;
+    border-radius: 2px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2);
+}
+
+#credentials-login-button:hover {
+    background-color: var(--primary-color-raised-hover-solid);
+    box-shadow: var(--shadow-4dp);
+}
+
+#credentials-login-button:disabled {
+    background-color: var(--background-color-disabled);
+    color: var(--font-color-disabled);
+    box-shadow: none;
+    cursor: default;
 }
 
 #login-panel .login-info-label {
     line-height: 1em;
     font-size: 0.9em;
     height: 2em;
-
     text-align: center;
 }
 
@@ -101,8 +158,10 @@ h6.header {
 }
 
 #login-panel .login-google_oauth .login-info-label,
+#login-panel .login-azure_ad_oauth .login-info-label,
 #login-panel .login-gitlab .login-info-label,
-#login-panel .login-keycloak .login-info-label {
+#login-panel .login-keycloak .login-info-label,
+#login-panel .login-authentik .login-info-label {
     margin-top: 16px;
 }
 
@@ -148,6 +207,10 @@ h6.header {
     background-image: url('../g-logo-plain.png');
 }
 
+#login-azure_ad_oauth-button {
+    background-image: url('../azure-ad-logo.png');
+}
+
 #login-panel .login-gitlab .login-info-label {
     margin-top: 16px;
 }
@@ -160,4 +223,9 @@ h6.header {
 #login-keycloak-button {
     padding-left: 42px;
     background-image: url('../keycloak_icon.png');
+}
+
+#login-authentik-button {
+    padding-left: 50px;
+    background-image: url('../authentik_icon.png');
 }

@@ -62,14 +62,16 @@ class ConfigModel:
                  path,
                  username,
                  audit_name,
+                 group_by_folders: bool,
+                 script_configs_folder: str,
                  process_invoker: ProcessInvoker,
                  pty_enabled_default=True):
         super().__init__()
 
-        short_config = read_short(path, config_object)
+        short_config = read_short(path, config_object, group_by_folders, script_configs_folder)
         self.name = short_config.name
         self._pty_enabled_default = pty_enabled_default
-        self._config_folder = os.path.dirname(path)
+        self._config_folder = script_configs_folder
         self._process_invoker = process_invoker
 
         self._username = username
@@ -94,8 +96,6 @@ class ConfigModel:
 
         for parameter in self.parameters:
             self.parameter_values[parameter.name] = parameter.create_value_wrapper_for_default()
-
-        self._reload_parameters({})
 
         self._included_config_prop.subscribe(lambda old, new: self._reload(old))
 
@@ -183,6 +183,8 @@ class ConfigModel:
                                        self.parameter_values,
                                        self.working_directory)
             self.parameters.append(parameter)
+
+        self._reload_parameters({})
 
         self._validate_parameter_configs()
 
@@ -363,11 +365,16 @@ def _build_name_from_path(file_path):
     return name.strip()
 
 
-def read_short(file_path, json_object):
+def read_short(file_path, json_object, group_by_folders: bool, script_configs_folder: str):
     name = _read_name(file_path, json_object)
     allowed_users = json_object.get('allowed_users')
     admin_users = json_object.get('admin_users')
     group = read_str_from_config(json_object, 'group', blank_to_none=True)
+    if ('group' not in json_object) and group_by_folders:
+        relative_path = file_utils.relative_path(file_path, script_configs_folder)
+        while os.path.dirname(relative_path):
+            relative_path = os.path.dirname(relative_path)
+            group = relative_path
 
     hidden = read_bool_from_config('hidden', json_object, default=False)
     if hidden:

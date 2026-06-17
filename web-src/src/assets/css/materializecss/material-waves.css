@@ -1,7 +1,0 @@
-.waves-effect .waves-ripple {
-    background-color: var(--focus-color);
-}
-
-.primary-color-dark .waves-effect .waves-ripple {
-    background-color: var(--primary-color-dark-when-focused);
-}

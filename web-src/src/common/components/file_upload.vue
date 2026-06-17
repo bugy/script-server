@@ -1,7 +1,7 @@
 <template>
   <div :data-error="error" :title="config.description" class="input-field file-upload-field">
     <a ref="uploadButton" class="btn-icon-flat btn-small waves-effect waves-circle">
-      <i class="material-icons">file_upload</i>
+      <v-icon>file_upload</v-icon>
     </a>
     <input :id="config.name"
            ref="fileField"
@@ -22,8 +22,9 @@
 import {getFileInputValue, isNull} from '@/common/utils/common';
 
 export default {
+  emits: ['update:modelValue', 'error'],
   props: {
-    'value': [File],
+    'modelValue': [File],
     'config': Object
   },
 
@@ -36,11 +37,11 @@ export default {
 
   computed: {
     valueText() {
-      if (isNull(this.value)) {
+      if (isNull(this.modelValue)) {
         return '';
       }
 
-      return this.value.name;
+      return this.modelValue.name;
     },
   },
 
@@ -63,7 +64,7 @@ export default {
       fileField.setCustomValidity(this.error);
 
       this.$emit('error', this.error);
-      this.$emit('input', value);
+      this.$emit('update:modelValue', value);
     },
 
     getValidationError(value) {

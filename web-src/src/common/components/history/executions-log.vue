@@ -6,9 +6,9 @@
 </template>
 
 <script>
-import {mapActions, mapState} from 'vuex';
 import PageProgress from '../PageProgress';
 import ExecutionsLogTable from './executions-log-table'
+import {useHistoryStore} from '@/common/stores/history'
 
 export default {
   name: 'executions-log',
@@ -24,25 +24,23 @@ export default {
     PageProgress
   },
 
-  mounted: function () {
-    this.init();
+  mounted() {
+    useHistoryStore().init()
   },
 
   methods: {
-    ...mapActions('history', ['init']),
-
     goToLog(execution_entry) {
-      this.$router.push({
-        path: this.$router.history.current.path + '/' + execution_entry.id
-      });
+      this.$router.push({path: this.$route.path + '/' + execution_entry.id})
     }
   },
 
   computed: {
-    ...mapState('history', {
-      executionRows: 'executions',
-      loading: 'loading'
-    })
+    executionRows() {
+      return useHistoryStore().executions
+    },
+    loading() {
+      return useHistoryStore().loading
+    }
   }
 }
 

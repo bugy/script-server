@@ -1,50 +1,31 @@
 'use strict';
 import {mount} from '@vue/test-utils';
-import Vuex from 'vuex';
-import VueRouter from 'vue-router';
+import {createPinia, setActivePinia} from 'pinia';
 import MainAppSidebar from '@/main-app/components/MainAppSidebar';
+import {useServerConfigStore} from '@/main-app/stores/serverConfig';
 import {attachToDocument, createScriptServerTestVue, vueTicks} from '../../test_utils';
 import router from '@/main-app/router/router';
 
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-localVue.use(VueRouter);
-
 describe('Test MainAppSidebar', function () {
     let sidebar;
-    let store;
+    let pinia;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
-            modules: {
-                serverConfig: {
-                    namespaced: true,
-                    state: {
-                        serverName: 'Custom name'
-                    }
-                },
-                scripts: {
-                    namespaced: true,
-                    state: {
-                        scripts: []
-                    }
-                },
-            }
-        });
+        pinia = createPinia();
+        setActivePinia(pinia);
+
+        const serverConfigStore = useServerConfigStore();
+        serverConfigStore.serverName = 'Custom name';
 
         sidebar = mount(MainAppSidebar, {
             attachTo: attachToDocument(),
-            store,
-            localVue,
-            router
+            global: {plugins: [pinia, router]},
         });
-
-        sidebar.vm.$parent.$forceUpdate();
         await sidebar.vm.$nextTick();
     });
 
     afterEach(function () {
-        sidebar.destroy();
+        sidebar.unmount();
     });
 
     describe('Test title', function () {
@@ -56,7 +37,7 @@ describe('Test MainAppSidebar', function () {
         });
 
         it('test change title in config', async function () {
-            store.state.serverConfig.serverName = 'Another name';
+            useServerConfigStore().serverName = 'Another name';
             await vueTicks();
 
             const header = sidebar.find('.server-header');
@@ -65,7 +46,7 @@ describe('Test MainAppSidebar', function () {
         });
 
         it('test default title when missing', async function () {
-            store.state.serverConfig.serverName = null;
+            useServerConfigStore().serverName = null;
             await vueTicks();
 
             const header = sidebar.find('.server-header');
@@ -74,7 +55,7 @@ describe('Test MainAppSidebar', function () {
         });
 
         it('test long title', async function () {
-            store.state.serverConfig.serverName = 'Some very very long title';
+            useServerConfigStore().serverName = 'Some very very long title';
             await vueTicks();
 
             const header = sidebar.find('.server-header');

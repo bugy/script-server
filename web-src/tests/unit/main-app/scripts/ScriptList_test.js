@@ -1,41 +1,27 @@
 'use strict';
 
-import {hasClass, isBlankString} from '@/common/utils/common';
 import ScriptsList from '@/main-app/components/scripts/ScriptsList';
 import router from '@/main-app/router/router';
 import {mount} from '@vue/test-utils';
-import VueRouter from 'vue-router';
-import Vuex from 'vuex';
-import {attachToDocument, createScriptServerTestVue, triggerSingleClick, vueTicks} from '../../test_utils';
-
-const localVue = createScriptServerTestVue();
-localVue.use(Vuex);
-localVue.use(VueRouter);
+import {createPinia, setActivePinia} from 'pinia';
+import {useScriptsStore} from '@/main-app/stores/scripts';
+import {attachToDocument, triggerSingleClick, vueTicks} from '../../test_utils';
 
 describe('Test ScriptConfig', function () {
-    let store;
+    let pinia;
+    let scriptsStore;
     let listComponent;
 
     beforeEach(async function () {
-        store = new Vuex.Store({
-            modules: {
-                scripts: {
-                    namespaced: true,
-                    state: {
-                        scripts: [],
-                        selectedScript: null
-                    }
-                },
-                executions: {
-                    executors: {}
-                }
-            }
-        });
+        pinia = createPinia();
+        setActivePinia(pinia);
+
+        scriptsStore = useScriptsStore();
+        scriptsStore.scripts = [];
+        scriptsStore.selectedScript = null;
 
         listComponent = mount(ScriptsList, {
-            store,
-            localVue,
-            router,
+            global: {plugins: [pinia, router]},
             attachTo: attachToDocument()
         });
 
@@ -45,77 +31,79 @@ describe('Test ScriptConfig', function () {
     afterEach(async function () {
         await vueTicks();
 
-        listComponent.destroy();
+        listComponent.unmount();
     });
 
-    function getText(item) {
-        return Array.from(item.childNodes)
-            .filter(child => child.nodeType === 3)
-            .map(child => child.nodeValue.trim())
-            .reduce((left, right) => left + right);
+    function getGroupTitle(groupEl) {
+        const titleEl = groupEl.querySelector('.v-list-group__header .v-list-item-title');
+        return titleEl ? titleEl.textContent.trim() : '';
     }
 
-    function getGroupText(groupItem) {
-        let groupTextItem = $(groupItem).find('> .script-group > span').get(0);
-        return getText(groupTextItem);
+    function getItemTitle(itemEl) {
+        const titleEl = itemEl.querySelector('.v-list-item-title');
+        return titleEl ? titleEl.textContent.trim() : '';
     }
 
     function getTopLevelItems() {
-        return Array.from(listComponent.vm.$el.childNodes)
-            .filter(child => hasClass(child, 'collection-item') || hasClass(child, 'script-list-group'))
+        return Array.from(listComponent.vm.$el.children)
+            .filter(child => child.classList.contains('v-list-item') || child.classList.contains('v-list-group'))
             .map(child => {
-                if (hasClass(child, 'script-list-group')) {
-                    return getGroupText(child);
+                if (child.classList.contains('v-list-group')) {
+                    return getGroupTitle(child);
                 }
-
-                return getText(child);
+                return getItemTitle(child);
             });
     }
 
-    function findGroupItem(groupName) {
-        let foundGroups = $(listComponent.vm.$el)
-            .find('.script-list-group')
-            .has('.script-group > span:contains("' + groupName + '")')
-            .toArray()
+    function findGroupElement(groupName) {
+        const groups = [...listComponent.vm.$el.querySelectorAll('.v-list-group')]
+            .filter(g => getGroupTitle(g) === groupName);
+        expect(groups).toBeArrayOfSize(1);
+        return groups[0];
+    }
 
-        expect(foundGroups).toBeArrayOfSize(1)
-        return foundGroups[0];
+    function isGroupOpen(groupEl) {
+        return groupEl.classList.contains('v-list-group--open');
     }
 
     function assertGroupItems(groupName, expectedTexts) {
-        let foundGroup = findGroupItem(groupName);
-
-        let innerItems = $(foundGroup).find('.collection-item:not(.script-group)').toArray();
-        let actualTexts = innerItems.map(item => getText(item));
-        expect(actualTexts).toEqual(expectedTexts)
+        const groupEl = findGroupElement(groupName);
+        const itemsContainer = groupEl.querySelector('.v-list-group__items');
+        if (!expectedTexts.length) {
+            expect(itemsContainer).toBeFalsy();
+            return;
+        }
+        expect(itemsContainer).toBeTruthy();
+        const items = [...itemsContainer.querySelectorAll('.v-list-item')];
+        const texts = items.map(item => getItemTitle(item));
+        expect(texts).toEqual(expectedTexts);
     }
 
     function assertOpenGroup(expectedOpenGroup, expectedItems) {
-        if (!isBlankString(expectedOpenGroup)) {
-            assertGroupItems(expectedOpenGroup, expectedItems);
-        }
-
-        let groupItems = $(listComponent.vm.$el).find('.script-list-group').toArray();
-        for (const groupItem of groupItems) {
-            let itemName = getGroupText(groupItem);
-            if (itemName === expectedOpenGroup) {
-                continue;
+        const groupEls = [...listComponent.vm.$el.querySelectorAll('.v-list-group')];
+        for (const groupEl of groupEls) {
+            const name = getGroupTitle(groupEl);
+            if (name === expectedOpenGroup) {
+                expect(isGroupOpen(groupEl)).toBe(true);
+                if (expectedItems) {
+                    assertGroupItems(name, expectedItems);
+                }
+            } else {
+                expect(isGroupOpen(groupEl)).toBe(false);
             }
-
-            assertGroupItems(itemName, []);
         }
     }
 
     async function clickOnGroup(groupName) {
-        let dropdownItem = $(findGroupItem(groupName)).find('.script-group');
-        triggerSingleClick(dropdownItem.get(0));
-
+        const groupEl = findGroupElement(groupName);
+        const header = groupEl.querySelector('.v-list-group__header');
+        triggerSingleClick(header);
         await vueTicks();
     }
 
     describe('Test show list', function () {
         it('Test show single item', async function () {
-            store.state.scripts.scripts = [{'name': 'abc'}];
+            scriptsStore.scripts = [{'name': 'abc'}];
 
             await vueTicks();
 
@@ -125,7 +113,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show multiple items', async function () {
-            store.state.scripts.scripts = [{'name': 'abc'}, {'name': 'xyz'}, {'name': 'def'}];
+            scriptsStore.scripts = [{'name': 'abc'}, {'name': 'xyz'}, {'name': 'def'}];
 
             await vueTicks();
 
@@ -135,7 +123,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show single item in group', async function () {
-            store.state.scripts.scripts = [{'name': 'abc', 'group': 'g1'}];
+            scriptsStore.scripts = [{'name': 'abc', 'group': 'g1'}];
 
             await vueTicks();
 
@@ -145,7 +133,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show multiple items in different groups', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'xyz', 'group': 'g2'},
                 {'name': 'def', 'group': 'g1'}];
@@ -158,7 +146,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show multiple items in different groups when empty', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': null},
                 {'name': 'xyz', 'group': ''},
                 {'name': 'def', 'group': ' \n'}];
@@ -171,7 +159,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show multiple items in same groups', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'ghi', 'group': 'g1'},
                 {'name': 'xyz', 'group': 'g2'},
@@ -186,7 +174,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test show items and groups mixed', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'ghi'},
                 {'name': 'xyz', 'group': 'g2'},
@@ -203,7 +191,7 @@ describe('Test ScriptConfig', function () {
 
     describe('Test open groups', function () {
         it('Test nothing open by default', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'xyz', 'group': 'g2'},
                 {'name': 'def', 'group': 'g1'}];
@@ -214,11 +202,11 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test open by default when selected', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'xyz', 'group': 'g2'},
                 {'name': 'def', 'group': 'g1'}];
-            store.state.scripts.selectedScript = 'abc';
+            scriptsStore.selectedScript = 'abc';
 
             await vueTicks();
 
@@ -226,7 +214,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test open on click', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'def', 'group': 'g2'},
                 {'name': 'xyz', 'group': 'g2'}];
@@ -238,7 +226,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test open another group on click', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'def', 'group': 'g2'},
                 {'name': 'xyz', 'group': 'g2'}];
@@ -251,7 +239,7 @@ describe('Test ScriptConfig', function () {
         });
 
         it('Test close group on second click', async function () {
-            store.state.scripts.scripts = [
+            scriptsStore.scripts = [
                 {'name': 'abc', 'group': 'g3'},
                 {'name': 'def', 'group': 'g2'},
                 {'name': 'xyz', 'group': 'g2'}];

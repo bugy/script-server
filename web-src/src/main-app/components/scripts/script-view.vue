@@ -4,21 +4,18 @@
     <p v-show="scriptDescription" class="script-description" v-html="formattedDescription"/>
     <ScriptParametersView ref="parametersView"/>
     <div class="actions-panel">
-      <button :disabled="!enableExecuteButton || scheduleMode"
-              class="button-execute btn"
-              v-bind:class="{ disabled: !enableExecuteButton }"
-              @click="executeScript">
+      <v-btn color="primary"
+             :disabled="!enableExecuteButton || scheduleMode"
+             class="button-execute"
+             @click="executeScript">
         Execute
-      </button>
-      <button :disabled="!enableStopButton"
-              class="button-stop btn"
-              v-bind:class="{
-                    disabled: !enableStopButton,
-                    'red lighten-1': !killEnabled,
-                    'red darken-3': killEnabled}"
-              @click="stopScript">
+      </v-btn>
+      <v-btn :disabled="!enableStopButton"
+             :color="killEnabled ? 'red-darken-3' : 'red-lighten-1'"
+             class="button-stop"
+             @click="stopScript">
         {{ stopButtonLabel }}
-      </button>
+      </v-btn>
       <div v-if="schedulable" class="button-gap"></div>
       <ScheduleButton v-if="schedulable" :disabled="!enableScheduleButton" @click="openSchedule"/>
     </div>
@@ -34,21 +31,25 @@
     </div>
     <div v-if="downloadableFiles && (downloadableFiles.length > 0) && !scheduleMode" v-show="!hideExecutionControls"
          class="files-download-panel">
-      <a v-for="file in downloadableFiles"
-         :download="file.filename"
-         :href="file.url"
-         class="waves-effect btn-flat"
-         target="_blank">
+      <v-btn v-for="file in downloadableFiles"
+             :key="file.filename"
+             :href="file.url"
+             :download="file.filename"
+             variant="text"
+             color="primary"
+             append-icon="file_download"
+             target="_blank">
         {{ file.filename }}
-        <i class="material-icons right">file_download</i>
-      </a>
+      </v-btn>
     </div>
-    <div v-if="inputPromptText" v-show="!hideExecutionControls" class="script-input-panel input-field">
-      <label :for="'inputField-' + id" class="script-input-label">{{ inputPromptText }}</label>
-      <input :id="'inputField-' + id" ref="inputField"
-             class="script-input-field"
-             type="text"
-             v-on:keyup="inputKeyUpHandler">
+    <div v-if="inputPromptText" v-show="!hideExecutionControls" class="script-input-panel">
+      <v-text-field ref="inputField"
+                    v-model="userInput"
+                    :label="inputPromptText"
+                    density="compact"
+                    variant="underlined"
+                    hide-details
+                    @keyup.enter="onInputEnter"/>
     </div>
     <ScriptViewScheduleHolder v-if="!hideExecutionControls"
                               ref="scheduleHolder"
@@ -66,9 +67,12 @@ import ScriptLoadingText from '@/main-app/components/scripts/ScriptLoadingText';
 import ScriptViewScheduleHolder from '@/main-app/components/scripts/ScriptViewScheduleHolder';
 import DOMPurify from 'dompurify';
 import {marked} from 'marked';
-import {mapActions, mapState} from 'vuex'
-import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '../../store/scriptExecutor';
+import {STATUS_DISCONNECTED, STATUS_ERROR, STATUS_EXECUTING, STATUS_FINISHED} from '@/main-app/stores/scriptExecutor';
 import ScriptParametersView from './script-parameters-view'
+import {useScriptsStore} from '@/main-app/stores/scripts'
+import {useScriptConfigStore} from '@/main-app/stores/scriptConfig'
+import {useScriptSetupStore} from '@/main-app/stores/scriptSetup'
+import {useExecutionsStore} from '@/main-app/stores/executions'
 
 export default {
   data: function () {
@@ -79,7 +83,8 @@ export default {
       nextLogIndex: 0,
       lastInlineImages: {},
       scheduleMode: false,
-      scriptConfigComponentsHeight: 0
+      scriptConfigComponentsHeight: 0,
+      userInput: ''
     }
   },
 
@@ -88,7 +93,7 @@ export default {
   },
 
   mounted: function () {
-    this.id = 'script-panel-' + this._uid;
+    this.id = 'script-panel-' + this.$.uid;
   },
 
   components: {
@@ -100,21 +105,33 @@ export default {
   },
 
   computed: {
-    ...mapState('scriptConfig', {
-      scriptDescription: state => state.scriptConfig ? state.scriptConfig.description : '',
-      loading: 'loading',
-      scriptConfig: 'scriptConfig',
-      outputFormat: state => state.scriptConfig ? state.scriptConfig.outputFormat : undefined,
-      preloadOutput: state => state.preloadScript?.['output'],
-      preloadOutputFormat: state => state.preloadScript?.['format']
-    }),
-    ...mapState('scriptSetup', {
-      parameterErrors: 'errors'
-    }),
-    ...mapState('executions', {
-      currentExecutor: 'currentExecutor'
-    }),
-    ...mapState('scripts', ['selectedScript']),
+    scriptDescription() {
+      return useScriptConfigStore().scriptConfig?.description ?? ''
+    },
+    loading() {
+      return useScriptConfigStore().loading
+    },
+    scriptConfig() {
+      return useScriptConfigStore().scriptConfig
+    },
+    outputFormat() {
+      return useScriptConfigStore().scriptConfig?.outputFormat
+    },
+    preloadOutput() {
+      return useScriptConfigStore().preloadScript?.['output']
+    },
+    preloadOutputFormat() {
+      return useScriptConfigStore().preloadScript?.['format']
+    },
+    parameterErrors() {
+      return useScriptSetupStore().errors
+    },
+    currentExecutor() {
+      return useExecutionsStore().currentExecutor
+    },
+    selectedScript() {
+      return useScriptsStore().selectedScript
+    },
 
     hasErrors: function () {
       return !isNull(this.shownErrors) && (this.shownErrors.length > 0);
@@ -257,14 +274,9 @@ export default {
   },
 
   methods: {
-    inputKeyUpHandler: function (event) {
-      if (event.keyCode === 13) {
-        const inputField = this.$refs.inputField;
-
-        this.sendUserInput(inputField.value);
-
-        inputField.value = '';
-      }
+    onInputEnter: function () {
+      this.sendUserInput(this.userInput);
+      this.userInput = '';
     },
 
     validatePreExecution: function () {
@@ -298,28 +310,22 @@ export default {
       this.scheduleMode = true;
     },
 
-    ...mapActions('executions', {
-      startExecution: 'startExecution'
-    }),
+    startExecution() {
+      useExecutionsStore().startExecution()
+    },
 
     stopScript() {
-      if (isNull(this.currentExecutor)) {
-        return;
-      }
-
+      if (isNull(this.currentExecutor)) return
       if (this.killEnabled) {
-        this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/killExecution');
+        this.currentExecutor.killExecution()
       } else {
-        this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/stopExecution');
+        this.currentExecutor.stopExecution()
       }
     },
 
     sendUserInput(value) {
-      if (isNull(this.currentExecutor)) {
-        return;
-      }
-
-      this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/sendUserInput', value);
+      if (isNull(this.currentExecutor)) return
+      this.currentExecutor.sendUserInput(value)
     },
 
     setLog: function (text) {
@@ -328,7 +334,9 @@ export default {
 
     appendLog: function (text) {
       this.$refs.logPanel.appendLog(text);
-    }
+    },
+
+
   },
 
   watch: {
@@ -338,8 +346,8 @@ export default {
       }
 
       var fieldUpdater = function () {
-        this.$refs.inputField.value = '';
-        if (!isNull(value)) {
+        this.userInput = '';
+        if (!isNull(value) && this.$refs.inputField) {
           this.$refs.inputField.focus();
         }
       }.bind(this);
@@ -353,6 +361,12 @@ export default {
 
     logChunks: {
       immediate: true,
+      // deep: the store appends log chunks in place (logChunks.push), so the
+      // array reference doesn't change. Vue 3 non-deep watchers compare by
+      // reference and would never fire on append (Vue 2 fired anyway via its
+      // isObject special-case). Without this, streamed output never reaches the
+      // log panel. The handler stays incremental via nextLogIndex.
+      deep: true,
       handler(newValue, oldValue) {
         const updateLog = () => {
           if (isNull(newValue)) {
@@ -393,6 +407,10 @@ export default {
     },
 
     inlineImages: {
+      // deep: the store adds inline images in place (state.inlineImages[path] = url),
+      // so the object reference doesn't change. Like logChunks, a Vue 3 non-deep
+      // watcher would never fire on this mutation and images would never render.
+      deep: true,
       handler(newValue, oldValue) {
         const logPanel = this.$refs.logPanel;
 
@@ -438,7 +456,7 @@ export default {
     status: {
       handler(newStatus) {
         if (newStatus === STATUS_FINISHED) {
-          this.$store.dispatch('executions/' + this.currentExecutor.state.id + '/cleanup');
+          this.currentExecutor.cleanup()
         }
       }
     }
@@ -489,7 +507,6 @@ export default {
 .button-stop {
   margin-left: 16px;
   flex: 1 1 104px;
-  color: var(--font-on-primary-color-main)
 }
 
 .schedule-button {
@@ -500,23 +517,6 @@ export default {
 .script-input-panel {
   margin-top: 20px;
   margin-bottom: 0;
-}
-
-.script-input-panel input[type=text] {
-  margin: 0;
-  width: 100%;
-  height: 1.5em;
-  font-size: 1rem;
-}
-
-.script-input-panel > label {
-  transform: translateY(-30%);
-  margin-left: 2px;
-}
-
-.script-input-panel.input-field > label.active {
-  color: var(--primary-color);
-  transform: translateY(-70%) scale(0.8);
 }
 
 .validation-panel {
@@ -543,22 +543,12 @@ export default {
   margin-top: 12px;
 }
 
-.files-download-panel a {
-  color: var(--primary-color);
-  padding-left: 16px;
-  padding-right: 16px;
+.files-download-panel :deep(.v-btn) {
   margin-right: 8px;
   text-transform: none;
 }
 
-.files-download-panel a > i {
-  margin-left: 8px;
-  vertical-align: middle;
-  font-size: 1.5em;
-  line-height: 2em;
-}
-
-.script-view >>> .log-panel {
+.script-view :deep(.log-panel) {
   margin-top: 12px;
 }
 

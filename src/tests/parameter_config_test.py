@@ -230,6 +230,68 @@ class ParameterModelMapValueTest(unittest.TestCase):
                                                  multiselect_separator='_')
         self.assertEqual('abc_456_def', parameter_model.to_script_args(['abc', '456', 'def']))
 
+    def test_map_to_script_date_default_format(self):
+        parameter_model = create_parameter_model('param1', type='date')
+        self.assertEqual('2024-03-15', parameter_model.map_to_script('2024-03-15'))
+
+    def test_map_to_script_date_custom_format(self):
+        parameter_model = create_parameter_model('param1', type='date', date_format='%d/%m/%Y')
+        self.assertEqual('15/03/2024', parameter_model.map_to_script('2024-03-15'))
+
+    def test_map_to_script_date_compact_format(self):
+        parameter_model = create_parameter_model('param1', type='date', date_format='%Y%m%d')
+        self.assertEqual('20240315', parameter_model.map_to_script('2024-03-15'))
+
+    def test_map_to_script_time_default_format(self):
+        parameter_model = create_parameter_model('param1', type='time')
+        self.assertEqual('14:30', parameter_model.map_to_script('14:30'))
+
+    def test_map_to_script_time_custom_format(self):
+        parameter_model = create_parameter_model('param1', type='time', time_format='%H%M')
+        self.assertEqual('1430', parameter_model.map_to_script('14:30'))
+
+    def test_map_to_script_time_with_seconds_format(self):
+        parameter_model = create_parameter_model('param1', type='time', time_format='%H:%M:%S')
+        self.assertEqual('14:30:00', parameter_model.map_to_script('14:30'))
+
+    # --- date_format / time_format config validation ---
+
+    def test_date_format_valid_custom(self):
+        # Should not raise — contains % directives
+        create_parameter_model('param1', type='date', date_format='%d/%m/%Y')
+
+    def test_date_format_invalid_no_directives(self):
+        self.assertRaisesRegex(
+            Exception,
+            'invalid date_format.*DD/MM/YYYY.*strftime directive',
+            create_parameter_model, 'param1', type='date', date_format='DD/MM/YYYY')
+
+    def test_date_format_invalid_java_style(self):
+        self.assertRaisesRegex(
+            Exception,
+            'invalid date_format',
+            create_parameter_model, 'param1', type='date', date_format='yyyy-MM-dd')
+
+    def test_date_format_validation_only_for_date_type(self):
+        # Same string on a text parameter should never raise
+        create_parameter_model('param1', type='text', date_format='DD/MM/YYYY')
+
+    def test_time_format_valid_custom(self):
+        # Should not raise — contains % directives
+        create_parameter_model('param1', type='time', time_format='%I:%M %p')
+
+    def test_time_format_invalid_no_directives(self):
+        self.assertRaisesRegex(
+            Exception,
+            'invalid time_format.*HH:MM.*strftime directive',
+            create_parameter_model, 'param1', type='time', time_format='HH:MM')
+
+    def test_time_format_validation_only_for_time_type(self):
+        # Same string on a text parameter should never raise
+        create_parameter_model('param1', type='text', time_format='HH:MM')
+
+    # --- end format validation tests ---
+
 
 class TestDefaultValue(unittest.TestCase):
 
@@ -678,6 +740,66 @@ class TestSingleParameterValidation(unittest.TestCase):
         error = validate_value(parameter, 0)
         self.assertIsNone(error)
 
+    def test_date_parameter_when_valid(self):
+        parameter = create_parameter_model('param', type='date')
+
+        error = validate_value(parameter, '2024-03-15')
+        self.assertIsNone(error)
+
+    def test_date_parameter_when_invalid_format(self):
+        parameter = create_parameter_model('param', type='date')
+
+        error = validate_value(parameter, '15/03/2024')
+        self.assert_error(error)
+
+    def test_date_parameter_when_not_a_date(self):
+        parameter = create_parameter_model('param', type='date')
+
+        error = validate_value(parameter, 'hello')
+        self.assert_error(error)
+
+    def test_date_parameter_when_invalid_day(self):
+        parameter = create_parameter_model('param', type='date')
+
+        error = validate_value(parameter, '2024-02-30')
+        self.assert_error(error)
+
+    def test_time_parameter_when_valid(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '14:30')
+        self.assertIsNone(error)
+
+    def test_time_parameter_when_midnight(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '00:00')
+        self.assertIsNone(error)
+
+    def test_time_parameter_when_end_of_day(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '23:59')
+        self.assertIsNone(error)
+
+    def test_time_parameter_when_invalid_format(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '14:30:00')
+        self.assert_error(error)
+
+    def test_time_parameter_when_not_a_time(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, 'hello')
+        self.assert_error(error)
+
+    def test_time_parameter_when_invalid_hour(self):
+        parameter = create_parameter_model('param', type='time')
+
+        error = validate_value(parameter, '25:00')
+        self.assert_error(error)
+
     def test_file_upload_parameter_when_valid(self):
         parameter = create_parameter_model('param', type='file_upload')
 
@@ -775,11 +897,11 @@ class TestSingleParameterValidation(unittest.TestCase):
         self.assertIsNone(error)
 
     @parameterized.expand([
-        ('a\d', 'ab', 'some desc', 'some desc'),
-        ('a\d', '12', 'desc 2', 'desc 2'),
-        ('a\d', 'a12', 'some long description', 'some long description'),
-        ('\d+\wa+', 'aaaa', 'some desc', 'some desc'),
-        ('\d+\wa+', 'aaaa', None, '\d+\wa+'),
+        (r'a\d', 'ab', 'some desc', 'some desc'),
+        (r'a\d', '12', 'desc 2', 'desc 2'),
+        (r'a\d', 'a12', 'some long description', 'some long description'),
+        (r'\d+\wa+', 'aaaa', 'some desc', 'some desc'),
+        (r'\d+\wa+', 'aaaa', None, r'\d+\wa+'),
     ])
     def test_regex_validation_when_fail_with_description(self, regex, value, description, expected_description):
         parameter = create_parameter_model('param', regex={'pattern': regex, 'description': description})
@@ -789,10 +911,10 @@ class TestSingleParameterValidation(unittest.TestCase):
         self.assertEqual(error, "does not match regex pattern: " + expected_description)
 
     @parameterized.expand([
-        ('a\d', 'a1',),
-        ('\da', '2a',),
-        ('a\d+', 'a12',),
-        ('\d+\wa+', '1Xaaaa'),
+        (r'a\d', 'a1',),
+        (r'\da', '2a',),
+        (r'a\d+', 'a12',),
+        (r'\d+\wa+', '1Xaaaa'),
         (None, '1Xaaaa'),
     ])
     def test_regex_validation_when_success(self, regex, value):

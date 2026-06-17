@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from collections import OrderedDict, namedtuple
+from datetime import datetime
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from config.constants import PARAM_TYPE_SERVER_FILE, FILE_TYPE_FILE, PARAM_TYPE_MULTISELECT, FILE_TYPE_DIR, \
@@ -113,6 +114,8 @@ class ParameterModel(object):
         self.file_recursive = read_bool_from_config('file_recursive', config, default=False)
         self.excluded_files_matcher = _resolve_excluded_files(config, 'excluded_files', self._list_files_dir)
 
+        self.date_format = config.get('date_format', '%Y-%m-%d')
+        self.time_format = config.get('time_format', '%H:%M')
         self.constant = read_bool_from_config('constant', config, default=False)
 
         ui_config = config.get('ui')
@@ -145,6 +148,16 @@ class ParameterModel(object):
         if self.type == PARAM_TYPE_SERVER_FILE:
             if not self.file_dir:
                 raise Exception('Parameter ' + param_log_name + ' has missing config file_dir')
+
+        if self.type == 'date' and self.date_format and '%' not in self.date_format:
+            raise Exception(
+                'Parameter "' + param_log_name + '" has invalid date_format "' + self.date_format
+                + '": must contain at least one strftime directive (e.g. %Y, %m, %d)')
+
+        if self.type == 'time' and self.time_format and '%' not in self.time_format:
+            raise Exception(
+                'Parameter "' + param_log_name + '" has invalid time_format "' + self.time_format
+                + '": must contain at least one strftime directive (e.g. %H, %M)')
 
     def str_name(self):
         names = (name for name in (self.name, self.param, self.description) if name)
@@ -316,6 +329,20 @@ class ParameterModel(object):
             else:
                 return None
 
+        if self.type == 'date' and isinstance(user_value, str) and user_value:
+            try:
+                date_obj = datetime.strptime(user_value, '%Y-%m-%d')
+                return date_obj.strftime(self.date_format)
+            except ValueError:
+                pass
+
+        if self.type == 'time' and isinstance(user_value, str) and user_value:
+            try:
+                time_obj = datetime.strptime(user_value, '%H:%M')
+                return time_obj.strftime(self.time_format)
+            except ValueError:
+                pass
+
         if isinstance(user_value, list):
             return [self._ui_value_mapper.map_to_script_value(single_value) for single_value in user_value]
         else:
@@ -383,6 +410,20 @@ class ParameterModel(object):
                 return 'is lower than allowed value (' \
                     + value_string + ' < ' + str(self.min) + ')'
             return None
+
+        if self.type == 'date':
+            try:
+                datetime.strptime(user_value, '%Y-%m-%d')
+                return None
+            except ValueError:
+                return 'should be a valid date in YYYY-MM-DD format, but was ' + value_string
+
+        if self.type == 'time':
+            try:
+                datetime.strptime(user_value, '%H:%M')
+                return None
+            except ValueError:
+                return 'should be a valid time in HH:MM format, but was ' + value_string
 
         if self.type in ('ip', 'ip4', 'ip6'):
             try:

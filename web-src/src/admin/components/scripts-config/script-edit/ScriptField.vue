@@ -3,17 +3,17 @@
     <div @click.capture="activateTextField"
          @keydown.capture="activateTextField">
       <TextField :config="scriptPathField"
-                 :value="inPathMode ? plainPath : scriptValue.path"
+                 :modelValue="inPathMode ? plainPath : scriptValue.path"
                  class="path-textfield"
-                 @input="onPathInput"/>
+                 @update:modelValue="onPathInput"/>
 
-      <a v-if="canEditCode"
-         v-trim-text
-         class="btn-icon-flat waves-effect waves-circle btn-large open-dialog-button"
-         title="Script editor"
-         @click="openScriptDialog()">
-        <i class="material-icons">{{ actionIcon }}</i>
-      </a>
+      <v-btn v-if="canEditCode"
+             :icon="actionIcon"
+             variant="text"
+             size="large"
+             class="open-dialog-button"
+             title="Script editor"
+             @click="openScriptDialog()"/>
     </div>
 
     <ScriptEditDialog v-if="dialogInitialized" ref="dialog"
@@ -29,20 +29,23 @@
 import {scriptPathField} from '@/admin/components/scripts-config/script-fields'
 import Combobox from '@/common/components/combobox'
 import TextField from '@/common/components/textfield'
-import CodeEditorDialog, {
+import ScriptEditDialog, {
   EDITOR_MODE,
   PATH_MODE,
   UPLOAD_MODE
 } from '@/admin/components/scripts-config/script-edit/ScriptEditDialog'
-import CodeEditor from '@/admin/components/scripts-config/script-edit/CodeEditor'
 import {isNull} from '@/common/utils/common'
-import {mapState} from 'vuex'
+import {useAuthStore} from '@/common/stores/auth'
 
-const ScriptEditDialog = () => import('@/admin/components/scripts-config/script-edit/ScriptEditDialog')
-
+// Vue 3 fix: the dialog used the Vue 2 async-component syntax
+// (`() => import(...)`), which Vue 3 renders as "[object Promise]" instead
+// of mounting the component. The module was already statically imported on
+// this page for its mode constants, so lazy-loading bought nothing — use
+// the static component directly.
 export default {
   name: 'ScriptPathField',
-  components: {ScriptEditDialog, Combobox, TextField, CodeEditorDialog, CodeEditor},
+  emits: ['change'],
+  components: {ScriptEditDialog, Combobox, TextField},
   props: {
     originalPath: String,
     newConfig: Boolean,
@@ -65,9 +68,9 @@ export default {
     inPathMode() {
       return isNull(this.scriptValue.mode) || (this.scriptValue.mode === PATH_MODE);
     },
-    ...mapState('auth', {
-      canEditCode: 'canEditCode'
-    }),
+    canEditCode() {
+      return useAuthStore().canEditCode
+    },
   },
   methods: {
     openScriptDialog() {
@@ -127,11 +130,11 @@ export default {
   top: 12px;
 }
 
->>> .input-field:after {
+:deep(.input-field:after) {
   left: 0;
 }
 
->>> .path-textfield input {
+:deep(.path-textfield input) {
   padding-right: 1em;
   box-sizing: border-box;
   text-overflow: ellipsis;

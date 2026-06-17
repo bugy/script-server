@@ -1,8 +1,6 @@
 import '@/assets/css/index.css';
-import '@/common/materializecss/imports/cards';
-import '@/common/materializecss/imports/input-fields';
-import '@/common/style_imports';
-import '@/common/style_imports.js';
+import '@/assets/css/shared.css';
+import 'typeface-roboto';
 import {axiosInstance} from '@/common/utils/axios_utils'
 import {
     addClass,
@@ -34,14 +32,25 @@ function checkRedirectReason() {
     return redirectReason;
 }
 
+function validateURL(url) {
+    if (!url || url.startsWith('http') || url.startsWith('/')) {
+        return url;
+    }
+    return '/';
+}
+
 function onLoad() {
     axiosInstance.get('auth/config').then(({data: config}) => {
         const loginContainer = document.getElementById('login-content-container');
 
         if (config['type'] === 'google_oauth') {
             setupGoogleOAuth(loginContainer, config);
+        } else if (config['type'] === 'azure_ad_oauth') {
+            setupAzureAdOAuth(loginContainer, config);
         } else if (config['type'] === 'keycloak_openid') {
             setupKeycloakOpenid(loginContainer, config);
+        } else if (config['type'] === 'authentik') {
+            setupAuthentikAuth(loginContainer, config);
         } else if (config['type'] === 'gitlab') {
             setupGitlabOAuth(loginContainer, config);
         } else {
@@ -58,8 +67,6 @@ function onLoad() {
 function setupCredentials(loginContainer) {
     var credentialsTemplate = createTemplateElement('login-credentials-template');
     loginContainer.appendChild(credentialsTemplate);
-
-    M.updateTextFields();
 
     const form = loginContainer.getElementsByClassName('login-form')[0];
     form.action = loginUrl;
@@ -81,12 +88,28 @@ function setupGoogleOAuth(loginContainer, authConfig) {
         'login-google_oauth-button')
 }
 
+function setupAzureAdOAuth(loginContainer, authConfig) {
+    setupOAuth(
+        loginContainer,
+        authConfig,
+        'login-azure_ad_oauth-template',
+        'login-azure_ad_oauth-button')
+}
+
 function setupKeycloakOpenid(loginContainer, authConfig) {
     setupOAuth(
         loginContainer,
         authConfig,
         'login-keycloak-template',
         'login-keycloak-button')
+}
+
+function setupAuthentikAuth(loginContainer, authConfig) {
+    setupOAuth(
+        loginContainer,
+        authConfig,
+        'login-authentik-template',
+        'login-authentik-button')
 }
 
 function setupGitlabOAuth(loginContainer, authConfig) {
@@ -109,7 +132,7 @@ function setupOAuth(loginContainer, authConfig, templateName, buttonId) {
             'token': token,
             'urlFragment': window.location.hash
         };
-        localState[NEXT_URL_KEY] = getQueryParameter(NEXT_URL_KEY);
+        localState[NEXT_URL_KEY] = validateURL(getQueryParameter(NEXT_URL_KEY));
 
         saveState(localState);
 
@@ -138,7 +161,7 @@ function processCurrentOauthState() {
             return;
         }
 
-        var nextUrl = oauthState[NEXT_URL_KEY];
+        var nextUrl = validateURL(oauthState[NEXT_URL_KEY]);
         var urlFragment = oauthState['urlFragment'];
 
         var previousLocation = getUnparameterizedUrl();
@@ -177,7 +200,7 @@ function getLoginButton() {
 
 function sendLoginRequest(formData) {
 
-    var nextUrl = getQueryParameter(NEXT_URL_KEY);
+    var nextUrl = validateURL(getQueryParameter(NEXT_URL_KEY));
     var nextUrlFragment = window.location.hash;
 
     if (nextUrl) {

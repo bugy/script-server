@@ -1,20 +1,36 @@
 <template>
-  <ul ref="parametersPanel" class="collapsible popout">
-    <ParamListItem v-for="param in parameters" :key="paramKeys.get(param)" :param="param"
-                   @delete="deleteParam(param)"
-                   @moveDown="moveDown(param)"
-                   @moveUp="moveUp(param)"/>
-    <li class="add-param-item" @click.stop="addParam">
-      <div class="collapsible-header">
-        <i class="material-icons">add</i>Add
-      </div>
-    </li>
-  </ul>
+  <div class="script-param-list">
+    <v-expansion-panels
+      ref="parametersPanel"
+      v-model="openedPanel"
+      variant="popout"
+      class="param-panels"
+    >
+      <ParamListItem
+        v-for="param in parameters"
+        :key="paramKeys.get(param)"
+        :param="param"
+        :panel-value="paramKeys.get(param)"
+        @delete="deleteParam(param)"
+        @move-down="moveDown(param)"
+        @move-up="moveUp(param)"
+      />
+    </v-expansion-panels>
+
+    <div class="add-param-item" @click.stop="addParam">
+      <v-icon>add</v-icon>Add
+    </div>
+
+    <v-snackbar v-model="snackbarVisible" :timeout="8000">
+      {{ snackbarMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="undoDelete">Undo</v-btn>
+      </template>
+    </v-snackbar>
+  </div>
 </template>
 
 <script>
-import '@/common/materializecss/imports/collapsible'
-import '@/common/materializecss/imports/toast'
 import {guid} from '@/common/utils/common'
 import ParamListItem from './ParamListItem';
 
@@ -33,16 +49,16 @@ export default {
   data() {
     return {
       openingNewParam: false,
-      paramKeys: new Map()
+      paramKeys: new Map(),
+      openedPanel: undefined,
+      snackbarVisible: false,
+      snackbarMessage: '',
+      undoQueue: []
     }
   },
 
-  mounted: function () {
-    M.Collapsible.init(this.$refs.parametersPanel, {
-      onOpenEnd: () => {
-        this.openingNewParam = false;
-      }
-    });
+  beforeUnmount() {
+    clearInterval(this.scrollInterval);
   },
 
   methods: {
@@ -52,22 +68,25 @@ export default {
         return;
       }
 
-      this.$delete(this.parameters, index);
+      this.parameters.splice(index, 1);
 
-      const toast = M.toast({
-        html: '<span>Deleted ' + param.name + '</span>' +
-            '<button class="btn-flat toast-action">' +
-            'Undo' +
-            '</button>',
-        displayLength: 8000
-      });
+      this.undoQueue.push({param, index});
+      this.snackbarMessage = 'Deleted ' + param.name;
+      this.snackbarVisible = true;
+    },
 
-      const undoButton = toast.el.getElementsByTagName('BUTTON')[0];
-      undoButton.onclick = () => {
-        toast.dismiss();
-        const insertPosition = Math.min(index, this.parameters.length);
-        this.parameters.splice(insertPosition, 0, param);
-      };
+    undoDelete() {
+      if (!this.undoQueue.length) {
+        return;
+      }
+
+      const {param, index} = this.undoQueue.shift();
+      const insertPosition = Math.min(index, this.parameters.length);
+      this.parameters.splice(insertPosition, 0, param);
+
+      if (!this.undoQueue.length) {
+        this.snackbarVisible = false;
+      }
     },
 
     moveUp(param) {
@@ -77,8 +96,8 @@ export default {
       }
 
       const prevParam = this.parameters[index - 1];
-      this.$set(this.parameters, index - 1, param);
-      this.$set(this.parameters, index, prevParam);
+      this.parameters[index - 1] = param;
+      this.parameters[index] = prevParam;
     },
 
     moveDown(param) {
@@ -88,8 +107,8 @@ export default {
       }
 
       const nextParam = this.parameters[index + 1];
-      this.$set(this.parameters, index + 1, param);
-      this.$set(this.parameters, index, nextParam);
+      this.parameters[index + 1] = param;
+      this.parameters[index] = nextParam;
     },
 
     addParam() {
@@ -122,17 +141,21 @@ export default {
 
       this.$nextTick(() => {
         this.openingNewParam = true;
-
-        const collapsible = M.Collapsible.getInstance(this.$refs.parametersPanel);
-        collapsible.open(lastIndex);
+        this.openedPanel = this.paramKeys.get(newParameter);
       });
     },
 
     scrollToNewParam() {
-      const parameterElements = this.$refs.parametersPanel.getElementsByTagName('li');
-      const newParamElement = parameterElements[parameterElements.length - 2];
+      const panelRef = this.$refs.parametersPanel;
+      if (!panelRef) {
+        return;
+      }
 
-      newParamElement.scrollIntoView();
+      const el = panelRef.$el || panelRef;
+      const parameterElements = el.querySelectorAll('.v-expansion-panel');
+      const newParamElement = parameterElements[parameterElements.length - 1];
+
+      newParamElement?.scrollIntoView?.();
     },
 
     setParameterKey(parameter) {
@@ -149,20 +172,36 @@ export default {
         return;
       }
 
-      let interval = null;
-      interval = setInterval(() => {
+      clearInterval(this.scrollInterval);
+      this.scrollInterval = setInterval(() => {
         try {
           this.scrollToNewParam();
         } finally {
           if (!this.openingNewParam) {
-            clearInterval(interval);
+            clearInterval(this.scrollInterval);
+            this.scrollInterval = null;
           }
         }
       }, 40);
     },
 
+    openedPanel(newVal) {
+      if (this.openingNewParam) {
+        this.$nextTick(() => {
+          this.openingNewParam = false;
+        });
+      }
+    },
+
+    snackbarVisible(val) {
+      if (!val) {
+        this.undoQueue = [];
+      }
+    },
+
     parameters: {
       immediate: true,
+      deep: true,
       handler(parameters) {
         for (const parameter of parameters) {
           this.setParameterKey(parameter);
@@ -174,9 +213,24 @@ export default {
 </script>
 
 <style scoped>
-.collapsible-header:last-child,
-.collapsible >>> .collapsible-body {
-  border-bottom: none;
+.script-param-list {
+  display: flex;
+  flex-direction: column;
 }
 
+.add-param-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.add-param-item:hover {
+  background-color: var(--hover-color);
+}
+
+.add-param-item i {
+  margin-right: 8px;
+}
 </style>

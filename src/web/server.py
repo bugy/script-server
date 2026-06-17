@@ -85,9 +85,28 @@ def exception_to_code_and_message(exception):
     return None, None
 
 
+def _set_security_headers(handler):
+    handler.set_header('X-Frame-Options', 'DENY')
+    handler.set_header('X-Content-Type-Options', 'nosniff')
+    handler.set_header('Referrer-Policy', 'strict-origin-when-cross-origin')
+    handler.set_header(
+        'Content-Security-Policy',
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' ws: wss:; "
+        "frame-ancestors 'none'; "
+        "object-src 'none'"
+    )
+    handler.set_header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    if handler.application.server_config.cookie_secure:
+        handler.set_header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+
+
 class BaseRequestHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
-        self.set_header('X-Frame-Options', 'DENY')
+        _set_security_headers(self)
 
         if self.application.server_config.xsrf_protection == XSRF_PROTECTION_TOKEN:
             # This is needed to initialize cookie (by default tornado does it only on html template rendering)
@@ -97,12 +116,28 @@ class BaseRequestHandler(tornado.web.RequestHandler):
     def check_xsrf_cookie(self):
         xsrf_protection = self.application.server_config.xsrf_protection
         if xsrf_protection == XSRF_PROTECTION_TOKEN:
-            return super().check_xsrf_cookie()
+            try:
+                return super().check_xsrf_cookie()
+            except tornado.web.HTTPError:
+                # Tornado's default reason is just "Forbidden", which is opaque in
+                # the UI. Surface an actionable reason instead (this becomes the
+                # response body via write_error). The usual cause is the browser not
+                # sending the token: the _xsrf cookie must be readable by JS (not
+                # HttpOnly) and, over plain HTTP, security.cookie_secure must be
+                # false so the cookie is stored at all.
+                raise tornado.web.HTTPError(
+                    403,
+                    "XSRF token missing/invalid. The browser must read the _xsrf cookie "
+                    "and send it as X-XSRFToken; over HTTP set security.cookie_secure=false.",
+                    reason='XSRF token missing or invalid')
 
         elif xsrf_protection == XSRF_PROTECTION_HEADER:
             requested_with = self.request.headers.get('X-Requested-With')
             if not requested_with:
-                raise tornado.web.HTTPError(403, 'X-Requested-With header is missing for XSRF protection')
+                raise tornado.web.HTTPError(
+                    403,
+                    'X-Requested-With header is missing for XSRF protection',
+                    reason='X-Requested-With header required')
             return
 
     def write_error(self, status_code, **kwargs):
@@ -119,7 +154,7 @@ class BaseRequestHandler(tornado.web.RequestHandler):
 
 class BaseStaticHandler(tornado.web.StaticFileHandler):
     def set_default_headers(self):
-        self.set_header('X-Frame-Options', 'DENY')
+        _set_security_headers(self)
 
 
 class GetServerConf(BaseRequestHandler):
@@ -262,6 +297,9 @@ class ScriptStreamSocket(tornado.websocket.WebSocketHandler):
         super().__init__(application, request, **kwargs)
 
         self.executor = None
+
+    def set_default_headers(self):
+        _set_security_headers(self)
 
     @check_authorization
     @inject_user
@@ -864,6 +902,16 @@ def init(server_config: ServerConfig,
         'websocket_ping_timeout': 300,
         'compress_response': True,
         'xsrf_cookies': server_config.xsrf_protection != XSRF_PROTECTION_DISABLED,
+        'xsrf_cookie_kwargs': {
+            # The XSRF cookie is a double-submit CSRF token, not a secret: in
+            # token mode (the default) the browser JS must read it and echo it
+            # back in the X-XSRFToken header. It therefore must NOT be httponly,
+            # otherwise every POST (e.g. starting an execution) is rejected with
+            # 403 "_xsrf argument missing".
+            'httponly': False,
+            'secure': server_config.cookie_secure,
+            'samesite': 'Lax'
+        },
     }
 
     application = tornado.web.Application(handlers, **settings)
@@ -886,7 +934,7 @@ def init(server_config: ServerConfig,
     application.max_request_size_mb = server_config.max_request_size_mb
 
     if os_utils.is_win() and env_utils.is_min_version('3.8'):
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        asyncio.set_event_loop(asyncio.SelectorEventLoop())
     io_loop = tornado.ioloop.IOLoop.current()
 
     global _http_server

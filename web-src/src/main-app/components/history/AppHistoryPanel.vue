@@ -6,24 +6,29 @@
 
 <script>
 import ExecutionsLogPage from '@/common/components/history/executions-log-page';
-import {mapActions, mapState} from 'vuex';
+import {useHistoryStore} from '@/common/stores/history'
+import {usePageStore} from '@/main-app/stores/page'
 
 export default {
   name: 'AppHistoryPanel',
   components: {ExecutionsLogPage},
-  methods: {
-    ...mapActions('page', ['setLoading']),
-    updateLoadingIndicator() {
-      if (this.$route.params.executionId) {
-        this.setLoading(this.detailsLoading);
-      } else {
-        this.setLoading(this.loading);
-      }
+
+  computed: {
+    loading() {
+      return useHistoryStore().loading
+    },
+    detailsLoading() {
+      return useHistoryStore().detailsLoading
     }
   },
-  computed: {
-    ...mapState('history', ['loading', 'detailsLoading'])
+
+  methods: {
+    updateLoadingIndicator() {
+      const val = this.$route.params.executionId ? this.detailsLoading : this.loading
+      usePageStore().setLoading(val)
+    }
   },
+
   watch: {
     loading: {
       immediate: true,

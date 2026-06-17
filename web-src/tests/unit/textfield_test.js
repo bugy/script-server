@@ -6,13 +6,11 @@ import {mount} from '@vue/test-utils';
 import {attachToDocument, mapArrayWrapper, setDeepProp, timeout, vueTicks, wrapVModel} from './test_utils';
 
 describe('Test TextField', function () {
+    let textfield;
 
-    before(function () {
-
-    });
     beforeEach(function () {
-        const textfield = mount(Textfield, {
-            propsData: {
+        textfield = mount(Textfield, {
+            props: {
                 config: {
                     required: false,
                     name: 'Text paparam',
@@ -20,58 +18,57 @@ describe('Test TextField', function () {
                     values: ['Value A', 'Value B', 'Value C'],
                     multiselect: false
                 },
-                value: 'Hello world'
+                modelValue: 'Hello world'
             }
         });
         wrapVModel(textfield);
 
-        this.textfield = textfield;
     });
 
     describe('Test config', function () {
 
         it('Test initial name', function () {
-            expect(this.textfield.find('label').text()).toEqual('Text paparam')
+            expect(textfield.find('label').text()).toEqual('Text paparam')
         });
 
         it('Test change name', async function () {
-            setDeepProp(this.textfield, 'config.name', 'testName1');
+            setDeepProp(textfield, 'config.name', 'testName1');
 
             await vueTicks();
 
-            expect(this.textfield.find('label').text()).toEqual('testName1')
+            expect(textfield.find('label').text()).toEqual('testName1')
         });
 
         it('Test initial required', function () {
-            expect(this.textfield.find('input').element.required).toEqual(false)
+            expect(textfield.find('input').element.required).toEqual(false)
         });
 
         it('Test change required', async function () {
-            setDeepProp(this.textfield, 'config.required', true);
+            setDeepProp(textfield, 'config.required', true);
 
             await vueTicks();
 
-            expect(this.textfield.find('input').element.required).toEqual(true)
+            expect(textfield.find('input').element.required).toEqual(true)
         });
 
         it('Test initial field type', function () {
-            expect(this.textfield.find('input').element.type).toEqual('text')
+            expect(textfield.find('input').element.type).toEqual('text')
         });
 
         it('Test change field type to number', async function () {
-            setDeepProp(this.textfield, 'config.type', 'int');
+            setDeepProp(textfield, 'config.type', 'int');
 
             await vueTicks();
 
-            expect(this.textfield.find('input').element.type).toEqual('number')
+            expect(textfield.find('input').element.type).toEqual('number')
         });
 
         it('Test change field type to password', async function () {
-            setDeepProp(this.textfield, 'config.secure', true);
+            setDeepProp(textfield, 'config.secure', true);
 
             await vueTicks();
 
-            expect(this.textfield.find('input').element.type).toEqual('password')
+            expect(textfield.find('input').element.type).toEqual('password')
         });
     });
 
@@ -80,26 +77,26 @@ describe('Test TextField', function () {
         it('Test initial value', async function () {
             await vueTicks();
 
-            expect(this.textfield.vm.value).toBe('Hello world')
-            expect(this.textfield.find('input').element.value).toBe('Hello world')
+            expect(textfield.vm.modelValue).toBe('Hello world')
+            expect(textfield.find('input').element.value).toBe('Hello world')
         });
 
         it('Test external value change', async function () {
-            this.textfield.setProps({value: 'XYZ'});
+            textfield.setProps({modelValue: 'XYZ'});
 
             await vueTicks();
 
-            expect(this.textfield.vm.value).toBe('XYZ')
-            expect(this.textfield.find('input').element.value).toBe('XYZ')
+            expect(textfield.vm.modelValue).toBe('XYZ')
+            expect(textfield.find('input').element.value).toBe('XYZ')
         });
 
         it('Test change value by user', async function () {
-            const inputField = this.textfield.find('input').element;
+            const inputField = textfield.find('input').element;
             setInputValue(inputField, 'abc def', true);
 
             await vueTicks();
 
-            expect(this.textfield.vm.value).toBe('abc def')
+            expect(textfield.vm.modelValue).toBe('abc def')
             expect(inputField.value).toBe('abc def')
         });
 
@@ -107,18 +104,18 @@ describe('Test TextField', function () {
             let textfield;
             try {
                 textfield = mount(Textfield, {
-                    propsData: {
+                    props: {
                         config: {
                             name: 'Text param'
                         },
-                        value: ''
+                        modelValue: ''
                     }
                 });
-                expect(textfield.vm.value).toBe('')
+                expect(textfield.vm.modelValue).toBe('')
             } finally {
                 if (textfield) {
                     await vueTicks();
-                    textfield.destroy();
+                    textfield.unmount();
                 }
             }
         });
@@ -126,94 +123,94 @@ describe('Test TextField', function () {
 
     describe('Test validaton', function () {
         it('Test set external empty value when required', async function () {
-            setDeepProp(this.textfield, 'config.required', true);
-            this.textfield.setProps({value: ''});
+            setDeepProp(textfield, 'config.required', true);
+            textfield.setProps({modelValue: ''});
 
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('required')
+            expect(textfield.currentError).toBe('required')
         });
 
         it('Test user set empty value when required', async function () {
-            setDeepProp(this.textfield, 'config.required', true);
+            setDeepProp(textfield, 'config.required', true);
             await vueTicks();
 
-            const inputField = this.textfield.find('input').element;
+            const inputField = textfield.find('input').element;
             setInputValue(inputField, '', true);
 
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('required')
+            expect(textfield.currentError).toBe('required')
         });
 
         it('Test set external value after empty when required', async function () {
-            setDeepProp(this.textfield, 'config.required', true);
-            this.textfield.setProps({value: ''});
+            setDeepProp(textfield, 'config.required', true);
+            textfield.setProps({modelValue: ''});
             await vueTicks();
 
-            this.textfield.setProps({value: 'A'});
+            textfield.setProps({modelValue: 'A'});
 
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('')
+            expect(textfield.currentError).toBe('')
         });
 
         it('Test user set value after empty when required', async function () {
-            setDeepProp(this.textfield, 'config.required', true);
-            this.textfield.setProps({value: ''});
+            setDeepProp(textfield, 'config.required', true);
+            textfield.setProps({modelValue: ''});
             await vueTicks();
-            const inputField = this.textfield.find('input').element;
+            const inputField = textfield.find('input').element;
 
 
             setInputValue(inputField, 'A', true);
 
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('')
+            expect(textfield.currentError).toBe('')
         });
 
         it('Test set invalid external value when integer', async function () {
-            setDeepProp(this.textfield, 'config.type', 'int');
-            this.textfield.setProps({value: '1.5'});
+            setDeepProp(textfield, 'config.type', 'int');
+            textfield.setProps({modelValue: '1.5'});
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('integer expected')
+            expect(textfield.currentError).toBe('integer expected')
         });
 
         it('Test set invalid external value when regex', async function () {
-            setDeepProp(this.textfield, 'config.regex', {pattern: 'a\\d\\db', description: 'test desc'});
-            this.textfield.setProps({value: 'a123'});
+            setDeepProp(textfield, 'config.regex', {pattern: 'a\\d\\db', description: 'test desc'});
+            textfield.setProps({modelValue: 'a123'});
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('test desc')
+            expect(textfield.currentError).toBe('test desc')
         });
 
         it('Test set invalid external value when regex fullstring match', async function () {
-            setDeepProp(this.textfield, 'config.regex', {pattern: 'a', description: 'test desc'});
-            this.textfield.setProps({value: 'wat'});
+            setDeepProp(textfield, 'config.regex', {pattern: 'a', description: 'test desc'});
+            textfield.setProps({modelValue: 'wat'});
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('test desc')
+            expect(textfield.currentError).toBe('test desc')
         });
 
         it('Test set invalid external value when regex fullstring match and no desc', async function () {
-            setDeepProp(this.textfield, 'config.regex', {pattern: 'a', description: ''});
-            this.textfield.setProps({value: 'a1a'});
+            setDeepProp(textfield, 'config.regex', {pattern: 'a', description: ''});
+            textfield.setProps({modelValue: 'a1a'});
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('pattern mismatch')
+            expect(textfield.currentError).toBe('pattern mismatch')
         });
 
         it('Test user set invalid value when regex', async function () {
-            setDeepProp(this.textfield, 'config.regex', {pattern: 'a\\d\\db', description: 'test desc'});
+            setDeepProp(textfield, 'config.regex', {pattern: 'a\\d\\db', description: 'test desc'});
             await vueTicks();
 
-            const inputField = this.textfield.find('input').element;
+            const inputField = textfield.find('input').element;
             setInputValue(inputField, 'a12XXX', true);
 
             await vueTicks();
 
-            expect(this.textfield.currentError).toBe('test desc')
+            expect(textfield.currentError).toBe('test desc')
         });
     });
 
@@ -221,7 +218,7 @@ describe('Test TextField', function () {
 
         async function testValidation(textfield, type, value, expectedError) {
             setDeepProp(textfield, 'config.type', type);
-            textfield.setProps({value: value});
+            textfield.setProps({modelValue: value});
             await vueTicks();
 
             if (isEmptyString(expectedError)) {
@@ -232,119 +229,119 @@ describe('Test TextField', function () {
         }
 
         it('Test IPv4 127.0.0.1', async function () {
-            await testValidation(this.textfield, 'ip4', '127.0.0.1', '')
+            await testValidation(textfield, 'ip4', '127.0.0.1', '')
         });
 
         it('Test IPv4 255.255.255.255', async function () {
-            await testValidation(this.textfield, 'ip4', '255.255.255.255', '')
+            await testValidation(textfield, 'ip4', '255.255.255.255', '')
         });
 
         it('Test IPv4 valid with trim', async function () {
-            await testValidation(this.textfield, 'ip4', '  192.168.0.1\n', '')
+            await testValidation(textfield, 'ip4', '  192.168.0.1\n', '')
         });
 
         it('Test IPv4 invalid block count', async function () {
-            await testValidation(this.textfield, 'ip4', '127.0.1', 'IPv4 expected')
+            await testValidation(textfield, 'ip4', '127.0.1', 'IPv4 expected')
         });
 
         it('Test IPv4 empty block', async function () {
-            await testValidation(this.textfield, 'ip4', '127..0.1', 'Empty IP block')
+            await testValidation(textfield, 'ip4', '127..0.1', 'Empty IP block')
         });
 
         it('Test IPv4 invalid block', async function () {
-            await testValidation(this.textfield, 'ip4', '127.wrong.0.1', 'Invalid block wrong')
+            await testValidation(textfield, 'ip4', '127.wrong.0.1', 'Invalid block wrong')
         });
 
         it('Test IPv4 large number', async function () {
-            await testValidation(this.textfield, 'ip4', '192.168.256.0', 'Out of range')
+            await testValidation(textfield, 'ip4', '192.168.256.0', 'Out of range')
         });
 
         it('Test IPv6 ::', async function () {
-            await testValidation(this.textfield, 'ip6', '::', '')
+            await testValidation(textfield, 'ip6', '::', '')
         });
 
         it('Test IPv6 ::0', async function () {
-            await testValidation(this.textfield, 'ip6', '::0', '')
+            await testValidation(textfield, 'ip6', '::0', '')
         });
 
         it('Test IPv6 ABCD::0', async function () {
-            await testValidation(this.textfield, 'ip6', 'ABCD::0', '')
+            await testValidation(textfield, 'ip6', 'ABCD::0', '')
         });
 
         it('Test IPv6 ABCD::192.168.2.12', async function () {
-            await testValidation(this.textfield, 'ip6', 'ABCD::192.168.2.12', '')
+            await testValidation(textfield, 'ip6', 'ABCD::192.168.2.12', '')
         });
 
         it('Test IPv6 ABCD:0123::4567:192.168.2.12', async function () {
-            await testValidation(this.textfield, 'ip6', 'ABCD:0123::4567:192.168.2.12', '')
+            await testValidation(textfield, 'ip6', 'ABCD:0123::4567:192.168.2.12', '')
         });
 
         it('Test IPv6 valid with trim', async function () {
-            await testValidation(this.textfield, 'ip6', '  ABCD::0123  ', '')
+            await testValidation(textfield, 'ip6', '  ABCD::0123  ', '')
         });
 
         it('Test IPv6 valid with different cases', async function () {
-            await testValidation(this.textfield, 'ip6', 'AbCd::123:dEf', '')
+            await testValidation(textfield, 'ip6', 'AbCd::123:dEf', '')
         });
 
         it('Test IPv6 valid blocks count', async function () {
-            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:6:7:8', '')
+            await testValidation(textfield, 'ip6', '1:2:3:4:5:6:7:8', '')
         });
 
         it('Test IPv6 valid blocks count with ip4', async function () {
-            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:6:127.0.0.1', '')
+            await testValidation(textfield, 'ip6', '1:2:3:4:5:6:127.0.0.1', '')
         });
 
         it('Test IPv6 too much blocks', async function () {
-            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:6:7:8:9', 'Should be 8 blocks')
+            await testValidation(textfield, 'ip6', '1:2:3:4:5:6:7:8:9', 'Should be 8 blocks')
         });
 
         it('Test IPv6 too much blocks with zero compression', async function () {
-            await testValidation(this.textfield, 'ip6', '1:2:3::4:5:6:7:8:9', 'Should be 8 blocks')
+            await testValidation(textfield, 'ip6', '1:2:3::4:5:6:7:8:9', 'Should be 8 blocks')
         });
 
         it('Test IPv6 too little blocks', async function () {
-            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:6:7', 'Should be 8 blocks')
+            await testValidation(textfield, 'ip6', '1:2:3:4:5:6:7', 'Should be 8 blocks')
         });
 
         it('Test IPv6 double ::', async function () {
-            await testValidation(this.textfield, 'ip6', '1::2::3', 'allowed only once')
+            await testValidation(textfield, 'ip6', '1::2::3', 'allowed only once')
         });
 
         it('Test IPv6 invalid long block', async function () {
-            await testValidation(this.textfield, 'ip6', '1::ABCDE:3', 'Invalid block ABCDE')
+            await testValidation(textfield, 'ip6', '1::ABCDE:3', 'Invalid block ABCDE')
         });
 
         it('Test IPv6 invalid character', async function () {
-            await testValidation(this.textfield, 'ip6', '1::ABCG:3', 'Invalid block ABCG')
+            await testValidation(textfield, 'ip6', '1::ABCG:3', 'Invalid block ABCG')
         });
 
         it('Test IPv6 when ip4 not last', async function () {
-            await testValidation(this.textfield, 'ip6', '1::127.0.0.1:AB', 'should be the last')
+            await testValidation(textfield, 'ip6', '1::127.0.0.1:AB', 'should be the last')
         });
 
         it('Test IPv6 when ip4 wrong', async function () {
-            await testValidation(this.textfield, 'ip6', '1::127..1', 'Invalid IPv4 block 127..1')
+            await testValidation(textfield, 'ip6', '1::127..1', 'Invalid IPv4 block 127..1')
         });
 
         it('Test IPv6 when ip4 too early', async function () {
-            await testValidation(this.textfield, 'ip6', '1:2:3:4:5:127.0.0.1', 'Invalid block 127.0.0.1')
+            await testValidation(textfield, 'ip6', '1:2:3:4:5:127.0.0.1', 'Invalid block 127.0.0.1')
         });
 
         it('Test Any IP when correct ip4', async function () {
-            await testValidation(this.textfield, 'ip', '127.0.0.1', '')
+            await testValidation(textfield, 'ip', '127.0.0.1', '')
         });
 
         it('Test Any IP when wrong ip4', async function () {
-            await testValidation(this.textfield, 'ip', '127.0..1', 'IPv4 or IPv6 expected')
+            await testValidation(textfield, 'ip', '127.0..1', 'IPv4 or IPv6 expected')
         });
 
         it('Test Any IP when correct ip6', async function () {
-            await testValidation(this.textfield, 'ip', 'ABCD::0', '')
+            await testValidation(textfield, 'ip', 'ABCD::0', '')
         });
 
         it('Test Any IP when wrong ip6', async function () {
-            await testValidation(this.textfield, 'ip', 'ABCX::0', 'IPv4 or IPv6 expected')
+            await testValidation(textfield, 'ip', 'ABCX::0', 'IPv4 or IPv6 expected')
         });
     });
 
@@ -355,14 +352,14 @@ describe('Test TextField', function () {
         beforeEach(async function () {
             autocompleteComponent = mount(Textfield, {
                 attachTo: attachToDocument(),
-                propsData: {
+                props: {
                     config: {
                         required: true,
                         name: 'Text autocomplete',
                         values: ['Value A', 'Value B', 'Value C'],
                         type: 'editable_list'
                     },
-                    value: ''
+                    modelValue: ''
                 }
             });
             wrapVModel(autocompleteComponent);
@@ -370,22 +367,30 @@ describe('Test TextField', function () {
             await vueTicks()
         });
 
+        // Vuetify migration: the dropdown is a v-combobox menu rendered in a
+        // teleported v-overlay (document.body), not a <ul> inside the
+        // component, so options are queried from the document.
+
         async function clickOnInputField() {
+            await autocompleteComponent.find('input').trigger('mousedown')
             await autocompleteComponent.find('input').trigger('click')
             await timeout(150)
         }
 
+        function getOptionElements() {
+            return [...document.querySelectorAll('.v-overlay .v-list-item')]
+        }
+
         function getOptionTexts() {
-            const listElements = autocompleteComponent.findAll('ul li')
-            return mapArrayWrapper(listElements, wrapper => wrapper.text())
+            return getOptionElements().map(el => el.textContent.trim())
         }
 
         it('Test open dropdown on click', async function () {
             await clickOnInputField()
 
-            expect(autocompleteComponent.find('input').classes()).toContain('autocomplete')
+            expect(autocompleteComponent.find('.v-combobox').exists()).toBeTrue()
 
-            expect(autocompleteComponent.find('ul').element).toBeVisible()
+            expect(document.querySelector('.v-overlay .v-list')).toBeVisible()
 
             const options = getOptionTexts()
             expect(options).toEqual(['Value A', 'Value B', 'Value C'])
@@ -399,7 +404,7 @@ describe('Test TextField', function () {
             const options = getOptionTexts()
             expect(options).toEqual(['Value A', 'Value B', 'Value C'])
 
-            expect(autocompleteComponent.vm.value).toBe('alu')
+            expect(autocompleteComponent.vm.modelValue).toBe('alu')
         });
 
         it('Test open dropdown on click when input value matches single element', async function () {
@@ -410,28 +415,31 @@ describe('Test TextField', function () {
             const options = getOptionTexts()
             expect(options).toEqual(['Value B'])
 
-            expect(autocompleteComponent.vm.value).toBe('B')
+            expect(autocompleteComponent.vm.modelValue).toBe('B')
         });
 
         it('Test open dropdown on click when vm value matches single element', async function () {
-            await autocompleteComponent.setProps({value: 'B'});
+            await autocompleteComponent.setProps({modelValue: 'B'});
 
             await clickOnInputField()
 
+            // Behaviour change vs materialize: v-combobox only filters while
+            // the user is typing. Opening the menu with a pre-set value shows
+            // all options, so an existing choice can be replaced without
+            // clearing the field first.
             const options = getOptionTexts()
-            expect(options).toEqual(['Value B'])
+            expect(options).toEqual(['Value A', 'Value B', 'Value C'])
 
-            expect(autocompleteComponent.vm.value).toBe('B')
+            expect(autocompleteComponent.vm.modelValue).toBe('B')
         });
 
         it('Test select option from dropdown', async function () {
             await clickOnInputField()
 
-            await autocompleteComponent.findAll('ul li').at(1).trigger('click')
+            getOptionElements()[1].click()
             await timeout(300)
 
-            expect(autocompleteComponent.find('ul').element).not.toBeVisible()
-            expect(autocompleteComponent.vm.value).toBe('Value B')
+            expect(autocompleteComponent.vm.modelValue).toBe('Value B')
         });
 
         it('Test update values', async function () {

@@ -1,22 +1,21 @@
 <template>
   <div ref="parametersPanel" :style="{ 'grid-template-columns': 'repeat(' + gridColumns + ', minmax(0, 1fr))'}"
        class="script-parameters-panel">
-    <template v-for="parameter in parameters">
+    <template v-for="parameter in parameters" :key="parameter.name">
       <ParameterSeparator
           v-if="parameter.ui?.separatorBefore && !startsWithNewLine(parameter)"
           :separator="parameter.ui?.separatorBefore"
           :style="'grid-column-start: span ' + gridColumns"/>
       <component
           :is="getComponentType(parameter)"
-          :key="parameter.name"
           :config="parameter"
-          :value="getParameterValue(parameter)"
+          :modelValue="getParameterValue(parameter)"
           :class="{'inline': isInline(parameter)}"
           class="parameter"
           :style="getGridCellStyle(parameter)"
           :forceValue="forcedValueParameters.includes(parameter.name)"
           @error="handleError(parameter, $event)"
-          @input="setParameterValue(parameter.name, $event)"/>
+          @update:modelValue="setParameterValue(parameter.name, $event)"/>
     </template>
   </div>
 </template>
@@ -24,14 +23,17 @@
 <script>
 import Checkbox from '@/common/components/checkbox'
 import Combobox from '@/common/components/combobox'
+import DateField from '@/common/components/inputs/DateField'
+import TimeField from '@/common/components/inputs/TimeField'
 import FileUpload from '@/common/components/file_upload'
 import ServerFileField from '@/common/components/server_file_field'
 import TextArea from '@/common/components/TextArea'
 import Textfield from '@/common/components/textfield'
 import {isNull} from '@/common/utils/common';
 import ParameterSeparator from '@/main-app/components/scripts/ParameterSeparator.vue';
-import {mapActions, mapState} from 'vuex'
 import {comboboxTypes, isRecursiveFileParameter} from '../../utils/model_helper'
+import {useScriptConfigStore} from '@/main-app/stores/scriptConfig'
+import {useScriptSetupStore} from '@/main-app/stores/scriptSetup'
 
 export default {
   name: 'script-parameters-view',
@@ -44,13 +46,15 @@ export default {
   },
 
   computed: {
-    ...mapState('scriptConfig', {
-      parameters: 'parameters'
-    }),
-    ...mapState('scriptSetup', {
-      parameterValues: 'parameterValues',
-      forcedValueParameters: 'forcedValueParameters'
-    })
+    parameters() {
+      return useScriptConfigStore().parameters
+    },
+    parameterValues() {
+      return useScriptSetupStore().parameterValues
+    },
+    forcedValueParameters() {
+      return useScriptSetupStore().forcedValueParameters
+    }
   },
 
   mounted() {
@@ -61,15 +65,17 @@ export default {
     })
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     window.removeEventListener('resize', this.recalculateParamsLayout)
   },
 
   methods: {
-    ...mapActions('scriptSetup', {
-      setParameterValueInStore: 'setParameterValue',
-      setParameterErrorInStore: 'setParameterError'
-    }),
+    setParameterValueInStore({parameterName, value}) {
+      useScriptSetupStore().setParameterValue({parameterName, value})
+    },
+    setParameterErrorInStore({parameterName, errorMessage}) {
+      useScriptSetupStore().setParameterError({parameterName, errorMessage})
+    },
     getComponentType(parameter) {
       if (parameter.withoutValue) {
         return Checkbox;
@@ -79,6 +85,10 @@ export default {
         return Combobox;
       } else if (parameter.type === 'file_upload') {
         return FileUpload;
+      } else if (parameter.type === 'date') {
+        return DateField;
+      } else if (parameter.type === 'time') {
+        return TimeField;
       } else if (parameter.type === 'multiline_text') {
         return TextArea;
       } else {
@@ -154,7 +164,7 @@ export default {
 </script>
 
 <style scoped>
-.script-parameters-panel >>> {
+.script-parameters-panel {
   margin-top: 15px;
   margin-right: 0;
   display: grid;
@@ -162,13 +172,13 @@ export default {
   row-gap: 8px;
 }
 
-.script-parameters-panel >>> .parameter.inline {
+.script-parameters-panel :deep(.parameter.inline) {
   margin-left: 0;
 }
 
-.script-parameters-panel >>> .parameter input,
-.script-parameters-panel >>> .parameter textarea,
-.script-parameters-panel >>> .parameter .file-upload-field-value {
+.script-parameters-panel :deep(.parameter input),
+.script-parameters-panel :deep(.parameter textarea),
+.script-parameters-panel :deep(.parameter .file-upload-field-value) {
   margin: 0;
 
   font-size: 1rem;
@@ -176,7 +186,7 @@ export default {
   line-height: 1.5em;
 }
 
-.script-parameters-panel >>> .parameter textarea {
+.script-parameters-panel :deep(.parameter textarea) {
   padding-bottom: 0;
   padding-top: 0;
 
@@ -184,35 +194,35 @@ export default {
   box-sizing: content-box;
 }
 
-.script-parameters-panel >>> .parameter > label {
+.script-parameters-panel :deep(.parameter > label) {
   transform: none;
   font-size: 1rem;
 }
 
-.script-parameters-panel >>> .parameter > label.active {
+.script-parameters-panel :deep(.parameter > label.active) {
   transform: translateY(-70%) scale(0.8);
 }
 
-.script-parameters-panel >>> .input-field input[type=checkbox] + span {
+.script-parameters-panel :deep(.input-field input[type=checkbox] + span) {
   padding-left: 28px;
 }
 
-.script-parameters-panel >>> .input-field .select-wrapper + label {
+.script-parameters-panel :deep(.input-field .select-wrapper + label) {
   transform: scale(0.8);
   top: -18px;
 }
 
-.script-parameters-panel >>> .input-field:after {
+.script-parameters-panel :deep(.input-field:after) {
   top: 1.7em;
   left: 0.1em;
 }
 
-.script-parameters-panel >>> .file-upload-field .btn-icon-flat {
+.script-parameters-panel :deep(.file-upload-field .btn-icon-flat) {
   top: -7px;
   right: -4px;
 }
 
-.script-parameters-panel >>> .dropdown-content {
+.script-parameters-panel :deep(.dropdown-content) {
   max-width: 50vw;
   min-width: 100%;
   white-space: nowrap;
@@ -220,7 +230,7 @@ export default {
   margin-bottom: 0;
 }
 
-.script-parameters-panel >>> .dropdown-content > li > span {
+.script-parameters-panel :deep(.dropdown-content > li > span) {
   overflow-x: hidden;
   text-overflow: ellipsis;
 }

@@ -1,8 +1,8 @@
 <template>
   <div v-trim-text
-       :class="{active: value}"
+       :class="{active: modelValue}"
        class="toggle-day-button"
-       @click="$emit('input', !value)">
+       @click="$emit('update:modelValue', !modelValue)">
     {{ text }}
   </div>
 </template>
@@ -10,12 +10,13 @@
 <script>
 export default {
   name: 'RoundToggleButton',
+  emits: ['update:modelValue'],
   props: {
     text: {
       type: String,
       default: '?'
     },
-    value: {
+    modelValue: {
       type: Boolean,
       default: false
     }

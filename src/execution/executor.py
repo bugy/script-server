@@ -114,7 +114,7 @@ class ScriptExecutor:
                 if not element_string.strip():
                     continue
 
-                value_pattern = '((?<!\w)|^)' + re.escape(element_string) + '((?!\w)|$)'
+                value_pattern = r'((?<!\w)|^)' + re.escape(element_string) + r'((?!\w)|$)'
                 word_replacements[value_pattern] = model_helper.SECURE_MASK
 
         return word_replacements

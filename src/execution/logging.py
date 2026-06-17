@@ -132,6 +132,11 @@ class ExecutionLoggingService:
                       script_config,
                       parameter_value_wrappers,
                       start_time_millis=None):
+        
+        if script_config.logging_config:
+            if not script_config.logging_config.enabled:
+                LOGGER.info(f'Logging is disabled for script {script_config.name}, skipping log creation')
+                return
 
         script_name = str(script_config.name)
 
@@ -289,7 +294,7 @@ class ExecutionLoggingService:
 
         parameters = {}
         for line in parameters_text.splitlines(keepends=True):
-            match = re.fullmatch('([\w_]+):(.*\r?\n)', line)
+            match = re.fullmatch(r'([\w_]+):(.*\r?\n)', line)
             if not match:
                 current_value += line
                 continue

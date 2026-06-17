@@ -3,19 +3,56 @@
 import ParameterConfigForm from '@/admin/components/scripts-config/ParameterConfigForm';
 import ParameterValuesUiMapping from '@/admin/components/scripts-config/ParameterValuesUiMapping.vue';
 import ScriptField from '@/admin/components/scripts-config/script-edit/ScriptField'
+import Checkbox from '@/common/components/checkbox';
 import ChipsList from '@/common/components/ChipsList';
 import Combobox from '@/common/components/combobox';
 import TextArea from '@/common/components/TextArea';
 import Textfield from '@/common/components/textfield.vue';
 import {asyncForEachKeyValue, isBlankString, isNull, setInputValue} from '@/common/utils/common';
 import {mount} from '@vue/test-utils';
-import {attachToDocument, createScriptServerTestVue, setChipListValue, vueTicks} from '../test_utils';
+import {attachToDocument, createScriptServerTestVue, setChipListValue, vueTicks, wrapVModel} from '../test_utils';
+
+// Component types a parameter form can render as fields.
+const FIELD_TYPES = [ChipsList, ScriptField, Combobox, TextArea, Checkbox, Textfield];
+
+function getFieldName(wrapper, Type) {
+    if (Type === ChipsList) return wrapper.props('title');
+    if (Type === ScriptField) return wrapper.vm.scriptPathField?.name;
+    return wrapper.props('config')?.name;
+}
+
+// Vue 3 / VTU v2 replacement for the old `form.$children` + `_componentTag`
+// traversal: locate a field by name across the known component types and return
+// both the VTU wrapper and its type.
+function findFieldWrapper(formWrapper, expectedName, failOnMissing = true) {
+    for (const Type of FIELD_TYPES) {
+        for (const w of formWrapper.findAllComponents(Type)) {
+            const name = getFieldName(w, Type);
+            if (!isNull(name) && (name.toLowerCase() === expectedName.toLowerCase())) {
+                return {wrapper: w, type: Type};
+            }
+        }
+    }
+
+    if (failOnMissing) {
+        throw Error('Failed to find field: ' + expectedName)
+    }
+    return undefined;
+}
 
 export async function setValueByUser(form, parameterName, value) {
-    const childComponent = findField(form, parameterName);
+    const found = findFieldWrapper(form, parameterName);
 
-    if (childComponent.$options._componentTag === ChipsList.name) {
-        setChipListValue(childComponent, value);
+    if (found.type === ChipsList) {
+        setChipListValue(found.wrapper.vm, value);
+        return;
+    }
+
+    if (found.type === Combobox) {
+        // Vuetify migration: no native <select> anymore; go through the
+        // component's update handler (same emit path as a menu click)
+        found.wrapper.vm.onUserInput(value);
+        await vueTicks();
         return;
     }
 
@@ -26,25 +63,23 @@ export async function setValueByUser(form, parameterName, value) {
     await vueTicks();
 }
 
+// Returns the matched field's vm behind a Proxy that maps `.value` to the Vue 3
+// `modelValue` prop, so existing `.value` reads keep working.
 export const findField = (form, expectedName, failOnMissing = true) => {
-    for (const child of form.$children) {
-        let fieldName;
-        if (child.$options._componentTag === ChipsList.name) {
-            fieldName = child.title;
-        } else if (child.$options._componentTag === ScriptField.name) {
-            fieldName = child.scriptPathField.name;
-        } else {
-            fieldName = child.$props.config?.name;
-        }
-
-        if (!isNull(fieldName) && (fieldName.toLowerCase() === expectedName.toLowerCase())) {
-            return child;
-        }
+    const found = findFieldWrapper(form, expectedName, failOnMissing);
+    if (isNull(found)) {
+        return undefined;
     }
 
-    if (failOnMissing) {
-        throw Error('Failed to find field: ' + expectedName)
-    }
+    const vm = found.wrapper.vm;
+    return new Proxy(vm, {
+        get(target, prop) {
+            if (prop === 'value') {
+                return target.modelValue;
+            }
+            return target[prop];
+        }
+    });
 };
 
 export const findUiMappingFields = (form, failOnMissing = true) => {
@@ -70,8 +105,8 @@ export const extractUiMappingValues = (uiMappingFields) => {
     const result = []
 
     for (const uiMappingFieldPair of uiMappingFields) {
-        const scriptValue = uiMappingFieldPair[0].vm.value
-        const uiValue = uiMappingFieldPair[1].vm.value
+        const scriptValue = uiMappingFieldPair[0].vm.modelValue
+        const uiValue = uiMappingFieldPair[1].vm.modelValue
 
         result.push([scriptValue, uiValue])
     }
@@ -96,18 +131,17 @@ export async function setUiMappingUiValue(form, index, value) {
 }
 
 const findFieldInputElement = (form, expectedName) => {
-    const field = findField(form, expectedName);
+    const found = findFieldWrapper(form, expectedName);
 
     let elementType;
-    if (field.$options._componentTag === TextArea.name) {
+    if (found.type === TextArea) {
         elementType = 'textarea';
-    } else if (field.$options._componentTag === Combobox.name) {
-        elementType = 'select';
     } else {
+        // Combobox included: the Vuetify v-select renders an <input>
         elementType = 'input';
     }
 
-    return $(field.$el).find(elementType).get(0);
+    return found.wrapper.element.querySelector(elementType);
 };
 
 
@@ -119,50 +153,45 @@ describe('Test ParameterConfigForm', function () {
         errors = [];
 
         form = mount(ParameterConfigForm, {
-            localVue: createScriptServerTestVue(),
             attachTo: attachToDocument(),
-            sync: false,
-            propsData: {
-                value: {
+            props: {
+                modelValue: {
                     'name': 'param 1',
                     'description': 'some description'
                 }
             }
         });
-        form.vm.$parent.$forceUpdate();
         await form.vm.$nextTick();
 
-        form.vm.$on('input', (value) => {
-            form.setProps({value});
-        });
-
-        form.vm.$on('error', (error) => {
-            errors.push(error);
+        // Vue 3 removed vm.$on; emulate parent v-model + capture errors via prop listeners.
+        form.setProps({
+            'onUpdate:modelValue': (value) => form.setProps({modelValue: value}),
+            'onError': (error) => errors.push(error)
         });
     });
 
     afterEach(async function () {
         await vueTicks();
 
-        form.destroy();
+        form.unmount();
     });
 
     const _findField = (expectedName, failOnMissing = true) => {
-        return findField(form.vm, expectedName, failOnMissing);
+        return findField(form, expectedName, failOnMissing);
     };
 
     const _findFieldInputElement = (expectedName) => {
-        return findFieldInputElement(form.vm, expectedName);
+        return findFieldInputElement(form, expectedName);
     };
 
     async function _setValueByUser(parameterName, value) {
-        await setValueByUser(form.vm, parameterName, value);
+        await setValueByUser(form, parameterName, value);
     }
 
     async function setPropsField(fieldName, value) {
         form.setProps({
-            value: {
-                ...form.vm.$props.value,
+            modelValue: {
+                ...form.vm.$props.modelValue,
                 [fieldName]: value
             }
         });
@@ -170,7 +199,7 @@ describe('Test ParameterConfigForm', function () {
     }
 
     const assertOutputValue = (fieldName, expectedValue) => {
-        const actualValue = form.vm.$props.value[fieldName];
+        const actualValue = form.vm.$props.modelValue[fieldName];
         expect(actualValue).toEqual(expectedValue)
     };
 
@@ -197,7 +226,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test simple parameters', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     name: 'param X',
                     description: 'my desc',
                     param: '-x',
@@ -224,7 +253,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test simple parameters when int', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'int',
                     min: -5,
                     max: 1000
@@ -240,7 +269,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test simple parameters when multiselect argument_per_value', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'multiselect',
                     multiselect_argument_type: 'argument_per_value'
                 }
@@ -255,7 +284,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test simple parameters when multiselect and single_argument', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'multiselect',
                     multiselect_argument_type: 'single_argument',
                     separator: '.'
@@ -271,7 +300,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test simple parameters when server file', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'server_file',
                     file_dir: '/tmp/',
                     file_recursive: true,
@@ -291,7 +320,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test default value when int', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'int',
                     default: 5
                 }
@@ -304,7 +333,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test default value when recursive file and default array', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'server_file',
                     default: ['some', 'path', 'value'],
                     file_recursive: true
@@ -318,7 +347,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test default value when recursive file and default array with absolute path', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'server_file',
                     default: ['/', 'some', 'path', 'value'],
                     file_recursive: true
@@ -332,7 +361,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test default value when recursive file and default string', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'server_file',
                     default: '/tmp/script-server/files',
                     file_recursive: true
@@ -346,7 +375,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test allowed values when array', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'list',
                     values: ['abc', '123', 'xyz']
                 }
@@ -362,7 +391,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test allowed values when script', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'list',
                     values: {'script': 'ls ~/'}
                 }
@@ -378,7 +407,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test allowed values when array and type editable_list', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     type: 'editable_list',
                     values: ['abc', '123', 'xyz']
                 }
@@ -393,7 +422,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test initial width weight', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     ui: {
                         'width_weight': 3
                     }
@@ -407,7 +436,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test initial width weight when no config', async function () {
             form.setProps({
-                value: {}
+                modelValue: {}
             });
 
             await vueTicks()
@@ -417,7 +446,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test initial separator', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     ui: {
                         'separator_before': {
                             'type': 'line',
@@ -435,7 +464,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test initial width weight when no config', async function () {
             form.setProps({
-                value: {}
+                modelValue: {}
             });
 
             await vueTicks()
@@ -446,7 +475,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test passAs when not set', async function () {
             form.setProps({
-                value: {}
+                modelValue: {}
             });
 
             await vueTicks()
@@ -457,7 +486,7 @@ describe('Test ParameterConfigForm', function () {
         it('Test passAs when set', async function () {
             for (const passAs of ['argument', 'env_variable', 'stdin']) {
                 form.setProps({
-                    value: {'pass_as': passAs}
+                    modelValue: {'pass_as': passAs}
                 });
 
                 await vueTicks()
@@ -468,7 +497,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test stdin expected text', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     'pass_as': 'stdin',
                     'stdin_expected_text': '123'
                 }
@@ -481,7 +510,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test initial values UI mapping', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     'type': 'list',
                     'values_ui_mapping': {
                         'abc': 'qwerty',
@@ -718,7 +747,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test update ui width weight to empty', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     ui: {
                         'width_weight': 3
                     }
@@ -760,7 +789,7 @@ describe('Test ParameterConfigForm', function () {
 
         it('Test update ui separator to empty', async function () {
             form.setProps({
-                value: {
+                modelValue: {
                     ui: {
                         'separator_before': {
                             'type': 'line',

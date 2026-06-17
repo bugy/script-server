@@ -1,28 +1,32 @@
 <template>
-  <div :data-error="error" :title="config.description" class="input-field">
-        <textarea
-            :id="elementId"
-            ref="textArea"
-            :required="config.required"
-            :value="value"
-            class="materialize-textarea"
-            type="text"
-            @input="textAreaChanged">
-
-        </textarea>
-    <label :class="{ active: labelActive }" :for="elementId">{{ config.name }}</label>
-  </div>
+  <v-textarea
+      ref="field"
+      :data-error="error"
+      :error-messages="errorMessages"
+      :label="config.name"
+      :model-value="modelValue"
+      :required="config.required"
+      :title="config.description"
+      auto-grow
+      class="textarea-field"
+      rows="1"
+      @update:model-value="onValueChanged"/>
 </template>
 
 <script>
-import '@/common/materializecss/imports/input-fields';
-import {isBlankString, isEmptyString, isNull} from '@/common/utils/common';
+// Vuetify migration: only the rendering layer changed (v-textarea with
+// auto-grow replacing the materialize textarea + M.textareaAutoResize).
+// The validation logic below is untouched business logic. External contract
+// preserved: modelValue/config props, update:modelValue + error emits,
+// data-error attribute.
+import {isBlankString, isNull} from '@/common/utils/common';
 
 export default {
   name: 'TextArea',
 
+  emits: ['update:modelValue', 'error'],
   props: {
-    'value': [String],
+    'modelValue': [String],
     'config': Object
   },
 
@@ -33,73 +37,54 @@ export default {
   },
 
   mounted: function () {
-    this.textAreaChanged();
+    this.onValueChanged(this.nativeTextarea()?.value ?? this.modelValue ?? '');
   },
 
   watch: {
-    'value': {
+    'modelValue': {
       immediate: true,
       handler(newValue) {
-        const textArea = this.$refs.textArea;
-        const notificationAfterTextAreaChanged = !isNull(textArea) && textArea.value === newValue;
+        const textArea = this.nativeTextarea();
 
-        if (!isNull(textArea) && notificationAfterTextAreaChanged) {
+        if (!isNull(textArea) && (textArea.value === newValue)) {
           this.doValidation(newValue);
         } else {
           this.$nextTick(() => {
-            if (this.$refs.textArea) {
+            if (this.nativeTextarea()) {
               this.doValidation(newValue);
-
-              if (!notificationAfterTextAreaChanged) {
-                this.initTextArea();
-              }
             }
           });
         }
       }
     },
     'config.max_length'() {
-      this.doValidation(this.value)
+      this.doValidation(this.modelValue)
     }
   },
 
   computed: {
-    elementId() {
-      return this._uid;
-    },
-
-    labelActive() {
-      if (!isEmptyString(this.value)) {
-        return true;
-      }
-
-      var textArea = this.$refs.textArea;
-      if (!isNull(textArea) && (textArea === document.activeElement)) {
-        return true;
-      }
-
-      return false;
-    },
+    errorMessages() {
+      return this.error ? [this.error] : [];
+    }
   },
 
   methods: {
-    textAreaChanged() {
-      const textArea = this.$refs.textArea;
-      const value = textArea.value;
-
-      this.doValidation(value);
-      this.$emit('input', value);
+    nativeTextarea() {
+      return this.$refs.field?.$el?.querySelector('textarea') ?? null;
     },
 
-    initTextArea() {
-      M.textareaAutoResize(this.$refs.textArea);
-      M.updateTextFields();
+    onValueChanged(value) {
+      if (isNull(value)) {
+        value = '';
+      }
+
+      this.doValidation(value);
+      this.$emit('update:modelValue', value);
     },
 
     doValidation(value) {
-      const textArea = this.$refs.textArea;
       this.error = this.getValidationError(value);
-      textArea.setCustomValidity(this.error);
+      this.nativeTextarea()?.setCustomValidity(this.error ?? '');
 
       this.$emit('error', this.error);
     },

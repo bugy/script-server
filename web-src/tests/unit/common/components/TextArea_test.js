@@ -9,19 +9,19 @@ describe('Test TextArea', function () {
 
     let textarea
 
-    before(function () {
+    beforeAll(function () {
 
     });
 
     beforeEach(function () {
         textarea = mount(TextArea, {
-            propsData: {
+            props: {
                 config: {
                     required: false,
                     name: 'Textarea parameter',
                     description: 'this field is used for nothing'
                 },
-                value: 'Hello world'
+                modelValue: 'Hello world'
             }
         });
         wrapVModel(textarea);
@@ -37,7 +37,10 @@ describe('Test TextArea', function () {
 
         it('Test initial configs', function () {
             expect(textarea.find('label').text()).toEqual('Textarea parameter')
-            expect(textarea.element.title).toEqual('this field is used for nothing')
+            // Vuetify forwards non class/style/id/data-* attrs to the inner
+            // textarea, so the description tooltip lives there now (same as
+            // the migrated Textfield).
+            expect(textarea.find('textarea').element.title).toEqual('this field is used for nothing')
             verifyElementValue('Hello world')
         });
 
@@ -63,7 +66,7 @@ describe('Test TextArea', function () {
 
         it('Test required when external change', async function () {
             setDeepProp(textarea, 'config.required', true)
-            textarea.setProps({value: ' '});
+            textarea.setProps({modelValue: ' '});
 
             await vueTicks()
 
@@ -85,10 +88,10 @@ describe('Test TextArea', function () {
 
         it('Test required when external change to correct one', async function () {
             setDeepProp(textarea, 'config.required', true)
-            textarea.setProps({value: ' '});
+            textarea.setProps({modelValue: ' '});
             await vueTicks()
 
-            textarea.setProps({value: '123'});
+            textarea.setProps({modelValue: '123'});
 
             await vueTicks()
 
@@ -120,7 +123,7 @@ describe('Test TextArea', function () {
 
         it('Test max_length when external change', async function () {
             setDeepProp(textarea, 'config.max_length', 10)
-            textarea.setProps({value: 'Some long text'});
+            textarea.setProps({modelValue: 'Some long text'});
 
             await vueTicks()
 
@@ -142,10 +145,10 @@ describe('Test TextArea', function () {
 
         it('Test max_length when external change to correct one', async function () {
             setDeepProp(textarea, 'config.max_length', 10)
-            textarea.setProps({value: 'Some long text'});
+            textarea.setProps({modelValue: 'Some long text'});
             await vueTicks()
 
-            textarea.setProps({value: 'short'});
+            textarea.setProps({modelValue: 'short'});
             await vueTicks()
 
             expect(textarea.currentError).toBeNil()
