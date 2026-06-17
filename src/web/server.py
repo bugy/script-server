@@ -934,7 +934,7 @@ def init(server_config: ServerConfig,
     application.max_request_size_mb = server_config.max_request_size_mb
 
     if os_utils.is_win() and env_utils.is_min_version('3.8'):
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        asyncio.set_event_loop(asyncio.SelectorEventLoop())
     io_loop = tornado.ioloop.IOLoop.current()
 
     global _http_server

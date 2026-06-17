@@ -1,8 +1,8 @@
+import asyncio
 import json
 import os
 import threading
 import traceback
-from asyncio import set_event_loop_policy
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
@@ -430,4 +430,4 @@ class ServerTest(TestCase):
 
         self.ioloop_thread.join(timeout=50)
         io_loop.close()
-        set_event_loop_policy(None)
+        asyncio.set_event_loop(None)
