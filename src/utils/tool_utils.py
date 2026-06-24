@@ -3,9 +3,7 @@ import os
 from utils import file_utils
 
 
-def validate_web_build_exists(project_path):
-    web_folder = os.path.join(project_path, 'web')
-
+def validate_web_build_exists(web_folder):
     how_to_fix_build_message = \
         'How to fix: ' \
         '\n - PROD: please use stable releases from https://github.com/bugy/script-server/releases/latest' \
