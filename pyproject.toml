@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "script-server"
+description = "Web UI for your scripts with execution management"
+version = "1.18.0"
+authors = []
+maintainers = []
+readme = "README.md"
+license-files = ["LICENSE"]
+
+requires-python = ">=3.7"
+dependencies = [
+  "tornado (>=5, <=7)",
+]
+
+[project.urls]
+Repository = "https://github.com/bugy/script-server"
+
+[project.scripts]
+script-server = "main:main"
