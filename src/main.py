@@ -61,7 +61,7 @@ def main():
     project_path = os.getcwd()
 
     try:
-        tool_utils.validate_web_build_exists(WEB_FOLDER)
+        tool_utils.validate_web_build_exists(os.path.realpath(WEB_FOLDER))
     except InvalidWebBuildException as e:
         print(str(e))
         sys.exit(-1)
