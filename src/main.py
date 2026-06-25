@@ -30,10 +30,12 @@ parser.add_argument('-d', '--config-dir', default='conf')
 parser.add_argument('-f', '--config-file', default='conf.json')
 parser.add_argument('-l', '--log-folder', default='logs')
 parser.add_argument('-t', '--tmp-folder', default='temp')
+parser.add_argument('-w', '--web-folder', default='web')
 args = vars(parser.parse_args())
 
 TEMP_FOLDER = args['tmp_folder']
 LOG_FOLDER = args['log_folder']
+WEB_FOLDER = args['web_folder']
 
 CONFIG_FOLDER = args['config_dir']
 if os.path.isabs(args['config_file']):
@@ -59,7 +61,7 @@ def main():
     project_path = os.getcwd()
 
     try:
-        tool_utils.validate_web_build_exists(project_path)
+        tool_utils.validate_web_build_exists(os.path.realpath(WEB_FOLDER))
     except InvalidWebBuildException as e:
         print(str(e))
         sys.exit(-1)
