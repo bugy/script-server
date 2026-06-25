@@ -864,6 +864,11 @@ def init(server_config: ServerConfig,
         'websocket_ping_timeout': 300,
         'compress_response': True,
         'xsrf_cookies': server_config.xsrf_protection != XSRF_PROTECTION_DISABLED,
+        'xsrf_cookie_kwargs': {
+            'httponly': True, 
+            'secure': server_config.cookie_secure,
+            'samesite': 'Lax'
+        },
     }
 
     application = tornado.web.Application(handlers, **settings)
