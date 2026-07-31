@@ -7,21 +7,73 @@ const store = () => ({
         selectedExecution: null,
         selectedExecutionId: null,
         loading: false,
-        detailsLoading: false
+        detailsLoading: false,
+        page: 1,
+        pageSize: 25,
+        total: 0,
+        totalPages: 1,
+        pageSizeOptions: [10, 25, 50, 100, 250, 500]
     },
     namespaced: true,
     actions: {
-        init({commit}) {
+        init({dispatch}) {
+            return dispatch('loadExecutions');
+        },
+
+        loadExecutions({commit, state}, params = {}) {
             commit('SET_LOADING', true);
             commit('SET_EXECUTION_DETAILS', {execution: null, id: null});
 
-            axiosInstance.get('history/execution_log/short').then(({data}) => {
-                sortExecutionLogs(data);
+            const page = params.page !== undefined ? params.page : state.page;
+            const size = params.size !== undefined ? params.size : state.pageSize;
 
-                let executions = data.map(log => translateExecutionLog(log));
+            return axiosInstance.get('history/execution_log/short', {
+                params: {
+                    page,
+                    size
+                }
+            }).then(({data}) => {
+                let executions = [];
+                let paginationData = {};
+
+                if (Array.isArray(data)) {
+                    sortExecutionLogs(data);
+                    executions = data.map(log => translateExecutionLog(log));
+                    paginationData = {
+                        page: 1,
+                        pageSize: executions.length || size,
+                        total: executions.length,
+                        totalPages: 1
+                    };
+                } else if (data && typeof data === 'object') {
+                    let records = data.records || [];
+                    executions = records.map(log => translateExecutionLog(log));
+                    paginationData = {
+                        page: data.page || page,
+                        pageSize: data.pageSize || size,
+                        total: data.total || 0,
+                        totalPages: data.totalPages || 1
+                    };
+                }
+
                 commit('SET_EXECUTIONS', executions);
+                commit('SET_PAGINATION', paginationData);
                 commit('SET_LOADING', false);
+            }).catch((error) => {
+                commit('SET_LOADING', false);
+                logError(error);
             });
+        },
+
+        changePage({dispatch, state}, newPage) {
+            if (newPage < 1 || (state.totalPages > 0 && newPage > state.totalPages)) {
+                return;
+            }
+            return dispatch('loadExecutions', {page: newPage, size: state.pageSize});
+        },
+
+        changePageSize({dispatch}, newSize) {
+            return dispatch('loadExecutions', {page: 1, size: newSize});
         },
 
         selectExecution({commit, state}, executionId) {
@@ -63,6 +115,13 @@ const store = () => ({
 
         SET_EXECUTIONS(state, executions) {
             state.executions = executions;
+        },
+
+        SET_PAGINATION(state, {page, pageSize, total, totalPages}) {
+            if (page !== undefined) state.page = page;
+            if (pageSize !== undefined) state.pageSize = pageSize;
+            if (total !== undefined) state.total = total;
+            if (totalPages !== undefined) state.totalPages = totalPages;
         },
 
         SET_EXECUTION_DETAILS(state, {execution, id}) {
