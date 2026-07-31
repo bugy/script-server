@@ -313,6 +313,98 @@ class ServerTest(TestCase):
         self._admin_session.cookies['username'] = create_signed_value(cookie_secret, 'username', 'admin_user') \
             .decode('utf8')
 
+    def _create_mock_history_entry(self, entry_id, user_name='normal_user', script_name='script1', start_time_ms=None, exit_code=0):
+        from execution.logging import HistoryEntry
+        from datetime import datetime, timezone
+        entry = HistoryEntry()
+        entry.id = str(entry_id)
+        entry.user_name = user_name
+        entry.user_id = user_name
+        entry.script_name = script_name
+        entry.command = 'python script.py'
+        entry.output_format = 'terminal'
+        entry.exit_code = exit_code
+        if start_time_ms is not None:
+            entry.start_time = datetime.fromtimestamp(start_time_ms / 1000.0, tz=timezone.utc)
+        return entry
+
+    def test_history_short_log_pagination_empty(self):
+        self.start_server(12345, '127.0.0.1')
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = []
+
+        response = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=1&size=25')
+        self.assertEqual(response, {
+            'records': [],
+            'total': 0,
+            'page': 1,
+            'pageSize': 25,
+            'totalPages': 1
+        })
+
+    def test_history_short_log_pagination_slicing_and_sorting(self):
+        self.start_server(12345, '127.0.0.1')
+        entries = [
+            self._create_mock_history_entry('e1', start_time_ms=1000),
+            self._create_mock_history_entry('e2', start_time_ms=3000),
+            self._create_mock_history_entry('e3', start_time_ms=2000),
+        ]
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = entries
+
+        page1 = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=1&size=10')
+        self.assertEqual(page1['total'], 3)
+        self.assertEqual(page1['page'], 1)
+        self.assertEqual(page1['pageSize'], 10)
+        self.assertEqual(page1['totalPages'], 1)
+        self.assertEqual([r['id'] for r in page1['records']], ['e2', 'e3', 'e1'])
+
+    def test_history_short_log_pagination_multiple_pages(self):
+        self.start_server(12345, '127.0.0.1')
+        entries = [self._create_mock_history_entry(f'e{i}', start_time_ms=i * 1000) for i in range(1, 35)]
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = entries
+
+        res_p1 = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=1&size=10')
+        self.assertEqual(res_p1['total'], 34)
+        self.assertEqual(res_p1['page'], 1)
+        self.assertEqual(res_p1['pageSize'], 10)
+        self.assertEqual(res_p1['totalPages'], 4)
+        self.assertEqual(len(res_p1['records']), 10)
+        self.assertEqual(res_p1['records'][0]['id'], 'e34')
+
+        res_p4 = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=4&size=10')
+        self.assertEqual(res_p4['page'], 4)
+        self.assertEqual(len(res_p4['records']), 4)
+        self.assertEqual(res_p4['records'][-1]['id'], 'e1')
+
+    def test_history_short_log_pagination_invalid_size_fallback(self):
+        self.start_server(12345, '127.0.0.1')
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = []
+
+        response = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=1&size=999')
+        self.assertEqual(response['pageSize'], 25)
+
+        response_abc = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=1&size=abc')
+        self.assertEqual(response_abc['pageSize'], 25)
+
+    def test_history_short_log_pagination_invalid_page_fallback(self):
+        self.start_server(12345, '127.0.0.1')
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = []
+
+        response = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=-5&size=25')
+        self.assertEqual(response['page'], 1)
+
+        response_invalid = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=xyz&size=25')
+        self.assertEqual(response_invalid['page'], 1)
+
+    def test_history_short_log_legacy_unpaginated(self):
+        self.start_server(12345, '127.0.0.1')
+        entries = [self._create_mock_history_entry('e1', start_time_ms=1000)]
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = entries
+
+        response = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short')
+        self.assertIsInstance(response, list)
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0]['id'], 'e1')
+
     def start_loop(self):
         io_loop = IOLoop.current()
         self.ioloop_thread = threading.Thread(target=io_loop.start)
