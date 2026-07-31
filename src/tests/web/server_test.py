@@ -405,6 +405,51 @@ class ServerTest(TestCase):
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0]['id'], 'e1')
 
+    def test_history_short_log_pagination_page_out_of_bounds(self):
+        self.start_server(12345, '127.0.0.1')
+        entries = [self._create_mock_history_entry(f'e{i}', start_time_ms=i * 1000) for i in range(1, 31)]
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = entries
+
+        response = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=99&size=10')
+        self.assertEqual(response['page'], 3)
+        self.assertEqual(response['totalPages'], 3)
+        self.assertEqual(len(response['records']), 10)
+
+    def test_history_short_log_pagination_with_none_start_time(self):
+        self.start_server(12345, '127.0.0.1')
+        entries = [
+            self._create_mock_history_entry('e_none', start_time_ms=None),
+            self._create_mock_history_entry('e_valid', start_time_ms=5000)
+        ]
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = entries
+
+        response = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=1&size=10')
+        self.assertEqual([r['id'] for r in response['records']], ['e_valid', 'e_none'])
+
+    def test_history_short_log_pagination_all_supported_sizes(self):
+        self.start_server(12345, '127.0.0.1')
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = []
+
+        for size in [10, 25, 50, 100, 250, 500]:
+            response = self.request('GET', f'http://127.0.0.1:12345/history/execution_log/short?page=1&size={size}')
+            self.assertEqual(response['pageSize'], size)
+
+    def test_history_short_log_pagination_running_script_status(self):
+        self.start_server(12345, '127.0.0.1')
+        entries = [
+            self._create_mock_history_entry('running_1', start_time_ms=2000, exit_code=None),
+            self._create_mock_history_entry('finished_1', start_time_ms=1000, exit_code=0)
+        ]
+        server._tornado_app.execution_logging_service.get_history_entries.return_value = entries
+        server._tornado_app.execution_service.is_running.side_effect = lambda entry_id, user: entry_id == 'running_1'
+
+        response = self.request('GET', 'http://127.0.0.1:12345/history/execution_log/short?page=1&size=10')
+        records = response['records']
+        self.assertEqual(records[0]['id'], 'running_1')
+        self.assertEqual(records[0]['status'], 'running')
+        self.assertEqual(records[1]['id'], 'finished_1')
+        self.assertEqual(records[1]['status'], 'finished')
+
     def start_loop(self):
         io_loop = IOLoop.current()
         self.ioloop_thread = threading.Thread(target=io_loop.start)
