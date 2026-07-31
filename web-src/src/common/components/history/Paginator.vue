@@ -14,10 +14,10 @@
 
     <div class="paginator-controls">
       <button class="btn-flat btn-pagination" :disabled="disabled || isFirstPage" @click="onFirst" title="First page">
-        «
+        <svg viewBox="0 0 24 24" class="pagination-icon"><path d="M18.41 16.59L13.82 12l4.59-4.59L17 6l-6 6 6 6zM6 6h2v12H6z"/></svg>
       </button>
       <button class="btn-flat btn-pagination" :disabled="disabled || isFirstPage" @click="onPrev" title="Previous page">
-        ‹ Prev
+        <svg viewBox="0 0 24 24" class="pagination-icon"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
       </button>
 
       <span class="page-indicator">
@@ -25,10 +25,10 @@
       </span>
 
       <button class="btn-flat btn-pagination" :disabled="disabled || isLastPage" @click="onNext" title="Next page">
-        Next ›
+        <svg viewBox="0 0 24 24" class="pagination-icon"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
       </button>
       <button class="btn-flat btn-pagination" :disabled="disabled || isLastPage" @click="onLast" title="Last page">
-        »
+        <svg viewBox="0 0 24 24" class="pagination-icon"><path d="M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6zM16 6h2v12h-2z"/></svg>
       </button>
     </div>
   </div>
@@ -178,15 +178,24 @@ export default {
 }
 
 .btn-pagination {
-  padding: 0.3rem 0.7rem;
-  height: auto;
-  line-height: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.5rem;
+  min-width: 2.2rem;
+  height: 2.2rem;
   border-radius: 4px;
   border: 1px solid var(--border-color, #ccc);
   background-color: var(--background-color-secondary, #fff);
   color: var(--font-color-main, #333);
   cursor: pointer;
-  transition: background-color 0.2s ease, opacity 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.pagination-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: currentColor;
 }
 
 .btn-pagination:hover:not(:disabled) {
@@ -196,7 +205,7 @@ export default {
 }
 
 .btn-pagination:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
