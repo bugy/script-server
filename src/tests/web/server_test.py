@@ -450,6 +450,37 @@ class ServerTest(TestCase):
         self.assertEqual(records[1]['id'], 'finished_1')
         self.assertEqual(records[1]['status'], 'finished')
 
+    def test_isolated_paginate_empty(self):
+        result = server.paginate_history_entries([], '1', '25')
+        self.assertEqual(result, {
+            'records': [],
+            'total': 0,
+            'page': 1,
+            'pageSize': 25,
+            'totalPages': 1
+        })
+
+    def test_isolated_paginate_legacy_unpaginated_returns_list(self):
+        entries = [self._create_mock_history_entry('e1', start_time_ms=1000)]
+        result = server.paginate_history_entries(entries, None, None)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+
+    def test_isolated_paginate_running_checker_only_called_for_sliced_page(self):
+        entries = [self._create_mock_history_entry(f'e{i}', start_time_ms=i * 1000) for i in range(1, 100)]
+        checked_ids = []
+
+        def mock_checker(entry_id):
+            checked_ids.append(entry_id)
+            return entry_id == 'e99'
+
+        result = server.paginate_history_entries(entries, '1', '10', is_running_checker=mock_checker)
+        self.assertEqual(result['total'], 99)
+        self.assertEqual(result['page'], 1)
+        self.assertEqual(len(result['records']), 10)
+        self.assertEqual(len(checked_ids), 10)
+        self.assertEqual(checked_ids[0], 'e99')
+
     def start_loop(self):
         io_loop = IOLoop.current()
         self.ioloop_thread = threading.Thread(target=io_loop.start)
