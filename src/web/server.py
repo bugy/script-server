@@ -685,6 +685,53 @@ ALLOWED_PAGE_SIZES = {10, 25, 50, 100, 250, 500}
 DEFAULT_PAGE_SIZE = 25
 
 
+def paginate_history_entries(entries, page_arg, size_arg, is_running_checker=None):
+    def _get_sort_key(entry):
+        if entry.start_time is None:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        return entry.start_time
+
+    entries.sort(key=_get_sort_key, reverse=True)
+
+    if page_arg is None and size_arg is None:
+        running_ids = [e.id for e in entries if is_running_checker and is_running_checker(e.id)]
+        return to_short_execution_log(entries, running_ids)
+
+    try:
+        size = int(size_arg) if size_arg is not None else DEFAULT_PAGE_SIZE
+        if size not in ALLOWED_PAGE_SIZES:
+            size = DEFAULT_PAGE_SIZE
+    except (ValueError, TypeError):
+        size = DEFAULT_PAGE_SIZE
+
+    try:
+        page = int(page_arg) if page_arg is not None else 1
+        if page < 1:
+            page = 1
+    except (ValueError, TypeError):
+        page = 1
+
+    total_count = len(entries)
+    total_pages = math.ceil(total_count / size) if total_count > 0 else 1
+
+    if page > total_pages and total_pages > 0:
+        page = total_pages
+
+    start_idx = (page - 1) * size
+    end_idx = start_idx + size
+    page_entries = entries[start_idx:end_idx]
+
+    running_ids = [e.id for e in page_entries if is_running_checker and is_running_checker(e.id)]
+
+    return {
+        'records': to_short_execution_log(page_entries, running_ids),
+        'total': total_count,
+        'page': page,
+        'pageSize': size,
+        'totalPages': total_pages
+    }
+
+
 class GetShortHistoryEntriesHandler(BaseRequestHandler):
     @check_authorization
     @inject_user
@@ -694,63 +741,14 @@ class GetShortHistoryEntriesHandler(BaseRequestHandler):
 
         history_entries = self.application.execution_logging_service.get_history_entries(user.user_id)
 
-        def _get_sort_key(entry):
-            if entry.start_time is None:
-                return datetime.min.replace(tzinfo=timezone.utc)
-            return entry.start_time
+        result = paginate_history_entries(
+            history_entries,
+            page_arg,
+            size_arg,
+            is_running_checker=lambda entry_id: self.application.execution_service.is_running(entry_id, user)
+        )
 
-        history_entries.sort(key=_get_sort_key, reverse=True)
-
-        if page_arg is None and size_arg is None:
-            running_script_ids = []
-            for entry in history_entries:
-                if self.application.execution_service.is_running(entry.id, user):
-                    running_script_ids.append(entry.id)
-
-            short_logs = to_short_execution_log(history_entries, running_script_ids)
-            self.write(json.dumps(short_logs))
-            return
-
-        try:
-            size = int(size_arg) if size_arg is not None else DEFAULT_PAGE_SIZE
-            if size not in ALLOWED_PAGE_SIZES:
-                size = DEFAULT_PAGE_SIZE
-        except (ValueError, TypeError):
-            size = DEFAULT_PAGE_SIZE
-
-        try:
-            page = int(page_arg) if page_arg is not None else 1
-            if page < 1:
-                page = 1
-        except (ValueError, TypeError):
-            page = 1
-
-        total_count = len(history_entries)
-        total_pages = math.ceil(total_count / size) if total_count > 0 else 1
-
-        if page > total_pages and total_pages > 0:
-            page = total_pages
-
-        start_idx = (page - 1) * size
-        end_idx = start_idx + size
-        page_entries = history_entries[start_idx:end_idx]
-
-        running_script_ids = []
-        for entry in page_entries:
-            if self.application.execution_service.is_running(entry.id, user):
-                running_script_ids.append(entry.id)
-
-        short_logs = to_short_execution_log(page_entries, running_script_ids)
-
-        response = {
-            'records': short_logs,
-            'total': total_count,
-            'page': page,
-            'pageSize': size,
-            'totalPages': total_pages
-        }
-
-        self.write(json.dumps(response))
+        self.write(json.dumps(result))
 
 
 class GetLongHistoryEntryHandler(BaseRequestHandler):
