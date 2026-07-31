@@ -32,7 +32,8 @@
       </tr>
       </tbody>
     </table>
-    <p v-if="loading" class="loading-text">History will appear here</p>
+    <p v-if="loading" class="loading-text">Loading history...</p>
+    <p v-else-if="filteredRows.length === 0" class="empty-text">No entries found</p>
   </div>
 </template>
 
@@ -168,11 +169,13 @@ export default {
   width: 15%;
 }
 
-.loading-text {
+.loading-text,
+.empty-text {
   color: var(--font-color-medium);
   font-size: 1.2em;
   text-align: center;
-  margin-top: 1em;
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
 }
 
 .executions-log-table .sorted:after {
