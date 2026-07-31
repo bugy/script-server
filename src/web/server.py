@@ -2,11 +2,13 @@
 import asyncio
 import json
 import logging.config
+import math
 import os
 import signal
 import ssl
 import time
 import urllib
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import tornado.concurrent
@@ -679,18 +681,76 @@ class ReceiveAlertHandler(BaseRequestHandler):
             file_utils.write_file(file_path, value)
 
 
+ALLOWED_PAGE_SIZES = {10, 25, 50, 100, 250, 500}
+DEFAULT_PAGE_SIZE = 25
+
+
 class GetShortHistoryEntriesHandler(BaseRequestHandler):
     @check_authorization
     @inject_user
     def get(self, user):
+        page_arg = self.get_argument('page', None)
+        size_arg = self.get_argument('size', None)
+
         history_entries = self.application.execution_logging_service.get_history_entries(user.user_id)
+
+        def _get_sort_key(entry):
+            if entry.start_time is None:
+                return datetime.min.replace(tzinfo=timezone.utc)
+            return entry.start_time
+
+        history_entries.sort(key=_get_sort_key, reverse=True)
+
+        if page_arg is None and size_arg is None:
+            running_script_ids = []
+            for entry in history_entries:
+                if self.application.execution_service.is_running(entry.id, user):
+                    running_script_ids.append(entry.id)
+
+            short_logs = to_short_execution_log(history_entries, running_script_ids)
+            self.write(json.dumps(short_logs))
+            return
+
+        try:
+            size = int(size_arg) if size_arg is not None else DEFAULT_PAGE_SIZE
+            if size not in ALLOWED_PAGE_SIZES:
+                size = DEFAULT_PAGE_SIZE
+        except (ValueError, TypeError):
+            size = DEFAULT_PAGE_SIZE
+
+        try:
+            page = int(page_arg) if page_arg is not None else 1
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            page = 1
+
+        total_count = len(history_entries)
+        total_pages = math.ceil(total_count / size) if total_count > 0 else 1
+
+        if page > total_pages and total_pages > 0:
+            page = total_pages
+
+        start_idx = (page - 1) * size
+        end_idx = start_idx + size
+        page_entries = history_entries[start_idx:end_idx]
+
         running_script_ids = []
-        for entry in history_entries:
+        for entry in page_entries:
             if self.application.execution_service.is_running(entry.id, user):
                 running_script_ids.append(entry.id)
 
-        short_logs = to_short_execution_log(history_entries, running_script_ids)
-        self.write(json.dumps(short_logs))
+        short_logs = to_short_execution_log(page_entries, running_script_ids)
+
+        response = {
+            'records': short_logs,
+            'total': total_count,
+            'page': page,
+            'pageSize': size,
+            'totalPages': total_pages
+        }
+
+        self.write(json.dumps(response))
 
 
 class GetLongHistoryEntryHandler(BaseRequestHandler):
@@ -895,7 +955,8 @@ def init(server_config: ServerConfig,
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     io_loop = tornado.ioloop.IOLoop.current()
 
-    global _http_server
+    global _http_server, _tornado_app
+    _tornado_app = application
     _http_server = httpserver.HTTPServer(
         application,
         ssl_options=ssl_context,
