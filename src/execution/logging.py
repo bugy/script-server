@@ -117,6 +117,7 @@ class ExecutionLoggingService:
 
         self._visited_files = set()
         self._ids_to_file_map = {}
+        self._entries_cache = {}
         self._output_loggers = {}
 
         file_utils.prepare_folder(output_folder)
@@ -183,33 +184,34 @@ class ExecutionLoggingService:
 
         log_file_path = os.path.join(self._output_folder, filename)
 
-        logger.set_close_callback(lambda: self._write_post_execution_info(log_file_path, exit_code))
+        def close_cb():
+            self._write_post_execution_info(log_file_path, exit_code)
+            cached_entry = self._entries_cache.get(execution_id)
+            if cached_entry:
+                cached_entry.exit_code = int(exit_code)
+
+        logger.set_close_callback(close_cb)
 
     def get_history_entries(self, user_id, *, system_call=False):
         self._renew_files_cache()
 
         result = []
 
-        for file in self._ids_to_file_map.values():
-            history_entry = self._extract_history_entry(file)
-            if history_entry is not None and self._can_access_entry(history_entry, user_id, system_call):
-                result.append(history_entry)
+        for entry in self._entries_cache.values():
+            if entry is not None and self._can_access_entry(entry, user_id, system_call):
+                result.append(entry)
 
         return result
 
     def find_history_entry(self, execution_id, user_id):
         self._renew_files_cache()
 
-        file = self._ids_to_file_map.get(execution_id)
-        if file is None:
+        entry = self._entries_cache.get(execution_id)
+        if entry is None:
             LOGGER.warning('find_history_entry: file for %s id not found', execution_id)
             return None
 
-        entry = self._extract_history_entry(file)
-        if entry is None:
-            LOGGER.warning('find_history_entry: cannot parse file for %s', execution_id)
-
-        elif not self._can_access_entry(entry, user_id):
+        if not self._can_access_entry(entry, user_id):
             message = 'User ' + user_id + ' has no access to execution #' + str(execution_id)
             LOGGER.warning('%s. Original user: %s', message, entry.user_id)
             raise AccessProhibitedException(message)
@@ -261,6 +263,7 @@ class ExecutionLoggingService:
         for obsolete_id in obsolete_ids:
             LOGGER.info('Logs for execution #' + obsolete_id + ' were deleted')
             del cache[obsolete_id]
+            self._entries_cache.pop(obsolete_id, None)
 
         for file in os.listdir(self._output_folder):
             if not file.lower().endswith('.log'):
@@ -276,6 +279,7 @@ class ExecutionLoggingService:
                 continue
 
             cache[entry.id] = file
+            self._entries_cache[entry.id] = entry
 
     @staticmethod
     def _create_log_identifier(audit_name, script_name, start_time):
