@@ -80,3 +80,7 @@ web-src/geckodriver.log
 venv/
 /venv2/
 e2e_venv/
+
+# Nix / NixOS
+/result
+/*.qcow2
