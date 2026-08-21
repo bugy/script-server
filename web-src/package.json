@@ -14,7 +14,7 @@
     "materialize-css": "git+https://github.com/bugy/materialize.git#90803fb",
     "tinycolor2": "^1.4.2",
     "typeface-roboto": "^1.1.13",
-    "vue": "^2.7.10",
+    "vue": "^3.0.0",
     "vue-router": "^3.6.5",
     "vuex": "^3.6.2"
   },
